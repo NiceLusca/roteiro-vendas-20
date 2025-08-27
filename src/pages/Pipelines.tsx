@@ -1,5 +1,5 @@
-import { PipelineKanban } from '@/components/kanban/PipelineKanban';
+import { EnhancedPipelineKanban } from '@/components/kanban/EnhancedPipelineKanban';
 
 export default function Pipelines() {
-  return <PipelineKanban />;
+  return <EnhancedPipelineKanban />;
 }

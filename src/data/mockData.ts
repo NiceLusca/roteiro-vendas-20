@@ -38,18 +38,40 @@ export const mockProducts: Product[] = [
   }
 ];
 
-// Pipeline Principal (seed)
-export const mockPipeline: Pipeline = {
-  id: 'pipeline-principal',
-  nome: 'Geral (Primário)',
-  descricao: 'Pipeline principal para captação e conversão de leads',
-  ativo: true,
-  objetivo: 'Conversão de leads em clientes',
-  primary: true
-};
+// Pipelines (incluindo múltiplos)
+export const mockPipelines: Pipeline[] = [
+  {
+    id: 'pipeline-principal',
+    nome: 'Geral (Primário)',
+    descricao: 'Pipeline principal para captação e conversão de leads',
+    ativo: true,
+    objetivo: 'Conversão de leads em clientes',
+    primary: true
+  },
+  {
+    id: 'pipeline-upsell',
+    nome: 'Upsell',
+    descricao: 'Pipeline para oportunidades de upsell com clientes existentes',
+    ativo: true,
+    objetivo: 'Maximizar valor por cliente',
+    primary: false
+  },
+  {
+    id: 'pipeline-recuperacao',
+    nome: 'Recuperação',
+    descricao: 'Pipeline para reativação de leads perdidos',
+    ativo: true,
+    objetivo: 'Recuperar oportunidades perdidas',
+    primary: false
+  }
+];
 
-// Etapas do pipeline principal
+// Pipeline Principal (seed) - manter compatibilidade
+export const mockPipeline: Pipeline = mockPipelines[0];
+
+// Etapas dos pipelines
 export const mockPipelineStages: PipelineStage[] = [
+  // Pipeline Principal
   {
     id: 'stage-1',
     pipeline_id: 'pipeline-principal',
@@ -60,7 +82,8 @@ export const mockPipelineStages: PipelineStage[] = [
     proximo_passo_tipo: 'Humano',
     gerar_agendamento_auto: false,
     entrada_criteria: 'Lead qualificado e interessado',
-    saida_criteria: 'Contato realizado e interesse confirmado'
+    saida_criteria: 'Contato realizado e interesse confirmado',
+    wip_limit: 10
   },
   {
     id: 'stage-2',
@@ -73,7 +96,8 @@ export const mockPipelineStages: PipelineStage[] = [
     gerar_agendamento_auto: true,
     duracao_minutos: 60,
     entrada_criteria: 'Lead demonstrou interesse e está qualificado',
-    saida_criteria: 'Sessão agendada ou realizada'
+    saida_criteria: 'Sessão agendada ou realizada',
+    wip_limit: 5
   },
   {
     id: 'stage-3',
@@ -85,7 +109,8 @@ export const mockPipelineStages: PipelineStage[] = [
     proximo_passo_tipo: 'Humano',
     gerar_agendamento_auto: false,
     entrada_criteria: 'Sessão realizada e necessidades identificadas',
-    saida_criteria: 'Proposta enviada e apresentada'
+    saida_criteria: 'Proposta enviada e apresentada',
+    wip_limit: 3
   },
   {
     id: 'stage-4',
@@ -110,6 +135,83 @@ export const mockPipelineStages: PipelineStage[] = [
     gerar_agendamento_auto: false,
     entrada_criteria: 'Cliente decidiu comprar ou recusar',
     saida_criteria: 'Venda fechada ou lead arquivado'
+  },
+
+  // Pipeline Upsell
+  {
+    id: 'stage-u1',
+    pipeline_id: 'pipeline-upsell',
+    nome: 'Identificação',
+    ordem: 1,
+    prazo_em_dias: 2,
+    proximo_passo_label: 'Analisar perfil do cliente',
+    proximo_passo_tipo: 'Humano',
+    gerar_agendamento_auto: false,
+    entrada_criteria: 'Cliente ativo identificado para upsell',
+    saida_criteria: 'Oportunidade de upsell confirmada'
+  },
+  {
+    id: 'stage-u2',
+    pipeline_id: 'pipeline-upsell',
+    nome: 'Proposta Upsell',
+    ordem: 2,
+    prazo_em_dias: 5,
+    proximo_passo_label: 'Preparar proposta personalizada',
+    proximo_passo_tipo: 'Humano',
+    gerar_agendamento_auto: false,
+    entrada_criteria: 'Necessidade identificada e mapeada',
+    saida_criteria: 'Proposta apresentada ao cliente'
+  },
+  {
+    id: 'stage-u3',
+    pipeline_id: 'pipeline-upsell',
+    nome: 'Fechamento Upsell',
+    ordem: 3,
+    prazo_em_dias: 3,
+    proximo_passo_label: 'Confirmar upgrade',
+    proximo_passo_tipo: 'Agendamento',
+    gerar_agendamento_auto: true,
+    duracao_minutos: 30,
+    entrada_criteria: 'Cliente interessado na proposta',
+    saida_criteria: 'Upsell confirmado ou descartado'
+  },
+
+  // Pipeline Recuperação
+  {
+    id: 'stage-r1',
+    pipeline_id: 'pipeline-recuperacao',
+    nome: 'Contato Inicial',
+    ordem: 1,
+    prazo_em_dias: 1,
+    proximo_passo_label: 'Fazer contato de recuperação',
+    proximo_passo_tipo: 'Mensagem',
+    gerar_agendamento_auto: false,
+    entrada_criteria: 'Lead perdido há mais de 30 dias',
+    saida_criteria: 'Contato reestabelecido'
+  },
+  {
+    id: 'stage-r2',
+    pipeline_id: 'pipeline-recuperacao',
+    nome: 'Requalificação',
+    ordem: 2,
+    prazo_em_dias: 3,
+    proximo_passo_label: 'Requalificar interesse',
+    proximo_passo_tipo: 'Humano',
+    gerar_agendamento_auto: false,
+    entrada_criteria: 'Lead respondeu ao contato',
+    saida_criteria: 'Interesse reconfirmado'
+  },
+  {
+    id: 'stage-r3',
+    pipeline_id: 'pipeline-recuperacao',
+    nome: 'Nova Oportunidade',
+    ordem: 3,
+    prazo_em_dias: 2,
+    proximo_passo_label: 'Transferir para pipeline principal',
+    proximo_passo_tipo: 'Humano',
+    gerar_agendamento_auto: false,
+    entrada_criteria: 'Lead demonstrou interesse renovado',
+    saida_criteria: 'Transferido ou arquivado definitivamente'
   }
 ];
 
@@ -243,8 +345,9 @@ export const mockLeads: Lead[] = [
   }
 ];
 
-// Entries no pipeline (posicionamento dos leads)
+// Entries no pipeline (posicionamento dos leads) - incluindo múltiplos pipelines
 export const mockLeadPipelineEntries: LeadPipelineEntry[] = [
+  // Pipeline Principal
   {
     id: 'entry-1',
     lead_id: 'lead-1',
@@ -300,6 +403,22 @@ export const mockLeadPipelineEntries: LeadPipelineEntry[] = [
     saude_etapa: 'Verde',
     checklist_state: { 'check-1-1': true, 'check-1-2': true, 'check-1-3': false },
     nota_etapa: 'Lead novo, primeiro contato realizado'
+  },
+  
+  // Pipeline Upsell
+  {
+    id: 'entry-u1',
+    lead_id: 'lead-5',
+    pipeline_id: 'pipeline-upsell',
+    etapa_atual_id: 'stage-u2',
+    status_inscricao: 'Ativo',
+    data_entrada_etapa: new Date('2024-01-26T09:00:00'),
+    data_prevista_proxima_etapa: new Date('2024-01-31T09:00:00'),
+    tempo_em_etapa_dias: 1,
+    dias_em_atraso: 0,
+    saude_etapa: 'Verde',
+    checklist_state: {},
+    nota_etapa: 'Cliente interessado em upgrade do plano'
   }
 ];
 

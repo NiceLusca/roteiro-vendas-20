@@ -5,11 +5,13 @@ import { KanbanCard } from './KanbanCard';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
 import { AlertTriangle, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useDroppable } from '@dnd-kit/core';
 
 interface KanbanColumnProps {
   stage: PipelineStage;
   entries: Array<LeadPipelineEntry & { lead: Lead }>;
   wipExceeded: boolean;
+  isDragAndDrop?: boolean;
   onAddLead?: () => void;
   onViewLead?: (leadId: string) => void;
   onCreateAppointment?: (leadId: string) => void;
@@ -21,12 +23,16 @@ export function KanbanColumn({
   stage,
   entries,
   wipExceeded,
+  isDragAndDrop = false,
   onAddLead,
   onViewLead,
   onCreateAppointment,
   onAdvanceStage,
   onRegisterInteraction
 }: KanbanColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: stage.id,
+  });
   // Contar leads por saúde
   const healthCounts = entries.reduce((acc, entry) => {
     acc[entry.saude_etapa] = (acc[entry.saude_etapa] || 0) + 1;
@@ -47,7 +53,13 @@ export function KanbanColumn({
   });
 
   return (
-    <div className="flex flex-col h-full min-w-80">
+    <div 
+      ref={setNodeRef}
+      className={cn(
+        "flex flex-col h-full min-w-80",
+        isDragAndDrop && isOver && "ring-2 ring-primary ring-opacity-50"
+      )}
+    >
       {/* Header da Coluna */}
       <Card className={cn('mb-4', wipExceeded && 'border-warning')}>
         <CardHeader className="pb-3">
@@ -134,7 +146,7 @@ export function KanbanColumn({
             </p>
           </div>
         ) : (
-          sortedEntries.map((entry) => (
+           sortedEntries.map((entry) => (
             <KanbanCard
               key={entry.id}
               entry={entry}
@@ -144,6 +156,7 @@ export function KanbanColumn({
               onCreateAppointment={() => onCreateAppointment?.(entry.lead.id)}
               onAdvanceStage={() => onAdvanceStage?.(entry.id)}
               onRegisterInteraction={() => onRegisterInteraction?.(entry.lead.id)}
+              onOpenChecklist={() => onAdvanceStage?.(entry.id)}
             />
           ))
         )}

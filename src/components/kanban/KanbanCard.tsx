@@ -11,29 +11,49 @@ import {
   ArrowRight, 
   MessageCircle,
   AlertCircle,
-  Clock
+  Clock,
+  CheckSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface KanbanCardProps {
   entry: LeadPipelineEntry;
   lead: Lead;
   stage: PipelineStage;
+  isDragging?: boolean;
   onViewLead?: () => void;
   onCreateAppointment?: () => void;
   onAdvanceStage?: () => void;
   onRegisterInteraction?: () => void;
+  onOpenChecklist?: () => void;
 }
 
 export function KanbanCard({
   entry,
   lead,
   stage,
+  isDragging = false,
   onViewLead,
   onCreateAppointment,
   onAdvanceStage,
-  onRegisterInteraction
+  onRegisterInteraction,
+  onOpenChecklist
 }: KanbanCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging: dragActive,
+  } = useSortable({ id: entry.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
   const getScoreBadgeClass = (classification: string) => {
     switch (classification) {
       case 'Alto':
@@ -57,7 +77,16 @@ export function KanbanCard({
   };
 
   return (
-    <Card className="kanban-card cursor-pointer">
+    <Card 
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        "kanban-card cursor-grab active:cursor-grabbing",
+        (dragActive || isDragging) && "opacity-50 rotate-2 scale-105 shadow-lg z-50"
+      )}
+    >
       <CardContent className="p-4">
         {/* Header do Card */}
         <div className="flex items-start justify-between mb-3">
@@ -144,17 +173,36 @@ export function KanbanCard({
           <Button
             size="sm"
             variant="ghost"
-            className="flex-1 text-xs"
-            onClick={onViewLead}
+            className="text-xs"
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewLead?.();
+            }}
           >
             Ver Lead
+          </Button>
+          
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenChecklist?.();
+            }}
+            title="Checklist"
+          >
+            <CheckSquare className="h-3 w-3" />
           </Button>
           
           {stage.gerar_agendamento_auto && (
             <Button
               size="sm"
               variant="ghost"
-              onClick={onCreateAppointment}
+              onClick={(e) => {
+                e.stopPropagation();
+                onCreateAppointment?.();
+              }}
+              title="Criar agendamento"
             >
               <Calendar className="h-3 w-3" />
             </Button>
@@ -164,19 +212,15 @@ export function KanbanCard({
             <Button
               size="sm"
               variant="ghost"
-              onClick={onRegisterInteraction}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRegisterInteraction?.();
+              }}
+              title="Registrar interação"
             >
               <MessageCircle className="h-3 w-3" />
             </Button>
           )}
-          
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onAdvanceStage}
-          >
-            <ArrowRight className="h-3 w-3" />
-          </Button>
         </div>
       </CardContent>
     </Card>

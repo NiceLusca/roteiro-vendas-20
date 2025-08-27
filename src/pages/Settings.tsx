@@ -53,7 +53,17 @@ export default function Settings() {
               Visualize o histórico de alterações no sistema
             </p>
             <div className="space-y-2">
-              <Button variant="outline" className="w-full">
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => {
+                  // Importar e abrir dialog de auditoria
+                  import('@/components/audit/AuditLogsDialog').then(({ AuditLogsDialog }) => {
+                    // Implementar abertura do dialog
+                    console.log('Abrir logs de auditoria');
+                  });
+                }}
+              >
                 Ver Logs de Auditoria
               </Button>
               <Button variant="outline" className="w-full">

@@ -221,6 +221,51 @@ export interface AuditLog {
   timestamp: Date;
 }
 
+// Adicionais tipos para múltiplos pipelines e funcionalidades avançadas
+export interface PipelineTransfer {
+  id: string;
+  lead_id: string;
+  de_pipeline_id: string;
+  para_pipeline_id: string;
+  de_etapa_id: string;
+  para_etapa_id: string;
+  motivo: string;
+  ator: string;
+  timestamp: Date;
+}
+
+export interface DealLostReason {
+  id: string;
+  deal_id: string;
+  motivo: ObjecaoPrincipal;
+  detalhes?: string;
+  timestamp: Date;
+}
+
+export interface Interaction {
+  id: string;
+  lead_id: string;
+  canal: CanalInteracao;
+  conteudo: string;
+  autor: string;
+  timestamp: Date;
+}
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: string;
+  valor: number; // Em BRL
+  quantidade: number;
+}
+
+// Tipos para drag and drop
+export interface DragDropResult {
+  fromStage: string;
+  toStage: string;
+  entryId: string;
+}
+
 // Tipos para métricas do Dashboard
 export interface DashboardMetrics {
   leads_por_status: Record<StatusGeral, number>;
