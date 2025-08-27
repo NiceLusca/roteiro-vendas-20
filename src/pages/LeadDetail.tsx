@@ -185,10 +185,13 @@ export default function LeadDetail() {
           <h1 className="text-2xl font-semibold">Editar Lead</h1>
         </div>
         <LeadForm 
-          onSave={() => {
-            setIsEditing(false);
+          lead={lead}
+          onSubmit={(updatedLead) => {
             // TODO: Implement save logic
+            console.log('Lead updated:', updatedLead);
+            setIsEditing(false);
           }}
+          onCancel={() => setIsEditing(false)}
         />
       </div>
     );

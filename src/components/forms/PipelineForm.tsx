@@ -19,19 +19,20 @@ const pipelineSchema = z.object({
 type PipelineFormData = z.infer<typeof pipelineSchema>;
 
 interface PipelineFormProps {
+  pipeline?: Partial<PipelineFormData> | null;
   onSave: (data: PipelineFormData) => void;
   onCancel: () => void;
 }
 
-export function PipelineForm({ onSave, onCancel }: PipelineFormProps) {
+export function PipelineForm({ pipeline, onSave, onCancel }: PipelineFormProps) {
   const form = useForm<PipelineFormData>({
     resolver: zodResolver(pipelineSchema),
     defaultValues: {
-      nome: '',
-      descricao: '',
-      objetivo: '',
-      primary: false,
-      ativo: true,
+      nome: pipeline?.nome || '',
+      descricao: pipeline?.descricao || '',
+      objetivo: pipeline?.objetivo || '',
+      primary: pipeline?.primary || false,
+      ativo: pipeline?.ativo ?? true,
     },
   });
 

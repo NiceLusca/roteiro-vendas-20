@@ -18,19 +18,20 @@ const stageSchema = z.object({
 type StageFormData = z.infer<typeof stageSchema>;
 
 interface StageFormProps {
+  stage?: Partial<StageFormData> | null;
   onSave: (data: StageFormData) => void;
   onCancel: () => void;
 }
 
-export function StageForm({ onSave, onCancel }: StageFormProps) {
+export function StageForm({ stage, onSave, onCancel }: StageFormProps) {
   const form = useForm<StageFormData>({
     resolver: zodResolver(stageSchema),
     defaultValues: {
-      nome: '',
-      ordem: 1,
-      prazo_em_dias: 3,
-      proximo_passo_label: '',
-      proximo_passo_tipo: 'Humano',
+      nome: stage?.nome || '',
+      ordem: stage?.ordem || 1,
+      prazo_em_dias: stage?.prazo_em_dias || 3,
+      proximo_passo_label: stage?.proximo_passo_label || '',
+      proximo_passo_tipo: stage?.proximo_passo_tipo || 'Humano',
     },
   });
 

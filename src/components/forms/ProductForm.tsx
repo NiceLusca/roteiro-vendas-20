@@ -18,19 +18,20 @@ const productSchema = z.object({
 type ProductFormData = z.infer<typeof productSchema>;
 
 interface ProductFormProps {
+  product?: Partial<ProductFormData> | null;
   onSave: (data: ProductFormData) => void;
   onCancel: () => void;
 }
 
-export function ProductForm({ onSave, onCancel }: ProductFormProps) {
+export function ProductForm({ product, onSave, onCancel }: ProductFormProps) {
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
-      nome: '',
-      tipo: 'Curso',
-      recorrencia: 'Nenhuma',
-      preco_padrao: 0,
-      ativo: true,
+      nome: product?.nome || '',
+      tipo: product?.tipo || 'Curso',
+      recorrencia: product?.recorrencia || 'Nenhuma',
+      preco_padrao: product?.preco_padrao || 0,
+      ativo: product?.ativo ?? true,
     },
   });
 
