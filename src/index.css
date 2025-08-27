@@ -1,0 +1,170 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CRM Design System - Cores profissionais para sistema de vendas */
+
+@layer base {
+  :root {
+    /* Base colors */
+    --background: 0 0% 100%;
+    --foreground: 215 25% 27%;
+
+    /* Cards e elementos */
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 27%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 27%;
+
+    /* Azul profissional como primário */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 217 91% 55%;
+
+    /* Secundário em tons de cinza */
+    --secondary: 214 13% 93%;
+    --secondary-foreground: 215 25% 27%;
+
+    /* Muted para textos auxiliares */
+    --muted: 214 13% 93%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Accent para elementos interativos */
+    --accent: 217 91% 95%;
+    --accent-foreground: 217 91% 60%;
+
+    /* Destrutivo para alertas */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Status colors para pipeline health */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 48 96% 53%;
+    --warning-foreground: 215 25% 27%;
+    --danger: 0 84% 60%;
+    --danger-foreground: 0 0% 100%;
+
+    /* Borders e inputs */
+    --border: 214 13% 90%;
+    --input: 214 13% 90%;
+    --ring: 217 91% 60%;
+
+    /* Gradients para elementos premium */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 70%));
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 46%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(214 13% 98%));
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(215 25% 27% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(215 25% 27% / 0.1), 0 2px 4px -2px hsl(215 25% 27% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(215 25% 27% / 0.1), 0 4px 6px -4px hsl(215 25% 27% / 0.1);
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 214 13% 95%;
+    --sidebar-foreground: 215 25% 27%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 91% 95%;
+    --sidebar-accent-foreground: 217 91% 60%;
+    --sidebar-border: 214 13% 90%;
+    --sidebar-ring: 217 91% 60%;
+  }
+
+  .dark {
+    /* Dark theme colors */
+    --background: 215 28% 17%;
+    --foreground: 213 31% 91%;
+
+    --card: 215 28% 17%;
+    --card-foreground: 213 31% 91%;
+
+    --popover: 215 28% 17%;
+    --popover-foreground: 213 31% 91%;
+
+    --primary: 217 91% 65%;
+    --primary-foreground: 215 28% 17%;
+    --primary-hover: 217 91% 60%;
+
+    --secondary: 215 25% 27%;
+    --secondary-foreground: 213 31% 91%;
+
+    --muted: 215 25% 27%;
+    --muted-foreground: 215 16% 65%;
+
+    --accent: 215 25% 27%;
+    --accent-foreground: 217 91% 65%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 48 96% 53%;
+    --warning-foreground: 215 28% 17%;
+    --danger: 0 84% 60%;
+    --danger-foreground: 0 0% 100%;
+
+    --border: 215 25% 27%;
+    --input: 215 25% 27%;
+    --ring: 217 91% 65%;
+
+    --sidebar-background: 215 28% 12%;
+    --sidebar-foreground: 213 31% 91%;
+    --sidebar-primary: 217 91% 65%;
+    --sidebar-primary-foreground: 215 28% 17%;
+    --sidebar-accent: 215 25% 27%;
+    --sidebar-accent-foreground: 213 31% 91%;
+    --sidebar-border: 215 25% 27%;
+    --sidebar-ring: 217 91% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+@layer components {
+  /* Pipeline health indicators */
+  .health-verde {
+    @apply bg-success text-success-foreground;
+  }
+  
+  .health-amarelo {
+    @apply bg-warning text-warning-foreground;
+  }
+  
+  .health-vermelho {
+    @apply bg-danger text-danger-foreground;
+  }
+
+  /* Lead score badges */
+  .score-alto {
+    @apply bg-success/10 text-success border border-success/20;
+  }
+  
+  .score-medio {
+    @apply bg-warning/10 text-warning-foreground border border-warning/20;
+  }
+  
+  .score-baixo {
+    @apply bg-muted text-muted-foreground border border-border;
+  }
+
+  /* CRM specific animations */
+  .kanban-card {
+    @apply transition-all duration-200 hover:shadow-md hover:-translate-y-1;
+  }
+  
+  .metric-card {
+    @apply bg-gradient-to-br from-card to-muted/5 border shadow-sm hover:shadow-md transition-all duration-200;
+  }
+}

@@ -1,0 +1,194 @@
+import React from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { mockLeads, mockProducts } from '@/data/mockData';
+import { Deal, StatusDeal } from '@/types/crm';
+
+const dealSchema = z.object({
+  lead_id: z.string().min(1, 'Lead é obrigatório'),
+  product_id: z.string().min(1, 'Produto é obrigatório'),
+  closer: z.string().min(1, 'Closer é obrigatório'),
+  valor_proposto: z.number().min(0, 'Valor deve ser positivo'),
+  status: z.enum(['Aberta', 'Ganha', 'Perdida'] as const),
+  fase_negociacao: z.string().optional(),
+});
+
+type DealFormData = z.infer<typeof dealSchema>;
+
+interface DealFormProps {
+  initialData?: Partial<Deal>;
+  onSave: (data: DealFormData) => void;
+  onCancel: () => void;
+}
+
+export function DealForm({ initialData, onSave, onCancel }: DealFormProps) {
+  const form = useForm<DealFormData>({
+    resolver: zodResolver(dealSchema),
+    defaultValues: {
+      lead_id: initialData?.lead_id || '',
+      product_id: initialData?.product_id || '',
+      closer: initialData?.closer || '',
+      valor_proposto: initialData?.valor_proposto || 0,
+      status: initialData?.status || 'Aberta',
+      fase_negociacao: initialData?.fase_negociacao || '',
+    },
+  });
+
+  const onSubmit = (data: DealFormData) => {
+    onSave(data);
+  };
+
+  const statusOptions: { value: StatusDeal; label: string }[] = [
+    { value: 'Aberta', label: 'Aberta' },
+    { value: 'Ganha', label: 'Ganha' },
+    { value: 'Perdida', label: 'Perdida' },
+  ];
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="lead_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Lead *</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um lead" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {mockLeads.map((lead) => (
+                    <SelectItem key={lead.id} value={lead.id}>
+                      {lead.nome} - {lead.whatsapp}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="product_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Produto *</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um produto" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {mockProducts.filter(p => p.ativo).map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.nome} - R$ {product.preco_padrao.toFixed(2)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="closer"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Closer *</FormLabel>
+              <FormControl>
+                <Input placeholder="Nome do closer responsável" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="valor_proposto"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Valor Proposto (R$) *</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  {...field}
+                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Status</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {statusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="fase_negociacao"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Fase da Negociação</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Descreva a fase atual da negociação..."
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-end space-x-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+          <Button type="submit">
+            Salvar
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
