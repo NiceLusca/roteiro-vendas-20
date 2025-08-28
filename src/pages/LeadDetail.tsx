@@ -25,6 +25,9 @@ import { ChecklistDialog } from '@/components/pipeline/ChecklistDialog';
 import { UnifiedTimeline } from '@/components/timeline/UnifiedTimeline';
 import { DealLossDialog } from '@/components/deals/DealLossDialog';
 import { OrderForm } from '@/components/orders/OrderForm';
+import { useFormAudit } from '@/hooks/useFormAudit';
+import { useLeadData } from '@/hooks/useLeadData';
+import { useMultiPipeline } from '@/hooks/useMultiPipeline';
 import { useAudit } from '@/contexts/AuditContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -56,6 +59,8 @@ export default function LeadDetail() {
 
   const { logChange } = useAudit();
   const { toast } = useToast();
+  const { saveLead } = useLeadData();
+  const { transferPipeline, inscribePipeline, archivePipelineEntry } = useMultiPipeline();
 
   const lead = mockLeads.find(l => l.id === id);
   const leadEntries = mockLeadPipelineEntries.filter(e => e.lead_id === id && e.status_inscricao === 'Ativo');
@@ -140,35 +145,11 @@ export default function LeadDetail() {
 
   // Event handlers
   const handleTransferPipeline = (transfer: PipelineTransferRequest) => {
-    logChange({
-      entidade: 'LeadPipelineEntry',
-      entidade_id: transfer.leadId,
-      alteracao: [
-        { campo: 'pipeline_transfer', de: transfer.fromPipelineId, para: transfer.toPipelineId },
-        { campo: 'motivo_transferencia', de: '', para: transfer.motivo }
-      ]
-    });
-
-    toast({
-      title: 'Lead transferido',
-      description: 'Lead transferido com sucesso para o novo pipeline'
-    });
+    transferPipeline(transfer);
   };
 
   const handleInscribePipeline = (pipelineId: string, stageId: string) => {
-    logChange({
-      entidade: 'LeadPipelineEntry',
-      entidade_id: `new-entry-${Date.now()}`,
-      alteracao: [
-        { campo: 'pipeline_inscription', de: '', para: pipelineId },
-        { campo: 'initial_stage', de: '', para: stageId }
-      ]
-    });
-
-    toast({
-      title: 'Lead inscrito',
-      description: 'Lead inscrito com sucesso no pipeline'
-    });
+    inscribePipeline(id!, pipelineId, stageId);
   };
 
   const handleDealLoss = (dealLoss: { deal_id: string; motivo: string; detalhes?: string }) => {
@@ -333,14 +314,7 @@ export default function LeadDetail() {
                         <Button 
                           size="sm" 
                           variant="outline"
-                          onClick={() => {
-                            logChange({
-                              entidade: 'LeadPipelineEntry',
-                              entidade_id: entry.id,
-                              alteracao: [{ campo: 'status_inscricao', de: 'Ativo', para: 'Arquivado' }]
-                            });
-                            toast({ title: 'Pipeline arquivado' });
-                          }}
+                          onClick={() => archivePipelineEntry(entry.id)}
                         >
                           <Archive className="h-4 w-4 mr-2" />
                           Arquivar
@@ -421,8 +395,7 @@ export default function LeadDetail() {
         <LeadForm 
           lead={lead}
           onSubmit={(updatedLead) => {
-            // TODO: Implement save logic
-            console.log('Lead updated:', updatedLead);
+            saveLead(updatedLead);
             setIsEditing(false);
           }}
           onCancel={() => setIsEditing(false)}

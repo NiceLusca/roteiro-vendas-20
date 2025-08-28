@@ -9,6 +9,11 @@ import { DragDropKanban } from './DragDropKanban';
 import { ChecklistDialog } from '@/components/pipeline/ChecklistDialog';
 import { DealLossDialog } from '@/components/deals/DealLossDialog';
 import { AuditLogsDialog } from '@/components/audit/AuditLogsDialog';
+import { AppointmentDialog } from '@/components/appointment/AppointmentDialog';
+import { InteractionDialog } from '@/components/interaction/InteractionDialog';
+import { ChecklistValidation } from '@/components/checklist/ChecklistValidation';
+import { usePipelineAutomation } from '@/hooks/usePipelineAutomation';
+import { useValidatedAdvancement } from '@/hooks/useValidatedAdvancement';
 import { 
   mockPipelines, 
   mockPipelineStages, 
@@ -49,9 +54,21 @@ export function EnhancedPipelineKanban() {
     stage?: PipelineStage;
   }>({ open: false });
   const [auditDialog, setAuditDialog] = useState(false);
+  const [appointmentDialog, setAppointmentDialog] = useState<{
+    open: boolean;
+    leadId?: string;
+    leadName?: string;
+  }>({ open: false });
+  const [interactionDialog, setInteractionDialog] = useState<{
+    open: boolean;
+    leadId?: string;
+    leadName?: string;
+  }>({ open: false });
 
   const { logChange } = useAudit();
   const { toast } = useToast();
+  const { processStageAdvancement, checkSLAViolations } = usePipelineAutomation();
+  const { attemptStageAdvancement } = useValidatedAdvancement();
 
   // Buscar stages ordenadas
   const stages = mockPipelineStages
@@ -160,8 +177,14 @@ export function EnhancedPipelineKanban() {
   };
 
   const handleCreateAppointment = (leadId: string) => {
-    console.log('Criar agendamento para lead:', leadId);
-    // TODO: Abrir modal de agendamento
+    const lead = mockLeads.find(l => l.id === leadId);
+    if (lead) {
+      setAppointmentDialog({
+        open: true,
+        leadId,
+        leadName: lead.nome
+      });
+    }
   };
 
   const handleAdvanceStage = (entryId: string) => {
@@ -169,6 +192,19 @@ export function EnhancedPipelineKanban() {
     const stage = stages.find(s => s.id === entry?.etapa_atual_id);
     
     if (entry && stage) {
+      // Check checklist validation
+      const checklistItems = mockChecklistItems.filter(item => item.stage_id === stage.id);
+      const validation = ChecklistValidation.validateStageAdvancement(entry as LeadPipelineEntry, checklistItems);
+      
+      if (!validation.valid) {
+        toast({
+          title: 'Não é possível avançar',
+          description: validation.errors[0],
+          variant: 'destructive'
+        });
+        return;
+      }
+
       setChecklistDialog({
         open: true,
         entry: entry as LeadPipelineEntry & { lead: Lead },
@@ -178,8 +214,14 @@ export function EnhancedPipelineKanban() {
   };
 
   const handleRegisterInteraction = (leadId: string) => {
-    console.log('Registrar interação:', leadId);
-    // TODO: Abrir modal de interação
+    const lead = mockLeads.find(l => l.id === leadId);
+    if (lead) {
+      setInteractionDialog({
+        open: true,
+        leadId,
+        leadName: lead.nome
+      });
+    }
   };
 
   const handleOpenChecklist = (entryId: string) => {
@@ -369,9 +411,28 @@ export function EnhancedPipelineKanban() {
           checklistItems={mockChecklistItems}
           onUpdateChecklist={handleUpdateChecklist}
           onUpdateNote={handleUpdateNote}
-          onAdvanceStage={() => {
-            console.log('Avançar etapa do checklist');
-            setChecklistDialog({ open: false });
+          onAdvanceStage={async () => {
+            if (checklistDialog.entry && checklistDialog.stage) {
+              const result = await attemptStageAdvancement(
+                checklistDialog.entry,
+                checklistDialog.stage,
+                mockChecklistItems.filter(item => item.stage_id === checklistDialog.stage!.id)
+              );
+              
+              if (result.success) {
+                toast({ 
+                  title: 'Sucesso', 
+                  description: result.message 
+                });
+                setChecklistDialog({ open: false });
+              } else {
+                toast({ 
+                  title: 'Não foi possível avançar', 
+                  description: result.message,
+                  variant: 'destructive'
+                });
+              }
+            }
           }}
         />
       )}
@@ -379,6 +440,36 @@ export function EnhancedPipelineKanban() {
       <AuditLogsDialog
         open={auditDialog}
         onOpenChange={setAuditDialog}
+      />
+
+      <AppointmentDialog
+        open={appointmentDialog.open}
+        onOpenChange={(open) => setAppointmentDialog({ open })}
+        leadId={appointmentDialog.leadId || ''}
+        leadName={appointmentDialog.leadName || ''}
+        onSave={(appointment) => {
+          console.log('Agendamento criado:', appointment);
+          toast({
+            title: 'Agendamento criado',
+            description: `Sessão agendada para ${appointmentDialog.leadName}`,
+          });
+          setAppointmentDialog({ open: false });
+        }}
+      />
+
+      <InteractionDialog
+        open={interactionDialog.open}
+        onOpenChange={(open) => setInteractionDialog({ open })}
+        leadId={interactionDialog.leadId || ''}
+        leadName={interactionDialog.leadName || ''}
+        onSave={(interaction) => {
+          console.log('Interação registrada:', interaction);
+          toast({
+            title: 'Interação registrada',
+            description: `Interação registrada para ${interactionDialog.leadName}`,
+          });
+          setInteractionDialog({ open: false });
+        }}
       />
     </div>
   );

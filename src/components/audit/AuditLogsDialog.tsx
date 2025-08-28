@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { AuditLog } from '@/types/crm';
-import { mockAuditLogs } from '@/data/mockAuditData';
+import { useAudit } from '@/contexts/AuditContext';
 import { Calendar, Filter, Download, User, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -32,9 +32,17 @@ export function AuditLogsDialog({
   const [searchTerm, setSearchTerm] = useState('');
   const [entityTypeFilter, setEntityTypeFilter] = useState<string>('all');
   const [actorFilter, setActorFilter] = useState<string>('all');
+  
+  const { getAuditLogs } = useAudit();
+  
+  // Get logs based on filters
+  // TODO: Implement getAllLogs for viewing all system logs
+  const allLogs = entityFilter && entityIdFilter 
+    ? getAuditLogs(entityFilter, entityIdFilter)
+    : []; // Show empty until we implement system-wide logs
 
   // Filtrar logs
-  const filteredLogs = mockAuditLogs.filter(log => {
+  const filteredLogs = allLogs.filter(log => {
     if (entityFilter && log.entidade !== entityFilter) return false;
     if (entityIdFilter && log.entidade_id !== entityIdFilter) return false;
     if (entityTypeFilter !== 'all' && log.entidade !== entityTypeFilter) return false;
@@ -44,8 +52,8 @@ export function AuditLogsDialog({
   });
 
   // Obter entidades e atores únicos
-  const entities = Array.from(new Set(mockAuditLogs.map(log => log.entidade)));
-  const actors = Array.from(new Set(mockAuditLogs.map(log => log.ator)));
+  const entities = Array.from(new Set(allLogs.map(log => log.entidade)));
+  const actors = Array.from(new Set(allLogs.map(log => log.ator)));
 
   const handleExport = () => {
     console.log('Exportar logs de auditoria');

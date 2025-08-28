@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LeadForm } from '@/components/forms/LeadForm';
 import { mockLeads } from '@/data/mockData';
+import { useLeadData } from '@/hooks/useLeadData';
 import { Lead } from '@/types/crm';
 import { formatWhatsApp, formatDateTime } from '@/utils/formatters';
 import { 
@@ -27,6 +28,8 @@ export default function Leads() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterScore, setFilterScore] = useState<string>('all');
+  
+  const { saveLead } = useLeadData();
 
   // Filtrar leads
   const filteredLeads = leads.filter(lead => {
@@ -51,8 +54,7 @@ export default function Leads() {
   };
 
   const handleSubmitLead = (leadData: Partial<Lead>) => {
-    console.log('Salvar lead:', leadData);
-    // TODO: Implementar salvamento
+    saveLead(leadData);
     setShowForm(false);
     setEditingLead(undefined);
   };
