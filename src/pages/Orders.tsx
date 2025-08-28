@@ -7,9 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Search, DollarSign, ShoppingBag, CreditCard, RefreshCw } from 'lucide-react';
-import { mockLeads } from '@/data/mockData';
+import { mockLeads, mockProducts } from '@/data/mockData';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { StatusPedido, Order } from '@/types/crm';
+import { OrderForm } from '@/components/orders/OrderForm';
+import { RefundDialog } from '@/components/orders/RefundDialog';
+import { useAudit } from '@/contexts/AuditContext';
+import { useToast } from '@/hooks/use-toast';
 
 // Mock orders data
 const mockOrders: Order[] = [
@@ -40,6 +44,14 @@ export default function Orders() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [closerFilter, setCloserFilter] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showOrderForm, setShowOrderForm] = useState(false);
+  const [refundDialog, setRefundDialog] = useState<{
+    open: boolean;
+    order?: Order;
+  }>({ open: false });
+
+  const { logChange } = useAudit();
+  const { toast } = useToast();
 
   const filteredOrders = mockOrders.filter(order => {
     const lead = mockLeads.find(l => l.id === order.lead_id);
@@ -84,7 +96,7 @@ export default function Orders() {
           <h1 className="text-2xl font-semibold">Vendas</h1>
           <p className="text-muted-foreground">Gerencie pedidos e receitas</p>
         </div>
-        <Button>
+        <Button onClick={() => setShowOrderForm(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Novo Pedido
         </Button>

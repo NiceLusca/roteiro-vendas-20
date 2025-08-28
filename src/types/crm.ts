@@ -34,6 +34,10 @@ export interface Lead {
   lead_score: number; // Calculado automaticamente
   lead_score_classification: LeadScore; // Alto (≥60), Médio (30-59), Baixo (<30)
   
+  // Resultado última sessão
+  resultado_sessao_ultimo?: ResultadoSessao;
+  resultado_obs_ultima_sessao?: string;
+  
   created_at: Date;
   updated_at: Date;
 }
@@ -206,6 +210,7 @@ export interface Refund {
   valor: number; // Em BRL
   motivo: string;
   data: Date;
+  parcial: boolean; // Se é reembolso parcial ou total
 }
 
 export interface AuditLog {
@@ -257,6 +262,7 @@ export interface OrderItem {
   product_id: string;
   valor: number; // Em BRL
   quantidade: number;
+  recorrencia?: 'Nenhuma' | 'Mensal' | 'Trimestral' | 'Anual'; // Herdada do produto, mas editável
 }
 
 // Tipos para drag and drop
@@ -294,4 +300,25 @@ export interface ProximoPasso {
   proximo_passo_tipo: ProximoPassoTipo;
   dias_em_atraso: number;
   saude_etapa: SaudeEtapa;
+}
+
+// Tipos para timeline unificada
+export interface TimelineEvent {
+  id: string;
+  type: 'interaction' | 'appointment' | 'pipeline' | 'deal' | 'order' | 'audit';
+  title: string;
+  description: string;
+  timestamp: Date;
+  icon: any; // LucideIcon
+  entityId?: string;
+  details?: Record<string, any>;
+}
+
+// Tipos para transferência de pipeline
+export interface PipelineTransferRequest {
+  leadId: string;
+  fromPipelineId: string;
+  toPipelineId: string;
+  toStageId: string;
+  motivo: string;
 }

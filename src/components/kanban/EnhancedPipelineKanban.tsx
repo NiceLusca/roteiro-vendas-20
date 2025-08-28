@@ -156,8 +156,7 @@ export function EnhancedPipelineKanban() {
   };
 
   const handleViewLead = (leadId: string) => {
-    console.log('Ver lead:', leadId);
-    // TODO: Navegar para detalhes do lead
+    window.open(`/leads/${leadId}`, '_blank');
   };
 
   const handleCreateAppointment = (leadId: string) => {
