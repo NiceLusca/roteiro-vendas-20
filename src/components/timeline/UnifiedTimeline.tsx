@@ -170,18 +170,18 @@ export function UnifiedTimeline({
     return true;
   });
 
-  const getEventBadgeColor = (type: string) => {
+const getEventBadgeColor = (type: string) => {
     switch (type) {
       case 'appointment':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+        return 'bg-primary/10 text-primary';
       case 'deal':
-        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+        return 'bg-success/10 text-success';
       case 'interaction':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
+        return 'bg-purple-500/10 text-purple-600 dark:text-purple-400';
       case 'pipeline':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
+        return 'bg-warning/10 text-warning';
       case 'audit':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+        return 'bg-muted/50 text-muted-foreground';
       default:
         return 'bg-muted text-muted-foreground';
     }

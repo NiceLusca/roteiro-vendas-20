@@ -1,6 +1,11 @@
 // Dados mock para desenvolvimento e testes do CRM
 
-import { Lead, Pipeline, PipelineStage, LeadPipelineEntry, Appointment, Deal, Product, DashboardMetrics, StageChecklistItem } from '@/types/crm';
+import { Lead, Pipeline, PipelineStage, LeadPipelineEntry, Appointment, Deal, Product, DashboardMetrics, StageChecklistItem, Interaction, PipelineEvent, AuditLog, Order, OrderItem } from '@/types/crm';
+
+// Importing additional mock data
+export { mockInteractions } from './mockInteractions';
+export { mockPipelineEvents } from './mockPipelineEvents';
+export { mockAuditLogs } from './mockAuditData';
 
 // Seeds - Produtos iniciais
 export const mockProducts: Product[] = [
@@ -498,7 +503,50 @@ export const mockDeals: Deal[] = [
   }
 ];
 
-// Métricas do Dashboard
+// Orders
+export const mockOrders: Order[] = [
+  {
+    id: 'order-1',
+    lead_id: 'lead-5',
+    closer: 'Maria Costa',
+    total: 997.00,
+    forma_pagamento: 'Cartão de Crédito',
+    status: 'Pago',
+    data_venda: new Date('2024-01-18T14:30:00'),
+    observacao: 'Cliente pagou à vista'
+  },
+  {
+    id: 'order-2',
+    lead_id: 'lead-1',
+    closer: 'João Santos',
+    total: 2500.00,
+    forma_pagamento: 'PIX',
+    status: 'Pendente',
+    data_venda: new Date('2024-01-26T10:00:00')
+  }
+];
+
+// Order Items
+export const mockOrderItems: OrderItem[] = [
+  {
+    id: 'item-1',
+    order_id: 'order-1',
+    product_id: 'prod-2',
+    valor: 997.00,
+    quantidade: 1,
+    recorrencia: 'Nenhuma'
+  },
+  {
+    id: 'item-2',
+    order_id: 'order-2',
+    product_id: 'prod-1',
+    valor: 2500.00,
+    quantidade: 1,
+    recorrencia: 'Mensal'
+  }
+];
+
+// Dashboard metrics
 export const mockDashboardMetrics: DashboardMetrics = {
   leads_por_status: {
     'Ativo': 4,

@@ -4,54 +4,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Search, DollarSign, ShoppingBag, CreditCard, RefreshCw } from 'lucide-react';
-import { mockLeads, mockProducts } from '@/data/mockData';
-import { formatCurrency, formatDate } from '@/utils/formatters';
-import { StatusPedido, Order } from '@/types/crm';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Plus, Search, DollarSign, ShoppingCart, TrendingUp } from 'lucide-react';
+import { mockOrders, mockOrderItems, mockLeads, mockProducts } from '@/data/mockData';
 import { OrderForm } from '@/components/orders/OrderForm';
 import { RefundDialog } from '@/components/orders/RefundDialog';
-import { useAudit } from '@/contexts/AuditContext';
-import { useToast } from '@/hooks/use-toast';
+import { formatCurrency, formatDate } from '@/utils/formatters';
+import { Order, StatusPedido } from '@/types/crm';
 
-// Mock orders data
-const mockOrders: Order[] = [
-  {
-    id: 'order-1',
-    lead_id: 'lead-5',
-    closer: 'Maria Costa',
-    total: 997.00,
-    forma_pagamento: 'Cartão de Crédito',
-    data_venda: new Date('2024-01-18T14:30:00'),
-    status: 'Pago',
-    observacao: 'Pagamento aprovado no Stripe'
-  },
-  {
-    id: 'order-2',
-    lead_id: 'lead-1',
-    closer: 'João Santos',
-    total: 2500.00,
-    forma_pagamento: 'PIX',
-    data_venda: new Date('2024-01-22T10:15:00'),
-    status: 'Pendente',
-    observacao: 'Aguardando confirmação do PIX'
-  }
-];
+type StatusOrder = StatusPedido;
+import { useLeadData } from '@/hooks/useLeadData';
 
 export default function Orders() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [closerFilter, setCloserFilter] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [showOrderForm, setShowOrderForm] = useState(false);
-  const [refundDialog, setRefundDialog] = useState<{
-    open: boolean;
-    order?: Order;
-  }>({ open: false });
-
-  const { logChange } = useAudit();
-  const { toast } = useToast();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [refundDialogOrder, setRefundDialogOrder] = useState<Order | null>(null);
+  
+  const { saveOrder } = useLeadData();
 
   const filteredOrders = mockOrders.filter(order => {
     const lead = mockLeads.find(l => l.id === order.lead_id);
@@ -66,40 +39,59 @@ export default function Orders() {
 
   const uniqueClosers = [...new Set(mockOrders.map(o => o.closer).filter(Boolean))];
 
-  const getStatusBadgeClass = (status: StatusPedido) => {
+  const getStatusBadgeClass = (status: StatusOrder) => {
     switch (status) {
       case 'Pago': return 'bg-success text-success-foreground';
       case 'Pendente': return 'bg-warning text-warning-foreground';
-      case 'Reembolsado': return 'bg-blue-100 text-blue-800';
-      case 'Estornado': return 'bg-destructive text-destructive-foreground';
+      case 'Reembolsado': return 'bg-destructive text-destructive-foreground';
+      case 'Reembolsado': return 'bg-muted text-muted-foreground';
       default: return 'bg-muted text-muted-foreground';
     }
   };
 
   const calculateMetrics = () => {
     const total = mockOrders.length;
-    const pago = mockOrders.filter(o => o.status === 'Pago').length;
-    const pendente = mockOrders.filter(o => o.status === 'Pendente').length;
     const valorTotal = mockOrders.reduce((sum, o) => sum + o.total, 0);
-    const valorPago = mockOrders.filter(o => o.status === 'Pago').reduce((sum, o) => sum + o.total, 0);
     const ticketMedio = total > 0 ? valorTotal / total : 0;
+    const pagos = mockOrders.filter(o => o.status === 'Pago').length;
 
-    return { total, pago, pendente, valorTotal, valorPago, ticketMedio };
+    return { total, valorTotal, ticketMedio, pagos };
   };
 
   const metrics = calculateMetrics();
+
+  const handleSaveOrder = (orderData: any, items: any[]) => {
+    saveOrder(orderData);
+    setIsCreateDialogOpen(false);
+  };
 
   return (
     <div className="container mx-auto px-6 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Vendas</h1>
-          <p className="text-muted-foreground">Gerencie pedidos e receitas</p>
+          <p className="text-muted-foreground">Gerencie seus pedidos e vendas</p>
         </div>
-        <Button onClick={() => setShowOrderForm(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Pedido
-        </Button>
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Pedido
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Novo Pedido</DialogTitle>
+            </DialogHeader>
+            <OrderForm
+              leadId="lead-1"
+              leadName="Cliente Exemplo"
+              products={mockProducts}
+              onSave={handleSaveOrder}
+              onCancel={() => setIsCreateDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Metrics */}
@@ -107,9 +99,9 @@ export default function Orders() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <ShoppingBag className="h-8 w-8 text-primary" />
+              <ShoppingCart className="h-8 w-8 text-primary" />
               <div className="ml-3">
-                <p className="text-sm font-medium text-muted-foreground">Total de Pedidos</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Pedidos</p>
                 <p className="text-2xl font-bold">{metrics.total}</p>
               </div>
             </div>
@@ -119,7 +111,7 @@ export default function Orders() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <DollarSign className="h-8 w-8 text-success" />
+              <DollarSign className="h-8 w-8 text-primary" />
               <div className="ml-3">
                 <p className="text-sm font-medium text-muted-foreground">Receita Total</p>
                 <p className="text-2xl font-bold">{formatCurrency(metrics.valorTotal)}</p>
@@ -131,10 +123,10 @@ export default function Orders() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <CreditCard className="h-8 w-8 text-success" />
+              <TrendingUp className="h-8 w-8 text-success" />
               <div className="ml-3">
-                <p className="text-sm font-medium text-muted-foreground">Pedidos Pagos</p>
-                <p className="text-2xl font-bold">{metrics.pago}</p>
+                <p className="text-sm font-medium text-muted-foreground">Ticket Médio</p>
+                <p className="text-2xl font-bold">{formatCurrency(metrics.ticketMedio)}</p>
               </div>
             </div>
           </CardContent>
@@ -143,10 +135,10 @@ export default function Orders() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <DollarSign className="h-8 w-8 text-primary" />
+              <TrendingUp className="h-8 w-8 text-success" />
               <div className="ml-3">
-                <p className="text-sm font-medium text-muted-foreground">Ticket Médio</p>
-                <p className="text-2xl font-bold">{formatCurrency(metrics.ticketMedio)}</p>
+                <p className="text-sm font-medium text-muted-foreground">Pedidos Pagos</p>
+                <p className="text-2xl font-bold">{metrics.pagos}</p>
               </div>
             </div>
           </CardContent>
@@ -176,8 +168,8 @@ export default function Orders() {
                 <SelectItem value="all">Todos os Status</SelectItem>
                 <SelectItem value="Pago">Pago</SelectItem>
                 <SelectItem value="Pendente">Pendente</SelectItem>
+                
                 <SelectItem value="Reembolsado">Reembolsado</SelectItem>
-                <SelectItem value="Estornado">Estornado</SelectItem>
               </SelectContent>
             </Select>
             <Select value={closerFilter} onValueChange={setCloserFilter}>
@@ -203,59 +195,62 @@ export default function Orders() {
           <CardTitle>Pedidos</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Pagamento</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Closer</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredOrders.map((order) => {
-                const lead = mockLeads.find(l => l.id === order.lead_id);
-                return (
-                  <TableRow 
-                    key={order.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => setSelectedOrder(order)}
-                  >
-                    <TableCell className="font-medium">{lead?.nome}</TableCell>
-                    <TableCell className="font-semibold text-primary">
-                      {formatCurrency(order.total)}
-                    </TableCell>
-                    <TableCell>{order.forma_pagamento}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusBadgeClass(order.status)}>
-                        {order.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{order.closer}</TableCell>
-                    <TableCell>{formatDate(order.data_venda)}</TableCell>
-                    <TableCell>
-                      <div className="flex space-x-1">
-                        {order.status === 'Pago' && (
-                          <Button size="sm" variant="outline">
-                            <RefreshCw className="w-3 h-3 mr-1" />
-                            Reembolsar
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-          
-          {filteredOrders.length === 0 && (
+          {filteredOrders.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">Nenhum pedido encontrado</p>
             </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Valor</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Closer</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredOrders.map((order) => {
+                  const lead = mockLeads.find(l => l.id === order.lead_id);
+                  
+                  return (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{lead?.nome}</TableCell>
+                      <TableCell>{formatCurrency(order.total)}</TableCell>
+                      <TableCell>
+                        <Badge className={getStatusBadgeClass(order.status)}>
+                          {order.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{order.closer}</TableCell>
+                      <TableCell>{formatDate(order.data_venda)}</TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSelectedOrder(order)}
+                          >
+                            Ver Detalhes
+                          </Button>
+                          {order.status === 'Pago' && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => setRefundDialogOrder(order)}
+                            >
+                              Reembolsar
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -276,14 +271,10 @@ export default function Orders() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Valor Total</p>
+                  <p className="text-sm font-medium text-muted-foreground">Total</p>
                   <p className="text-sm font-semibold text-primary">
                     {formatCurrency(selectedOrder.total)}
                   </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Forma de Pagamento</p>
-                  <p className="text-sm">{selectedOrder.forma_pagamento}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Status</p>
@@ -299,6 +290,10 @@ export default function Orders() {
                   <p className="text-sm font-medium text-muted-foreground">Data da Venda</p>
                   <p className="text-sm">{formatDate(selectedOrder.data_venda)}</p>
                 </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Forma de Pagamento</p>
+                  <p className="text-sm">{selectedOrder.forma_pagamento}</p>
+                </div>
               </div>
               
               {selectedOrder.observacao && (
@@ -308,23 +303,42 @@ export default function Orders() {
                 </div>
               )}
 
-              <div className="flex space-x-2">
-                <Button size="sm">Editar</Button>
-                {selectedOrder.status === 'Pago' && (
-                  <Button size="sm" variant="destructive">
-                    <RefreshCw className="w-3 h-3 mr-1" />
-                    Reembolsar
-                  </Button>
-                )}
-                {selectedOrder.status === 'Pendente' && (
-                  <Button size="sm" variant="outline">
-                    Marcar como Pago
-                  </Button>
-                )}
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-2">Itens do Pedido</h4>
+                {mockOrderItems.filter(item => item.order_id === selectedOrder.id).map((item) => {
+                  const product = mockProducts.find(p => p.id === item.product_id);
+                  return (
+                    <div key={item.id} className="flex justify-between items-center py-2 border-b">
+                      <div>
+                        <p className="text-sm font-medium">{product?.nome}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Qtd: {item.quantidade} × {formatCurrency(item.valor)}
+                          {item.recorrencia !== 'Nenhuma' && ` (${item.recorrencia})`}
+                        </p>
+                      </div>
+                      <p className="text-sm font-medium">
+                        {formatCurrency(item.valor * item.quantidade)}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Refund Dialog */}
+      {refundDialogOrder && (
+        <RefundDialog
+          open={!!refundDialogOrder}
+          onOpenChange={() => setRefundDialogOrder(null)}
+          order={refundDialogOrder}
+          onConfirm={(refund) => {
+            console.log('Processing refund:', refund);
+            setRefundDialogOrder(null);
+          }}
+        />
       )}
     </div>
   );

@@ -14,7 +14,10 @@ import {
   mockChecklistItems, 
   mockAppointments, 
   mockDeals,
-  mockProducts
+  mockProducts,
+  mockInteractions,
+  mockPipelineEvents,
+  mockAuditLogs
 } from '@/data/mockData';
 import { LeadForm } from '@/components/forms/LeadForm';
 import { formatWhatsApp, formatCurrency, formatDate } from '@/utils/formatters';
@@ -57,7 +60,7 @@ export default function LeadDetail() {
   
   const [showOrderForm, setShowOrderForm] = useState(false);
 
-  const { logChange } = useAudit();
+  const { logChange, getAuditLogs } = useAudit();
   const { toast } = useToast();
   const { saveLead } = useLeadData();
   const { transferPipeline, inscribePipeline, archivePipelineEntry } = useMultiPipeline();
@@ -67,10 +70,10 @@ export default function LeadDetail() {
   const leadAppointments = mockAppointments.filter(a => a.lead_id === id);
   const leadDeals = mockDeals.filter(d => d.lead_id === id);
   
-  // Mock data para timeline (em produção viriam de APIs)
-  const mockInteractions: Interaction[] = [];
-  const mockPipelineEvents: PipelineEvent[] = [];
-  const mockAuditLogs: AuditLog[] = [];
+  // Get real data for timeline
+  const leadInteractions = mockInteractions.filter(int => int.lead_id === id);
+  const leadPipelineEvents = mockPipelineEvents.filter(event => event.entidade_id === id);
+  const leadAuditLogs = getAuditLogs('Lead', id!);
 
   if (!lead) {
     return (

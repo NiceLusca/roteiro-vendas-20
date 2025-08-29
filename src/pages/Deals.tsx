@@ -8,8 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Search, Filter, DollarSign, User, Calendar, TrendingUp } from 'lucide-react';
 import { mockDeals, mockLeads, mockProducts } from '@/data/mockData';
 import { DealForm } from '@/components/forms/DealForm';
+import { DealLossDialog } from '@/components/deals/DealLossDialog';
 import { formatCurrency, formatDate } from '@/utils/formatters';
-import { Deal, StatusDeal } from '@/types/crm';
+import { Deal, StatusDeal, DealLostReason } from '@/types/crm';
+import { useLeadData } from '@/hooks/useLeadData';
 
 export default function Deals() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,6 +19,8 @@ export default function Deals() {
   const [closerFilter, setCloserFilter] = useState<string>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [lossDialogDeal, setLossDialogDeal] = useState<Deal | null>(null);
+  const { saveDeal } = useLeadData();
 
   const filteredDeals = mockDeals.filter(deal => {
     const lead = mockLeads.find(l => l.id === deal.lead_id);
@@ -286,14 +290,48 @@ export default function Deals() {
                 <Button size="sm">Editar</Button>
                 {selectedDeal.status === 'Aberta' && (
                   <>
-                    <Button size="sm" variant="outline">Marcar como Ganha</Button>
-                    <Button size="sm" variant="destructive">Marcar como Perdida</Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        saveDeal({ ...selectedDeal, status: 'Ganha' });
+                        setSelectedDeal(null);
+                      }}
+                    >
+                      Marcar como Ganha
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      onClick={() => {
+                        setLossDialogDeal(selectedDeal);
+                        setSelectedDeal(null);
+                      }}
+                    >
+                      Marcar como Perdida
+                    </Button>
                   </>
                 )}
               </div>
             </div>
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Deal Loss Dialog */}
+      {lossDialogDeal && (
+        <DealLossDialog
+          open={!!lossDialogDeal}
+          onOpenChange={() => setLossDialogDeal(null)}
+          dealId={lossDialogDeal.id}
+          onConfirm={(lossReason: Omit<DealLostReason, 'id' | 'timestamp'>) => {
+            // Update deal status and save loss reason
+            saveDeal({ ...lossDialogDeal, status: 'Perdida' });
+            // TODO: Save loss reason to database
+            console.log('Deal lost reason:', lossReason);
+            setLossDialogDeal(null);
+          }}
+        />
       )}
     </div>
   );
