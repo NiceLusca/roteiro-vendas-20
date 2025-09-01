@@ -6,19 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Phone, Mail, MessageSquare, Calendar, DollarSign, FileText, Clock, CheckCircle2, AlertCircle, Plus, GitBranch, Archive, Pencil } from 'lucide-react';
-import { 
-  mockLeads, 
-  mockLeadPipelineEntries, 
-  mockPipelineStages, 
-  mockPipelines, 
-  mockChecklistItems, 
-  mockAppointments, 
-  mockDeals,
-  mockProducts,
-  mockInteractions,
-  mockPipelineEvents,
-  mockAuditLogs
-} from '@/data/mockData';
+import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { LeadForm } from '@/components/forms/LeadForm';
 import { formatWhatsApp, formatCurrency, formatDate } from '@/utils/formatters';
 import { Lead, LeadPipelineEntry, PipelineStage, StageChecklistItem, Appointment, Deal, PipelineTransferRequest, Interaction, PipelineEvent, AuditLog } from '@/types/crm';
@@ -38,6 +26,19 @@ export default function LeadDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
+  
+  const { leads } = useSupabaseLeads();
+  
+  // Temporary mock data
+  const mockLeadPipelineEntries: any[] = [];
+  const mockPipelineStages: any[] = [];
+  const mockPipelines: any[] = [];
+  const mockChecklistItems: any[] = [];
+  const mockAppointments: any[] = [];
+  const mockDeals: any[] = [];
+  const mockInteractions: any[] = [];
+  const mockPipelineEvents: any[] = [];
+  const mockProducts: any[] = [];
   
   // Dialog states
   const [transferDialog, setTransferDialog] = useState<{
@@ -65,7 +66,7 @@ export default function LeadDetail() {
   const { saveLead } = useLeadData();
   const { transferPipeline, inscribePipeline, archivePipelineEntry } = useMultiPipeline();
 
-  const lead = mockLeads.find(l => l.id === id);
+  const lead = leads.find(l => l.id === id);
   const leadEntries = mockLeadPipelineEntries.filter(e => e.lead_id === id && e.status_inscricao === 'Ativo');
   const leadAppointments = mockAppointments.filter(a => a.lead_id === id);
   const leadDeals = mockDeals.filter(d => d.lead_id === id);
@@ -73,7 +74,14 @@ export default function LeadDetail() {
   // Get real data for timeline
   const leadInteractions = mockInteractions.filter(int => int.lead_id === id);
   const leadPipelineEvents = mockPipelineEvents.filter(event => event.lead_pipeline_entry_id === id);
-  const leadAuditLogs = getAuditLogs('Lead', id!);
+  const [leadAuditLogs, setLeadAuditLogs] = useState<any[]>([]);
+  
+  // Load audit logs asynchronously
+  React.useEffect(() => {
+    if (id) {
+      getAuditLogs('Lead', id).then(setLeadAuditLogs);
+    }
+  }, [id, getAuditLogs]);
 
   if (!lead) {
     return (
@@ -496,7 +504,7 @@ export default function LeadDetail() {
             deals={leadDeals}
             interactions={mockInteractions}
             pipelineEvents={mockPipelineEvents}
-            auditLogs={mockAuditLogs}
+            auditLogs={leadAuditLogs}
             onAddInteraction={(interaction) => {
               logChange({
                 entidade: 'Interaction',

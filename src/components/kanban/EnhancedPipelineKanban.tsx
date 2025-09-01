@@ -14,13 +14,8 @@ import { InteractionDialog } from '@/components/interaction/InteractionDialog';
 import { ChecklistValidation } from '@/components/checklist/ChecklistValidation';
 import { usePipelineAutomation } from '@/hooks/usePipelineAutomation';
 import { useValidatedAdvancement } from '@/hooks/useValidatedAdvancement';
-import { 
-  mockPipelines, 
-  mockPipelineStages, 
-  mockLeadPipelineEntries, 
-  mockLeads,
-  mockChecklistItems 
-} from '@/data/mockData';
+import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
+import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { 
   DragDropResult,
   LeadPipelineEntry,
@@ -41,7 +36,15 @@ import {
 } from 'lucide-react';
 
 export function EnhancedPipelineKanban() {
-  const [selectedPipelineId, setSelectedPipelineId] = useState(mockPipelines[0].id);
+  const { pipelines } = useSupabasePipelines();
+  const { leads } = useSupabaseLeads();
+  
+  const [selectedPipelineId, setSelectedPipelineId] = useState(pipelines[0]?.id || '');
+
+  // Mock data temporarily until hooks are fully implemented
+  const stages: any[] = [];
+  const leadPipelineEntries: any[] = [];  
+  const checklistItems: any[] = [];
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCloser, setFilterCloser] = useState<string>('all');
   const [filterScore, setFilterScore] = useState<string>('all');
@@ -71,20 +74,20 @@ export function EnhancedPipelineKanban() {
   const { attemptStageAdvancement } = useValidatedAdvancement();
 
   // Buscar stages ordenadas
-  const stages = mockPipelineStages
-    .filter(stage => stage.pipeline_id === selectedPipelineId)
-    .sort((a, b) => a.ordem - b.ordem);
+  const pipelineStages = stages
+    .filter((stage: any) => stage.pipeline_id === selectedPipelineId)
+    .sort((a: any, b: any) => a.ordem - b.ordem);
 
-  const selectedPipeline = mockPipelines.find(p => p.id === selectedPipelineId);
+  const selectedPipeline = pipelines.find(p => p.id === selectedPipelineId);
 
   // Buscar entries ativas e aplicar filtros
-  const allEntries = mockLeadPipelineEntries
+  const allEntries = leadPipelineEntries
     .filter(entry => 
       entry.status_inscricao === 'Ativo' && 
       entry.pipeline_id === selectedPipelineId
     )
     .map(entry => {
-      const lead = mockLeads.find(l => l.id === entry.lead_id);
+      const lead = leads.find(l => l.id === entry.lead_id);
       return lead ? { ...entry, lead } : null;
     })
     .filter(Boolean)
@@ -115,19 +118,19 @@ export function EnhancedPipelineKanban() {
     });
 
   // Agrupar entries por stage
-  const stageEntries = stages.map(stage => {
+  const stageEntries = pipelineStages.map(stage => {
     const entries = allEntries.filter(entry => entry?.etapa_atual_id === stage.id);
     const wipExceeded = stage.wip_limit ? entries.length > stage.wip_limit : false;
     
     return {
       stage,
-      entries: entries as Array<typeof allEntries[0] & { lead: typeof mockLeads[0] }>,
+      entries: entries as Array<typeof allEntries[0] & { lead: typeof leads[0] }>,
       wipExceeded
     };
   });
 
   // Obter closers únicos
-  const closers = Array.from(new Set(mockLeads.map(l => l.closer).filter(Boolean)));
+  const closers = Array.from(new Set(leads.map(l => l.closer).filter(Boolean)));
 
   // Métricas do pipeline
   const totalLeads = allEntries.length;
@@ -142,8 +145,8 @@ export function EnhancedPipelineKanban() {
     
     if (fromStage === toStage) return;
 
-    const fromStageData = stages.find(s => s.id === fromStage);
-    const toStageData = stages.find(s => s.id === toStage);
+    const fromStageData = pipelineStages.find(s => s.id === fromStage);
+    const toStageData = pipelineStages.find(s => s.id === toStage);
     
     if (!fromStageData || !toStageData) return;
 
@@ -177,7 +180,7 @@ export function EnhancedPipelineKanban() {
   };
 
   const handleCreateAppointment = (leadId: string) => {
-    const lead = mockLeads.find(l => l.id === leadId);
+    const lead = leads.find(l => l.id === leadId);
     if (lead) {
       setAppointmentDialog({
         open: true,
@@ -189,12 +192,12 @@ export function EnhancedPipelineKanban() {
 
   const handleAdvanceStage = (entryId: string) => {
     const entry = allEntries.find(e => e?.id === entryId);
-    const stage = stages.find(s => s.id === entry?.etapa_atual_id);
+    const stage = pipelineStages.find(s => s.id === entry?.etapa_atual_id);
     
     if (entry && stage) {
       // Check checklist validation
-      const checklistItems = mockChecklistItems.filter(item => item.stage_id === stage.id);
-      const validation = ChecklistValidation.validateStageAdvancement(entry as LeadPipelineEntry, checklistItems);
+      const stageChecklistItems = checklistItems.filter(item => item.stage_id === stage.id);
+      const validation = ChecklistValidation.validateStageAdvancement(entry as LeadPipelineEntry, stageChecklistItems);
       
       if (!validation.valid) {
         toast({
@@ -214,7 +217,7 @@ export function EnhancedPipelineKanban() {
   };
 
   const handleRegisterInteraction = (leadId: string) => {
-    const lead = mockLeads.find(l => l.id === leadId);
+    const lead = leads.find(l => l.id === leadId);
     if (lead) {
       setInteractionDialog({
         open: true,
@@ -226,7 +229,7 @@ export function EnhancedPipelineKanban() {
 
   const handleOpenChecklist = (entryId: string) => {
     const entry = allEntries.find(e => e?.id === entryId);
-    const stage = stages.find(s => s.id === entry?.etapa_atual_id);
+    const stage = pipelineStages.find(s => s.id === entry?.etapa_atual_id);
     
     if (entry && stage) {
       setChecklistDialog({
@@ -280,7 +283,7 @@ export function EnhancedPipelineKanban() {
     <div className="space-y-6">
       {/* Header com Seletor de Pipeline */}
       <PipelineSelector
-        pipelines={mockPipelines}
+        pipelines={pipelines as any}
         selectedPipelineId={selectedPipelineId}
         onPipelineChange={setSelectedPipelineId}
         onConfigurePipeline={() => console.log('Configurar pipeline')}
@@ -343,8 +346,8 @@ export function EnhancedPipelineKanban() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os closers</SelectItem>
-                {closers.map(closer => (
-                  <SelectItem key={closer} value={closer!}>
+                {closers.map((closer, index) => (
+                  <SelectItem key={closer || index} value={closer as string}>
                     {closer}
                   </SelectItem>
                 ))}
@@ -408,7 +411,7 @@ export function EnhancedPipelineKanban() {
           onOpenChange={(open) => setChecklistDialog({ open })}
           entry={checklistDialog.entry}
           stage={checklistDialog.stage}
-          checklistItems={mockChecklistItems}
+          checklistItems={checklistItems}
           onUpdateChecklist={handleUpdateChecklist}
           onUpdateNote={handleUpdateNote}
           onAdvanceStage={async () => {
@@ -416,7 +419,7 @@ export function EnhancedPipelineKanban() {
               const result = await attemptStageAdvancement(
                 checklistDialog.entry,
                 checklistDialog.stage,
-                mockChecklistItems.filter(item => item.stage_id === checklistDialog.stage!.id)
+                checklistItems.filter(item => item.stage_id === checklistDialog.stage!.id)
               );
               
               if (result.success) {

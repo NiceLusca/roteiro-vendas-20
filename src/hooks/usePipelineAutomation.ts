@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { PipelineStage, LeadPipelineEntry, Appointment } from '@/types/crm';
-import { mockPipelineStages } from '@/data/mockData';
+import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useAudit } from '@/contexts/AuditContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -8,6 +8,9 @@ import { useToast } from '@/hooks/use-toast';
 export function usePipelineAutomation() {
   const { logChange } = useAudit();
   const { toast } = useToast();
+  
+  // Temporary mock data
+  const mockPipelineStages: any[] = [];
 
   const shouldAutoGenerateAppointment = useCallback((stage: PipelineStage): boolean => {
     return stage.gerar_agendamento_auto === true;
@@ -55,8 +58,8 @@ export function usePipelineAutomation() {
 
   const getNextStage = useCallback((currentStageId: string, pipelineId: string): PipelineStage | null => {
     const pipelineStages = mockPipelineStages
-      .filter(s => s.pipeline_id === pipelineId)
-      .sort((a, b) => a.ordem - b.ordem);
+      .filter((s: any) => s.pipeline_id === pipelineId)
+      .sort((a: any, b: any) => a.ordem - b.ordem);
     
     const currentStageIndex = pipelineStages.findIndex(s => s.id === currentStageId);
     
@@ -76,7 +79,7 @@ export function usePipelineAutomation() {
     nextActions: string[];
   } => {
     
-    const targetStage = mockPipelineStages.find(s => s.id === targetStageId);
+    const targetStage = mockPipelineStages.find((s: any) => s.id === targetStageId);
     
     if (!targetStage) {
       return { shouldGenerateAppointment: false, nextActions: [] };
@@ -167,7 +170,7 @@ export function usePipelineAutomation() {
 
     entries.forEach(entry => {
       if (entry.dias_em_atraso > 0) {
-        const stage = mockPipelineStages.find(s => s.id === entry.etapa_atual_id);
+        const stage = mockPipelineStages.find((s: any) => s.id === entry.etapa_atual_id);
         if (stage) {
           violations.push({
             ...entry,
@@ -176,7 +179,7 @@ export function usePipelineAutomation() {
           });
         }
       } else if (entry.tempo_em_etapa_dias >= 1) {
-        const stage = mockPipelineStages.find(s => s.id === entry.etapa_atual_id);
+        const stage = mockPipelineStages.find((s: any) => s.id === entry.etapa_atual_id);
         if (stage && stage.prazo_em_dias) {
           const daysUntilDue = stage.prazo_em_dias - entry.tempo_em_etapa_dias;
           if (daysUntilDue <= 1 && daysUntilDue > 0) {

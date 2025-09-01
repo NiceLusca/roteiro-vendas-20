@@ -5,12 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { KanbanColumn } from './KanbanColumn';
-import { 
-  mockPipeline, 
-  mockPipelineStages, 
-  mockLeadPipelineEntries, 
-  mockLeads 
-} from '@/data/mockData';
+import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
+import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { 
   Filter, 
   Search, 
@@ -21,11 +17,19 @@ import {
 } from 'lucide-react';
 
 export function PipelineKanban() {
-  const [selectedPipeline] = useState(mockPipeline.id);
+  const { pipelines } = useSupabasePipelines();
+  const { leads } = useSupabaseLeads();
+  
+  const [selectedPipeline] = useState(pipelines[0]?.id || '');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCloser, setFilterCloser] = useState<string>('all');
   const [filterScore, setFilterScore] = useState<string>('all');
   const [filterHealth, setFilterHealth] = useState<string>('all');
+
+  // Mock data temporarily  
+  const mockPipelineStages: any[] = [];
+  const mockLeadPipelineEntries: any[] = [];
+  const mockPipeline = pipelines[0] || { nome: 'Pipeline Principal', descricao: 'Pipeline padrão' };
 
   // Buscar stages ordenadas
   const stages = mockPipelineStages
@@ -36,7 +40,7 @@ export function PipelineKanban() {
   const allEntries = mockLeadPipelineEntries
     .filter(entry => entry.status_inscricao === 'Ativo')
     .map(entry => {
-      const lead = mockLeads.find(l => l.id === entry.lead_id);
+      const lead = leads.find(l => l.id === entry.lead_id);
       return lead ? { ...entry, lead } : null;
     })
     .filter(Boolean)
@@ -73,13 +77,13 @@ export function PipelineKanban() {
     
     return {
       stage,
-      entries: entries as Array<typeof allEntries[0] & { lead: typeof mockLeads[0] }>,
+      entries: entries as Array<typeof allEntries[0] & { lead: typeof leads[0] }>,
       wipExceeded
     };
   });
 
   // Obter closers únicos
-  const closers = Array.from(new Set(mockLeads.map(l => l.closer).filter(Boolean)));
+  const closers = Array.from(new Set(leads.map(l => l.closer).filter(Boolean)));
 
   // Métricas do pipeline
   const totalLeads = allEntries.length;
@@ -180,9 +184,9 @@ export function PipelineKanban() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os closers</SelectItem>
-                {closers.map(closer => (
-                  <SelectItem key={closer} value={closer!}>
-                    {closer}
+                {closers.map((closer, index) => (
+                  <SelectItem key={closer || index} value={closer as string}>
+                    {closer as string}
                   </SelectItem>
                 ))}
               </SelectContent>

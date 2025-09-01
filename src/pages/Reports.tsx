@@ -4,11 +4,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { TrendingUp, Users, DollarSign, Target, Clock, AlertTriangle } from 'lucide-react';
-import { mockLeads, mockDeals, mockAppointments, mockDashboardMetrics, mockLeadPipelineEntries, mockPipelineStages } from '@/data/mockData';
+import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useSupabaseDeals } from '@/hooks/useSupabaseDeals';
 import { formatCurrency } from '@/utils/formatters';
 
 export default function Reports() {
   const [period, setPeriod] = useState('30days');
+  const { leads } = useSupabaseLeads();
+  const { deals } = useSupabaseDeals();
+  
+  // Temporary mock data
+  const mockAppointments: any[] = [];
+  const mockDashboardMetrics = { 
+    deals_ganhas_mes: 10, 
+    deals_perdidas_mes: 5, 
+    receita_mes: 50000,
+    top_objecoes: [
+      { objecao: 'Preço alto', count: 15 },
+      { objecao: 'Falta de tempo', count: 12 },
+      { objecao: 'Precisa consultar', count: 8 },
+      { objecao: 'Outro fornecedor', count: 6 }
+    ]
+  };
+  const mockLeadPipelineEntries: any[] = [];
+  const mockPipelineStages: any[] = [];
 
   // Calculate conversion funnel
   const calculateFunnel = () => {
@@ -27,15 +46,15 @@ export default function Reports() {
 
   // Calculate closer performance
   const calculateCloserPerformance = () => {
-    const closers = [...new Set(mockLeads.map(l => l.closer).filter(Boolean))];
+    const closers = [...new Set(leads.map(l => l.closer).filter(Boolean))];
     return closers.map(closer => {
-      const closerLeads = mockLeads.filter(l => l.closer === closer);
-      const closerDeals = mockDeals.filter(d => d.closer === closer);
+      const closerLeads = leads.filter(l => l.closer === closer);
+      const closerDeals = deals.filter(d => d.closer === closer);
       const wonDeals = closerDeals.filter(d => d.status === 'Ganha');
       const revenue = wonDeals.reduce((sum, d) => sum + d.valor_proposto, 0);
       
       return {
-        name: closer!,
+        name: closer as string,
         leads: closerLeads.length,
         deals: closerDeals.length,
         won: wonDeals.length,
@@ -47,11 +66,11 @@ export default function Reports() {
 
   // Calculate lead sources performance
   const calculateSourcePerformance = () => {
-    const sources = [...new Set(mockLeads.map(l => l.origem))];
+    const sources = [...new Set(leads.map(l => l.origem))];
     return sources.map(source => {
-      const sourceLeads = mockLeads.filter(l => l.origem === source);
-      const sourceDeals = mockDeals.filter(d => {
-        const lead = mockLeads.find(l => l.id === d.lead_id);
+      const sourceLeads = leads.filter(l => l.origem === source);
+      const sourceDeals = deals.filter(d => {
+        const lead = leads.find(l => l.id === d.lead_id);
         return lead?.origem === source;
       });
       const wonDeals = sourceDeals.filter(d => d.status === 'Ganha');
@@ -219,7 +238,7 @@ export default function Reports() {
           <CardContent>
             <div className="space-y-4">
               {closerData.map((closer, index) => (
-                <div key={closer.name} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={`closer-${index}`} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
                     <p className="font-medium">{closer.name}</p>
                     <div className="flex items-center space-x-4 text-sm text-muted-foreground">
@@ -267,7 +286,7 @@ export default function Reports() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {mockDashboardMetrics.top_objecoes.map((objection, index) => (
-              <div key={objection.objecao} className="p-4 border rounded-lg text-center">
+              <div key={`objection-${index}`} className="p-4 border rounded-lg text-center">
                 <p className="text-2xl font-bold text-primary">{objection.count}</p>
                 <p className="text-sm text-muted-foreground">{objection.objecao}</p>
               </div>

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { LeadPipelineEntry, PipelineTransferRequest } from '@/types/crm';
-import { mockLeadPipelineEntries, mockPipelineStages } from '@/data/mockData';
+import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useAudit } from '@/contexts/AuditContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -8,17 +8,20 @@ import { useToast } from '@/hooks/use-toast';
 export function useMultiPipeline() {
   const { logChange } = useAudit();
   const { toast } = useToast();
+  
+  // Temporary mock data
+  const mockLeadPipelineEntries: any[] = [];
 
   const getLeadPipelineEntries = useCallback((leadId: string): LeadPipelineEntry[] => {
     return mockLeadPipelineEntries.filter(
-      entry => entry.lead_id === leadId && entry.status_inscricao === 'Ativo'
+      (entry: any) => entry.lead_id === leadId && entry.status_inscricao === 'Ativo'
     );
   }, []);
 
   const transferPipeline = useCallback((transfer: PipelineTransferRequest) => {
     // Find existing entry
     const existingEntry = mockLeadPipelineEntries.find(
-      e => e.lead_id === transfer.leadId && e.pipeline_id === transfer.fromPipelineId
+      (e: any) => e.lead_id === transfer.leadId && e.pipeline_id === transfer.fromPipelineId
     );
 
     if (!existingEntry) {
@@ -68,7 +71,7 @@ export function useMultiPipeline() {
   const inscribePipeline = useCallback((leadId: string, pipelineId: string, stageId: string) => {
     // Check if already inscribed
     const existingEntry = mockLeadPipelineEntries.find(
-      e => e.lead_id === leadId && e.pipeline_id === pipelineId && e.status_inscricao === 'Ativo'
+      (e: any) => e.lead_id === leadId && e.pipeline_id === pipelineId && e.status_inscricao === 'Ativo'
     );
 
     if (existingEntry) {
@@ -124,7 +127,7 @@ export function useMultiPipeline() {
   }, [logChange, toast]);
 
   const advanceStage = useCallback((entryId: string, newStageId: string) => {
-    const entry = mockLeadPipelineEntries.find(e => e.id === entryId);
+    const entry = mockLeadPipelineEntries.find((e: any) => e.id === entryId);
     const oldStageId = entry?.etapa_atual_id;
 
     logChange({
