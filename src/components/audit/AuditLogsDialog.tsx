@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { AuditLog } from '@/types/crm';
 import { useAudit } from '@/contexts/AuditContext';
+import { useToast } from '@/hooks/use-toast';
 import { Calendar, Filter, Download, User, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -36,6 +37,7 @@ export function AuditLogsDialog({
   const [loading, setLoading] = useState(false);
   
   const { getAuditLogs } = useAudit();
+  const { toast } = useToast();
   
   // Load logs when dialog opens or filters change
   useEffect(() => {
@@ -74,8 +76,27 @@ export function AuditLogsDialog({
   const actors = Array.from(new Set(allLogs.map(log => log.ator)));
 
   const handleExport = () => {
-    console.log('Exportar logs de auditoria');
-    // TODO: Implementar exportação
+    // Implementar exportação de logs
+    const exportData = {
+      logs: allLogs,
+      exportDate: new Date().toISOString(),
+      filters: { entityTypeFilter, entityFilter, actorFilter }
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit-logs-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Logs exportados",
+      description: "Os logs de auditoria foram exportados com sucesso",
+    });
   };
 
   const formatAlteracao = (alteracao: AuditLog['alteracao']) => {

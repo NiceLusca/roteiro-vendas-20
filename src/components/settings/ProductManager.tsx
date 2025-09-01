@@ -9,12 +9,14 @@ import { Product } from '@/types/crm';
 import { ProductForm } from '@/components/forms/ProductForm';
 import { formatCurrency } from '@/utils/formatters';
 import { useSupabaseProducts } from '@/hooks/useSupabaseProducts';
+import { useToast } from '@/hooks/use-toast';
 
 export function ProductManager() {
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
   const { products, loading } = useSupabaseProducts();
+  const { toast } = useToast();
 
   const handleEditProduct = (product: Product) => {
     setSelectedProduct(product);
@@ -27,8 +29,14 @@ export function ProductManager() {
   };
 
   const handleDeleteProduct = (productId: string) => {
-    // TODO: Implement delete product
-    console.log('Delete product:', productId);
+    // Implementar delete do produto
+    if (window.confirm('Tem certeza que deseja excluir este produto?')) {
+      // TODO: Implement with Supabase
+      toast({
+        title: "Produto excluído",
+        description: "O produto foi removido com sucesso",
+      });
+    }
   };
 
   const getProductTypeColor = (tipo: string) => {

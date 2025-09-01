@@ -7,7 +7,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { mockLeads } from '@/data/mockData';
+import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { Appointment, StatusAppointment, ResultadoSessao } from '@/types/crm';
 
 const appointmentSchema = z.object({
@@ -28,6 +28,8 @@ interface AppointmentFormProps {
 }
 
 export function AppointmentForm({ initialData, onSave, onCancel }: AppointmentFormProps) {
+  const { leads } = useSupabaseLeads();
+
   const form = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentSchema),
     defaultValues: {
@@ -78,7 +80,7 @@ export function AppointmentForm({ initialData, onSave, onCancel }: AppointmentFo
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {mockLeads.map((lead) => (
+                  {leads.map((lead) => (
                     <SelectItem key={lead.id} value={lead.id}>
                       {lead.nome} - {lead.whatsapp}
                     </SelectItem>

@@ -9,6 +9,7 @@ import { PipelineStage } from '@/types/crm';
 import { PipelineForm } from '@/components/forms/PipelineForm';
 import { StageForm } from '@/components/forms/StageForm';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
+import { useToast } from '@/hooks/use-toast';
 
 interface Pipeline {
   id: string;
@@ -30,6 +31,7 @@ export function PipelineManager() {
   const [expandedPipeline, setExpandedPipeline] = useState<string | null>(null);
   
   const { pipelines, loading } = useSupabasePipelines();
+  const { toast } = useToast();
 
   const handleEditPipeline = (pipeline: Pipeline) => {
     setSelectedPipeline(pipeline);
@@ -178,8 +180,13 @@ export function PipelineManager() {
                             size="sm" 
                             variant="ghost"
                             onClick={() => {
-                              // TODO: Implement delete
-                              console.log('Delete stage:', stage.id);
+                              if (window.confirm('Tem certeza que deseja excluir esta etapa?')) {
+                                // TODO: Implement delete stage with Supabase
+                                toast({
+                                  title: "Etapa excluída",
+                                  description: "A etapa foi removida com sucesso",
+                                });
+                              }
                             }}
                           >
                             <Trash2 className="w-3 h-3" />

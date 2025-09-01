@@ -7,7 +7,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { mockLeads, mockProducts } from '@/data/mockData';
+import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useSupabaseProducts } from '@/hooks/useSupabaseProducts';
 import { Deal, StatusDeal } from '@/types/crm';
 
 const dealSchema = z.object({
@@ -28,6 +29,9 @@ interface DealFormProps {
 }
 
 export function DealForm({ initialData, onSave, onCancel }: DealFormProps) {
+  const { leads } = useSupabaseLeads();
+  const { products } = useSupabaseProducts();
+
   const form = useForm<DealFormData>({
     resolver: zodResolver(dealSchema),
     defaultValues: {
@@ -66,7 +70,7 @@ export function DealForm({ initialData, onSave, onCancel }: DealFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {mockLeads.map((lead) => (
+                  {leads.map((lead) => (
                     <SelectItem key={lead.id} value={lead.id}>
                       {lead.nome} - {lead.whatsapp}
                     </SelectItem>
@@ -91,7 +95,7 @@ export function DealForm({ initialData, onSave, onCancel }: DealFormProps) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {mockProducts.filter(p => p.ativo).map((product) => (
+                  {products.filter(p => p.ativo).map((product) => (
                     <SelectItem key={product.id} value={product.id}>
                       {product.nome} - R$ {product.preco_padrao.toFixed(2)}
                     </SelectItem>

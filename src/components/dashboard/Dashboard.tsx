@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,6 +7,8 @@ import { formatCurrency, formatDateTime } from '@/utils/formatters';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
+import { LoadingState, EmptyState } from '@/components/ui/loading-states';
+import { CardSkeleton } from '@/components/ui/loading-skeleton';
 import { 
   Users, 
   Calendar, 
@@ -18,10 +21,12 @@ import {
   Phone
 } from 'lucide-react';
 
-export function Dashboard() {
-  const { leads } = useSupabaseLeads();
-  const { appointments } = useSupabaseAppointments();
-  const { pipelines } = useSupabasePipelines();
+export const Dashboard = memo(function Dashboard() {
+  const { leads, loading: leadsLoading } = useSupabaseLeads();
+  const { appointments, loading: appointmentsLoading } = useSupabaseAppointments();
+  const { pipelines, loading: pipelinesLoading } = useSupabasePipelines();
+
+  const isLoading = leadsLoading || appointmentsLoading || pipelinesLoading;
 
   // Calculate metrics from real data
   const metrics = {
@@ -155,10 +160,11 @@ export function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-3">
             {proximosAgendamentos.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Nenhum agendamento nos próximos dias</p>
-              </div>
+              <EmptyState
+                title="Nenhum agendamento próximo"
+                description="Não há agendamentos programados para os próximos dias"
+                icon={<Calendar className="w-12 h-12" />}
+              />
             ) : (
               proximosAgendamentos.map((appointment) => {
                 const lead = leads.find(l => l.id === appointment.lead_id);
@@ -210,10 +216,11 @@ export function Dashboard() {
                 })}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Nenhum lead encontrado</p>
-              </div>
+              <EmptyState
+                title="Nenhum lead encontrado"
+                description="Comece criando seus primeiros leads"
+                icon={<Users className="w-12 h-12" />}
+              />
             )}
           </CardContent>
         </Card>
@@ -228,14 +235,15 @@ export function Dashboard() {
           <CardContent>
             <div className="space-y-3">
               {/* TODO: Calculate objections from real data */}
-              <div className="text-center py-8 text-muted-foreground">
-                <AlertTriangle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Dados de objeção serão calculados automaticamente</p>
-              </div>
+              <EmptyState
+                title="Dados de objeção em breve"
+                description="Os dados de objeção serão calculados automaticamente conforme você registra interações"
+                icon={<AlertTriangle className="w-12 h-12" />}
+              />
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
   );
-}
+});
