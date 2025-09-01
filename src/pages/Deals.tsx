@@ -6,7 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Search, Filter, DollarSign, User, Calendar, TrendingUp } from 'lucide-react';
-import { mockDeals, mockLeads, mockProducts } from '@/data/mockData';
+import { useSupabaseDeals } from '@/hooks/useSupabaseDeals';
+import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useSupabaseProducts } from '@/hooks/useSupabaseProducts';
 import { DealForm } from '@/components/forms/DealForm';
 import { DealLossDialog } from '@/components/deals/DealLossDialog';
 import { formatCurrency, formatDate } from '@/utils/formatters';
@@ -22,8 +24,12 @@ export default function Deals() {
   const [lossDialogDeal, setLossDialogDeal] = useState<Deal | null>(null);
   const { saveDeal } = useLeadData();
 
-  const filteredDeals = mockDeals.filter(deal => {
-    const lead = mockLeads.find(l => l.id === deal.lead_id);
+  const { deals } = useSupabaseDeals();
+  const { leads } = useSupabaseLeads();
+  const { products } = useSupabaseProducts();
+
+  const filteredDeals = deals.filter(deal => {
+    const lead = leads.find(l => l.id === deal.lead_id);
     const matchesSearch = !searchTerm || 
       lead?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       deal.closer?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -33,7 +39,7 @@ export default function Deals() {
     return matchesSearch && matchesStatus && matchesCloser;
   });
 
-  const uniqueClosers = [...new Set(mockDeals.map(d => d.closer).filter(Boolean))];
+  const uniqueClosers = [...new Set(deals.map(d => d.closer).filter(Boolean))];
 
   const getStatusBadgeClass = (status: StatusDeal) => {
     switch (status) {
@@ -45,12 +51,12 @@ export default function Deals() {
   };
 
   const calculateMetrics = () => {
-    const total = mockDeals.length;
-    const abertas = mockDeals.filter(d => d.status === 'Aberta').length;
-    const ganhas = mockDeals.filter(d => d.status === 'Ganha').length;
-    const perdidas = mockDeals.filter(d => d.status === 'Perdida').length;
-    const valorTotal = mockDeals.reduce((sum, d) => sum + d.valor_proposto, 0);
-    const valorGanho = mockDeals.filter(d => d.status === 'Ganha').reduce((sum, d) => sum + d.valor_proposto, 0);
+    const total = deals.length;
+    const abertas = deals.filter(d => d.status === 'Aberta').length;
+    const ganhas = deals.filter(d => d.status === 'Ganha').length;
+    const perdidas = deals.filter(d => d.status === 'Perdida').length;
+    const valorTotal = deals.reduce((sum, d) => sum + d.valor_proposto, 0);
+    const valorGanho = deals.filter(d => d.status === 'Ganha').reduce((sum, d) => sum + d.valor_proposto, 0);
     const conversao = total > 0 ? (ganhas / total) * 100 : 0;
 
     return { total, abertas, ganhas, perdidas, valorTotal, valorGanho, conversao };
@@ -71,14 +77,14 @@ export default function Deals() {
         </CardHeader>
         <CardContent className="space-y-3">
           {statusDeals.map((deal) => {
-            const lead = mockLeads.find(l => l.id === deal.lead_id);
-            const product = mockProducts.find(p => p.id === deal.product_id);
+            const lead = leads.find(l => l.id === deal.lead_id);
+            const product = products.find(p => p.id === deal.product_id);
             
             return (
               <div
                 key={deal.id}
                 className="p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => setSelectedDeal(deal)}
+                onClick={() => setSelectedDeal(deal as any)}
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium">{lead?.nome}</span>
@@ -248,13 +254,13 @@ export default function Deals() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Lead</p>
                   <p className="text-sm">
-                    {mockLeads.find(l => l.id === selectedDeal.lead_id)?.nome}
+                    {leads.find(l => l.id === selectedDeal.lead_id)?.nome || 'Lead não encontrado'}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Produto</p>
                   <p className="text-sm">
-                    {mockProducts.find(p => p.id === selectedDeal.product_id)?.nome}
+                    {products.find(p => p.id === selectedDeal.product_id)?.nome || 'Produto não encontrado'}
                   </p>
                 </div>
                 <div>

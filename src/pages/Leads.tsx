@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LeadForm } from '@/components/forms/LeadForm';
-import { mockLeads } from '@/data/mockData';
+import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useLeadData } from '@/hooks/useLeadData';
 import { Lead } from '@/types/crm';
 import { formatWhatsApp, formatDateTime } from '@/utils/formatters';
@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 export default function Leads() {
-  const [leads] = useState<Lead[]>(mockLeads);
+  const { leads } = useSupabaseLeads();
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | undefined>();
   const [searchTerm, setSearchTerm] = useState('');

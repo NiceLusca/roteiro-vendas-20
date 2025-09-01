@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Calendar as CalendarIcon, Clock, User } from 'lucide-react';
-import { mockAppointments, mockLeads } from '@/data/mockData';
+import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
+import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { AppointmentForm } from '@/components/forms/AppointmentForm';
 import { formatDate } from '@/utils/formatters';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -41,19 +42,26 @@ const messages = {
 };
 
 export default function Agenda() {
-  const [view, setView] = useState<View>('week');
-  const [date, setDate] = useState(new Date());
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<View>('month');
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-  const events = mockAppointments.map(appointment => {
-    const lead = mockLeads.find(l => l.id === appointment.lead_id);
+  const { appointments } = useSupabaseAppointments();
+  const { leads } = useSupabaseLeads();
+
+  // Transform appointments into calendar events
+  const events = appointments.map(appointment => {
+    const lead = leads.find(l => l.id === appointment.lead_id);
     return {
       id: appointment.id,
-      title: `${lead?.nome || 'Lead'} - Sessão`,
+      title: `${lead?.nome || 'Lead não encontrado'} - ${appointment.status}`,
       start: new Date(appointment.start_at),
       end: new Date(appointment.end_at),
-      resource: appointment,
+      resource: {
+        ...appointment,
+        leadName: lead?.nome || 'Lead não encontrado'
+      }
     };
   });
 
@@ -97,51 +105,14 @@ export default function Agenda() {
     setSelectedEvent(event);
   };
 
-  const renderUpcomingAppointments = () => {
+  const getUpcomingAppointments = () => {
     const now = new Date();
-    const upcoming = mockAppointments
+    const upcoming = appointments
       .filter(apt => new Date(apt.start_at) > now)
       .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
       .slice(0, 5);
 
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <CalendarIcon className="w-5 h-5 mr-2" />
-            Próximos Agendamentos
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {upcoming.map((appointment) => {
-              const lead = mockLeads.find(l => l.id === appointment.lead_id);
-              return (
-                <div key={appointment.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">{lead?.nome}</span>
-                      <div className="flex items-center text-xs text-muted-foreground">
-                        <Clock className="w-3 h-3 mr-1" />
-                        {formatDate(appointment.start_at)}
-                      </div>
-                    </div>
-                  </div>
-                  <Badge className={getStatusBadgeClass(appointment.status)}>
-                    {appointment.status}
-                  </Badge>
-                </div>
-              );
-            })}
-            {upcoming.length === 0 && (
-              <p className="text-center text-muted-foreground py-4">
-                Nenhum agendamento próximo
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return upcoming;
   };
 
   return (
@@ -165,7 +136,6 @@ export default function Agenda() {
             <AppointmentForm
               onSave={() => {
                 setIsCreateDialogOpen(false);
-                // TODO: Implement save logic
               }}
               onCancel={() => setIsCreateDialogOpen(false)}
             />
@@ -184,10 +154,10 @@ export default function Agenda() {
                   startAccessor="start"
                   endAccessor="end"
                   style={{ height: '100%' }}
-                  view={view}
-                  onView={setView}
-                  date={date}
-                  onNavigate={setDate}
+                  view={currentView}
+                  onView={setCurrentView}
+                  date={currentDate}
+                  onNavigate={setCurrentDate}
                   messages={messages}
                   culture="pt-BR"
                   eventPropGetter={eventStyleGetter}
@@ -199,7 +169,42 @@ export default function Agenda() {
         </div>
 
         <div className="space-y-6">
-          {renderUpcomingAppointments()}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <CalendarIcon className="w-5 h-5 mr-2" />
+                Próximos Agendamentos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {getUpcomingAppointments().map((appointment) => {
+                  const lead = leads.find(l => l.id === appointment.lead_id);
+                  return (
+                    <div key={appointment.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">{lead?.nome || 'Lead não encontrado'}</span>
+                          <div className="flex items-center text-xs text-muted-foreground">
+                            <Clock className="w-3 h-3 mr-1" />
+                            {formatDate(new Date(appointment.start_at))}
+                          </div>
+                        </div>
+                      </div>
+                      <Badge className={getStatusBadgeClass(appointment.status)}>
+                        {appointment.status}
+                      </Badge>
+                    </div>
+                  );
+                })}
+                {getUpcomingAppointments().length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">
+                    Nenhum agendamento próximo
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>
@@ -209,19 +214,43 @@ export default function Agenda() {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Total hoje</span>
-                  <span className="text-sm font-medium">2</span>
+                  <span className="text-sm font-medium">
+                    {appointments.filter(a => {
+                      const today = new Date();
+                      const aptDate = new Date(a.start_at);
+                      return aptDate.toDateString() === today.toDateString();
+                    }).length}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Realizadas</span>
-                  <span className="text-sm font-medium text-success">1</span>
+                  <span className="text-sm font-medium text-success">
+                    {appointments.filter(a => {
+                      const today = new Date();
+                      const aptDate = new Date(a.start_at);
+                      return aptDate.toDateString() === today.toDateString() && a.status === 'Realizado';
+                    }).length}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Pendentes</span>
-                  <span className="text-sm font-medium text-warning">1</span>
+                  <span className="text-sm font-medium text-warning">
+                    {appointments.filter(a => {
+                      const today = new Date();
+                      const aptDate = new Date(a.start_at);
+                      return aptDate.toDateString() === today.toDateString() && a.status === 'Agendado';
+                    }).length}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">No-Show</span>
-                  <span className="text-sm font-medium text-destructive">0</span>
+                  <span className="text-sm font-medium text-destructive">
+                    {appointments.filter(a => {
+                      const today = new Date();
+                      const aptDate = new Date(a.start_at);
+                      return aptDate.toDateString() === today.toDateString() && a.status === 'No-Show';
+                    }).length}
+                  </span>
                 </div>
               </div>
             </CardContent>
@@ -240,12 +269,12 @@ export default function Agenda() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Lead</p>
                 <p className="text-sm">
-                  {mockLeads.find(l => l.id === selectedEvent.resource.lead_id)?.nome}
+                  {leads.find(l => l.id === selectedEvent.resource.lead_id)?.nome || 'Lead não encontrado'}
                 </p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Data e Hora</p>
-                <p className="text-sm">{formatDate(selectedEvent.resource.start_at)}</p>
+                <p className="text-sm">{formatDate(new Date(selectedEvent.resource.start_at))}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Status</p>

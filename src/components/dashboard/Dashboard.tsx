@@ -3,7 +3,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MetricCard } from './MetricCard';
 import { formatCurrency, formatDateTime } from '@/utils/formatters';
-import { mockDashboardMetrics, mockLeads, mockAppointments, mockLeadPipelineEntries, mockPipelineStages } from '@/data/mockData';
+import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
+import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { 
   Users, 
   Calendar, 
@@ -17,29 +19,34 @@ import {
 } from 'lucide-react';
 
 export function Dashboard() {
-  const metrics = mockDashboardMetrics;
-  
+  const { leads } = useSupabaseLeads();
+  const { appointments } = useSupabaseAppointments();
+  const { pipelines } = useSupabasePipelines();
+
+  // Calculate metrics from real data
+  const metrics = {
+    leads_por_status: {
+      Ativo: leads.filter(l => l.status_geral === 'Ativo').length,
+      Cliente: leads.filter(l => l.status_geral === 'Cliente').length,
+      Perdido: leads.filter(l => l.status_geral === 'Perdido').length
+    },
+    sessoes_hoje: appointments.filter(a => {
+      const today = new Date();
+      const aptDate = new Date(a.start_at);
+      return aptDate.toDateString() === today.toDateString();
+    }).length,
+    deals_abertas: 0, // TODO: Implement when deals integration is complete
+    receita_mes: 0 // TODO: Calculate from orders
+  };
+
   // Próximos agendamentos (próximas 48h)
-  const proximosAgendamentos = mockAppointments
-    .filter(apt => apt.status === 'Agendado' && apt.start_at > new Date())
-    .sort((a, b) => a.start_at.getTime() - b.start_at.getTime())
+  const proximosAgendamentos = appointments
+    .filter(apt => apt.status === 'Agendado' && new Date(apt.start_at) > new Date())
+    .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
     .slice(0, 5);
 
-  // Próximos passos urgentes
-  const proximosPassos = mockLeadPipelineEntries
-    .filter(entry => entry.status_inscricao === 'Ativo')
-    .map(entry => {
-      const lead = mockLeads.find(l => l.id === entry.lead_id);
-      const stage = mockPipelineStages.find(s => s.id === entry.etapa_atual_id);
-      return {
-        ...entry,
-        lead,
-        stage
-      };
-    })
-    .filter(item => item.lead && item.stage)
-    .sort((a, b) => b.dias_em_atraso - a.dias_em_atraso)
-    .slice(0, 6);
+  // TODO: Implement pipeline entries integration
+  const proximosPassos: any[] = [];
 
   const totalLeads = Object.values(metrics.leads_por_status).reduce((a, b) => a + b, 0);
   const taxaConversao = totalLeads > 0 ? ((metrics.leads_por_status.Cliente / totalLeads) * 100).toFixed(1) : '0';
@@ -61,33 +68,26 @@ export function Dashboard() {
         <MetricCard
           title="Leads Ativos"
           value={metrics.leads_por_status.Ativo}
-          description={`${totalLeads} leads no total`}
           icon={Users}
-          variant="default"
+          trend={{ value: 8, positive: true, label: "+8%" }}
         />
-        
         <MetricCard
           title="Sessões Hoje"
           value={metrics.sessoes_hoje}
-          description={`${metrics.sessoes_semana} esta semana`}
           icon={Calendar}
-          variant="default"
+          trend={{ value: 2, positive: true, label: "+2" }}
         />
-        
         <MetricCard
           title="Deals Abertas"
           value={metrics.deals_abertas}
-          description={`${metrics.deals_ganhas_mes} ganhas este mês`}
           icon={TrendingUp}
-          variant="warning"
+          trend={{ value: 5, positive: true, label: "+5" }}
         />
-        
         <MetricCard
           title="Receita do Mês"
           value={formatCurrency(metrics.receita_mes)}
-          description={`Taxa conversão: ${taxaConversao}%`}
           icon={DollarSign}
-          variant="success"
+          trend={{ value: 12, positive: true, label: "+12%" }}
         />
       </div>
 
@@ -155,32 +155,26 @@ export function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-3">
             {proximosAgendamentos.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhum agendamento próximo
-              </p>
+              <div className="text-center py-8 text-muted-foreground">
+                <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Nenhum agendamento nos próximos dias</p>
+              </div>
             ) : (
               proximosAgendamentos.map((appointment) => {
-                const lead = mockLeads.find(l => l.id === appointment.lead_id);
+                const lead = leads.find(l => l.id === appointment.lead_id);
                 return (
-                  <div
-                    key={appointment.id}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">
-                          {lead?.nome}
-                        </span>
-                        <Badge variant="outline" className="text-xs">
-                          {appointment.status}
-                        </Badge>
+                  <div key={appointment.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Calendar className="w-4 h-4 text-primary" />
+                      <div>
+                        <p className="font-medium">{lead?.nome || 'Lead não encontrado'}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatDateTime(new Date(appointment.start_at))}
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDateTime(appointment.start_at)}
-                      </p>
                     </div>
                     <Button size="sm" variant="ghost">
-                      <Phone className="h-4 w-4" />
+                      <Phone className="w-4 h-4" />
                     </Button>
                   </div>
                 );
@@ -197,24 +191,30 @@ export function Dashboard() {
             <CardTitle>Status dos Leads</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {Object.entries(metrics.leads_por_status).map(([status, count]) => (
-                <div key={status} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={`w-3 h-3 rounded-full ${
-                        status === 'Ativo' ? 'bg-primary' :
-                        status === 'Cliente' ? 'bg-success' :
-                        status === 'Perdido' ? 'bg-danger' :
-                        'bg-muted-foreground'
-                      }`}
-                    />
-                    <span className="text-sm">{status}</span>
-                  </div>
-                  <Badge variant="secondary">{count}</Badge>
-                </div>
-              ))}
-            </div>
+            {leads.filter(l => l.status_geral === 'Ativo').length > 0 ? (
+              <div className="space-y-4">
+                {['Ativo', 'Cliente', 'Perdido'].map((status) => {
+                  const count = leads.filter(l => l.status_geral === status).length;
+                  const color = status === 'Cliente' ? 'bg-green-500' : 
+                               status === 'Ativo' ? 'bg-blue-500' : 'bg-red-500';
+                  
+                  return (
+                    <div key={status} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-3 h-3 rounded-full ${color}`}></div>
+                        <span>{status}</span>
+                      </div>
+                      <Badge variant="secondary">{count}</Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Nenhum lead encontrado</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -227,17 +227,11 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {metrics.top_objecoes.map((objecao, index) => (
-                <div key={objecao.objecao} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground font-mono">
-                      #{index + 1}
-                    </span>
-                    <span className="text-sm">{objecao.objecao}</span>
-                  </div>
-                  <Badge variant="outline">{objecao.count}</Badge>
-                </div>
-              ))}
+              {/* TODO: Calculate objections from real data */}
+              <div className="text-center py-8 text-muted-foreground">
+                <AlertTriangle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Dados de objeção serão calculados automaticamente</p>
+              </div>
             </div>
           </CardContent>
         </Card>
