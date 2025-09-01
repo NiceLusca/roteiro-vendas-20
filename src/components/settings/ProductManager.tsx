@@ -8,14 +8,13 @@ import { Plus, Edit, Trash2, Package, DollarSign } from 'lucide-react';
 import { Product } from '@/types/crm';
 import { ProductForm } from '@/components/forms/ProductForm';
 import { formatCurrency } from '@/utils/formatters';
-import { mockProducts } from '@/data/mockData';
+import { useSupabaseProducts } from '@/hooks/useSupabaseProducts';
 
 export function ProductManager() {
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-
-  // Mock data - em produção viria de uma API
-  const products = mockProducts;
+  
+  const { products, loading } = useSupabaseProducts();
 
   const handleEditProduct = (product: Product) => {
     setSelectedProduct(product);

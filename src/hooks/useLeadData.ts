@@ -1,166 +1,108 @@
 import { useState, useCallback } from 'react';
 import { Lead, Appointment, Interaction, Deal, Order } from '@/types/crm';
-import { mockLeads, mockAppointments, mockDeals } from '@/data/mockData';
+import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
+import { useSupabaseDeals } from '@/hooks/useSupabaseDeals';
+import { useSupabaseOrders } from '@/hooks/useSupabaseOrders';
+import { useSupabaseInteractions } from '@/hooks/useSupabaseInteractions';
 import { useAudit } from '@/contexts/AuditContext';
 import { useToast } from '@/hooks/use-toast';
 
 // Hook for managing lead data operations
 export function useLeadData() {
   const { logChange } = useAudit();
+  const { saveLead: saveLeadToSupabase } = useSupabaseLeads();
+  const { saveAppointment: saveAppointmentToSupabase } = useSupabaseAppointments();
+  const { saveDeal: saveDealToSupabase } = useSupabaseDeals();
+  const { saveOrder: saveOrderToSupabase } = useSupabaseOrders();
+  const { saveInteraction: saveInteractionToSupabase } = useSupabaseInteractions();
   const { toast } = useToast();
 
-  const saveLead = useCallback((leadData: Partial<Lead> & { id?: string }) => {
-    if (leadData.id) {
-      // Update existing lead
-      const existingLead = mockLeads.find(l => l.id === leadData.id);
-      if (existingLead) {
-        const changes = Object.keys(leadData).reduce((acc, key) => {
-          const field = key as keyof Lead;
-          if (leadData[field] !== existingLead[field]) {
-            acc.push({
-              campo: key,
-              de: existingLead[field],
-              para: leadData[field]
-            });
-          }
-          return acc;
-        }, [] as Array<{ campo: string; de: any; para: any }>);
-
-        if (changes.length > 0) {
-          logChange({
-            entidade: 'Lead',
-            entidade_id: leadData.id,
-            alteracao: changes
-          });
-        }
+  const saveLead = useCallback(async (leadData: Partial<Lead> & { id?: string }) => {
+    const result = await saveLeadToSupabase(leadData);
+    if (result) {
+      if (leadData.id) {
+        logChange({
+          entidade: 'Lead',
+          entidade_id: leadData.id,
+          alteracao: [{ campo: 'status', de: 'anterior', para: 'atualizado' }]
+        });
+      } else {
+        logChange({
+          entidade: 'Lead',
+          entidade_id: result.id,
+          alteracao: [{ campo: 'status', de: null, para: 'Criado' }]
+        });
       }
-      
-      toast({
-        title: 'Lead atualizado',
-        description: 'As informações do lead foram salvas com sucesso.',
-      });
-    } else {
-      // Create new lead
-      const newId = `lead-${Date.now()}`;
-      
+    }
+  }, [saveLeadToSupabase, logChange]);
+
+  const saveAppointment = useCallback(async (appointmentData: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>) => {
+    const result = await saveAppointmentToSupabase(appointmentData as any);
+    if (result) {
       logChange({
-        entidade: 'Lead',
-        entidade_id: newId,
+        entidade: 'Appointment',
+        entidade_id: result.id,
         alteracao: [
-          { campo: 'status', de: null, para: 'Criado' }
+          { campo: 'status', de: null, para: appointmentData.status },
+          { campo: 'lead_id', de: null, para: appointmentData.lead_id }
         ]
       });
-      
-      toast({
-        title: 'Lead criado',
-        description: 'Novo lead foi criado com sucesso.',
+    }
+  }, [saveAppointmentToSupabase, logChange]);
+
+  const saveInteraction = useCallback(async (interactionData: Omit<Interaction, 'id' | 'timestamp'>) => {
+    const result = await saveInteractionToSupabase(interactionData);
+    if (result) {
+      logChange({
+        entidade: 'Interaction',
+        entidade_id: result.id,
+        alteracao: [
+          { campo: 'canal', de: null, para: interactionData.canal },
+          { campo: 'lead_id', de: null, para: interactionData.lead_id }
+        ]
       });
     }
+  }, [saveInteractionToSupabase, logChange]);
+
+  const saveDeal = useCallback(async (dealData: Partial<Deal> & { id?: string }) => {
+    // Convert Date fields to strings if needed
+    const convertedData = {
+      ...dealData,
+      created_at: dealData.created_at instanceof Date ? dealData.created_at.toISOString() : dealData.created_at,
+      updated_at: dealData.updated_at instanceof Date ? dealData.updated_at.toISOString() : dealData.updated_at
+    };
     
-    // TODO: Implement actual data persistence
-    console.log('Lead saved:', leadData);
-  }, [logChange, toast]);
-
-  const saveAppointment = useCallback((appointmentData: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>) => {
-    const newId = `apt-${Date.now()}`;
-    
-    logChange({
-      entidade: 'Appointment',
-      entidade_id: newId,
-      alteracao: [
-        { campo: 'status', de: null, para: appointmentData.status },
-        { campo: 'lead_id', de: null, para: appointmentData.lead_id }
-      ]
-    });
-
-    // TODO: Implement actual data persistence
-    console.log('Appointment saved:', { ...appointmentData, id: newId });
-  }, [logChange]);
-
-  const saveInteraction = useCallback((interactionData: Omit<Interaction, 'id' | 'timestamp'>) => {
-    const newId = `int-${Date.now()}`;
-    
-    logChange({
-      entidade: 'Interaction',
-      entidade_id: newId,
-      alteracao: [
-        { campo: 'canal', de: null, para: interactionData.canal },
-        { campo: 'lead_id', de: null, para: interactionData.lead_id }
-      ]
-    });
-
-    // TODO: Implement actual data persistence  
-    console.log('Interaction saved:', { ...interactionData, id: newId });
-  }, [logChange]);
-
-  const saveDeal = useCallback((dealData: Partial<Deal> & { id?: string }) => {
-    if (dealData.id) {
-      // Update existing deal
-      const existingDeal = mockDeals.find(d => d.id === dealData.id);
-      if (existingDeal) {
-        const changes = Object.keys(dealData).reduce((acc, key) => {
-          const field = key as keyof Deal;
-          if (dealData[field] !== existingDeal[field]) {
-            acc.push({
-              campo: key,
-              de: existingDeal[field],
-              para: dealData[field]
-            });
-          }
-          return acc;
-        }, [] as Array<{ campo: string; de: any; para: any }>);
-
-        if (changes.length > 0) {
-          logChange({
-            entidade: 'Deal',
-            entidade_id: dealData.id,
-            alteracao: changes
-          });
-        }
-      }
-    } else {
-      // Create new deal
-      const newId = `deal-${Date.now()}`;
-      
+    const result = await saveDealToSupabase(convertedData as any);
+    if (result) {
       logChange({
         entidade: 'Deal',
-        entidade_id: newId,
+        entidade_id: result.id,
         alteracao: [
-          { campo: 'status', de: null, para: dealData.status || 'Aberta' }
+          { campo: 'status', de: 'anterior', para: dealData.status || 'Aberta' }
         ]
       });
     }
+  }, [saveDealToSupabase, logChange]);
 
-    // TODO: Implement actual data persistence
-    console.log('Deal saved:', dealData);
-  }, [logChange]);
-
-  const saveOrder = useCallback((orderData: Partial<Order> & { id?: string }) => {
-    if (orderData.id) {
-      // Update existing order
+  const saveOrder = useCallback(async (orderData: Partial<Order> & { id?: string }) => {
+    // Convert Date fields to strings if needed - only handle existing properties
+    const convertedData = {
+      ...orderData,
+      data_venda: orderData.data_venda instanceof Date ? orderData.data_venda.toISOString() : orderData.data_venda
+    };
+    
+    const result = await saveOrderToSupabase(convertedData as any);
+    if (result) {
       logChange({
         entidade: 'Order',
-        entidade_id: orderData.id,
+        entidade_id: result.id,
         alteracao: [
-          { campo: 'status', de: 'anterior', para: orderData.status || 'atualizado' }
-        ]
-      });
-    } else {
-      // Create new order
-      const newId = `order-${Date.now()}`;
-      
-      logChange({
-        entidade: 'Order',
-        entidade_id: newId,
-        alteracao: [
-          { campo: 'status', de: null, para: orderData.status || 'Ativo' }
+          { campo: 'status', de: 'anterior', para: orderData.status || 'Pendente' }
         ]
       });
     }
-
-    // TODO: Implement actual data persistence
-    console.log('Order saved:', orderData);
-  }, [logChange]);
+  }, [saveOrderToSupabase, logChange]);
 
   return {
     saveLead,

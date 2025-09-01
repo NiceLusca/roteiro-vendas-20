@@ -5,21 +5,31 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight } from 'lucide-react';
-import { Pipeline, PipelineStage } from '@/types/crm';
+import { PipelineStage } from '@/types/crm';
 import { PipelineForm } from '@/components/forms/PipelineForm';
 import { StageForm } from '@/components/forms/StageForm';
-import { mockPipeline, mockPipelineStages, mockChecklistItems } from '@/data/mockData';
+import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
+
+interface Pipeline {
+  id: string;
+  nome: string;
+  descricao?: string;
+  ativo: boolean;
+  objetivo?: string;
+  primary_pipeline: boolean; // Changed to match database
+  user_id?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export function PipelineManager() {
   const [isPipelineDialogOpen, setIsPipelineDialogOpen] = useState(false);
   const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
   const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null);
   const [selectedStage, setSelectedStage] = useState<PipelineStage | null>(null);
-  const [expandedPipeline, setExpandedPipeline] = useState<string | null>(mockPipeline.id);
-
-  // Mock data - em produção viria de uma API
-  const pipelines = [mockPipeline];
-  const stages = mockPipelineStages;
+  const [expandedPipeline, setExpandedPipeline] = useState<string | null>(null);
+  
+  const { pipelines, loading } = useSupabasePipelines();
 
   const handleEditPipeline = (pipeline: Pipeline) => {
     setSelectedPipeline(pipeline);
@@ -34,19 +44,19 @@ export function PipelineManager() {
   const handleNewStage = (pipelineId: string) => {
     setSelectedStage({ 
       pipeline_id: pipelineId,
-      ordem: stages.filter(s => s.pipeline_id === pipelineId).length + 1 
+      ordem: 1 // Will be calculated properly in the form
     } as PipelineStage);
     setIsStageDialogOpen(true);
   };
 
   const getPipelineStages = (pipelineId: string) => {
-    return stages
-      .filter(s => s.pipeline_id === pipelineId)
-      .sort((a, b) => a.ordem - b.ordem);
+    // TODO: Fetch stages from database
+    return [];
   };
 
   const getStageChecklistCount = (stageId: string) => {
-    return mockChecklistItems.filter(item => item.stage_id === stageId).length;
+    // TODO: Fetch checklist items from database
+    return 0;
   };
 
   const renderPipelineCard = (pipeline: Pipeline) => {
@@ -67,12 +77,12 @@ export function PipelineManager() {
               <div>
                 <div className="flex items-center gap-2">
                   <CardTitle className="text-lg">{pipeline.nome}</CardTitle>
-                  {pipeline.primary && (
-                    <Badge variant="default">
-                      <Star className="w-3 h-3 mr-1" />
-                      Primário
-                    </Badge>
-                  )}
+                   {pipeline.primary_pipeline && (
+                     <Badge variant="default">
+                       <Star className="w-3 h-3 mr-1" />
+                       Primário
+                     </Badge>
+                   )}
                   <Badge variant={pipeline.ativo ? 'default' : 'secondary'}>
                     {pipeline.ativo ? 'Ativo' : 'Inativo'}
                   </Badge>

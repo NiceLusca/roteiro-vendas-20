@@ -1,9 +1,10 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { AuditLog } from '@/types/crm';
 import { useAudit } from './AuditContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AllLogsAuditContextType {
-  getAllLogs: () => AuditLog[];
+  getAllLogs: () => Promise<AuditLog[]>;
 }
 
 const AllLogsAuditContext = createContext<AllLogsAuditContextType | undefined>(undefined);
@@ -12,10 +13,30 @@ const AllLogsAuditContext = createContext<AllLogsAuditContextType | undefined>(u
 export function AllLogsAuditProvider({ children }: { children: ReactNode }) {
   const { getAuditLogs } = useAudit();
 
-  // TODO: Implement a method to get ALL audit logs, not just per entity
-  // For now, return empty array since the base context only provides entity-specific logs
-  const getAllLogs = (): AuditLog[] => {
-    return [];
+  const getAllLogs = async (): Promise<AuditLog[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('timestamp', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar todos os logs:', error);
+        return [];
+      }
+
+      return data?.map(log => ({
+        id: log.id,
+        entidade: log.entidade,
+        entidade_id: log.entidade_id,
+        ator: log.ator,
+        alteracao: (log.alteracao as any) || [],
+        timestamp: new Date(log.timestamp)
+      })) || [];
+    } catch (error) {
+      console.error('Erro ao buscar logs:', error);
+      return [];
+    }
   };
 
   return (
