@@ -3,7 +3,7 @@ import { PipelineEvent } from '@/types/crm';
 export const mockPipelineEvents: PipelineEvent[] = [
   {
     id: 'event-1',
-    entidade_id: 'lead-1',
+    lead_pipeline_entry_id: 'entry-1',
     tipo: 'Avancado',
     de_etapa_id: 'stage-2',
     para_etapa_id: 'stage-3',
@@ -15,7 +15,7 @@ export const mockPipelineEvents: PipelineEvent[] = [
   },
   {
     id: 'event-2',
-    entidade_id: 'lead-2',
+    lead_pipeline_entry_id: 'entry-2',
     tipo: 'Avancado',
     de_etapa_id: 'stage-1',
     para_etapa_id: 'stage-2',
@@ -27,7 +27,7 @@ export const mockPipelineEvents: PipelineEvent[] = [
   },
   {
     id: 'event-3',
-    entidade_id: 'lead-3',
+    lead_pipeline_entry_id: 'entry-3',
     tipo: 'Avancado',
     de_etapa_id: 'stage-3',
     para_etapa_id: 'stage-4',
@@ -39,7 +39,7 @@ export const mockPipelineEvents: PipelineEvent[] = [
   },
   {
     id: 'event-4',
-    entidade_id: 'lead-4',
+    lead_pipeline_entry_id: 'entry-4',
     tipo: 'Criado',
     de_etapa_id: null,
     para_etapa_id: 'stage-1',
@@ -51,7 +51,7 @@ export const mockPipelineEvents: PipelineEvent[] = [
   },
   {
     id: 'event-5',
-    entidade_id: 'lead-5',
+    lead_pipeline_entry_id: 'entry-5',
     tipo: 'Transferido',
     de_etapa_id: 'stage-5',
     para_etapa_id: 'stage-u1',

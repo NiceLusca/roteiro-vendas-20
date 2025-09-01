@@ -72,7 +72,7 @@ export default function LeadDetail() {
   
   // Get real data for timeline
   const leadInteractions = mockInteractions.filter(int => int.lead_id === id);
-  const leadPipelineEvents = mockPipelineEvents.filter(event => event.entidade_id === id);
+  const leadPipelineEvents = mockPipelineEvents.filter(event => event.lead_pipeline_entry_id === id);
   const leadAuditLogs = getAuditLogs('Lead', id!);
 
   if (!lead) {
