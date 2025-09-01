@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -32,14 +32,32 @@ export function AuditLogsDialog({
   const [searchTerm, setSearchTerm] = useState('');
   const [entityTypeFilter, setEntityTypeFilter] = useState<string>('all');
   const [actorFilter, setActorFilter] = useState<string>('all');
+  const [allLogs, setAllLogs] = useState<AuditLog[]>([]);
+  const [loading, setLoading] = useState(false);
   
   const { getAuditLogs } = useAudit();
   
-  // Get logs based on filters
-  // TODO: Implement getAllLogs for viewing all system logs
-  const allLogs = entityFilter && entityIdFilter 
-    ? getAuditLogs(entityFilter, entityIdFilter)
-    : []; // Show empty until we implement system-wide logs
+  // Load logs when dialog opens or filters change
+  useEffect(() => {
+    if (open && entityFilter && entityIdFilter) {
+      loadLogs();
+    }
+  }, [open, entityFilter, entityIdFilter]);
+
+  const loadLogs = async () => {
+    if (!entityFilter || !entityIdFilter) return;
+    
+    setLoading(true);
+    try {
+      const logs = await getAuditLogs(entityFilter, entityIdFilter);
+      setAllLogs(logs);
+    } catch (error) {
+      console.error('Error loading audit logs:', error);
+      setAllLogs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filtrar logs
   const filteredLogs = allLogs.filter(log => {
@@ -99,7 +117,7 @@ export function AuditLogsDialog({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas</SelectItem>
-              {entities.map(entity => (
+              {entities.map((entity: string) => (
                 <SelectItem key={entity} value={entity}>
                   {entity}
                 </SelectItem>
@@ -113,7 +131,7 @@ export function AuditLogsDialog({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              {actors.map(actor => (
+              {actors.map((actor: string) => (
                 <SelectItem key={actor} value={actor}>
                   {actor}
                 </SelectItem>
@@ -129,12 +147,17 @@ export function AuditLogsDialog({
 
         {/* Lista de Logs */}
         <div className="flex-1 overflow-y-auto space-y-3">
-          {filteredLogs.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="text-muted-foreground mt-2">Carregando logs...</p>
+            </div>
+          ) : filteredLogs.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">Nenhum log encontrado</p>
             </div>
           ) : (
-            filteredLogs.map(log => (
+            filteredLogs.map((log: AuditLog) => (
               <div key={log.id} className="p-4 border rounded-lg space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">

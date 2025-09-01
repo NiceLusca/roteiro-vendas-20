@@ -1,6 +1,7 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { AuditLog } from '@/types/crm';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuditContextType {
   logChange: (params: {
@@ -8,19 +9,18 @@ interface AuditContextType {
     entidade_id: string;
     alteracao: Array<{ campo: string; de: any; para: any }>;
     ator?: string;
-  }) => void;
-  getAuditLogs: (entidade: string, entidade_id: string) => AuditLog[];
+  }) => Promise<void>;
+  getAuditLogs: (entidade: string, entidade_id: string) => Promise<AuditLog[]>;
 }
 
 const AuditContext = createContext<AuditContextType | undefined>(undefined);
 
-// Mock storage - em produção seria uma API/banco
-const auditLogs: AuditLog[] = [];
+// Real Supabase storage
 
 export function AuditProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
-  const logChange = ({
+  const logChange = async ({
     entidade,
     entidade_id,
     alteracao,
@@ -31,31 +31,57 @@ export function AuditProvider({ children }: { children: ReactNode }) {
     alteracao: Array<{ campo: string; de: any; para: any }>;
     ator?: string;
   }) => {
-    const logEntry: AuditLog = {
-      id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      entidade,
-      entidade_id,
-      alteracao,
-      ator,
-      timestamp: new Date()
-    };
+    try {
+      const { error } = await supabase
+        .from('audit_logs')
+        .insert({
+          entidade,
+          entidade_id,
+          alteracao,
+          ator
+        });
 
-    auditLogs.push(logEntry);
-    
-    // Toast sutil para confirmação
-    if (alteracao.length > 0) {
-      toast({
-        title: `${entidade} atualizado`,
-        description: `${alteracao.length} campo(s) alterado(s)`,
-        duration: 2000,
-      });
+      if (error) {
+        console.error('Erro ao salvar log de auditoria:', error);
+        return;
+      }
+      
+      // Toast sutil para confirmação
+      if (alteracao.length > 0) {
+        toast({
+          title: `${entidade} atualizado`,
+          description: `${alteracao.length} campo(s) alterado(s)`,
+          duration: 2000,
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao fazer log de auditoria:', error);
     }
   };
 
-  const getAuditLogs = (entidade: string, entidade_id: string): AuditLog[] => {
-    return auditLogs
-      .filter(log => log.entidade === entidade && log.entidade_id === entidade_id)
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  const getAuditLogs = async (entidade: string, entidade_id: string): Promise<AuditLog[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .eq('entidade', entidade)
+        .eq('entidade_id', entidade_id)
+        .order('timestamp', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar logs de auditoria:', error);
+        return [];
+      }
+
+      return data?.map(log => ({
+        ...log,
+        timestamp: new Date(log.timestamp),
+        alteracao: log.alteracao as Array<{ campo: string; de: any; para: any }>
+      })) || [];
+    } catch (error) {
+      console.error('Erro ao buscar logs de auditoria:', error);
+      return [];
+    }
   };
 
   return (

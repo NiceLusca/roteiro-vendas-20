@@ -9,6 +9,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarHeader,
+  SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
 import {
@@ -20,8 +21,11 @@ import {
   ShoppingCart,
   BarChart3,
   Settings,
-  Building2
+  Building2,
+  LogOut
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
 
 const mainMenuItems = [
   {
@@ -78,6 +82,7 @@ const configItems = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
+  const { signOut, user } = useAuth();
   const currentPath = location.pathname;
   const collapsed = state === 'collapsed';
 
@@ -177,6 +182,23 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter className="border-t border-sidebar-border p-4">
+        <Button
+          variant="ghost"
+          size={collapsed ? "icon" : "default"}
+          onClick={signOut}
+          className="w-full justify-start"
+        >
+          <LogOut className={`h-4 w-4 ${collapsed ? '' : 'mr-2'}`} />
+          {!collapsed && <span>Sair</span>}
+        </Button>
+        {!collapsed && user && (
+          <div className="mt-2 text-xs text-muted-foreground truncate">
+            {user.email}
+          </div>
+        )}
+      </SidebarFooter>
     </Sidebar>
   );
 }
