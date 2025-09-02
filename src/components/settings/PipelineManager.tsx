@@ -5,10 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight } from 'lucide-react';
-import { PipelineStage } from '@/types/crm';
 import { PipelineForm } from '@/components/forms/PipelineForm';
 import { StageForm } from '@/components/forms/StageForm';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
+import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
+import { useSupabaseChecklistItems } from '@/hooks/useSupabaseChecklistItems';
 import { useToast } from '@/hooks/use-toast';
 
 interface Pipeline {
@@ -17,20 +18,37 @@ interface Pipeline {
   descricao?: string;
   ativo: boolean;
   objetivo?: string;
-  primary_pipeline: boolean; // Changed to match database
+  primary_pipeline: boolean;
   user_id?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+interface StageData {
+  id?: string;
+  pipeline_id: string;
+  nome: string;
+  ordem: number;
+  prazo_em_dias: number;
+  proximo_passo_tipo: 'Humano' | 'Agendamento' | 'Mensagem' | 'Outro';
+  proximo_passo_label?: string;
+  entrada_criteria?: string;
+  saida_criteria?: string;
+  wip_limit?: number;
+  gerar_agendamento_auto: boolean;
+  duracao_minutos?: number;
 }
 
 export function PipelineManager() {
   const [isPipelineDialogOpen, setIsPipelineDialogOpen] = useState(false);
   const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
   const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null);
-  const [selectedStage, setSelectedStage] = useState<PipelineStage | null>(null);
+  const [selectedStage, setSelectedStage] = useState<StageData | null>(null);
   const [expandedPipeline, setExpandedPipeline] = useState<string | null>(null);
   
-  const { pipelines, loading } = useSupabasePipelines();
+  const { pipelines, loading, savePipeline } = useSupabasePipelines();
+  const { stages, saveStage, deleteStage, refetch: refetchStages } = useSupabasePipelineStages();
+  const { checklistItems, refetch: refetchChecklistItems } = useSupabaseChecklistItems();
   const { toast } = useToast();
 
   const handleEditPipeline = (pipeline: Pipeline) => {
@@ -38,27 +56,32 @@ export function PipelineManager() {
     setIsPipelineDialogOpen(true);
   };
 
-  const handleEditStage = (stage: PipelineStage) => {
+  const handleEditStage = (stage: StageData) => {
     setSelectedStage(stage);
     setIsStageDialogOpen(true);
   };
 
   const handleNewStage = (pipelineId: string) => {
+    const pipelineStages = getPipelineStages(pipelineId);
+    const nextOrder = pipelineStages.length > 0 ? Math.max(...pipelineStages.map(s => s.ordem)) + 1 : 1;
+    
     setSelectedStage({ 
       pipeline_id: pipelineId,
-      ordem: 1 // Will be calculated properly in the form
-    } as PipelineStage);
+      ordem: nextOrder,
+      nome: '',
+      prazo_em_dias: 3,
+      proximo_passo_tipo: 'Humano',
+      gerar_agendamento_auto: false
+    } as StageData);
     setIsStageDialogOpen(true);
   };
 
   const getPipelineStages = (pipelineId: string) => {
-    // TODO: Fetch stages from database
-    return [];
+    return stages.filter(stage => stage.pipeline_id === pipelineId);
   };
 
   const getStageChecklistCount = (stageId: string) => {
-    // TODO: Fetch checklist items from database
-    return 0;
+    return checklistItems.filter(item => item.stage_id === stageId).length;
   };
 
   const renderPipelineCard = (pipeline: Pipeline) => {
@@ -179,13 +202,13 @@ export function PipelineManager() {
                           <Button 
                             size="sm" 
                             variant="ghost"
-                            onClick={() => {
+                            onClick={async () => {
                               if (window.confirm('Tem certeza que deseja excluir esta etapa?')) {
-                                // TODO: Implement delete stage with Supabase
-                                toast({
-                                  title: "Etapa excluída",
-                                  description: "A etapa foi removida com sucesso",
-                                });
+                                const success = await deleteStage(stage.id);
+                                if (success) {
+                                  refetchStages();
+                                  refetchChecklistItems();
+                                }
                               }
                             }}
                           >
@@ -229,9 +252,12 @@ export function PipelineManager() {
             </DialogHeader>
             <PipelineForm
               pipeline={selectedPipeline}
-              onSave={() => {
-                setIsPipelineDialogOpen(false);
-                setSelectedPipeline(null);
+              onSave={async (data) => {
+                const result = await savePipeline({ ...data, id: selectedPipeline?.id });
+                if (result) {
+                  setIsPipelineDialogOpen(false);
+                  setSelectedPipeline(null);
+                }
               }}
               onCancel={() => {
                 setIsPipelineDialogOpen(false);
@@ -244,7 +270,20 @@ export function PipelineManager() {
 
       {/* Pipeline Cards */}
       <div>
-        {pipelines.map(renderPipelineCard)}
+      {loading ? (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">Carregando pipelines...</p>
+        </div>
+      ) : pipelines.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">Nenhum pipeline cadastrado ainda.</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Clique em "Novo Pipeline" para começar.
+          </p>
+        </div>
+      ) : (
+        pipelines.map(renderPipelineCard)
+      )}
       </div>
 
       {/* Stage Dialog */}
@@ -257,9 +296,13 @@ export function PipelineManager() {
           </DialogHeader>
           <StageForm
             stage={selectedStage}
-            onSave={() => {
-              setIsStageDialogOpen(false);
-              setSelectedStage(null);
+            onSave={async (data) => {
+              const result = await saveStage({ ...data, id: selectedStage?.id });
+              if (result) {
+                setIsStageDialogOpen(false);
+                setSelectedStage(null);
+                refetchStages();
+              }
             }}
             onCancel={() => {
               setIsStageDialogOpen(false);
