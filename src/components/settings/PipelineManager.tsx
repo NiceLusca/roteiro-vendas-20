@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight } from 'lucide-react';
 import { PipelineForm } from '@/components/forms/PipelineForm';
 import { StageForm } from '@/components/forms/StageForm';
+import { StageChecklistManager } from '@/components/settings/StageChecklistManager';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { useSupabaseChecklistItems } from '@/hooks/useSupabaseChecklistItems';
@@ -45,6 +46,7 @@ export function PipelineManager() {
   const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null);
   const [selectedStage, setSelectedStage] = useState<StageData | null>(null);
   const [expandedPipeline, setExpandedPipeline] = useState<string | null>(null);
+  const [selectedStageForChecklist, setSelectedStageForChecklist] = useState<{ id: string; nome: string } | null>(null);
   
   const { pipelines, loading, savePipeline } = useSupabasePipelines();
   const { stages, saveStage, deleteStage, refetch: refetchStages } = useSupabasePipelineStages();
@@ -186,9 +188,16 @@ export function PipelineManager() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary">
-                          {getStageChecklistCount(stage.id)} itens
-                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSelectedStageForChecklist({ id: stage.id, nome: stage.nome })}
+                        >
+                          <Badge variant="secondary" className="mr-1">
+                            {getStageChecklistCount(stage.id)}
+                          </Badge>
+                          Checklist
+                        </Button>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -309,6 +318,26 @@ export function PipelineManager() {
               setSelectedStage(null);
             }}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Checklist Management Dialog */}
+      <Dialog 
+        open={!!selectedStageForChecklist} 
+        onOpenChange={(open) => !open && setSelectedStageForChecklist(null)}
+      >
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Gerenciar Checklist - {selectedStageForChecklist?.nome}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedStageForChecklist && (
+            <StageChecklistManager
+              stageId={selectedStageForChecklist.id}
+              stageName={selectedStageForChecklist.nome}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
