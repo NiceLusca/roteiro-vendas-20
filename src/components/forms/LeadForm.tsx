@@ -83,8 +83,12 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
 
     if (!formData.whatsapp?.trim()) {
       newErrors.whatsapp = 'WhatsApp é obrigatório';
-    } else if (!/^\+55\d{10,11}$/.test(formData.whatsapp.replace(/\D/g, ''))) {
-      newErrors.whatsapp = 'WhatsApp deve ter formato válido (+55DDDNÚMERO)';
+    } else {
+      // Remove apenas espaços, hífens e parênteses para validação
+      const cleanPhone = formData.whatsapp.replace(/[\s\-\(\)]/g, '');
+      if (!/^\+55\d{10,11}$/.test(cleanPhone)) {
+        newErrors.whatsapp = 'WhatsApp deve ter formato válido (+55DDDNÚMERO)';
+      }
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {

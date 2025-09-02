@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
 import { DragDropKanban } from './DragDropKanban';
 import { ChecklistDialog } from '@/components/pipeline/ChecklistDialog';
@@ -12,6 +14,7 @@ import { AuditLogsDialog } from '@/components/audit/AuditLogsDialog';
 import { AppointmentDialog } from '@/components/appointment/AppointmentDialog';
 import { InteractionDialog } from '@/components/interaction/InteractionDialog';
 import { ChecklistValidation } from '@/components/checklist/ChecklistValidation';
+import { PipelineForm } from '@/components/forms/PipelineForm';
 import { usePipelineAutomation } from '@/hooks/usePipelineAutomation';
 import { useValidatedAdvancement } from '@/hooks/useValidatedAdvancement';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
@@ -40,10 +43,12 @@ import {
 } from 'lucide-react';
 
 export function EnhancedPipelineKanban() {
-  const { pipelines } = useSupabasePipelines();
+  const navigate = useNavigate();
+  const { pipelines, loading: pipelinesLoading, savePipeline } = useSupabasePipelines();
   const { leads } = useSupabaseLeads();
   
   const [selectedPipelineId, setSelectedPipelineId] = useState(pipelines[0]?.id || '');
+  const [isNewPipelineDialogOpen, setIsNewPipelineDialogOpen] = useState(false);
 
   // Use real Supabase hooks
   const { entries } = useSupabaseLeadPipelineEntries(selectedPipelineId);
@@ -282,6 +287,19 @@ export function EnhancedPipelineKanban() {
     setFilterHealth('all');
   };
 
+  const handleConfigurePipeline = () => {
+    navigate('/settings');
+  };
+
+  const handleCreatePipeline = () => {
+    setIsNewPipelineDialogOpen(true);
+  };
+
+  const handleSaveNewPipeline = async (pipelineData: any) => {
+    await savePipeline(pipelineData);
+    setIsNewPipelineDialogOpen(false);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header com Seletor de Pipeline */}
@@ -289,8 +307,8 @@ export function EnhancedPipelineKanban() {
         pipelines={pipelines as any}
         selectedPipelineId={selectedPipelineId}
         onPipelineChange={setSelectedPipelineId}
-        onConfigurePipeline={() => {/* TODO: Configurar pipeline */}}
-        onCreatePipeline={() => {/* TODO: Criar pipeline */}}
+        onConfigurePipeline={handleConfigurePipeline}
+        onCreatePipeline={handleCreatePipeline}
       />
 
       {/* Métricas Rápidas */}
@@ -477,6 +495,19 @@ export function EnhancedPipelineKanban() {
           setInteractionDialog({ open: false });
         }}
       />
+
+      {/* Dialog para Novo Pipeline */}
+      <Dialog open={isNewPipelineDialogOpen} onOpenChange={setIsNewPipelineDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Criar Novo Pipeline</DialogTitle>
+          </DialogHeader>
+          <PipelineForm
+            onSave={handleSaveNewPipeline}
+            onCancel={() => setIsNewPipelineDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
