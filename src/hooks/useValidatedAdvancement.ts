@@ -2,86 +2,71 @@ import { useCallback } from 'react';
 import { LeadPipelineEntry, PipelineStage, StageChecklistItem } from '@/types/crm';
 import { ChecklistValidation } from '@/components/checklist/ChecklistValidation';
 import { usePipelineAutomation } from './usePipelineAutomation';
-import { useMultiPipeline } from './useMultiPipeline';
+import { useSupabaseLeadStageManagement } from './useSupabaseLeadStageManagement';
+import { useSupabasePipelineStages } from './useSupabasePipelineStages';
 import { useAudit } from '@/contexts/AuditContext';
 import { useToast } from '@/hooks/use-toast';
 
 // Hook that combines checklist validation with pipeline automation
 export function useValidatedAdvancement() {
-  const { processStageAdvancement, getNextStage } = usePipelineAutomation();
-  const { advanceStage } = useMultiPipeline();
+  const { processStageAdvancement } = usePipelineAutomation();
+  const { advanceStage } = useSupabaseLeadStageManagement();
+  const { stages } = useSupabasePipelineStages();
   const { logChange } = useAudit();
   const { toast } = useToast();
 
-  const attemptStageAdvancement = useCallback((
+  const getNextStage = useCallback((currentStageId: string, pipelineId: string) => {
+    const pipelineStages = stages.filter(s => s.pipeline_id === pipelineId).sort((a, b) => a.ordem - b.ordem);
+    const currentIndex = pipelineStages.findIndex(s => s.id === currentStageId);
+    return currentIndex >= 0 && currentIndex < pipelineStages.length - 1 ? pipelineStages[currentIndex + 1] : null;
+  }, [stages]);
+
+  const attemptStageAdvancement = useCallback(async (
     entry: LeadPipelineEntry,
     stage: PipelineStage,
     checklistItems: StageChecklistItem[],
     targetStageId?: string
   ): Promise<{ success: boolean; message: string }> => {
     
-    return new Promise((resolve) => {
-      // Validate checklist completion
-      const validation = ChecklistValidation.validateStageAdvancement(entry, checklistItems);
-      
-      if (!validation.valid) {
-        resolve({
-          success: false,
-          message: validation.errors.join('\n')
-        });
-        return;
-      }
+    // Validate checklist completion
+    const validation = ChecklistValidation.validateStageAdvancement(entry, checklistItems);
+    
+    if (!validation.valid) {
+      return {
+        success: false,
+        message: validation.errors.join('\n')
+      };
+    }
 
-      // Determine target stage
-      const nextStageId = targetStageId || getNextStage(stage.id, entry.pipeline_id)?.id;
-      
-      if (!nextStageId) {
-        resolve({
-          success: false,
-          message: 'Não há próxima etapa disponível neste pipeline'
-        });
-        return;
-      }
+    // Determine target stage
+    const nextStageId = targetStageId || getNextStage(stage.id, entry.pipeline_id)?.id;
+    
+    if (!nextStageId) {
+      return {
+        success: false,
+        message: 'Não há próxima etapa disponível neste pipeline'
+      };
+    }
 
-      try {
-        // Process automation effects
-        const automation = processStageAdvancement(entry, nextStageId);
-        
-        // Log the advancement
-        logChange({
-          entidade: 'LeadPipelineEntry',
-          entidade_id: entry.id,
-          alteracao: [
-            { campo: 'etapa_atual_id', de: entry.etapa_atual_id, para: nextStageId },
-            { campo: 'automated_actions', de: '', para: automation.nextActions.join(', ') }
-          ],
-          ator: 'Sistema (Avanço Validado)'
-        });
+    try {
+      // Use the real stage advancement hook
+      const result = await advanceStage(
+        entry.id,
+        nextStageId,
+        entry.checklist_state,
+        entry.nota_etapa
+      );
 
-        // Execute the advancement
-        advanceStage(entry.id, nextStageId);
-
-        // Show automation results
-        if (automation.nextActions.length > 0) {
-          toast({
-            title: 'Etapa avançada com automações',
-            description: automation.nextActions.join(' • '),
-            duration: 5000
-          });
-        }
-
-        resolve({
-          success: true,
-          message: `Etapa avançada com sucesso${automation.shouldGenerateAppointment ? ' (agendamento automático criado)' : ''}`
-        });
-
-      } catch (error) {
-        resolve({
-          success: false,
-          message: 'Erro interno ao processar avanço de etapa'
-        });
-      }
-    });
+      return {
+        success: result.success,
+        message: result.message || (result.success ? 'Etapa avançada com sucesso' : 'Erro ao avançar etapa')
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Erro interno ao processar avanço de etapa'
+      };
+    }
   }, [processStageAdvancement, getNextStage, advanceStage, logChange, toast]);
 
   const canAdvanceFromCurrentStage = useCallback((

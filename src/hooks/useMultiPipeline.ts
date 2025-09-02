@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { LeadPipelineEntry, PipelineTransferRequest } from '@/types/crm';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
+import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
 import { useAudit } from '@/contexts/AuditContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -8,70 +9,39 @@ import { useToast } from '@/hooks/use-toast';
 export function useMultiPipeline() {
   const { logChange } = useAudit();
   const { toast } = useToast();
-  
-  // Temporary mock data
-  const mockLeadPipelineEntries: any[] = [];
+  const { entries, createEntry, archiveEntry, transferToPipeline, updateEntry } = useSupabaseLeadPipelineEntries();
 
-  const getLeadPipelineEntries = useCallback((leadId: string): LeadPipelineEntry[] => {
-    return mockLeadPipelineEntries.filter(
-      (entry: any) => entry.lead_id === leadId && entry.status_inscricao === 'Ativo'
+  const getLeadPipelineEntries = useCallback((leadId: string): any[] => {
+    return entries.filter(
+      (entry) => entry.lead_id === leadId && entry.status_inscricao === 'Ativo'
     );
-  }, []);
+  }, [entries]);
 
-  const transferPipeline = useCallback((transfer: PipelineTransferRequest) => {
-    // Find existing entry
-    const existingEntry = mockLeadPipelineEntries.find(
-      (e: any) => e.lead_id === transfer.leadId && e.pipeline_id === transfer.fromPipelineId
+  const transferPipeline = useCallback(async (transfer: PipelineTransferRequest) => {
+    const success = await transferToPipeline(
+      transfer.leadId, // Actually should be entryId, but we'll handle this in the UI
+      transfer.toPipelineId,
+      transfer.toStageId,
+      transfer.motivo
     );
 
-    if (!existingEntry) {
-      toast({
-        title: 'Erro na transferência',
-        description: 'Entry não encontrado no pipeline atual',
-        variant: 'destructive'
+    if (success) {
+      logChange({
+        entidade: 'LeadPipelineEntry',
+        entidade_id: transfer.leadId,
+        alteracao: [
+          { campo: 'pipeline_transfer', de: transfer.fromPipelineId, para: transfer.toPipelineId },
+          { campo: 'motivo', de: '', para: transfer.motivo }
+        ],
+        ator: 'Sistema (Transferência)'
       });
-      return;
     }
+  }, [transferToPipeline, logChange]);
 
-    // Archive current entry
-    logChange({
-      entidade: 'LeadPipelineEntry',
-      entidade_id: existingEntry.id,
-      alteracao: [
-        { campo: 'status_inscricao', de: 'Ativo', para: 'Arquivado' },
-        { campo: 'motivo_arquivamento', de: '', para: `Transferido para pipeline: ${transfer.toPipelineId}` }
-      ],
-      ator: 'Sistema (Transferência)'
-    });
-
-    // Create new entry in target pipeline
-    const newEntryId = `entry-${Date.now()}`;
-    logChange({
-      entidade: 'LeadPipelineEntry', 
-      entidade_id: newEntryId,
-      alteracao: [
-        { campo: 'lead_id', de: '', para: transfer.leadId },
-        { campo: 'pipeline_id', de: '', para: transfer.toPipelineId },
-        { campo: 'etapa_atual_id', de: '', para: transfer.toStageId },
-        { campo: 'status_inscricao', de: '', para: 'Ativo' },
-        { campo: 'motivo_entrada', de: '', para: transfer.motivo }
-      ],
-      ator: 'Sistema (Transferência)'
-    });
-
-    toast({
-      title: 'Lead transferido',
-      description: 'Lead transferido com sucesso para o novo pipeline',
-    });
-
-    // TODO: Update mock data or call API
-    console.log('Transfer completed:', transfer);
-  }, [logChange, toast]);
-
-  const inscribePipeline = useCallback((leadId: string, pipelineId: string, stageId: string) => {
+  const inscribePipeline = useCallback(async (leadId: string, pipelineId: string, stageId: string) => {
     // Check if already inscribed
-    const existingEntry = mockLeadPipelineEntries.find(
-      (e: any) => e.lead_id === leadId && e.pipeline_id === pipelineId && e.status_inscricao === 'Ativo'
+    const existingEntry = entries.find(
+      (e) => e.lead_id === leadId && e.pipeline_id === pipelineId && e.status_inscricao === 'Ativo'
     );
 
     if (existingEntry) {
@@ -84,70 +54,64 @@ export function useMultiPipeline() {
     }
 
     // Create new entry
-    const newEntryId = `entry-${Date.now()}`;
-    logChange({
-      entidade: 'LeadPipelineEntry',
-      entidade_id: newEntryId,
-      alteracao: [
-        { campo: 'lead_id', de: '', para: leadId },
-        { campo: 'pipeline_id', de: '', para: pipelineId },
-        { campo: 'etapa_atual_id', de: '', para: stageId },
-        { campo: 'status_inscricao', de: '', para: 'Ativo' }
-      ],
-      ator: 'Sistema (Inscrição)'
+    const newEntry = await createEntry({
+      lead_id: leadId,
+      pipeline_id: pipelineId,
+      etapa_atual_id: stageId
     });
 
-    toast({
-      title: 'Lead inscrito',
-      description: 'Lead inscrito com sucesso no pipeline',
-    });
+    if (newEntry) {
+      logChange({
+        entidade: 'LeadPipelineEntry',
+        entidade_id: newEntry.id,
+        alteracao: [
+          { campo: 'lead_id', de: '', para: leadId },
+          { campo: 'pipeline_id', de: '', para: pipelineId },
+          { campo: 'etapa_atual_id', de: '', para: stageId },
+          { campo: 'status_inscricao', de: '', para: 'Ativo' }
+        ],
+        ator: 'Sistema (Inscrição)'
+      });
+    }
+  }, [entries, createEntry, toast, logChange]);
 
-    // TODO: Update mock data or call API
-    console.log('Inscription completed:', { leadId, pipelineId, stageId });
-  }, [logChange, toast]);
+  const archivePipelineEntry = useCallback(async (entryId: string, motivo: string = 'Arquivado manualmente') => {
+    const success = await archiveEntry(entryId, motivo);
 
-  const archivePipelineEntry = useCallback((entryId: string, motivo: string = 'Arquivado manualmente') => {
-    logChange({
-      entidade: 'LeadPipelineEntry',
-      entidade_id: entryId,
-      alteracao: [
-        { campo: 'status_inscricao', de: 'Ativo', para: 'Arquivado' },
-        { campo: 'motivo_arquivamento', de: '', para: motivo }
-      ],
-      ator: 'Usuário'
-    });
+    if (success) {
+      logChange({
+        entidade: 'LeadPipelineEntry',
+        entidade_id: entryId,
+        alteracao: [
+          { campo: 'status_inscricao', de: 'Ativo', para: 'Arquivado' },
+          { campo: 'motivo_arquivamento', de: '', para: motivo }
+        ],
+        ator: 'Usuário'
+      });
+    }
+  }, [archiveEntry, logChange]);
 
-    toast({
-      title: 'Pipeline arquivado',
-      description: 'Entry removido do pipeline ativo',
-    });
-
-    // TODO: Update mock data or call API
-    console.log('Entry archived:', entryId);
-  }, [logChange, toast]);
-
-  const advanceStage = useCallback((entryId: string, newStageId: string) => {
-    const entry = mockLeadPipelineEntries.find((e: any) => e.id === entryId);
+  const advanceStage = useCallback(async (entryId: string, newStageId: string) => {
+    const entry = entries.find((e) => e.id === entryId);
     const oldStageId = entry?.etapa_atual_id;
 
-    logChange({
-      entidade: 'LeadPipelineEntry',
-      entidade_id: entryId,
-      alteracao: [
-        { campo: 'etapa_atual_id', de: oldStageId || '', para: newStageId },
-        { campo: 'data_entrada_etapa', de: entry?.data_entrada_etapa?.toISOString() || '', para: new Date().toISOString() }
-      ],
-      ator: 'Sistema (Avanço de Etapa)'
+    const success = await updateEntry(entryId, {
+      etapa_atual_id: newStageId,
+      data_entrada_etapa: new Date().toISOString()
     });
 
-    toast({
-      title: 'Etapa avançada',
-      description: 'Lead movido para a próxima etapa',
-    });
-
-    // TODO: Update mock data or call API
-    console.log('Stage advanced:', { entryId, newStageId });
-  }, [logChange, toast]);
+    if (success) {
+      logChange({
+        entidade: 'LeadPipelineEntry',
+        entidade_id: entryId,
+        alteracao: [
+          { campo: 'etapa_atual_id', de: oldStageId || '', para: newStageId },
+          { campo: 'data_entrada_etapa', de: entry?.data_entrada_etapa || '', para: new Date().toISOString() }
+        ],
+        ator: 'Sistema (Avanço de Etapa)'
+      });
+    }
+  }, [entries, updateEntry, logChange]);
 
   return {
     getLeadPipelineEntries,

@@ -16,6 +16,10 @@ import { usePipelineAutomation } from '@/hooks/usePipelineAutomation';
 import { useValidatedAdvancement } from '@/hooks/useValidatedAdvancement';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
+import { useSupabaseLeadStageManagement } from '@/hooks/useSupabaseLeadStageManagement';
+import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
+import { useSupabaseChecklistItems } from '@/hooks/useSupabaseChecklistItems';
 import { 
   DragDropResult,
   LeadPipelineEntry,
@@ -41,10 +45,10 @@ export function EnhancedPipelineKanban() {
   
   const [selectedPipelineId, setSelectedPipelineId] = useState(pipelines[0]?.id || '');
 
-  // Mock data temporarily until hooks are fully implemented
-  const stages: any[] = [];
-  const leadPipelineEntries: any[] = [];  
-  const checklistItems: any[] = [];
+  // Use real Supabase hooks
+  const { entries } = useSupabaseLeadPipelineEntries(selectedPipelineId);
+  const { stages } = useSupabasePipelineStages(selectedPipelineId);
+  const { checklistItems } = useSupabaseChecklistItems();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCloser, setFilterCloser] = useState<string>('all');
   const [filterScore, setFilterScore] = useState<string>('all');
@@ -81,7 +85,7 @@ export function EnhancedPipelineKanban() {
   const selectedPipeline = pipelines.find(p => p.id === selectedPipelineId);
 
   // Buscar entries ativas e aplicar filtros
-  const allEntries = leadPipelineEntries
+  const allEntries = entries
     .filter(entry => 
       entry.status_inscricao === 'Ativo' && 
       entry.pipeline_id === selectedPipelineId
@@ -197,7 +201,7 @@ export function EnhancedPipelineKanban() {
     if (entry && stage) {
       // Check checklist validation
       const stageChecklistItems = checklistItems.filter(item => item.stage_id === stage.id);
-      const validation = ChecklistValidation.validateStageAdvancement(entry as LeadPipelineEntry, stageChecklistItems);
+      const validation = ChecklistValidation.validateStageAdvancement(entry as any, stageChecklistItems);
       
       if (!validation.valid) {
         toast({
@@ -210,7 +214,7 @@ export function EnhancedPipelineKanban() {
 
       setChecklistDialog({
         open: true,
-        entry: entry as LeadPipelineEntry & { lead: Lead },
+        entry: entry as any,
         stage
       });
     }
@@ -234,7 +238,7 @@ export function EnhancedPipelineKanban() {
     if (entry && stage) {
       setChecklistDialog({
         open: true,
-        entry: entry as LeadPipelineEntry & { lead: Lead },
+        entry: entry as any,
         stage
       });
     }
@@ -347,8 +351,8 @@ export function EnhancedPipelineKanban() {
               <SelectContent>
                 <SelectItem value="all">Todos os closers</SelectItem>
                 {closers.map((closer, index) => (
-                  <SelectItem key={closer || index} value={closer as string}>
-                    {closer}
+                  <SelectItem key={`closer-${index}`} value={closer as string}>
+                    {closer as string}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -396,7 +400,7 @@ export function EnhancedPipelineKanban() {
 
       {/* Kanban com Drag & Drop */}
       <DragDropKanban
-        stageEntries={stageEntries}
+        stageEntries={stageEntries as any}
         onDragEnd={handleDragEnd}
         onViewLead={handleViewLead}
         onCreateAppointment={handleCreateAppointment}
