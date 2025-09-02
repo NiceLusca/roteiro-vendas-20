@@ -93,22 +93,18 @@ export function PipelineKanban() {
     : 0;
 
   const handleViewLead = (leadId: string) => {
-    console.log('Ver lead:', leadId);
     // TODO: Navegar para detalhes do lead
   };
 
   const handleCreateAppointment = (leadId: string) => {
-    console.log('Criar agendamento para lead:', leadId);
     // TODO: Abrir modal de agendamento
   };
 
   const handleAdvanceStage = (entryId: string) => {
-    console.log('Avançar etapa:', entryId);
     // TODO: Lógica de avanço de etapa
   };
 
   const handleRegisterInteraction = (leadId: string) => {
-    console.log('Registrar interação:', leadId);
     // TODO: Abrir modal de interação
   };
 

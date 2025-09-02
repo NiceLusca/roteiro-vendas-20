@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Activity, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatCurrency } from '@/utils/formatters';
 
 interface RealtimeData {
   newLeadsToday: number;
@@ -135,12 +136,6 @@ export function RealtimeMetrics() {
     return () => clearInterval(interval);
   }, [user]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
 
   return (
     <Card>

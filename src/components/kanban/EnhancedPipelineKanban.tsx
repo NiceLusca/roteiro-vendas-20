@@ -289,8 +289,8 @@ export function EnhancedPipelineKanban() {
         pipelines={pipelines as any}
         selectedPipelineId={selectedPipelineId}
         onPipelineChange={setSelectedPipelineId}
-        onConfigurePipeline={() => console.log('Configurar pipeline')}
-        onCreatePipeline={() => console.log('Criar pipeline')}
+        onConfigurePipeline={() => {/* TODO: Configurar pipeline */}}
+        onCreatePipeline={() => {/* TODO: Criar pipeline */}}
       />
 
       {/* Métricas Rápidas */}
