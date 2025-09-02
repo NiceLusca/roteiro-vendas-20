@@ -102,7 +102,7 @@ export function AppSidebar() {
             src="/lovable-uploads/ae86e39e-a3e0-4d92-a994-0de0e09258ff.png" 
             alt="Lúmen CRM" 
             className={`object-contain transition-all duration-200 ${
-              collapsed ? 'h-6 w-6' : 'h-8 w-auto max-w-[180px]'
+              collapsed ? 'h-8 w-8' : 'h-12 w-auto max-w-[200px]'
             }`}
           />
         </div>
