@@ -9,13 +9,13 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/src/assets/lumen-logo.png",
+      "src": "/lovable-uploads/ae86e39e-a3e0-4d92-a994-0de0e09258ff.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/src/assets/lumen-logo.png",
+      "src": "/lovable-uploads/ae86e39e-a3e0-4d92-a994-0de0e09258ff.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

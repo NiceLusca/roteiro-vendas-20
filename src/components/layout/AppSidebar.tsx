@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import lumenLogo from '@/assets/lumen-logo.png';
 
 const mainMenuItems = [
   {
@@ -100,13 +99,11 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-3 px-4 py-3">
           <div className="relative">
-            <div className="bg-gradient-lumen rounded-lg p-1.5 flex-shrink-0">
-              <img 
-                src={lumenLogo} 
-                alt="Lúmen CRM" 
-                className="h-6 w-6 object-contain brightness-0 invert"
-              />
-            </div>
+            <img 
+              src="/lovable-uploads/ae86e39e-a3e0-4d92-a994-0de0e09258ff.png" 
+              alt="Lúmen CRM" 
+              className="h-8 w-8 object-contain flex-shrink-0"
+            />
           </div>
           {!collapsed && (
             <div className="flex flex-col">
