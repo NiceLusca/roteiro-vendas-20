@@ -6,6 +6,7 @@ import { Plus, Bell, User, Search, Command } from 'lucide-react';
 import { BreadcrumbNavigation } from '@/components/ui/breadcrumb-navigation';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { KeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help';
+import { CommunicationHub } from '@/components/communication/CommunicationHub';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -156,10 +157,13 @@ export function AppLayout() {
           </header>
 
           {/* Main Content */}
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1 overflow-auto relative">
             <div className="p-6">
               <Outlet />
             </div>
+            
+            {/* Communication Hub - Fixed Position */}
+            <CommunicationHub compact={true} />
           </main>
         </div>
 
