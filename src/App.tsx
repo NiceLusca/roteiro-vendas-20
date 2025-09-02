@@ -19,6 +19,7 @@ const Agenda = lazy(() => import('./pages/Agenda'));
 const Deals = lazy(() => import('./pages/Deals'));
 const Orders = lazy(() => import('./pages/Orders'));
 const Reports = lazy(() => import('./pages/Reports'));
+const Analytics = lazy(() => import('./pages/Analytics'));
 const Settings = lazy(() => import('./pages/Settings'));
 const LeadDetail = lazy(() => import('./pages/LeadDetail'));
 
@@ -79,6 +80,11 @@ const App = () => (
               <Route path="reports" element={
                 <Suspense fallback={<div>Carregando...</div>}>
                   <Reports />
+                </Suspense>
+              } />
+              <Route path="analytics" element={
+                <Suspense fallback={<div>Carregando...</div>}>
+                  <Analytics />
                 </Suspense>
               } />
               <Route path="settings" element={

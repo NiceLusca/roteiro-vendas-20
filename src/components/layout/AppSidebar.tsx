@@ -69,6 +69,11 @@ const analyticsItems = [
     url: '/reports',
     icon: BarChart3,
   },
+  {
+    title: 'Analytics',
+    url: '/analytics',
+    icon: TrendingUp,
+  },
 ];
 
 const configItems = [
