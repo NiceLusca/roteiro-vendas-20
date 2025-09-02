@@ -74,15 +74,14 @@ export function EnhancedPipelineKanban() {
 
   const { logChange } = useAudit();
   const { toast } = useToast();
-  const { processStageAdvancement, checkSLAViolations } = usePipelineAutomation();
+  const selectedPipeline = pipelines.find(p => p.id === selectedPipelineId);
+  const { processStageAdvancement, checkSLAViolations } = usePipelineAutomation(selectedPipelineId || '');
   const { attemptStageAdvancement } = useValidatedAdvancement();
 
   // Buscar stages ordenadas
   const pipelineStages = stages
     .filter((stage: any) => stage.pipeline_id === selectedPipelineId)
     .sort((a: any, b: any) => a.ordem - b.ordem);
-
-  const selectedPipeline = pipelines.find(p => p.id === selectedPipelineId);
 
   // Buscar entries ativas e aplicar filtros
   const allEntries = entries

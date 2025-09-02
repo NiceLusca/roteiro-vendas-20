@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 
 // Hook that combines checklist validation with pipeline automation
 export function useValidatedAdvancement() {
-  const { processStageAdvancement } = usePipelineAutomation();
+  const { processStageAdvancement } = usePipelineAutomation('');
   const { advanceStage } = useSupabaseLeadStageManagement();
   const { stages } = useSupabasePipelineStages();
   const { logChange } = useAudit();

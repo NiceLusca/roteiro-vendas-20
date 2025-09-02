@@ -431,8 +431,8 @@ export function PipelineHealthDashboard({ pipelineId, className }: PipelineHealt
 
       {/* Workflow and Notifications */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <WorkflowOrchestrator pipelineId={selectedPipeline} />
-        <NotificationSystem pipelineId={selectedPipeline} />
+        <WorkflowOrchestrator />
+        <NotificationSystem />
       </div>
     </div>
   );
