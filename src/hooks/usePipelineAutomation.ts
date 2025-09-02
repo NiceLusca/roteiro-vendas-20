@@ -1,206 +1,203 @@
-import { useState, useCallback } from 'react';
-import { PipelineStage, LeadPipelineEntry, Appointment } from '@/types/crm';
-import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
-import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
-import { useAudit } from '@/contexts/AuditContext';
+import { useEffect, useCallback } from 'react';
+import { useAutomationEngine } from './useAutomationEngine';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-// Hook for managing pipeline automations
-export function usePipelineAutomation(pipelineId?: string) {
-  const { logChange } = useAudit();
+interface PipelineAutomationConfig {
+  autoAdvancement: boolean;
+  slaEnforcement: boolean;
+  leadScoring: boolean;
+  inactivityAlerts: boolean;
+  stageTimeouts: Record<string, number>; // stage_id -> timeout in days
+}
+
+export function usePipelineAutomation(pipelineId: string) {
+  const { checkTriggers } = useAutomationEngine();
   const { toast } = useToast();
-  const { stages } = useSupabasePipelineStages(pipelineId);
 
-  const shouldAutoGenerateAppointment = useCallback((stage: PipelineStage): boolean => {
-    return stage.gerar_agendamento_auto === true;
-  }, []);
-
-  const generateAutoAppointment = useCallback((
-    entry: LeadPipelineEntry, 
-    stage: PipelineStage
-  ): Omit<Appointment, 'id' | 'created_at' | 'updated_at'> | null => {
-    
-    if (!shouldAutoGenerateAppointment(stage)) {
-      return null;
+  const config: PipelineAutomationConfig = {
+    autoAdvancement: true,
+    slaEnforcement: true,
+    leadScoring: true,
+    inactivityAlerts: true,
+    stageTimeouts: {
+      // Default timeouts - would be configurable
+      'default': 7
     }
+  };
 
-    // Calculate appointment date/time
-    const appointmentDate = new Date();
-    appointmentDate.setDate(appointmentDate.getDate() + 1); // Next day
-    appointmentDate.setHours(14, 0, 0, 0); // 2 PM default
+  const monitorStageTimeouts = useCallback(async () => {
+    if (!config.slaEnforcement) return;
 
-    const endDate = new Date(appointmentDate);
-    endDate.setMinutes(appointmentDate.getMinutes() + (stage.duracao_minutos || 60));
+    try {
+      const { data: entries } = await supabase
+        .from('lead_pipeline_entries')
+        .select(`
+          *,
+          leads (*),
+          pipeline_stages (*)
+        `)
+        .eq('pipeline_id', pipelineId)
+        .eq('status_inscricao', 'Ativo');
 
-    const appointment: Omit<Appointment, 'id' | 'created_at' | 'updated_at'> = {
-      lead_id: entry.lead_id,
-      start_at: appointmentDate,
-      end_at: endDate,
-      status: 'Agendado',
-      origem: 'Plataforma',
-      observacao: `Agendamento automático gerado pela etapa: ${stage.nome}`,
-      criado_por: 'Sistema (Automação)'
-    };
+      if (!entries) return;
 
-    logChange({
-      entidade: 'Appointment',
-      entidade_id: `auto-apt-${Date.now()}`,
-      alteracao: [
-        { campo: 'created_by_automation', de: '', para: 'true' },
-        { campo: 'stage_id', de: '', para: stage.id }
-      ],
-      ator: 'Sistema (Automação)'
-    });
+      const now = new Date();
+      
+      for (const entry of entries) {
+        const stageTimeout = config.stageTimeouts[entry.etapa_atual_id] || config.stageTimeouts.default;
+        const entryDate = new Date(entry.data_entrada_etapa);
+        const daysInStage = Math.floor((now.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysInStage > stageTimeout) {
+          // Update overdue status
+          await supabase
+            .from('lead_pipeline_entries')
+            .update({
+              dias_em_atraso: daysInStage - stageTimeout,
+              saude_etapa: daysInStage > stageTimeout * 1.5 ? 'Vermelho' : 'Amarelo'
+            })
+            .eq('id', entry.id);
 
-    return appointment;
-  }, [logChange]);
-
-  const getNextStage = useCallback((currentStageId: string, targetPipelineId: string): PipelineStage | null => {
-    const pipelineStages = stages
-      .filter((s: any) => s.pipeline_id === targetPipelineId)
-      .sort((a: any, b: any) => a.ordem - b.ordem);
-    
-    const currentStageIndex = pipelineStages.findIndex(s => s.id === currentStageId);
-    
-    if (currentStageIndex === -1 || currentStageIndex === pipelineStages.length - 1) {
-      return null; // No next stage
-    }
-
-    return pipelineStages[currentStageIndex + 1];
-  }, [stages]);
-
-  const processStageAdvancement = useCallback((
-    entry: LeadPipelineEntry,
-    targetStageId: string
-  ): {
-    shouldGenerateAppointment: boolean;
-    appointment?: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>;
-    nextActions: string[];
-  } => {
-    
-    const targetStage = stages.find((s: any) => s.id === targetStageId);
-    
-    if (!targetStage) {
-      return { shouldGenerateAppointment: false, nextActions: [] };
-    }
-
-    const nextActions: string[] = [];
-    let appointment: Omit<Appointment, 'id' | 'created_at' | 'updated_at'> | undefined;
-
-    // Check if should generate appointment
-    if (shouldAutoGenerateAppointment(targetStage)) {
-      appointment = generateAutoAppointment(entry, targetStage);
-      if (appointment) {
-        nextActions.push(`Agendamento automático criado para ${targetStage.nome}`);
-      }
-    }
-
-    // Add next step suggestion
-    if (targetStage.proximo_passo_label) {
-      nextActions.push(`Próximo passo: ${targetStage.proximo_passo_label}`);
-    }
-
-    // Add SLA warning
-    if (targetStage.prazo_em_dias) {
-      const deadline = new Date();
-      deadline.setDate(deadline.getDate() + targetStage.prazo_em_dias);
-      nextActions.push(`SLA: ${targetStage.prazo_em_dias} dias (até ${deadline.toLocaleDateString('pt-BR')})`);
-    }
-
-    return {
-      shouldGenerateAppointment: !!appointment,
-      appointment,
-      nextActions
-    };
-  }, [shouldAutoGenerateAppointment, generateAutoAppointment]);
-
-  const handleSessionResult = useCallback((
-    sessionResult: 'Avançar' | 'Recuperar' | 'Upsell' | 'Desqualificar',
-    entry: LeadPipelineEntry
-  ): { 
-    recommendedAction: string;
-    targetPipeline?: string;
-    targetStage?: string;
-  } => {
-    
-    switch (sessionResult) {
-      case 'Avançar':
-        const nextStage = getNextStage(entry.etapa_atual_id, entry.pipeline_id);
-        return {
-          recommendedAction: nextStage 
-            ? `Avançar para: ${nextStage.nome}`
-            : 'Lead está na última etapa do pipeline',
-          targetStage: nextStage?.id
-        };
-
-      case 'Recuperar':
-        return {
-          recommendedAction: 'Transferir para pipeline de Recuperação',
-          targetPipeline: 'pipeline-recuperacao',
-          targetStage: 'stage-r1'
-        };
-
-      case 'Upsell':
-        return {
-          recommendedAction: 'Inscrever em pipeline de Upsell',
-          targetPipeline: 'pipeline-upsell', 
-          targetStage: 'stage-u1'
-        };
-
-      case 'Desqualificar':
-        return {
-          recommendedAction: 'Arquivar lead do pipeline atual'
-        };
-
-      default:
-        return {
-          recommendedAction: 'Nenhuma ação automática disponível'
-        };
-    }
-  }, [getNextStage]);
-
-  const checkSLAViolations = useCallback((entries: LeadPipelineEntry[]): {
-    violations: Array<LeadPipelineEntry & { stage: PipelineStage; daysOverdue: number }>;
-    warnings: Array<LeadPipelineEntry & { stage: PipelineStage; daysUntilDue: number }>;
-  } => {
-    
-    const violations: Array<LeadPipelineEntry & { stage: PipelineStage; daysOverdue: number }> = [];
-    const warnings: Array<LeadPipelineEntry & { stage: PipelineStage; daysUntilDue: number }> = [];
-
-    entries.forEach(entry => {
-      if (entry.dias_em_atraso > 0) {
-        const stage = stages.find((s: any) => s.id === entry.etapa_atual_id);
-        if (stage) {
-          violations.push({
-            ...entry,
-            stage,
-            daysOverdue: entry.dias_em_atraso
+          // Trigger automation
+          await checkTriggers(entry.lead_id, 'time_elapsed', {
+            daysInStage,
+            stageTimeout,
+            overdueDays: daysInStage - stageTimeout,
+            stageId: entry.etapa_atual_id
           });
         }
-      } else if (entry.tempo_em_etapa_dias >= 1) {
-        const stage = stages.find((s: any) => s.id === entry.etapa_atual_id);
-        if (stage && stage.prazo_em_dias) {
-          const daysUntilDue = stage.prazo_em_dias - entry.tempo_em_etapa_dias;
-          if (daysUntilDue <= 1 && daysUntilDue > 0) {
-            warnings.push({
-              ...entry,
-              stage,
-              daysUntilDue
-            });
-          }
+      }
+    } catch (error) {
+      console.error('Error monitoring stage timeouts:', error);
+    }
+  }, [pipelineId, checkTriggers, config]);
+
+  const handleStageAdvancement = useCallback(async (leadId: string, fromStageId: string, toStageId: string) => {
+    if (!config.autoAdvancement) return;
+
+    try {
+      await checkTriggers(leadId, 'stage_change', {
+        fromStageId,
+        toStageId,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error handling stage advancement:', error);
+    }
+  }, [checkTriggers, config]);
+
+  const updateLeadScore = useCallback(async (leadId: string, factors: Record<string, number>) => {
+    if (!config.leadScoring) return;
+
+    try {
+      // Calculate lead score based on various factors
+      const baseScore = 0;
+      let score = baseScore;
+
+      // Engagement factors
+      if (factors.appointmentsCompleted) {
+        score += factors.appointmentsCompleted * 10;
+      }
+      
+      if (factors.daysInPipeline) {
+        score += Math.max(0, 20 - factors.daysInPipeline); // Newer leads get higher scores
+      }
+      
+      if (factors.interactionCount) {
+        score += factors.interactionCount * 5;
+      }
+
+      // Business factors
+      if (factors.revenue) {
+        score += Math.min(50, factors.revenue / 1000); // Up to 50 points for revenue
+      }
+
+      // Update lead score
+      const classification = score >= 80 ? 'Alto' : score >= 50 ? 'Médio' : 'Baixo';
+      
+      await supabase
+        .from('leads')
+        .update({
+          lead_score: Math.round(score),
+          lead_score_classification: classification
+        })
+        .eq('id', leadId);
+
+      // Trigger score-based automation
+      await checkTriggers(leadId, 'lead_score', {
+        score: Math.round(score),
+        classification,
+        factors
+      });
+
+    } catch (error) {
+      console.error('Error updating lead score:', error);
+    }
+  }, [checkTriggers, config]);
+
+  const monitorInactivity = useCallback(async () => {
+    if (!config.inactivityAlerts) return;
+
+    try {
+      const inactivityThreshold = new Date();
+      inactivityThreshold.setDate(inactivityThreshold.getDate() - 3); // 3 days
+
+      const { data: inactiveLeads } = await supabase
+        .from('lead_pipeline_entries')
+        .select(`
+          *,
+          leads (*),
+          interactions (
+            timestamp
+          )
+        `)
+        .eq('pipeline_id', pipelineId)
+        .eq('status_inscricao', 'Ativo')
+        .lt('updated_at', inactivityThreshold.toISOString());
+
+      if (!inactiveLeads) return;
+
+      for (const entry of inactiveLeads) {
+        const lastInteraction = entry.interactions?.[0];
+        const daysSinceLastInteraction = lastInteraction 
+          ? Math.floor((Date.now() - new Date(lastInteraction).getTime()) / (1000 * 60 * 60 * 24))
+          : 999;
+
+        if (daysSinceLastInteraction >= 3) {
+          await checkTriggers(entry.lead_id, 'inactivity', {
+            daysSinceLastInteraction,
+            stageId: entry.etapa_atual_id,
+            leadId: entry.lead_id
+          });
         }
       }
-    });
+    } catch (error) {
+      console.error('Error monitoring inactivity:', error);
+    }
+  }, [pipelineId, checkTriggers, config]);
 
-    return { violations, warnings };
-  }, []);
+  // Set up periodic monitoring
+  useEffect(() => {
+    const interval = setInterval(() => {
+      monitorStageTimeouts();
+      monitorInactivity();
+    }, 5 * 60 * 1000); // Every 5 minutes
+
+    // Initial run
+    monitorStageTimeouts();
+    monitorInactivity();
+
+    return () => clearInterval(interval);
+  }, [monitorStageTimeouts, monitorInactivity]);
 
   return {
-    shouldAutoGenerateAppointment,
-    generateAutoAppointment,
-    getNextStage,
-    processStageAdvancement,
-    handleSessionResult,
-    checkSLAViolations
+    config,
+    handleStageAdvancement,
+    updateLeadScore,
+    monitorStageTimeouts,
+    monitorInactivity,
+    processStageAdvancement: handleStageAdvancement,
+    checkSLAViolations: monitorStageTimeouts
   };
 }

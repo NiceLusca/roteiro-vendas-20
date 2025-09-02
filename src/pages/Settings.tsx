@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings as SettingsIcon, Users, Workflow, Package, Database } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Workflow, Package, Database, Zap, Bell } from 'lucide-react';
 import { PipelineManager } from '@/components/settings/PipelineManager';
 import { ProductManager } from '@/components/settings/ProductManager';
+import { WorkflowOrchestrator } from '@/components/pipeline/WorkflowOrchestrator';
+import { NotificationSystem } from '@/components/pipeline/NotificationSystem';
 
 export default function Settings() {
 
@@ -166,6 +168,8 @@ export default function Settings() {
         <TabsList>
           <TabsTrigger value="pipelines">Pipelines</TabsTrigger>
           <TabsTrigger value="products">Produtos</TabsTrigger>
+          <TabsTrigger value="automation">Automação</TabsTrigger>
+          <TabsTrigger value="notifications">Notificações</TabsTrigger>
           <TabsTrigger value="general">Geral</TabsTrigger>
           <TabsTrigger value="data">Dados</TabsTrigger>
         </TabsList>
@@ -176,6 +180,14 @@ export default function Settings() {
 
         <TabsContent value="products">
           <ProductManager />
+        </TabsContent>
+
+        <TabsContent value="automation">
+          <WorkflowOrchestrator />
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <NotificationSystem />
         </TabsContent>
 
         <TabsContent value="general">

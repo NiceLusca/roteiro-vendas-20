@@ -1,316 +1,236 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
-import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
-import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
-import { useAudit } from '@/contexts/AuditContext';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface AutomationRule {
   id: string;
   name: string;
-  trigger: 'sla_violation' | 'stage_duration' | 'checklist_complete' | 'appointment_result';
-  conditions: Record<string, any>;
-  actions: AutomationAction[];
-  active: boolean;
-  pipelineId?: string;
-  stageId?: string;
+  trigger: {
+    type: 'stage_change' | 'time_elapsed' | 'field_change' | 'lead_score' | 'inactivity';
+    conditions: Record<string, any>;
+  };
+  actions: Array<{
+    type: 'move_stage' | 'create_appointment' | 'send_notification' | 'update_field' | 'assign_user';
+    parameters: Record<string, any>;
+  }>;
+  enabled: boolean;
+  priority: number;
 }
 
-interface AutomationAction {
-  type: 'advance_stage' | 'create_appointment' | 'send_notification' | 'update_health' | 'transfer_pipeline';
-  parameters: Record<string, any>;
+interface AutomationExecution {
+  ruleId: string;
+  leadId: string;
+  status: 'pending' | 'executing' | 'completed' | 'failed';
+  result?: any;
+  error?: string;
+  timestamp: Date;
 }
 
-interface AutomationResult {
-  success: boolean;
-  actions: string[];
-  errors: string[];
-}
-
-export function useAutomationEngine(pipelineId?: string) {
-  const [automationRules, setAutomationRules] = useState<AutomationRule[]>([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [lastProcessed, setLastProcessed] = useState<Date | null>(null);
-
-  const { entries, updateEntry, updateHealthStatus } = useSupabaseLeadPipelineEntries(pipelineId);
-  const { stages } = useSupabasePipelineStages(pipelineId);
-  const { saveAppointment } = useSupabaseAppointments();
-  const { logChange } = useAudit();
+export function useAutomationEngine() {
+  const [rules, setRules] = useState<AutomationRule[]>([]);
+  const [executions, setExecutions] = useState<AutomationExecution[]>([]);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { user } = useAuth();
 
-  // Default automation rules
-  useEffect(() => {
-    const defaultRules: AutomationRule[] = [
-      {
-        id: 'sla-health-update',
-        name: 'Atualizar Saúde por SLA',
-        trigger: 'sla_violation',
-        conditions: { days_overdue: 0 },
-        actions: [
-          { type: 'update_health', parameters: { health: 'auto' } }
-        ],
-        active: true
-      },
-      {
-        id: 'auto-appointment-creation',
-        name: 'Criar Agendamento Automático',
-        trigger: 'stage_duration',
-        conditions: { auto_appointment: true },
-        actions: [
-          { type: 'create_appointment', parameters: { type: 'auto' } }
-        ],
-        active: true
-      },
-      {
-        id: 'stage-advance-complete',
-        name: 'Avançar por Checklist Completo',
-        trigger: 'checklist_complete',
-        conditions: { required_complete: true },
-        actions: [
-          { type: 'advance_stage', parameters: { auto: true } }
-        ],
-        active: false // Disabled by default - requires user configuration
-      }
-    ];
-
-    setAutomationRules(defaultRules);
-  }, []);
-
-  const executeAction = useCallback(async (
-    action: AutomationAction,
-    entry: any,
-    stage: any
-  ): Promise<{ success: boolean; message: string }> => {
-    
+  const loadRules = useCallback(async () => {
     try {
-      switch (action.type) {
-        case 'update_health':
-          const newHealth = action.parameters.health === 'auto' 
-            ? calculateAutoHealth(entry, stage)
-            : action.parameters.health;
-          
-          await updateHealthStatus(entry.id, newHealth);
-          return { success: true, message: `Saúde atualizada para ${newHealth}` };
-
-        case 'create_appointment':
-          if (stage.gerar_agendamento_auto) {
-            const appointmentDate = new Date();
-            appointmentDate.setDate(appointmentDate.getDate() + 1);
-            appointmentDate.setHours(14, 0, 0, 0);
-
-            const endDate = new Date(appointmentDate);
-            endDate.setMinutes(appointmentDate.getMinutes() + (stage.duracao_minutos || 60));
-
-            await saveAppointment({
-              lead_id: entry.lead_id,
-              start_at: appointmentDate.toISOString(),
-              end_at: endDate.toISOString(),
-              status: 'Agendado',
-              origem: 'Plataforma',
-              observacao: `Agendamento automático - ${stage.nome}`,
-              criado_por: 'Sistema (Automação)'
-            });
-
-            return { success: true, message: 'Agendamento criado automaticamente' };
-          }
-          return { success: false, message: 'Etapa não configurada para agendamento automático' };
-
-        case 'advance_stage':
-          const nextStage = getNextStage(stage.id, entry.pipeline_id);
-          if (nextStage && canAutoAdvance(entry, stage)) {
-            await updateEntry(entry.id, {
-              etapa_atual_id: nextStage.id,
-              data_entrada_etapa: new Date().toISOString(),
-              tempo_em_etapa_dias: 0,
-              dias_em_atraso: 0,
-              nota_etapa: 'Avançado automaticamente pelo sistema'
-            });
-
-            logChange({
-              entidade: 'LeadPipelineEntry',
-              entidade_id: entry.id,
-              alteracao: [
-                { campo: 'etapa_atual_id', de: stage.id, para: nextStage.id },
-                { campo: 'advancement_type', de: '', para: 'automatic' }
-              ],
-              ator: 'Sistema (Automação)'
-            });
-
-            return { success: true, message: `Lead avançado para ${nextStage.nome}` };
-          }
-          return { success: false, message: 'Não é possível avançar automaticamente' };
-
-        case 'send_notification':
-          toast({
-            title: action.parameters.title || 'Notificação de Automação',
-            description: action.parameters.message || 'Ação automática executada',
-            variant: action.parameters.variant || 'default'
-          });
-          return { success: true, message: 'Notificação enviada' };
-
-        default:
-          return { success: false, message: 'Ação não implementada' };
+      // Load automation rules from database or local storage
+      const storedRules = localStorage.getItem('automation_rules');
+      if (storedRules) {
+        setRules(JSON.parse(storedRules));
       }
     } catch (error) {
-      console.error('Erro ao executar ação:', error);
-      return { success: false, message: `Erro: ${error}` };
+      console.error('Error loading automation rules:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [updateHealthStatus, saveAppointment, updateEntry, logChange, toast]);
+  }, []);
 
-  const calculateAutoHealth = (entry: any, stage: any): 'Verde' | 'Amarelo' | 'Vermelho' => {
-    if (entry.dias_em_atraso > 0) return 'Vermelho';
-    
-    const warningThreshold = Math.floor(stage.prazo_em_dias * 0.8);
-    if (entry.tempo_em_etapa_dias >= warningThreshold) return 'Amarelo';
-    
-    return 'Verde';
-  };
-
-  const getNextStage = (currentStageId: string, pipelineId: string) => {
-    const pipelineStages = stages
-      .filter(s => s.pipeline_id === pipelineId)
-      .sort((a, b) => a.ordem - b.ordem);
-    
-    const currentIndex = pipelineStages.findIndex(s => s.id === currentStageId);
-    return currentIndex !== -1 && currentIndex < pipelineStages.length - 1 
-      ? pipelineStages[currentIndex + 1] 
-      : null;
-  };
-
-  const canAutoAdvance = (entry: any, stage: any): boolean => {
-    // Check if all required checklist items are completed
-    const checklistState = entry.checklist_state || {};
-    // This would need integration with checklist items
-    // For now, return false to prevent auto-advancement
-    return false;
-  };
-
-  const processAutomationRules = useCallback(async (): Promise<AutomationResult> => {
-    if (isProcessing || !user) {
-      return { success: false, actions: [], errors: ['Processamento já em andamento'] };
+  const saveRules = useCallback(async (newRules: AutomationRule[]) => {
+    try {
+      localStorage.setItem('automation_rules', JSON.stringify(newRules));
+      setRules(newRules);
+    } catch (error) {
+      console.error('Error saving automation rules:', error);
     }
+  }, []);
 
-    setIsProcessing(true);
-    const results: string[] = [];
-    const errors: string[] = [];
+  const createRule = useCallback(async (rule: Omit<AutomationRule, 'id'>) => {
+    const newRule: AutomationRule = {
+      ...rule,
+      id: crypto.randomUUID()
+    };
+    
+    const updatedRules = [...rules, newRule];
+    await saveRules(updatedRules);
+    
+    toast({
+      title: "Regra de Automação Criada",
+      description: `Regra "${rule.name}" foi criada com sucesso.`,
+    });
+    
+    return newRule;
+  }, [rules, saveRules, toast]);
+
+  const updateRule = useCallback(async (ruleId: string, updates: Partial<AutomationRule>) => {
+    const updatedRules = rules.map(rule => 
+      rule.id === ruleId ? { ...rule, ...updates } : rule
+    );
+    await saveRules(updatedRules);
+    
+    toast({
+      title: "Regra Atualizada",
+      description: "Regra de automação foi atualizada com sucesso.",
+    });
+  }, [rules, saveRules, toast]);
+
+  const deleteRule = useCallback(async (ruleId: string) => {
+    const updatedRules = rules.filter(rule => rule.id !== ruleId);
+    await saveRules(updatedRules);
+    
+    toast({
+      title: "Regra Removida",
+      description: "Regra de automação foi removida com sucesso.",
+    });
+  }, [rules, saveRules, toast]);
+
+  const executeRule = useCallback(async (rule: AutomationRule, leadId: string, context: Record<string, any> = {}) => {
+    const execution: AutomationExecution = {
+      ruleId: rule.id,
+      leadId,
+      status: 'executing',
+      timestamp: new Date()
+    };
+
+    setExecutions(prev => [...prev, execution]);
 
     try {
-      const activeRules = automationRules.filter(rule => rule.active);
-      
-      for (const rule of activeRules) {
-        const applicableEntries = entries.filter(entry => {
-          if (rule.pipelineId && entry.pipeline_id !== rule.pipelineId) return false;
-          if (rule.stageId && entry.etapa_atual_id !== rule.stageId) return false;
-          return entry.status_inscricao === 'Ativo';
-        });
+      // Execute each action in the rule
+      for (const action of rule.actions) {
+        switch (action.type) {
+          case 'move_stage':
+            // Move lead to different stage
+            await supabase
+              .from('lead_pipeline_entries')
+              .update({ 
+                etapa_atual_id: action.parameters.stageId,
+                data_entrada_etapa: new Date().toISOString()
+              })
+              .eq('lead_id', leadId);
+            break;
 
-        for (const entry of applicableEntries) {
-          const stage = stages.find(s => s.id === entry.etapa_atual_id);
-          if (!stage) continue;
+          case 'create_appointment':
+            // Create new appointment
+            await supabase
+              .from('appointments')
+              .insert({
+                lead_id: leadId,
+                start_at: action.parameters.dateTime,
+                end_at: new Date(new Date(action.parameters.dateTime).getTime() + 60 * 60 * 1000).toISOString(),
+                observacao: `Agendamento automático via regra: ${rule.name}`
+              });
+            break;
 
-          let shouldTrigger = false;
+          case 'update_field':
+            // Update lead field
+            await supabase
+              .from('leads')
+              .update({ [action.parameters.field]: action.parameters.value })
+              .eq('id', leadId);
+            break;
 
-          switch (rule.trigger) {
-            case 'sla_violation':
-              shouldTrigger = entry.dias_em_atraso > (rule.conditions.days_overdue || 0);
-              break;
-            
-            case 'stage_duration':
-              shouldTrigger = entry.tempo_em_etapa_dias >= (stage.prazo_em_dias - 1);
-              break;
-            
-            case 'checklist_complete':
-              // This would need checklist validation
-              shouldTrigger = false;
-              break;
-          }
-
-          if (shouldTrigger) {
-            for (const action of rule.actions) {
-              const result = await executeAction(action, entry, stage);
-              if (result.success) {
-                results.push(`${rule.name}: ${result.message}`);
-              } else {
-                errors.push(`${rule.name}: ${result.message}`);
-              }
-            }
-          }
+          case 'send_notification':
+            // Send notification (would integrate with notification system)
+            console.log(`Sending notification: ${action.parameters.message}`);
+            break;
         }
       }
 
-      setLastProcessed(new Date());
-      
-      if (results.length > 0) {
-        toast({
-          title: 'Automações Executadas',
-          description: `${results.length} ação(ões) automática(s) executadas`,
-          variant: 'default'
-        });
-      }
+      // Update execution status
+      setExecutions(prev => prev.map(e => 
+        e.ruleId === rule.id && e.leadId === leadId 
+          ? { ...e, status: 'completed' as const }
+          : e
+      ));
+
+      toast({
+        title: "Automação Executada",
+        description: `Regra "${rule.name}" foi executada com sucesso.`,
+      });
 
     } catch (error) {
-      console.error('Erro no processamento de automações:', error);
-      errors.push('Erro interno no processamento');
-    } finally {
-      setIsProcessing(false);
+      console.error('Error executing automation rule:', error);
+      
+      setExecutions(prev => prev.map(e => 
+        e.ruleId === rule.id && e.leadId === leadId 
+          ? { 
+              ...e, 
+              status: 'failed' as const, 
+              error: error instanceof Error ? error.message : 'Unknown error'
+            }
+          : e
+      ));
+      
+      toast({
+        title: "Erro na Automação",
+        description: `Falha ao executar regra "${rule.name}".`,
+        variant: "destructive"
+      });
     }
+  }, [toast]);
 
-    return { success: errors.length === 0, actions: results, errors };
-  }, [isProcessing, user, automationRules, entries, stages, executeAction, toast]);
-
-  const addAutomationRule = useCallback((rule: Omit<AutomationRule, 'id'>) => {
-    const newRule: AutomationRule = {
-      ...rule,
-      id: `rule-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    };
-    setAutomationRules(prev => [...prev, newRule]);
-  }, []);
-
-  const updateAutomationRule = useCallback((ruleId: string, updates: Partial<AutomationRule>) => {
-    setAutomationRules(prev => 
-      prev.map(rule => rule.id === ruleId ? { ...rule, ...updates } : rule)
+  const checkTriggers = useCallback(async (leadId: string, triggerType: AutomationRule['trigger']['type'], context: Record<string, any>) => {
+    const applicableRules = rules.filter(rule => 
+      rule.enabled && 
+      rule.trigger.type === triggerType
     );
-  }, []);
 
-  const deleteAutomationRule = useCallback((ruleId: string) => {
-    setAutomationRules(prev => prev.filter(rule => rule.id !== ruleId));
-  }, []);
-
-  const getAutomationStats = useCallback(() => {
-    const totalRules = automationRules.length;
-    const activeRules = automationRules.filter(rule => rule.active).length;
-    const eligibleEntries = entries.filter(entry => entry.status_inscricao === 'Ativo').length;
-    
-    return {
-      totalRules,
-      activeRules,
-      eligibleEntries,
-      lastProcessed,
-      isProcessing
-    };
-  }, [automationRules, entries, lastProcessed, isProcessing]);
-
-  // Auto-process every 5 minutes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (automationRules.some(rule => rule.active)) {
-        processAutomationRules();
+    for (const rule of applicableRules) {
+      // Check if trigger conditions are met
+      const conditionsMet = evaluateTriggerConditions(rule.trigger.conditions, context);
+      
+      if (conditionsMet) {
+        await executeRule(rule, leadId, context);
       }
-    }, 5 * 60 * 1000); // 5 minutes
+    }
+  }, [rules, executeRule]);
 
-    return () => clearInterval(interval);
-  }, [processAutomationRules, automationRules]);
+  useEffect(() => {
+    loadRules();
+  }, [loadRules]);
 
   return {
-    automationRules,
-    isProcessing,
-    lastProcessed,
-    processAutomationRules,
-    addAutomationRule,
-    updateAutomationRule,
-    deleteAutomationRule,
-    getAutomationStats
+    rules,
+    executions,
+    loading,
+    createRule,
+    updateRule,
+    deleteRule,
+    executeRule,
+    checkTriggers
   };
+}
+
+function evaluateTriggerConditions(conditions: Record<string, any>, context: Record<string, any>): boolean {
+  // Simple condition evaluation - can be enhanced
+  return Object.entries(conditions).every(([key, expectedValue]) => {
+    const actualValue = context[key];
+    
+    if (typeof expectedValue === 'object' && expectedValue.operator) {
+      switch (expectedValue.operator) {
+        case 'equals':
+          return actualValue === expectedValue.value;
+        case 'greater_than':
+          return actualValue > expectedValue.value;
+        case 'less_than':
+          return actualValue < expectedValue.value;
+        case 'contains':
+          return String(actualValue).includes(expectedValue.value);
+        default:
+          return actualValue === expectedValue.value;
+      }
+    }
+    
+    return actualValue === expectedValue;
+  });
 }
