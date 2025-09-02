@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight } from 'lucide-react';
-import { PipelineForm } from '@/components/forms/PipelineForm';
+import { AdvancedPipelineForm } from '@/components/forms/AdvancedPipelineForm';
 import { StageForm } from '@/components/forms/StageForm';
 import { StageChecklistManager } from '@/components/settings/StageChecklistManager';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
@@ -253,13 +253,13 @@ export function PipelineManager() {
               Novo Pipeline
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {selectedPipeline ? 'Editar Pipeline' : 'Novo Pipeline'}
               </DialogTitle>
             </DialogHeader>
-            <PipelineForm
+            <AdvancedPipelineForm
               pipeline={selectedPipeline}
               onSave={async (data) => {
                 const result = await savePipeline({ ...data, id: selectedPipeline?.id });

@@ -14,7 +14,7 @@ import { AuditLogsDialog } from '@/components/audit/AuditLogsDialog';
 import { AppointmentDialog } from '@/components/appointment/AppointmentDialog';
 import { InteractionDialog } from '@/components/interaction/InteractionDialog';
 import { ChecklistValidation } from '@/components/checklist/ChecklistValidation';
-import { PipelineForm } from '@/components/forms/PipelineForm';
+import { AdvancedPipelineForm } from '@/components/forms/AdvancedPipelineForm';
 import { usePipelineAutomation } from '@/hooks/usePipelineAutomation';
 import { useValidatedAdvancement } from '@/hooks/useValidatedAdvancement';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
@@ -498,11 +498,11 @@ export function EnhancedPipelineKanban() {
 
       {/* Dialog para Novo Pipeline */}
       <Dialog open={isNewPipelineDialogOpen} onOpenChange={setIsNewPipelineDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Criar Novo Pipeline</DialogTitle>
           </DialogHeader>
-          <PipelineForm
+          <AdvancedPipelineForm
             onSave={handleSaveNewPipeline}
             onCancel={() => setIsNewPipelineDialogOpen(false)}
           />
