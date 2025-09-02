@@ -1,16 +1,15 @@
 import { useState, useCallback } from 'react';
 import { PipelineStage, LeadPipelineEntry, Appointment } from '@/types/crm';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
+import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { useAudit } from '@/contexts/AuditContext';
 import { useToast } from '@/hooks/use-toast';
 
 // Hook for managing pipeline automations
-export function usePipelineAutomation() {
+export function usePipelineAutomation(pipelineId?: string) {
   const { logChange } = useAudit();
   const { toast } = useToast();
-  
-  // Temporary mock data
-  const mockPipelineStages: any[] = [];
+  const { stages } = useSupabasePipelineStages(pipelineId);
 
   const shouldAutoGenerateAppointment = useCallback((stage: PipelineStage): boolean => {
     return stage.gerar_agendamento_auto === true;
@@ -56,9 +55,9 @@ export function usePipelineAutomation() {
     return appointment;
   }, [logChange]);
 
-  const getNextStage = useCallback((currentStageId: string, pipelineId: string): PipelineStage | null => {
-    const pipelineStages = mockPipelineStages
-      .filter((s: any) => s.pipeline_id === pipelineId)
+  const getNextStage = useCallback((currentStageId: string, targetPipelineId: string): PipelineStage | null => {
+    const pipelineStages = stages
+      .filter((s: any) => s.pipeline_id === targetPipelineId)
       .sort((a: any, b: any) => a.ordem - b.ordem);
     
     const currentStageIndex = pipelineStages.findIndex(s => s.id === currentStageId);
@@ -68,7 +67,7 @@ export function usePipelineAutomation() {
     }
 
     return pipelineStages[currentStageIndex + 1];
-  }, []);
+  }, [stages]);
 
   const processStageAdvancement = useCallback((
     entry: LeadPipelineEntry,
@@ -79,7 +78,7 @@ export function usePipelineAutomation() {
     nextActions: string[];
   } => {
     
-    const targetStage = mockPipelineStages.find((s: any) => s.id === targetStageId);
+    const targetStage = stages.find((s: any) => s.id === targetStageId);
     
     if (!targetStage) {
       return { shouldGenerateAppointment: false, nextActions: [] };
@@ -170,7 +169,7 @@ export function usePipelineAutomation() {
 
     entries.forEach(entry => {
       if (entry.dias_em_atraso > 0) {
-        const stage = mockPipelineStages.find((s: any) => s.id === entry.etapa_atual_id);
+        const stage = stages.find((s: any) => s.id === entry.etapa_atual_id);
         if (stage) {
           violations.push({
             ...entry,
@@ -179,7 +178,7 @@ export function usePipelineAutomation() {
           });
         }
       } else if (entry.tempo_em_etapa_dias >= 1) {
-        const stage = mockPipelineStages.find((s: any) => s.id === entry.etapa_atual_id);
+        const stage = stages.find((s: any) => s.id === entry.etapa_atual_id);
         if (stage && stage.prazo_em_dias) {
           const daysUntilDue = stage.prazo_em_dias - entry.tempo_em_etapa_dias;
           if (daysUntilDue <= 1 && daysUntilDue > 0) {
