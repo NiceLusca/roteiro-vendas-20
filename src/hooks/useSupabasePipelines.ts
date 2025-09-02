@@ -50,7 +50,6 @@ interface ComplexPipelineData {
   segmento_alvo?: string;
   responsaveis?: string[];
   tags?: string[];
-  default_para_novos_leads?: boolean;
   stages?: PipelineStage[];
 }
 
@@ -318,7 +317,7 @@ export function useSupabasePipelines() {
         segmento_alvo: (originalPipeline as any).segmento_alvo,
         responsaveis: (originalPipeline as any).responsaveis || [],
         tags: (originalPipeline as any).tags || [],
-        default_para_novos_leads: false,
+        
         stages: originalStages?.map(stage => ({
           nome: stage.nome,
           ordem: stage.ordem,

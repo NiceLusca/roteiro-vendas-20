@@ -57,9 +57,7 @@ const advancedPipelineSchema = z.object({
   responsaveis: z.array(z.string()).default([]),
   tags: z.array(z.string()).default([]),
   
-  // Configurações Avançadas
   duplicar_de_pipeline: z.string().optional(),
-  default_para_novos_leads: z.boolean().default(false),
   
   // Etapas
   stages: z.array(stageSchema).default([]),
@@ -367,7 +365,6 @@ export function AdvancedPipelineForm({
       responsaveis: pipeline?.responsaveis || [],
       tags: pipeline?.tags || [],
       duplicar_de_pipeline: pipeline?.duplicar_de_pipeline || undefined,
-      default_para_novos_leads: pipeline?.default_para_novos_leads || false,
       stages: pipeline?.stages || [],
     },
   });
@@ -814,26 +811,6 @@ export function AdvancedPipelineForm({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="default_para_novos_leads"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>Default para Novos Leads</FormLabel>
-                    <p className="text-sm text-muted-foreground">
-                      Novos leads serão automaticamente inscritos neste pipeline
-                    </p>
-                  </div>
-                </FormItem>
-              )}
-            />
           </TabsContent>
 
           {/* Tab: Preview Visual */}
