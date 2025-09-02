@@ -97,22 +97,14 @@ export function AppSidebar() {
   return (
     <Sidebar className={collapsed ? 'w-14' : 'w-64'} collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <div className="relative">
-            <img 
-              src="/lovable-uploads/ae86e39e-a3e0-4d92-a994-0de0e09258ff.png" 
-              alt="Lúmen CRM" 
-              className="h-8 w-8 object-contain flex-shrink-0"
-            />
-          </div>
-          {!collapsed && (
-            <div className="flex flex-col">
-              <span className="text-sm font-bold bg-gradient-lumen bg-clip-text text-transparent">
-                Lúmen CRM
-              </span>
-              <span className="text-xs text-muted-foreground">Plataforma Inteligente</span>
-            </div>
-          )}
+        <div className="flex items-center justify-center px-4 py-3">
+          <img 
+            src="/lovable-uploads/ae86e39e-a3e0-4d92-a994-0de0e09258ff.png" 
+            alt="Lúmen CRM" 
+            className={`object-contain transition-all duration-200 ${
+              collapsed ? 'h-6 w-6' : 'h-8 w-auto max-w-[180px]'
+            }`}
+          />
         </div>
       </SidebarHeader>
 
