@@ -96,17 +96,25 @@ export function AppSidebar() {
 
   return (
     <Sidebar className={collapsed ? 'w-14' : 'w-64'} collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center justify-center px-4 py-3">
-          <img 
-            src="/lovable-uploads/ae86e39e-a3e0-4d92-a994-0de0e09258ff.png" 
-            alt="Lúmen CRM" 
-            className={`object-contain transition-all duration-200 ${
-              collapsed ? 'h-20 w-20' : 'h-32 w-auto max-w-[400px]'
-            }`}
-          />
-        </div>
-      </SidebarHeader>
+<SidebarHeader className="border-b border-sidebar-border">
+  <div className="flex items-center justify-center px-4 py-3">
+    {/* Container que define formato horizontal e faz o crop */}
+    <div
+      className={`
+        relative overflow-hidden rounded-md transition-all duration-200
+        ${collapsed ? 'h-10 w-10' : 'h-16 w-full max-w-[220px]'}
+        ${collapsed ? '' : 'aspect-[3.2/1]'}
+      `}
+    >
+      <img
+        src="/lovable-uploads/ae86e39e-a3e0-4d92-a994-0de0e09258ff.png"
+        alt="Lúmen CRM"
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+    </div>
+  </div>
+</SidebarHeader>
+
 
       <SidebarContent>
         {/* Menu Principal */}
