@@ -19,6 +19,7 @@ import { Separator } from '@/components/ui/separator';
 import { Plus, X, GripVertical, Eye, Save, SaveIcon } from 'lucide-react';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useToast } from '@/hooks/use-toast';
+import { memo, useRef, useCallback as useCallbackReact } from 'react';
 
 // Esquemas de validação expandidos
 const checklistItemSchema = z.object({
@@ -121,6 +122,8 @@ function SortableChecklistItem({
         onChange={(e) => onUpdate({ titulo: e.target.value })}
         placeholder="Item do checklist"
         className="flex-1 h-8"
+        onKeyDown={(e) => e.stopPropagation()}
+        onFocus={(e) => e.stopPropagation()}
       />
       
       <Checkbox
@@ -216,12 +219,16 @@ function SortableStage({
             value={stage.nome}
             onChange={(e) => onUpdate({ nome: e.target.value })}
             placeholder="Nome da etapa"
+            onKeyDown={(e) => e.stopPropagation()}
+            onFocus={(e) => e.stopPropagation()}
           />
           <Input
             type="number"
             value={stage.prazo_em_dias}
             onChange={(e) => onUpdate({ prazo_em_dias: parseInt(e.target.value) || 1 })}
             placeholder="Prazo (dias)"
+            onKeyDown={(e) => e.stopPropagation()}
+            onFocus={(e) => e.stopPropagation()}
           />
         </div>
 
@@ -245,6 +252,8 @@ function SortableStage({
             value={stage.proximo_passo_label || ''}
             onChange={(e) => onUpdate({ proximo_passo_label: e.target.value })}
             placeholder="Próximo passo"
+            onKeyDown={(e) => e.stopPropagation()}
+            onFocus={(e) => e.stopPropagation()}
           />
         </div>
 
@@ -261,6 +270,8 @@ function SortableStage({
               onChange={(e) => onUpdate({ duracao_minutos: parseInt(e.target.value) || undefined })}
               placeholder="Duração (min)"
               className="w-32"
+              onKeyDown={(e) => e.stopPropagation()}
+              onFocus={(e) => e.stopPropagation()}
             />
           </div>
         )}
@@ -271,12 +282,16 @@ function SortableStage({
             onChange={(e) => onUpdate({ entrada_criteria: e.target.value })}
             placeholder="Critérios de entrada"
             className="h-20"
+            onKeyDown={(e) => e.stopPropagation()}
+            onFocus={(e) => e.stopPropagation()}
           />
           <Textarea
             value={stage.saida_criteria || ''}
             onChange={(e) => onUpdate({ saida_criteria: e.target.value })}
             placeholder="Critérios de saída"
             className="h-20"
+            onKeyDown={(e) => e.stopPropagation()}
+            onFocus={(e) => e.stopPropagation()}
           />
         </div>
 
@@ -335,8 +350,10 @@ export function AdvancedPipelineForm({
 }: AdvancedPipelineFormProps) {
   const [activeTab, setActiveTab] = useState('general');
   const [saving, setSaving] = useState(false);
-  const { pipelines } = useSupabasePipelines();
+  const [continueEditing, setContinueEditing] = useState(false);
+  const { pipelines, saveComplexPipeline, duplicatePipeline } = useSupabasePipelines();
   const { toast } = useToast();
+  const formRef = useRef<HTMLFormElement>(null);
 
   const form = useForm<AdvancedPipelineFormData>({
     resolver: zodResolver(advancedPipelineSchema),
@@ -363,7 +380,7 @@ export function AdvancedPipelineForm({
     const newOrder = currentStages.length + 1;
     
     const newStage: StageData = {
-      nome: '',
+      nome: 'Nova Etapa',
       ordem: newOrder,
       prazo_em_dias: 3,
       proximo_passo_tipo: 'Humano',
@@ -412,7 +429,7 @@ export function AdvancedPipelineForm({
     const currentItems = updatedStages[stageIndex].checklist_items;
     
     const newItem: ChecklistItemData = {
-      titulo: '',
+      titulo: 'Novo item',
       ordem: currentItems.length + 1,
       obrigatorio: false,
     };
@@ -462,38 +479,94 @@ export function AdvancedPipelineForm({
   const handleSave = async (data: AdvancedPipelineFormData) => {
     setSaving(true);
     try {
-      await onSave(data);
-      toast({
-        title: "Pipeline salvo",
-        description: "Pipeline criado com sucesso"
-      });
+      // Validate required fields
+      if (!data.nome || data.nome.trim() === '') {
+        toast({
+          title: "Erro de validação",
+          description: "Nome do pipeline é obrigatório",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Remove duplicar_de_pipeline from data before saving
+      const { duplicar_de_pipeline, ...cleanData } = data;
+      
+      const result = await saveComplexPipeline(cleanData);
+      if (result) {
+        if (!continueEditing) {
+          onCancel(); // Close modal
+        } else {
+          setContinueEditing(false);
+        }
+      }
     } catch (error) {
-      toast({
-        title: "Erro ao salvar",
-        description: "Ocorreu um erro ao salvar o pipeline",
-        variant: "destructive"
-      });
+      console.error('Erro ao salvar pipeline:', error);
     } finally {
       setSaving(false);
     }
   };
 
   const handleSaveAndContinue = async (data: AdvancedPipelineFormData) => {
-    if (!onSaveAndContinue) return;
+    setContinueEditing(true);
+    setSaving(true);
+    try {
+      // Validate required fields
+      if (!data.nome || data.nome.trim() === '') {
+        toast({
+          title: "Erro de validação",
+          description: "Nome do pipeline é obrigatório",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Remove duplicar_de_pipeline from data before saving
+      const { duplicar_de_pipeline, ...cleanData } = data;
+      
+      const result = await saveComplexPipeline(cleanData);
+      if (result) {
+        // Keep form open for editing
+        toast({
+          title: "Pipeline salvo",
+          description: "Continue editando o pipeline..."
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao salvar pipeline:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDuplicateFrom = async (sourcePipelineId: string) => {
+    if (!sourcePipelineId) return;
+    
+    const currentName = form.getValues('nome');
+    const newName = currentName ? `${currentName} (Cópia)` : 'Pipeline Duplicado';
     
     setSaving(true);
     try {
-      await onSaveAndContinue(data);
-      toast({
-        title: "Pipeline salvo",
-        description: "Pipeline salvo. Continue editando..."
-      });
+      const result = await duplicatePipeline(sourcePipelineId, newName);
+      if (result) {
+        // Update form with duplicated data
+        const sourcePipeline = pipelines.find(p => p.id === sourcePipelineId);
+        if (sourcePipeline) {
+          form.reset({
+            ...form.getValues(),
+            nome: newName,
+            descricao: sourcePipeline.descricao,
+            objetivo: sourcePipeline.objetivo,
+          });
+          
+          toast({
+            title: "Pipeline duplicado",
+            description: "Pipeline base foi carregado. Faça as alterações necessárias."
+          });
+        }
+      }
     } catch (error) {
-      toast({
-        title: "Erro ao salvar",
-        description: "Ocorreu um erro ao salvar o pipeline",
-        variant: "destructive"
-      });
+      console.error('Erro ao duplicar pipeline:', error);
     } finally {
       setSaving(false);
     }
@@ -530,7 +603,12 @@ export function AdvancedPipelineForm({
                   <FormItem>
                     <FormLabel>Nome do Pipeline *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Ex: Vendas B2B" />
+            <Input 
+              {...field}
+              placeholder="Ex: Vendas B2B"
+              onKeyDown={(e) => e.stopPropagation()}
+              onFocus={(e) => e.stopPropagation()}
+            />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -544,7 +622,12 @@ export function AdvancedPipelineForm({
                   <FormItem>
                     <FormLabel>Descrição</FormLabel>
                     <FormControl>
-                      <Textarea {...field} placeholder="Descreva o propósito deste pipeline" />
+                      <Textarea 
+                        {...field}
+                        placeholder="Descreva o propósito deste pipeline"
+                        onKeyDown={(e) => e.stopPropagation()}
+                        onFocus={(e) => e.stopPropagation()}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -558,7 +641,12 @@ export function AdvancedPipelineForm({
                   <FormItem>
                     <FormLabel>Objetivo</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Ex: Converter leads B2B em clientes" />
+                      <Input 
+                        {...field}
+                        placeholder="Ex: Converter leads B2B em clientes"
+                        onKeyDown={(e) => e.stopPropagation()}
+                        onFocus={(e) => e.stopPropagation()}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

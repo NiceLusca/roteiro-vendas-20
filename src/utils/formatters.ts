@@ -49,19 +49,49 @@ export const formatWhatsApp = (phone: string): string => {
 
 // Normalizar WhatsApp para armazenamento
 export const normalizeWhatsApp = (phone: string): string => {
+  // Preserva o + se já existir
+  const hasPlus = phone.startsWith('+');
   const cleaned = phone.replace(/\D/g, '');
   
-  // Se tem 11 dígitos, adiciona +55
+  // Se tem 11 dígitos (número brasileiro), adiciona +55
   if (cleaned.length === 11) {
     return `+55${cleaned}`;
   }
   
-  // Se já tem +55, mantém
+  // Se já tem 13 dígitos e começa com 55, adiciona + se não tiver
   if (cleaned.startsWith('55') && cleaned.length === 13) {
+    return hasPlus ? `+${cleaned}` : `+${cleaned}`;
+  }
+  
+  // Se já está no formato correto, mantém
+  if (hasPlus && cleaned.length === 13 && cleaned.startsWith('55')) {
     return `+${cleaned}`;
   }
   
-  return phone;
+  // Para outros casos, retorna o número limpo com + se necessário
+  return hasPlus ? `+${cleaned}` : cleaned.length > 0 ? `+55${cleaned}` : phone;
+};
+
+// Validar WhatsApp brasileiro
+export const validateWhatsApp = (phone: string): boolean => {
+  const cleaned = phone.replace(/\D/g, '');
+  
+  // Aceita números de 11 dígitos (DDD + 9 + número)
+  if (cleaned.length === 11) {
+    const ddd = cleaned.slice(0, 2);
+    const nono = cleaned.slice(2, 3);
+    // DDD válido (11-99) e nono dígito 9
+    return parseInt(ddd) >= 11 && parseInt(ddd) <= 99 && nono === '9';
+  }
+  
+  // Aceita números de 13 dígitos com código do país (+55)
+  if (cleaned.length === 13 && cleaned.startsWith('55')) {
+    const ddd = cleaned.slice(2, 4);
+    const nono = cleaned.slice(4, 5);
+    return parseInt(ddd) >= 11 && parseInt(ddd) <= 99 && nono === '9';
+  }
+  
+  return false;
 };
 
 // Calcular score do lead
