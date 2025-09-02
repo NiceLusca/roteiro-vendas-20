@@ -486,10 +486,10 @@ export function AdvancedPipelineForm({
         return;
       }
 
-      // Remove duplicar_de_pipeline from data before saving
-      const { duplicar_de_pipeline, ...cleanData } = data;
+      // Filter only valid database fields
+      const { duplicar_de_pipeline, segmento_alvo, responsaveis, tags, ...validData } = data;
       
-      const result = await saveComplexPipeline(cleanData);
+      const result = await saveComplexPipeline(validData);
       if (result) {
         if (!continueEditing) {
           onCancel(); // Close modal
@@ -518,10 +518,10 @@ export function AdvancedPipelineForm({
         return;
       }
 
-      // Remove duplicar_de_pipeline from data before saving
-      const { duplicar_de_pipeline, ...cleanData } = data;
+      // Filter only valid database fields
+      const { duplicar_de_pipeline, segmento_alvo, responsaveis, tags, ...validData } = data;
       
-      const result = await saveComplexPipeline(cleanData);
+      const result = await saveComplexPipeline(validData);
       if (result) {
         // Keep form open for editing
         toast({
