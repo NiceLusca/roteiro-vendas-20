@@ -65,6 +65,25 @@ export default {
 					DEFAULT: 'hsl(var(--danger))',
 					foreground: 'hsl(var(--danger-foreground))'
 				},
+				// Lúmen CRM Brand Colors
+				'lumen-purple': {
+					DEFAULT: '263 69% 50%',
+					light: '263 69% 55%',
+					dark: '263 69% 45%'
+				},
+				'lumen-blue': {
+					DEFAULT: '217 91% 60%',
+					light: '217 91% 65%',
+					dark: '217 91% 55%'
+				},
+				'energy-orange': {
+					DEFAULT: '24 95% 53%',
+					light: '24 95% 58%',
+					dark: '24 95% 48%'
+				},
+				'neutral-ultra': '220 14% 96%',
+				'neutral-medium': '215 16% 47%',
+				'black-soft': '217 32% 17%',
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -75,6 +94,12 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				}
+			},
+			backgroundImage: {
+				'gradient-lumen': 'var(--gradient-primary)',
+				'gradient-energy': 'var(--gradient-energy)',
+				'gradient-success': 'var(--gradient-success)',
+				'gradient-card': 'var(--gradient-card)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

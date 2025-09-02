@@ -21,11 +21,11 @@ import {
   ShoppingCart,
   BarChart3,
   Settings,
-  Building2,
   LogOut
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import lumenLogo from '@/assets/lumen-logo.png';
 
 const mainMenuItems = [
   {
@@ -98,14 +98,22 @@ export function AppSidebar() {
   return (
     <Sidebar className={collapsed ? 'w-14' : 'w-64'} collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-2 px-4 py-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Building2 className="h-4 w-4" />
+        <div className="flex items-center gap-3 px-4 py-3">
+          <div className="relative">
+            <div className="bg-gradient-lumen rounded-lg p-1.5 flex-shrink-0">
+              <img 
+                src={lumenLogo} 
+                alt="Lúmen CRM" 
+                className="h-6 w-6 object-contain brightness-0 invert"
+              />
+            </div>
           </div>
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="text-sm font-semibold">CRM Pro</span>
-              <span className="text-xs text-muted-foreground">Sistema de Vendas</span>
+              <span className="text-sm font-bold bg-gradient-lumen bg-clip-text text-transparent">
+                Lúmen CRM
+              </span>
+              <span className="text-xs text-muted-foreground">Plataforma Inteligente</span>
             </div>
           )}
         </div>

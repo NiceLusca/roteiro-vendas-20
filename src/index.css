@@ -2,64 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
-/* CRM Design System - Cores profissionais para sistema de vendas */
+/* Lúmen CRM Design System - Paleta futurista e tecnológica */
 
 @layer base {
   :root {
     /* Base colors */
     --background: 0 0% 100%;
-    --foreground: 215 25% 27%;
+    --foreground: 217 32% 17%;
 
     /* Cards e elementos */
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 27%;
+    --card-foreground: 217 32% 17%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 27%;
+    --popover-foreground: 217 32% 17%;
 
-    /* Azul profissional como primário */
-    --primary: 217 91% 60%;
+    /* Roxo Prisma como cor principal */
+    --primary: 263 69% 50%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 217 91% 55%;
+    --primary-hover: 263 69% 45%;
 
-    /* Secundário em tons de cinza */
-    --secondary: 214 13% 93%;
-    --secondary-foreground: 215 25% 27%;
+    /* Azul Lumínico como secundário */
+    --secondary: 217 91% 60%;
+    --secondary-foreground: 0 0% 100%;
 
     /* Muted para textos auxiliares */
-    --muted: 214 13% 93%;
+    --muted: 220 14% 96%;
     --muted-foreground: 215 16% 47%;
 
     /* Accent para elementos interativos */
-    --accent: 217 91% 95%;
-    --accent-foreground: 217 91% 60%;
+    --accent: 263 69% 96%;
+    --accent-foreground: 263 69% 50%;
 
-    /* Destrutivo para alertas */
-    --destructive: 0 84% 60%;
+    /* Laranja Energia para CTAs */
+    --destructive: 24 95% 53%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Status colors para pipeline health */
-    --success: 142 76% 36%;
+    /* Verde Sucesso para confirmações */
+    --success: 158 64% 40%;
     --success-foreground: 0 0% 100%;
-    --warning: 48 96% 53%;
-    --warning-foreground: 215 25% 27%;
+    
+    /* Laranja Energia para avisos */
+    --warning: 24 95% 53%;
+    --warning-foreground: 0 0% 100%;
+    
+    /* Vermelho para erros */
     --danger: 0 84% 60%;
     --danger-foreground: 0 0% 100%;
 
     /* Borders e inputs */
-    --border: 214 13% 90%;
-    --input: 214 13% 90%;
-    --ring: 217 91% 60%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 263 69% 50%;
 
-    /* Gradients para elementos premium */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 70%));
-    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 46%));
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(214 13% 98%));
+    /* Gradiente Exclusivo Roxo → Azul */
+    --gradient-primary: linear-gradient(135deg, hsl(263 69% 50%), hsl(217 91% 60%));
+    --gradient-success: linear-gradient(135deg, hsl(158 64% 40%), hsl(158 64% 50%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 14% 98%));
+    --gradient-energy: linear-gradient(135deg, hsl(24 95% 53%), hsl(38 92% 50%));
 
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(215 25% 27% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(215 25% 27% / 0.1), 0 2px 4px -2px hsl(215 25% 27% / 0.1);
-    --shadow-lg: 0 10px 15px -3px hsl(215 25% 27% / 0.1), 0 4px 6px -4px hsl(215 25% 27% / 0.1);
+    /* Shadows com cores da marca */
+    --shadow-sm: 0 1px 2px 0 hsl(263 69% 50% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(263 69% 50% / 0.1), 0 2px 4px -2px hsl(263 69% 50% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(263 69% 50% / 0.1), 0 4px 6px -4px hsl(263 69% 50% / 0.1);
 
     --radius: 0.75rem;
 
@@ -75,41 +80,41 @@
 
   .dark {
     /* Dark theme colors */
-    --background: 215 28% 17%;
-    --foreground: 213 31% 91%;
+    --background: 217 32% 17%;
+    --foreground: 220 14% 96%;
 
-    --card: 215 28% 17%;
-    --card-foreground: 213 31% 91%;
+    --card: 217 32% 17%;
+    --card-foreground: 220 14% 96%;
 
-    --popover: 215 28% 17%;
-    --popover-foreground: 213 31% 91%;
+    --popover: 217 32% 17%;
+    --popover-foreground: 220 14% 96%;
 
-    --primary: 217 91% 65%;
-    --primary-foreground: 215 28% 17%;
-    --primary-hover: 217 91% 60%;
+    --primary: 263 69% 55%;
+    --primary-foreground: 217 32% 17%;
+    --primary-hover: 263 69% 50%;
 
-    --secondary: 215 25% 27%;
-    --secondary-foreground: 213 31% 91%;
+    --secondary: 217 91% 65%;
+    --secondary-foreground: 217 32% 17%;
 
     --muted: 215 25% 27%;
     --muted-foreground: 215 16% 65%;
 
     --accent: 215 25% 27%;
-    --accent-foreground: 217 91% 65%;
+    --accent-foreground: 263 69% 55%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 24 95% 53%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 76% 36%;
+    --success: 158 64% 40%;
     --success-foreground: 0 0% 100%;
-    --warning: 48 96% 53%;
-    --warning-foreground: 215 28% 17%;
+    --warning: 24 95% 53%;
+    --warning-foreground: 217 32% 17%;
     --danger: 0 84% 60%;
     --danger-foreground: 0 0% 100%;
 
     --border: 215 25% 27%;
     --input: 215 25% 27%;
-    --ring: 217 91% 65%;
+    --ring: 263 69% 55%;
 
     --sidebar-background: 215 28% 12%;
     --sidebar-foreground: 213 31% 91%;
