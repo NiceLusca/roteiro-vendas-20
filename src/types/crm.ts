@@ -56,7 +56,7 @@ export interface Pipeline {
   descricao?: string;
   ativo: boolean;
   objetivo?: string;
-  primary: boolean; // Pipeline principal quando lead for inscrito
+  primary_pipeline: boolean; // Pipeline principal quando lead for inscrito
 }
 
 export interface PipelineStage {

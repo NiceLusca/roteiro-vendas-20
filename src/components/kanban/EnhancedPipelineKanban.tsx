@@ -48,8 +48,21 @@ export function EnhancedPipelineKanban() {
   const { pipelines, loading: pipelinesLoading, savePipeline } = useSupabasePipelines();
   const { leads } = useSupabaseLeads();
   
-  const [selectedPipelineId, setSelectedPipelineId] = useState(pipelines[0]?.id || '');
+  console.log('EnhancedPipelineKanban render:', { pipelines, pipelinesLoading });
+  
+  const [selectedPipelineId, setSelectedPipelineId] = useState('');
   const [isNewPipelineDialogOpen, setIsNewPipelineDialogOpen] = useState(false);
+
+  // Update selectedPipelineId when pipelines are loaded
+  useEffect(() => {
+    if (pipelines.length > 0 && !selectedPipelineId) {
+      const primaryPipeline = pipelines.find(p => p.primary_pipeline && p.ativo);
+      const defaultPipeline = primaryPipeline || pipelines.find(p => p.ativo) || pipelines[0];
+      if (defaultPipeline) {
+        setSelectedPipelineId(defaultPipeline.id);
+      }
+    }
+  }, [pipelines, selectedPipelineId]);
 
   // Use real Supabase hooks
   const { entries } = useSupabaseLeadPipelineEntries(selectedPipelineId);

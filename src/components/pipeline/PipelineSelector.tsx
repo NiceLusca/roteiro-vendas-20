@@ -36,7 +36,7 @@ export function PipelineSelector({
                   <SelectItem key={pipeline.id} value={pipeline.id}>
                     <div className="flex items-center gap-2">
                       <span>{pipeline.nome}</span>
-                      {pipeline.primary && (
+                      {pipeline.primary_pipeline && (
                         <Badge variant="secondary" className="text-xs">
                           Primário
                         </Badge>
