@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import React, { lazy, Suspense } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AuditProvider } from "@/contexts/AuditContext";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -45,73 +45,75 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <AuditProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={
-              <ProtectedRoute>
-                <AppLayout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<Index />} />
-              <Route path="pipelines" element={<Pipelines />} />
-              <Route path="leads" element={<Leads />} />
-              <Route path="agenda" element={
-                <Suspense fallback={<div>Carregando...</div>}>
-                  <Agenda />
-                </Suspense>
-              } />
-              <Route path="deals" element={
-                <Suspense fallback={<div>Carregando...</div>}>
-                  <Deals />
-                </Suspense>
-              } />
-              <Route path="orders" element={
-                <Suspense fallback={<div>Carregando...</div>}>
-                  <Orders />
-                </Suspense>
-              } />
-              <Route path="reports" element={
-                <Suspense fallback={<div>Carregando...</div>}>
-                  <Reports />
-                </Suspense>
-              } />
-              <Route path="analytics" element={
-                <Suspense fallback={<div>Carregando...</div>}>
-                  <Analytics />
-                </Suspense>
-              } />
-              <Route path="intelligence" element={
-                <Suspense fallback={<div>Carregando...</div>}>
-                  <Intelligence />
-                </Suspense>
-              } />
-              <Route path="settings" element={
-                <Suspense fallback={<div>Carregando...</div>}>
-                  <Settings />
-                </Suspense>
-              } />
-              <Route path="leads/:id" element={
-                <Suspense fallback={<div>Carregando...</div>}>
-                  <LeadDetail />
-                </Suspense>
-              } />
-            </Route>
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-        </TooltipProvider>
-      </AuditProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <AuditProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <AppLayout />
+                  </ProtectedRoute>
+                }>
+                  <Route index element={<Index />} />
+                  <Route path="pipelines" element={<Pipelines />} />
+                  <Route path="leads" element={<Leads />} />
+                  <Route path="agenda" element={
+                    <Suspense fallback={<div>Carregando...</div>}>
+                      <Agenda />
+                    </Suspense>
+                  } />
+                  <Route path="deals" element={
+                    <Suspense fallback={<div>Carregando...</div>}>
+                      <Deals />
+                    </Suspense>
+                  } />
+                  <Route path="orders" element={
+                    <Suspense fallback={<div>Carregando...</div>}>
+                      <Orders />
+                    </Suspense>
+                  } />
+                  <Route path="reports" element={
+                    <Suspense fallback={<div>Carregando...</div>}>
+                      <Reports />
+                    </Suspense>
+                  } />
+                  <Route path="analytics" element={
+                    <Suspense fallback={<div>Carregando...</div>}>
+                      <Analytics />
+                    </Suspense>
+                  } />
+                  <Route path="intelligence" element={
+                    <Suspense fallback={<div>Carregando...</div>}>
+                      <Intelligence />
+                    </Suspense>
+                  } />
+                  <Route path="settings" element={
+                    <Suspense fallback={<div>Carregando...</div>}>
+                      <Settings />
+                    </Suspense>
+                  } />
+                  <Route path="leads/:id" element={
+                    <Suspense fallback={<div>Carregando...</div>}>
+                      <LeadDetail />
+                    </Suspense>
+                  } />
+                </Route>
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuditProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;
