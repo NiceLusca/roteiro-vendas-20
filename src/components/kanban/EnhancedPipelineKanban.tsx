@@ -25,7 +25,7 @@ import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineE
 import { useLeadData } from '@/hooks/useLeadData';
 import { usePipelineAutomation } from '@/hooks/usePipelineAutomation';
 import { useValidatedAdvancement } from '@/hooks/useValidatedAdvancement';
-import { AdvancedPipelineForm } from '@/components/forms/AdvancedPipelineForm';
+import { ImprovedPipelineForm } from '@/components/forms/ImprovedPipelineForm';
 import { LeadForm } from '@/components/forms/LeadForm';
 import { 
   DragDropResult,
@@ -670,7 +670,7 @@ export function EnhancedPipelineKanban() {
               Formulário para criação de um novo pipeline com configurações avançadas
             </div>
           </DialogHeader>
-          <AdvancedPipelineForm
+          <ImprovedPipelineForm
             onSave={handleSaveNewPipeline}
             onCancel={() => setIsNewPipelineDialogOpen(false)}
           />

@@ -359,6 +359,8 @@ export function AdvancedPipelineForm({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastAutoSave, setLastAutoSave] = useState<Date | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [isClosingPrevented, setIsClosingPrevented] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
   
   const { pipelines, saveComplexPipeline, duplicatePipeline } = useSupabasePipelines();
   const { toast } = useToast();
@@ -461,6 +463,23 @@ export function AdvancedPipelineForm({
     }
   }, [form, pipeline, toast]);
 
+  // Prevent accidental modal closing
+  useEffect(() => {
+    const preventClosing = hasUnsavedChanges && form.formState.isDirty;
+    setIsClosingPrevented(preventClosing);
+    
+    // Prevent browser navigation
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (preventClosing) {
+        e.preventDefault();
+        e.returnValue = 'Você tem alterações não salvas. Deseja sair mesmo assim?';
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges, form.formState.isDirty]);
+
   // Keyboard shortcuts management
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -489,10 +508,14 @@ export function AdvancedPipelineForm({
         }
       }
 
-      // Escape key handling
+      // Escape key handling with confirmation
       if (e.key === 'Escape') {
         e.preventDefault();
-        handleModalClose();
+        if (isClosingPrevented) {
+          setShowExitDialog(true);
+        } else {
+          handleModalClose();
+        }
       }
     };
 
