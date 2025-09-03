@@ -443,11 +443,11 @@ export function EmbeddedPipelineAnalytics({
                         </div>
                       </div>
                       
-                      <Badge 
-                        variant={stage.health === 'green' ? 'success' : 
-                               stage.health === 'yellow' ? 'warning' : 'destructive'}
-                        className="text-xs"
-                      >
+                       <Badge 
+                         variant={stage.health === 'green' ? 'secondary' : 
+                                stage.health === 'yellow' ? 'outline' : 'destructive'}
+                         className="text-xs"
+                       >
                         {stage.health === 'green' ? 'Saudável' : 
                          stage.health === 'yellow' ? 'Atenção' : 'Crítico'}
                       </Badge>
@@ -611,11 +611,11 @@ export function EmbeddedPipelineAnalytics({
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <h4 className="font-medium">{bottleneck.stage}</h4>
-                            <Badge 
-                              variant={bottleneck.severity === 'high' ? 'destructive' : 
-                                     bottleneck.severity === 'medium' ? 'warning' : 'secondary'}
-                              className="text-xs"
-                            >
+                             <Badge 
+                               variant={bottleneck.severity === 'high' ? 'destructive' : 
+                                      bottleneck.severity === 'medium' ? 'outline' : 'secondary'}
+                               className="text-xs"
+                             >
                               {bottleneck.severity === 'high' ? 'Alto' :
                                bottleneck.severity === 'medium' ? 'Médio' : 'Baixo'}
                             </Badge>

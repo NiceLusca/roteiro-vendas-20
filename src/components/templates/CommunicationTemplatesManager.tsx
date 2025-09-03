@@ -492,7 +492,7 @@ export function CommunicationTemplatesManager({
                             <Badge variant="outline" className="text-xs">
                               {template.categoria.replace('_', ' ')}
                             </Badge>
-                            <Badge variant={template.ativo ? "success" : "secondary"} className="text-xs">
+                            <Badge variant={template.ativo ? "secondary" : "outline"} className="text-xs">
                               {template.ativo ? 'Ativo' : 'Inativo'}
                             </Badge>
                             {template.auto_send && (
@@ -717,7 +717,7 @@ export function CommunicationTemplatesManager({
                               <Badge variant="outline" className="text-xs">
                                 {rule.trigger_type.replace('_', ' ')}
                               </Badge>
-                              <Badge variant={rule.ativo ? "success" : "secondary"} className="text-xs">
+                              <Badge variant={rule.ativo ? "secondary" : "outline"} className="text-xs">
                                 {rule.ativo ? 'Ativo' : 'Inativo'}
                               </Badge>
                             </div>
