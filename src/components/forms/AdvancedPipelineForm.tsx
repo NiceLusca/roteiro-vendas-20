@@ -46,6 +46,9 @@ const stageSchema = z.object({
 });
 
 const advancedPipelineSchema = z.object({
+  // ID optional for updates
+  id: z.string().optional(),
+  
   // Informações Gerais
   nome: z.string().min(1, 'Nome é obrigatório'),
   descricao: z.string().optional(),
@@ -357,6 +360,7 @@ export function AdvancedPipelineForm({
   const form = useForm<AdvancedPipelineFormData>({
     resolver: zodResolver(advancedPipelineSchema),
     defaultValues: {
+      id: pipeline?.id,
       nome: pipeline?.nome || '',
       descricao: pipeline?.descricao || '',
       objetivo: pipeline?.objetivo || '',
