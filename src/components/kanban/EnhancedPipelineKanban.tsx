@@ -39,7 +39,8 @@ import {
   RotateCcw,
   Users,
   TrendingUp,
-  History
+  History,
+  Plus
 } from 'lucide-react';
 
 export function EnhancedPipelineKanban() {
