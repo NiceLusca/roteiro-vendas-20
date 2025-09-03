@@ -149,12 +149,32 @@ export function useSupabasePipelines() {
     }
   };
 
+  // Validate UUID helper function
+  const isValidUUID = (uuid: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  };
+
   // Save complex pipeline with stages and checklist items (with better error handling)
   const saveComplexPipeline = async (complexData: ComplexPipelineData & { id?: string }) => {
-    if (!user) {
+    console.log('saveComplexPipeline called with:', { complexData, user: user?.id });
+    
+    if (!user || !user.id) {
+      console.error('No user found:', user);
       toast({
         title: "Erro de autenticação",
         description: "Usuário não encontrado. Faça login novamente.",
+        variant: "destructive"
+      });
+      return null;
+    }
+
+    // Validate user ID is a valid UUID
+    if (!isValidUUID(user.id)) {
+      console.error('Invalid user ID format:', user.id);
+      toast({
+        title: "Erro de autenticação",
+        description: "ID do usuário inválido. Faça login novamente.",
         variant: "destructive"
       });
       return null;
@@ -199,12 +219,14 @@ export function useSupabasePipelines() {
       // Separate pipeline data from stages
       const { stages, ...pipelineData } = complexData;
       
-      // Build pipeline payload with only valid fields
+      // Build pipeline payload with only valid fields  
       const pipelinePayload: any = {
-        nome: pipelineData.nome,
+        nome: pipelineData.nome?.trim(),
         user_id: user.id,
         updated_at: new Date().toISOString()
       };
+
+      console.log('Pipeline payload:', pipelinePayload);
 
       // Add optional fields if they exist
       if (pipelineData.descricao !== undefined) pipelinePayload.descricao = pipelineData.descricao;
@@ -239,6 +261,7 @@ export function useSupabasePipelines() {
           .single();
         
         if (error) {
+          console.error('Update pipeline error:', error);
           throw new Error(`Erro ao atualizar pipeline: ${error.message}`);
         }
         savedPipeline = data;
@@ -250,6 +273,8 @@ export function useSupabasePipelines() {
           .single();
         
         if (error) {
+          console.error('Create pipeline error:', error);
+          console.error('Failed payload:', pipelinePayload);
           throw new Error(`Erro ao criar pipeline: ${error.message}`);
         }
         savedPipeline = data;
