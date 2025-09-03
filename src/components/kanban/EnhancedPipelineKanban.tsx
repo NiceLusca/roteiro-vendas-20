@@ -84,18 +84,27 @@ export function EnhancedPipelineKanban() {
     entry?: LeadPipelineEntry & { lead: Lead };
     stage?: PipelineStage;
   }>({ open: false });
+  
   const [auditDialog, setAuditDialog] = useState(false);
+  
   const [appointmentDialog, setAppointmentDialog] = useState<{
     open: boolean;
     leadId?: string;
     leadName?: string;
   }>({ open: false });
+  
   const [interactionDialog, setInteractionDialog] = useState<{
     open: boolean;
     leadId?: string;
     leadName?: string;
   }>({ open: false });
-  const [addLeadDialog, setAddLeadDialog] = useState({
+  
+  // Estado para o diálogo de adicionar lead
+  const [addLeadDialog, setAddLeadDialog] = useState<{
+    open: boolean;
+    stageId: string;
+    stageName: string;
+  }>({
     open: false,
     stageId: '',
     stageName: ''
