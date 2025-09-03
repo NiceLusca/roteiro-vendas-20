@@ -21,7 +21,8 @@ import {
   ShoppingCart,
   BarChart3,
   Settings,
-  LogOut
+  LogOut,
+  Brain
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';

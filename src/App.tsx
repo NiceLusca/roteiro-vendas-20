@@ -22,6 +22,7 @@ const Reports = lazy(() => import('./pages/Reports'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Settings = lazy(() => import('./pages/Settings'));
 const LeadDetail = lazy(() => import('./pages/LeadDetail'));
+const Intelligence = lazy(() => import('./pages/Intelligence'));
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,11 @@ const App = () => (
               <Route path="analytics" element={
                 <Suspense fallback={<div>Carregando...</div>}>
                   <Analytics />
+                </Suspense>
+              } />
+              <Route path="intelligence" element={
+                <Suspense fallback={<div>Carregando...</div>}>
+                  <Intelligence />
                 </Suspense>
               } />
               <Route path="settings" element={
