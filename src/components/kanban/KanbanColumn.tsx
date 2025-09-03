@@ -12,7 +12,7 @@ interface KanbanColumnProps {
   entries: Array<LeadPipelineEntry & { lead: Lead }>;
   wipExceeded: boolean;
   isDragAndDrop?: boolean;
-  onAddLead?: () => void;
+  onAddLead?: (stageId: string) => void;
   onViewLead?: (leadId: string) => void;
   onCreateAppointment?: (leadId: string) => void;
   onAdvanceStage?: (entryId: string) => void;
@@ -70,8 +70,9 @@ export function KanbanColumn({
             <Button
               size="sm"
               variant="ghost"
-              onClick={onAddLead}
+              onClick={() => onAddLead?.(stage.id)}
               className="h-6 w-6 p-0"
+              title="Adicionar lead nesta etapa"
             >
               <Plus className="h-3 w-3" />
             </Button>

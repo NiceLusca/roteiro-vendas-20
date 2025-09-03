@@ -24,6 +24,7 @@ interface DragDropKanbanProps {
     wipExceeded: boolean;
   }>;
   onDragEnd: (result: DragDropResult) => void;
+  onAddLead?: (stageId: string) => void;
   onViewLead?: (leadId: string) => void;
   onCreateAppointment?: (leadId: string) => void;
   onAdvanceStage?: (entryId: string) => void;
@@ -33,6 +34,7 @@ interface DragDropKanbanProps {
 export function DragDropKanban({
   stageEntries,
   onDragEnd,
+  onAddLead,
   onViewLead,
   onCreateAppointment,
   onAdvanceStage,
@@ -107,11 +109,12 @@ export function DragDropKanban({
               stage={stage}
               entries={entries}
               wipExceeded={wipExceeded}
+              isDragAndDrop={true}
+              onAddLead={onAddLead}
               onViewLead={onViewLead}
               onCreateAppointment={onCreateAppointment}
               onAdvanceStage={onAdvanceStage}
               onRegisterInteraction={onRegisterInteraction}
-              isDragAndDrop={true}
             />
           </SortableContext>
         ))}

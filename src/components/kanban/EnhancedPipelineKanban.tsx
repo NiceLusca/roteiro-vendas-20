@@ -20,6 +20,8 @@ import { useValidatedAdvancement } from '@/hooks/useValidatedAdvancement';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
+import { LeadForm } from '@/components/forms/LeadForm';
+import { useLeadData } from '@/hooks/useLeadData';
 import { useMultiPipeline } from '@/hooks/useMultiPipeline';
 import { useSupabaseLeadStageManagement } from '@/hooks/useSupabaseLeadStageManagement';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
@@ -67,7 +69,8 @@ export function EnhancedPipelineKanban() {
 
   // Use real Supabase hooks
   const { entries, refetch: refetchEntries } = useSupabaseLeadPipelineEntries(selectedPipelineId);
-  const { advanceStage } = useMultiPipeline();
+  const { advanceStage, inscribePipeline } = useMultiPipeline();
+  const { saveLead } = useLeadData();
   const { stages } = useSupabasePipelineStages(selectedPipelineId);
   const { checklistItems } = useSupabaseChecklistItems();
   const [searchTerm, setSearchTerm] = useState('');
@@ -92,6 +95,11 @@ export function EnhancedPipelineKanban() {
     leadId?: string;
     leadName?: string;
   }>({ open: false });
+  const [addLeadDialog, setAddLeadDialog] = useState({
+    open: false,
+    stageId: '',
+    stageName: ''
+  });
 
   const { logChange } = useAudit();
   const { toast } = useToast();
@@ -266,6 +274,51 @@ export function EnhancedPipelineKanban() {
         leadName: lead.nome
       });
     }
+  };
+
+  const handleAddLead = (stageId: string) => {
+    const stage = pipelineStages.find(s => s.id === stageId);
+    if (stage) {
+      setAddLeadDialog({
+        open: true,
+        stageId,
+        stageName: stage.nome
+      });
+    }
+  };
+
+  const handleAddLeadSubmit = async (leadData: Partial<Lead>) => {
+    if (!addLeadDialog.stageId) return;
+
+    try {
+      // Primeiro salvar o lead
+      await saveLead(leadData);
+      
+      // Obter o ID do lead criado via refetch 
+      // Como saveLead não retorna o lead, vamos usar uma abordagem diferente
+      // Primeiro, vamos inscrever usando o nome do lead para encontrá-lo
+      setTimeout(async () => {
+        // Buscar o lead recém-criado pelo nome (assumindo que é único)
+        const newLead = leads.find(l => l.nome === leadData.nome);
+        if (newLead) {
+          await inscribePipeline(newLead.id, selectedPipelineId, addLeadDialog.stageId);
+        }
+      }, 1000);
+      
+      toast({
+        title: 'Lead criado com sucesso',
+        description: `Lead adicionado na etapa "${addLeadDialog.stageName}"`
+      });
+    } catch (error) {
+      console.error('Erro ao criar lead:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível criar o lead. Tente novamente.',
+        variant: 'destructive'
+      });
+    }
+
+    setAddLeadDialog({ open: false, stageId: '', stageName: '' });
   };
 
   const handleOpenChecklist = (entryId: string) => {
@@ -452,6 +505,7 @@ export function EnhancedPipelineKanban() {
       <DragDropKanban
         stageEntries={stageEntries as any}
         onDragEnd={handleDragEnd}
+        onAddLead={handleAddLead}
         onViewLead={handleViewLead}
         onCreateAppointment={handleCreateAppointment}
         onAdvanceStage={handleAdvanceStage}
@@ -541,6 +595,22 @@ export function EnhancedPipelineKanban() {
           />
         </DialogContent>
       </Dialog>
+      {/* Dialog para adicionar lead em etapa específica */}
+      {addLeadDialog.open && (
+        <Dialog open={addLeadDialog.open} onOpenChange={(open) => 
+          setAddLeadDialog({ open, stageId: '', stageName: '' })
+        }>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Novo Lead - {addLeadDialog.stageName}</DialogTitle>
+            </DialogHeader>
+            <LeadForm
+              onSubmit={handleAddLeadSubmit}
+              onCancel={() => setAddLeadDialog({ open: false, stageId: '', stageName: '' })}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
