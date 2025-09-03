@@ -275,6 +275,32 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     }
   }, [user, pipelineId]);
 
+  // Real-time updates
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('lead_pipeline_entries_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'lead_pipeline_entries'
+        },
+        (payload) => {
+          console.log('Real-time update received:', payload);
+          // Refetch entries when any change occurs
+          fetchEntries();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, pipelineId]);
+
   return {
     entries,
     loading,

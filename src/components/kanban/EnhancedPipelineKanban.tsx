@@ -66,7 +66,7 @@ export function EnhancedPipelineKanban() {
   }, [pipelines, selectedPipelineId]);
 
   // Use real Supabase hooks
-  const { entries } = useSupabaseLeadPipelineEntries(selectedPipelineId);
+  const { entries, refetch: refetchEntries } = useSupabaseLeadPipelineEntries(selectedPipelineId);
   const { advanceStage } = useMultiPipeline();
   const { stages } = useSupabasePipelineStages(selectedPipelineId);
   const { checklistItems } = useSupabaseChecklistItems();
@@ -201,6 +201,11 @@ export function EnhancedPipelineKanban() {
         title: 'Lead movido',
         description: `Lead movido de "${fromStageData.nome}" para "${toStageData.nome}"`,
       });
+
+      // Force refresh to ensure UI updates immediately
+      if (refetchEntries) {
+        refetchEntries();
+      }
     } catch (error) {
       console.error('Erro ao mover lead:', error);
       toast({
