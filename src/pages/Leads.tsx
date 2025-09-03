@@ -5,7 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LeadForm } from '@/components/forms/LeadForm';
+import { PipelineInscriptionDialog } from '@/components/pipeline/PipelineInscriptionDialog';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
+import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
+import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
+import { useMultiPipeline } from '@/hooks/useMultiPipeline';
 import { useLeadData } from '@/hooks/useLeadData';
 import { Lead } from '@/types/crm';
 import { formatWhatsApp, formatDateTime } from '@/utils/formatters';
@@ -18,16 +23,24 @@ import {
   Phone, 
   Mail,
   MessageCircle,
-  TrendingUp
+  TrendingUp,
+  GitBranch
 } from 'lucide-react';
 
 export default function Leads() {
   const { leads } = useSupabaseLeads();
+  const { pipelines } = useSupabasePipelines();
+  const { stages } = useSupabasePipelineStages();
+  const { entries } = useSupabaseLeadPipelineEntries();
+  const { inscribePipeline, getLeadPipelineEntries } = useMultiPipeline();
+  
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterScore, setFilterScore] = useState<string>('all');
+  const [showInscriptionDialog, setShowInscriptionDialog] = useState(false);
+  const [selectedLeadForInscription, setSelectedLeadForInscription] = useState<Lead | null>(null);
   
   const { saveLead } = useLeadData();
 
@@ -75,6 +88,25 @@ export default function Leads() {
   const handleCancelForm = () => {
     setShowForm(false);
     setEditingLead(undefined);
+  };
+
+  const handleInscribeLead = (lead: Lead) => {
+    setSelectedLeadForInscription(lead);
+    setShowInscriptionDialog(true);
+  };
+
+  const handleInscriptionConfirm = async (pipelineId: string, stageId: string) => {
+    if (!selectedLeadForInscription) return;
+    
+    await inscribePipeline(selectedLeadForInscription.id, pipelineId, stageId);
+    setShowInscriptionDialog(false);
+    setSelectedLeadForInscription(null);
+  };
+
+  const getActivePipelineIds = (leadId: string) => {
+    return getLeadPipelineEntries(leadId)
+      .filter(entry => entry.status_inscricao === 'Ativo')
+      .map(entry => entry.pipeline_id);
   };
 
   const getScoreBadgeClass = (classification: string) => {
@@ -253,6 +285,9 @@ export default function Leads() {
                     <Button variant="ghost" size="sm" onClick={() => handleEditLead(lead)}>
                       <Edit className="h-4 w-4" />
                     </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleInscribeLead(lead)}>
+                      <GitBranch className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="sm">
                       <MessageCircle className="h-4 w-4" />
                     </Button>
@@ -263,6 +298,20 @@ export default function Leads() {
           ))
         )}
       </div>
+
+      {/* Dialog de Inscrição em Pipeline */}
+      {selectedLeadForInscription && (
+        <PipelineInscriptionDialog
+          open={showInscriptionDialog}
+          onOpenChange={setShowInscriptionDialog}
+          leadId={selectedLeadForInscription.id}
+          leadName={selectedLeadForInscription.nome}
+          activePipelineIds={getActivePipelineIds(selectedLeadForInscription.id)}
+          pipelines={pipelines.filter(p => p.ativo)}
+          stages={stages}
+          onConfirm={handleInscriptionConfirm}
+        />
+      )}
     </div>
   );
 }
