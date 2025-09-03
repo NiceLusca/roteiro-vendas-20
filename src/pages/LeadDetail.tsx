@@ -7,6 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Phone, Mail, MessageSquare, Calendar, DollarSign, FileText, Clock, CheckCircle2, AlertCircle, Plus, GitBranch, Archive, Pencil } from 'lucide-react';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
+import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
+import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
+import { useSupabaseChecklistItems } from '@/hooks/useSupabaseChecklistItems';
+import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
+import { useSupabaseDeals } from '@/hooks/useSupabaseDeals';
+import { useSupabaseInteractions } from '@/hooks/useSupabaseInteractions';
+import { useSupabaseOrders } from '@/hooks/useSupabaseOrders';
+import { useSupabaseProducts } from '@/hooks/useSupabaseProducts';
 import { LeadForm } from '@/components/forms/LeadForm';
 import { formatWhatsApp, formatCurrency, formatDate } from '@/utils/formatters';
 import { Lead, LeadPipelineEntry, PipelineStage, StageChecklistItem, Appointment, Deal, PipelineTransferRequest, Interaction, PipelineEvent, AuditLog } from '@/types/crm';
@@ -29,16 +38,16 @@ export default function LeadDetail() {
   
   const { leads } = useSupabaseLeads();
   
-  // Temporary mock data
-  const mockLeadPipelineEntries: any[] = [];
-  const mockPipelineStages: any[] = [];
-  const mockPipelines: any[] = [];
-  const mockChecklistItems: any[] = [];
-  const mockAppointments: any[] = [];
-  const mockDeals: any[] = [];
-  const mockInteractions: any[] = [];
-  const mockPipelineEvents: any[] = [];
-  const mockProducts: any[] = [];
+  // Real Supabase data hooks
+  const { entries: leadPipelineEntries } = useSupabaseLeadPipelineEntries();
+  const { stages: pipelineStages } = useSupabasePipelineStages();
+  const { pipelines } = useSupabasePipelines();
+  const { checklistItems } = useSupabaseChecklistItems();
+  const { appointments } = useSupabaseAppointments();
+  const { deals } = useSupabaseDeals();
+  const { interactions } = useSupabaseInteractions();
+  const { orders } = useSupabaseOrders();
+  const { products } = useSupabaseProducts();
   
   // Dialog states
   const [transferDialog, setTransferDialog] = useState<{
@@ -67,13 +76,13 @@ export default function LeadDetail() {
   const { transferPipeline, inscribePipeline, archivePipelineEntry } = useMultiPipeline();
 
   const lead = leads.find(l => l.id === id);
-  const leadEntries = mockLeadPipelineEntries.filter(e => e.lead_id === id && e.status_inscricao === 'Ativo');
-  const leadAppointments = mockAppointments.filter(a => a.lead_id === id);
-  const leadDeals = mockDeals.filter(d => d.lead_id === id);
+  const leadEntries = leadPipelineEntries.filter(e => e.lead_id === id && e.status_inscricao === 'Ativo');
+  const leadAppointments = appointments.filter(a => a.lead_id === id);
+  const leadDeals = deals.filter(d => d.lead_id === id);
   
   // Get real data for timeline
-  const leadInteractions = mockInteractions.filter(int => int.lead_id === id);
-  const leadPipelineEvents = mockPipelineEvents.filter(event => event.lead_pipeline_entry_id === id);
+  const leadInteractions = interactions.filter(int => int.lead_id === id);
+  const leadPipelineEvents = leadPipelineEntries.filter(entry => entry.lead_id === id).map(entry => entry.id);
   const [leadAuditLogs, setLeadAuditLogs] = useState<any[]>([]);
   
   // Load audit logs asynchronously
@@ -145,7 +154,7 @@ export default function LeadDetail() {
               <p className="text-sm font-medium">{event.title}</p>
               <p className="text-sm text-muted-foreground">{event.description}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                {formatDate(event.timestamp)}
+                {formatDate(new Date(event.timestamp))}
               </p>
             </div>
           </div>
@@ -229,9 +238,9 @@ export default function LeadDetail() {
           </Card>
         ) : (
           leadEntries.map((entry) => {
-            const pipeline = mockPipelines.find(p => p.id === entry.pipeline_id);
-            const stage = mockPipelineStages.find(s => s.id === entry.etapa_atual_id);
-            const checklistItems = mockChecklistItems.filter(item => item.stage_id === entry.etapa_atual_id);
+            const pipeline = pipelines.find(p => p.id === entry.pipeline_id);
+            const stage = pipelineStages.find(s => s.id === entry.etapa_atual_id);
+            const stageChecklistItems = checklistItems.filter(item => item.stage_id === entry.etapa_atual_id);
             
             return (
               <Card key={entry.id}>
@@ -239,7 +248,7 @@ export default function LeadDetail() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <CardTitle className="text-lg">{pipeline?.nome}</CardTitle>
-                      {pipeline?.primary && (
+                      {pipeline?.primary_pipeline && (
                         <Badge variant="secondary">Primário</Badge>
                       )}
                     </div>
@@ -267,11 +276,11 @@ export default function LeadDetail() {
                         <p className="text-sm text-muted-foreground">{stage.proximo_passo_label}</p>
                       </div>
                       
-                      {checklistItems.length > 0 && (
+                      {stageChecklistItems.length > 0 && (
                         <div>
                           <p className="text-sm font-medium mb-2">Checklist da Etapa:</p>
                           <div className="space-y-2">
-                            {checklistItems.map((item) => {
+                            {stageChecklistItems.map((item) => {
                               const isCompleted = entry.checklist_state[item.id] || false;
                               return (
                                 <div key={item.id} className="flex items-center space-x-2">
@@ -303,7 +312,7 @@ export default function LeadDetail() {
                           size="sm" 
                           onClick={() => setChecklistDialog({
                             open: true,
-                            entry: { ...entry, lead } as LeadPipelineEntry & { lead: Lead },
+                            entry: { ...entry, lead } as any,
                             stage
                           })}
                         >
@@ -346,8 +355,8 @@ export default function LeadDetail() {
           leadId={id!}
           leadName={lead?.nome || ''}
           currentPipelineId={transferDialog.pipelineId || ''}
-          pipelines={mockPipelines}
-          stages={mockPipelineStages}
+          pipelines={pipelines}
+          stages={pipelineStages}
           onConfirm={handleTransferPipeline}
         />
 
@@ -357,8 +366,8 @@ export default function LeadDetail() {
           leadId={id!}
           leadName={lead?.nome || ''}
           activePipelineIds={activePipelineIds}
-          pipelines={mockPipelines}
-          stages={mockPipelineStages}
+          pipelines={pipelines}
+          stages={pipelineStages}
           onConfirm={handleInscribePipeline}
         />
 
@@ -368,7 +377,7 @@ export default function LeadDetail() {
             onOpenChange={(open) => setChecklistDialog({ open })}
             entry={checklistDialog.entry}
             stage={checklistDialog.stage}
-            checklistItems={mockChecklistItems}
+            checklistItems={checklistItems}
             onUpdateChecklist={(state) => {
               logChange({
                 entidade: 'LeadPipelineEntry',
@@ -500,10 +509,10 @@ export default function LeadDetail() {
           <UnifiedTimeline
             leadId={id!}
             lead={lead}
-            appointments={leadAppointments}
-            deals={leadDeals}
-            interactions={mockInteractions}
-            pipelineEvents={mockPipelineEvents}
+            appointments={leadAppointments as any}
+            deals={leadDeals as any}
+            interactions={leadInteractions as any}
+            pipelineEvents={leadPipelineEvents as any}
             auditLogs={leadAuditLogs}
             onAddInteraction={(interaction) => {
               logChange({
@@ -530,7 +539,7 @@ export default function LeadDetail() {
                   <div key={apt.id} className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium">{formatDate(apt.start_at)}</p>
+                        <p className="font-medium">{formatDate(new Date(apt.start_at))}</p>
                         <p className="text-sm text-muted-foreground">Status: {apt.status}</p>
                       </div>
                       <Badge>{apt.status}</Badge>
@@ -621,7 +630,7 @@ export default function LeadDetail() {
             <OrderForm
               leadId={id!}
               leadName={lead?.nome || ''}
-              products={mockProducts}
+              products={products}
               onSave={handleCreateOrder}
               onCancel={() => setShowOrderForm(false)}
             />

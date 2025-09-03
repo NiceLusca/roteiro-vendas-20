@@ -17,6 +17,9 @@ interface KanbanColumnProps {
   onCreateAppointment?: (leadId: string) => void;
   onAdvanceStage?: (entryId: string) => void;
   onRegisterInteraction?: (leadId: string) => void;
+  onOpenChecklist?: (entryId: string) => void;
+  onRegressStage?: (entryId: string) => void;
+  onTransferPipeline?: (leadId: string) => void;
 }
 
 export function KanbanColumn({
@@ -28,7 +31,10 @@ export function KanbanColumn({
   onViewLead,
   onCreateAppointment,
   onAdvanceStage,
-  onRegisterInteraction
+  onRegisterInteraction,
+  onOpenChecklist,
+  onRegressStage,
+  onTransferPipeline
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
@@ -157,7 +163,9 @@ export function KanbanColumn({
               onCreateAppointment={() => onCreateAppointment?.(entry.lead.id)}
               onAdvanceStage={() => onAdvanceStage?.(entry.id)}
               onRegisterInteraction={() => onRegisterInteraction?.(entry.lead.id)}
-              onOpenChecklist={() => onAdvanceStage?.(entry.id)}
+              onOpenChecklist={() => onOpenChecklist?.(entry.id)}
+              onRegressStage={() => onRegressStage?.(entry.id)}
+              onTransferPipeline={() => onTransferPipeline?.(entry.lead.id)}
             />
           ))
         )}

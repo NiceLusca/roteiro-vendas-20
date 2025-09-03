@@ -14,18 +14,19 @@ import { AuditLogsDialog } from '@/components/audit/AuditLogsDialog';
 import { AppointmentDialog } from '@/components/appointment/AppointmentDialog';
 import { InteractionDialog } from '@/components/interaction/InteractionDialog';
 import { ChecklistValidation } from '@/components/checklist/ChecklistValidation';
-import { AdvancedPipelineForm } from '@/components/forms/AdvancedPipelineForm';
-import { usePipelineAutomation } from '@/hooks/usePipelineAutomation';
-import { useValidatedAdvancement } from '@/hooks/useValidatedAdvancement';
-import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
-import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
-import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
-import { LeadForm } from '@/components/forms/LeadForm';
-import { useLeadData } from '@/hooks/useLeadData';
+import { PipelineTransferDialog } from '@/components/pipeline/PipelineTransferDialog';
 import { useMultiPipeline } from '@/hooks/useMultiPipeline';
 import { useSupabaseLeadStageManagement } from '@/hooks/useSupabaseLeadStageManagement';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { useSupabaseChecklistItems } from '@/hooks/useSupabaseChecklistItems';
+import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
+import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
+import { useLeadData } from '@/hooks/useLeadData';
+import { usePipelineAutomation } from '@/hooks/usePipelineAutomation';
+import { useValidatedAdvancement } from '@/hooks/useValidatedAdvancement';
+import { AdvancedPipelineForm } from '@/components/forms/AdvancedPipelineForm';
+import { LeadForm } from '@/components/forms/LeadForm';
 import { 
   DragDropResult,
   LeadPipelineEntry,
@@ -68,8 +69,9 @@ export function EnhancedPipelineKanban() {
   }, [pipelines, selectedPipelineId]);
 
   // Use real Supabase hooks
-  const { entries, refetch: refetchEntries } = useSupabaseLeadPipelineEntries(selectedPipelineId);
-  const { advanceStage, inscribePipeline } = useMultiPipeline();
+  const { entries: leadPipelineEntries, updateEntry, refetch } = useSupabaseLeadPipelineEntries(selectedPipelineId);
+  const currentPipeline = pipelines.find(p => p.id === selectedPipelineId);
+  const { advanceStage, inscribePipeline, transferPipeline } = useMultiPipeline();
   const { saveLead } = useLeadData();
   const { stages } = useSupabasePipelineStages(selectedPipelineId);
   const { checklistItems } = useSupabaseChecklistItems();
@@ -110,6 +112,13 @@ export function EnhancedPipelineKanban() {
     stageName: ''
   });
 
+  const [transferDialog, setTransferDialog] = useState<{
+    open: boolean;
+    leadId?: string;
+    leadName?: string;
+    currentPipelineId?: string;
+  }>({ open: false });
+
   const { logChange } = useAudit();
   const { toast } = useToast();
   const selectedPipeline = pipelines.find(p => p.id === selectedPipelineId);
@@ -122,7 +131,7 @@ export function EnhancedPipelineKanban() {
     .sort((a: any, b: any) => a.ordem - b.ordem);
 
   // Buscar entries ativas e aplicar filtros
-  const allEntries = entries
+  const allEntries = leadPipelineEntries
     .filter(entry => 
       entry.status_inscricao === 'Ativo' && 
       entry.pipeline_id === selectedPipelineId
@@ -182,52 +191,58 @@ export function EnhancedPipelineKanban() {
 
   // Event Handlers
   const handleDragEnd = async (result: DragDropResult) => {
-    const { fromStage, toStage, entryId } = result;
-    
-    if (fromStage === toStage) return;
-
-    const fromStageData = pipelineStages.find(s => s.id === fromStage);
-    const toStageData = pipelineStages.find(s => s.id === toStage);
-    
-    if (!fromStageData || !toStageData) return;
+    if (!currentPipeline) return;
 
     try {
-      // Atualizar a etapa na base de dados
-      await advanceStage(entryId, toStage);
+      const currentEntry = leadPipelineEntries.find(e => e.id === result.entryId);
+      if (!currentEntry) return;
 
-      // Log da movimentação
+      const fromStage = pipelineStages.find(s => s.id === result.fromStage);
+      const toStage = pipelineStages.find(s => s.id === result.toStage);
+      
+      if (!fromStage || !toStage) return;
+
+      // Validate checklist before allowing drag
+      const stageChecklistItems = checklistItems.filter(item => item.stage_id === fromStage.id);
+      const validation = ChecklistValidation.validateStageAdvancement(currentEntry as any, stageChecklistItems);
+      
+      if (!validation.valid) {
+        toast({
+          title: 'Não é possível mover o lead',
+          description: validation.errors.join('\n'),
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Update the lead's stage
+      await updateEntry(result.entryId, {
+        etapa_atual_id: result.toStage,
+        data_entrada_etapa: new Date().toISOString(),
+        tempo_em_etapa_dias: 0,
+        dias_em_atraso: 0
+      });
+
+      // Log the movement
       logChange({
         entidade: 'LeadPipelineEntry',
-        entidade_id: entryId,
+        entidade_id: result.entryId,
         alteracao: [
-          { 
-            campo: 'etapa_atual_id', 
-            de: fromStage, 
-            para: toStage 
-          },
-          {
-            campo: 'data_entrada_etapa',
-            de: new Date().toISOString(),
-            para: new Date().toISOString()
-          }
-        ],
-        ator: 'Sistema (Drag & Drop)'
+          { campo: 'etapa', de: fromStage.nome, para: toStage.nome }
+        ]
       });
 
       toast({
-        title: 'Lead movido',
-        description: `Lead movido de "${fromStageData.nome}" para "${toStageData.nome}"`,
+        title: 'Lead movido com sucesso',
+        description: `Movido de "${fromStage.nome}" para "${toStage.nome}"`
       });
 
-      // Force refresh to ensure UI updates immediately
-      if (refetchEntries) {
-        refetchEntries();
-      }
+      refetch();
     } catch (error) {
       console.error('Erro ao mover lead:', error);
       toast({
-        title: 'Erro',
-        description: 'Não foi possível mover o lead. Tente novamente.',
+        title: 'Erro ao mover lead',
+        description: 'Não foi possível completar a movimentação.',
         variant: 'destructive'
       });
     }
@@ -244,6 +259,42 @@ export function EnhancedPipelineKanban() {
         open: true,
         leadId,
         leadName: lead.nome
+      });
+    }
+  };
+
+  const handleRegressStage = (entryId: string) => {
+    const entry = leadPipelineEntries.find(e => e.id === entryId);
+    if (!entry) return;
+    
+    const currentStageIndex = pipelineStages
+      .filter(s => s.pipeline_id === entry.pipeline_id)
+      .sort((a, b) => a.ordem - b.ordem)
+      .findIndex(s => s.id === entry.etapa_atual_id);
+    
+    const previousStage = pipelineStages
+      .filter(s => s.pipeline_id === entry.pipeline_id)
+      .sort((a, b) => a.ordem - b.ordem)[currentStageIndex - 1];
+    
+    if (previousStage) {
+      setChecklistDialog({
+        open: true,
+        entry: { ...entry, lead: leads.find(l => l.id === entry.lead_id)! } as any,
+        stage: previousStage
+      });
+    }
+  };
+
+  const handleTransferPipeline = (leadId: string) => {
+    const lead = leads.find(l => l.id === leadId);
+    const currentEntry = leadPipelineEntries.find(e => e.lead_id === leadId && e.status_inscricao === 'Ativo');
+    
+    if (lead && currentEntry) {
+      setTransferDialog({
+        open: true,
+        leadId,
+        leadName: lead.nome,
+        currentPipelineId: currentEntry.pipeline_id
       });
     }
   };
@@ -517,11 +568,29 @@ export function EnhancedPipelineKanban() {
         onAddLead={handleAddLead}
         onViewLead={handleViewLead}
         onCreateAppointment={handleCreateAppointment}
-        onAdvanceStage={handleAdvanceStage}
-        onRegisterInteraction={handleRegisterInteraction}
+            onAdvanceStage={handleAdvanceStage}
+            onRegisterInteraction={handleRegisterInteraction}
+            onOpenChecklist={handleOpenChecklist}
+            onRegressStage={handleRegressStage}
+            onTransferPipeline={handleTransferPipeline}
       />
 
-      {/* Dialogs */}
+        {/* Pipeline Transfer Dialog */}
+        <PipelineTransferDialog
+          open={transferDialog.open}
+          onOpenChange={(open) => setTransferDialog({ open })}
+          leadId={transferDialog.leadId || ''}
+          leadName={transferDialog.leadName || ''}
+          currentPipelineId={transferDialog.currentPipelineId || ''}
+          pipelines={pipelines}
+          stages={pipelineStages}
+          onConfirm={(transfer) => {
+            transferPipeline(transfer);
+            setTransferDialog({ open: false });
+          }}
+        />
+
+        {/* Dialogs existentes */}
       {checklistDialog.entry && checklistDialog.stage && (
         <ChecklistDialog
           open={checklistDialog.open}

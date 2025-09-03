@@ -12,7 +12,9 @@ import {
   MessageCircle,
   AlertCircle,
   Clock,
-  CheckSquare
+  CheckSquare,
+  ArrowLeft,
+  GitBranch
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSortable } from '@dnd-kit/sortable';
@@ -28,6 +30,8 @@ interface KanbanCardProps {
   onAdvanceStage?: () => void;
   onRegisterInteraction?: () => void;
   onOpenChecklist?: () => void;
+  onRegressStage?: () => void;
+  onTransferPipeline?: () => void;
 }
 
 export function KanbanCard({
@@ -39,7 +43,9 @@ export function KanbanCard({
   onCreateAppointment,
   onAdvanceStage,
   onRegisterInteraction,
-  onOpenChecklist
+  onOpenChecklist,
+  onRegressStage,
+  onTransferPipeline
 }: KanbanCardProps) {
   const {
     attributes,
@@ -169,11 +175,11 @@ export function KanbanCard({
         )}
 
         {/* Ações Rápidas */}
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           <Button
             size="sm"
             variant="ghost"
-            className="text-xs"
+            className="text-xs h-6 px-2"
             onClick={(e) => {
               e.stopPropagation();
               onViewLead?.();
@@ -185,6 +191,7 @@ export function KanbanCard({
           <Button
             size="sm"
             variant="ghost"
+            className="h-6 w-6 p-0"
             onClick={(e) => {
               e.stopPropagation();
               onOpenChecklist?.();
@@ -194,10 +201,50 @@ export function KanbanCard({
             <CheckSquare className="h-3 w-3" />
           </Button>
           
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 w-6 p-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRegressStage?.();
+            }}
+            title="Voltar etapa"
+          >
+            <ArrowLeft className="h-3 w-3" />
+          </Button>
+          
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 w-6 p-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAdvanceStage?.();
+            }}
+            title="Avançar etapa"
+          >
+            <ArrowRight className="h-3 w-3" />
+          </Button>
+          
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 w-6 p-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              onTransferPipeline?.();
+            }}
+            title="Transferir pipeline"
+          >
+            <GitBranch className="h-3 w-3" />
+          </Button>
+          
           {stage.gerar_agendamento_auto && (
             <Button
               size="sm"
               variant="ghost"
+              className="h-6 w-6 p-0"
               onClick={(e) => {
                 e.stopPropagation();
                 onCreateAppointment?.();
@@ -212,6 +259,7 @@ export function KanbanCard({
             <Button
               size="sm"
               variant="ghost"
+              className="h-6 w-6 p-0"
               onClick={(e) => {
                 e.stopPropagation();
                 onRegisterInteraction?.();

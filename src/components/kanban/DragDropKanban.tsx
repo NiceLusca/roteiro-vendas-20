@@ -29,6 +29,9 @@ interface DragDropKanbanProps {
   onCreateAppointment?: (leadId: string) => void;
   onAdvanceStage?: (entryId: string) => void;
   onRegisterInteraction?: (leadId: string) => void;
+  onOpenChecklist?: (entryId: string) => void;
+  onRegressStage?: (entryId: string) => void;
+  onTransferPipeline?: (leadId: string) => void;
 }
 
 export function DragDropKanban({
@@ -38,7 +41,10 @@ export function DragDropKanban({
   onViewLead,
   onCreateAppointment,
   onAdvanceStage,
-  onRegisterInteraction
+  onRegisterInteraction,
+  onOpenChecklist,
+  onRegressStage,
+  onTransferPipeline
 }: DragDropKanbanProps) {
   const [activeEntry, setActiveEntry] = useState<(LeadPipelineEntry & { lead: Lead }) | null>(null);
   
@@ -113,8 +119,10 @@ export function DragDropKanban({
               onAddLead={onAddLead}
               onViewLead={onViewLead}
               onCreateAppointment={onCreateAppointment}
-              onAdvanceStage={onAdvanceStage}
               onRegisterInteraction={onRegisterInteraction}
+              onOpenChecklist={onOpenChecklist}
+              onRegressStage={onRegressStage}
+              onTransferPipeline={onTransferPipeline}
             />
           </SortableContext>
         ))}
