@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight } from 'lucide-react';
 import { AdvancedPipelineForm } from '@/components/forms/AdvancedPipelineForm';
@@ -47,8 +48,9 @@ export function PipelineManager() {
   const [selectedStage, setSelectedStage] = useState<StageData | null>(null);
   const [expandedPipeline, setExpandedPipeline] = useState<string | null>(null);
   const [selectedStageForChecklist, setSelectedStageForChecklist] = useState<{ id: string; nome: string } | null>(null);
+  const [pipelineToDelete, setPipelineToDelete] = useState<Pipeline | null>(null);
   
-  const { pipelines, loading, savePipeline } = useSupabasePipelines();
+  const { pipelines, loading, savePipeline, deletePipeline } = useSupabasePipelines();
   const { stages, saveStage, deleteStage, refetch: refetchStages } = useSupabasePipelineStages();
   const { checklistItems, refetch: refetchChecklistItems } = useSupabaseChecklistItems();
   const { toast } = useToast();
@@ -144,6 +146,59 @@ export function PipelineManager() {
                 <Plus className="w-3 h-3 mr-1" />
                 Nova Etapa
               </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    size="sm" 
+                    variant="destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPipelineToDelete(pipeline);
+                    }}
+                  >
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    Excluir
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>⚠️ Excluir Pipeline</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      <div className="space-y-3">
+                        <p>
+                          <strong>Tem certeza que deseja excluir permanentemente o pipeline "{pipeline.nome}"?</strong>
+                        </p>
+                        <div className="bg-destructive/10 p-3 rounded-md border-l-4 border-destructive">
+                          <p className="text-sm font-medium text-destructive">Esta ação é irreversível e irá:</p>
+                          <ul className="text-sm text-destructive mt-2 space-y-1">
+                            <li>• Excluir todas as etapas do pipeline</li>
+                            <li>• Excluir todos os checklists das etapas</li>
+                            <li>• Remover configurações de critérios</li>
+                          </ul>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          <strong>Importante:</strong> Se houver leads neste pipeline, você precisará transferi-los 
+                          para outro pipeline antes de poder excluir este.
+                        </p>
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={async () => {
+                        const success = await deletePipeline(pipeline.id);
+                        if (success) {
+                          setPipelineToDelete(null);
+                        }
+                      }}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Sim, excluir permanentemente
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         </CardHeader>

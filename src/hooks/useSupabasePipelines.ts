@@ -455,6 +455,85 @@ export function useSupabasePipelines() {
     return pipelines.find(p => p.primary_pipeline && p.ativo);
   };
 
+  // Delete pipeline
+  const deletePipeline = async (pipelineId: string) => {
+    if (!user) return false;
+
+    try {
+      // Check if pipeline has leads before deleting
+      const { data: leadEntries, error: leadCheckError } = await supabase
+        .from('lead_pipeline_entries')
+        .select('id')
+        .eq('pipeline_id', pipelineId)
+        .limit(1);
+
+      if (leadCheckError) {
+        throw new Error(`Erro ao verificar leads: ${leadCheckError.message}`);
+      }
+
+      if (leadEntries && leadEntries.length > 0) {
+        toast({
+          title: "Não é possível excluir",
+          description: "Este pipeline possui leads ativos. Transfira ou arquive os leads antes de excluir o pipeline.",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      // Delete checklist items first
+      const { error: checklistError } = await supabase
+        .from('stage_checklist_items')
+        .delete()
+        .in('stage_id', 
+          (await supabase
+            .from('pipeline_stages')
+            .select('id')
+            .eq('pipeline_id', pipelineId)
+          ).data?.map(s => s.id) || []
+        );
+
+      if (checklistError) {
+        console.warn('Warning deleting checklist items:', checklistError.message);
+      }
+
+      // Delete stages
+      const { error: stagesError } = await supabase
+        .from('pipeline_stages')
+        .delete()
+        .eq('pipeline_id', pipelineId);
+
+      if (stagesError) {
+        throw new Error(`Erro ao excluir etapas: ${stagesError.message}`);
+      }
+
+      // Delete pipeline
+      const { error: pipelineError } = await supabase
+        .from('pipelines')
+        .delete()
+        .eq('id', pipelineId);
+
+      if (pipelineError) {
+        throw new Error(`Erro ao excluir pipeline: ${pipelineError.message}`);
+      }
+
+      toast({
+        title: "Pipeline excluído",
+        description: "Pipeline e todas suas etapas foram excluídos com sucesso.",
+      });
+
+      await fetchPipelines();
+      return true;
+    } catch (error) {
+      console.error('Erro ao excluir pipeline:', error);
+      toast({
+        title: "Erro ao excluir pipeline",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchPipelines();
@@ -467,6 +546,7 @@ export function useSupabasePipelines() {
     savePipeline,
     saveComplexPipeline,
     duplicatePipeline,
+    deletePipeline,
     getPipelineById,
     getActivePipelines,
     getPrimaryPipeline,
