@@ -149,9 +149,49 @@ export function useSupabasePipelines() {
     }
   };
 
-  // Save complex pipeline with stages and checklist items (with transaction)
+  // Save complex pipeline with stages and checklist items (with better error handling)
   const saveComplexPipeline = async (complexData: ComplexPipelineData & { id?: string }) => {
-    if (!user) return null;
+    if (!user) {
+      toast({
+        title: "Erro de autenticação",
+        description: "Usuário não encontrado. Faça login novamente.",
+        variant: "destructive"
+      });
+      return null;
+    }
+
+    // Validate required pipeline fields
+    if (!complexData.nome || complexData.nome.trim() === '') {
+      toast({
+        title: "Erro de validação",
+        description: "Nome do pipeline é obrigatório",
+        variant: "destructive"
+      });
+      return null;
+    }
+
+    // Validate stages if provided
+    if (complexData.stages && complexData.stages.length > 0) {
+      for (let i = 0; i < complexData.stages.length; i++) {
+        const stage = complexData.stages[i];
+        if (!stage.nome || stage.nome.trim() === '') {
+          toast({
+            title: "Erro de validação",
+            description: `Nome da etapa ${i + 1} é obrigatório`,
+            variant: "destructive"
+          });
+          return null;
+        }
+        if (!stage.prazo_em_dias || stage.prazo_em_dias < 1) {
+          toast({
+            title: "Erro de validação",
+            description: `Prazo da etapa "${stage.nome}" deve ser pelo menos 1 dia`,
+            variant: "destructive"
+          });
+          return null;
+        }
+      }
+    }
 
     try {
       const isUpdate = !!complexData.id;
@@ -159,26 +199,38 @@ export function useSupabasePipelines() {
       // Separate pipeline data from stages
       const { stages, ...pipelineData } = complexData;
       
-      // Build pipeline payload
-      const pipelinePayload: any = {};
-      Object.keys(pipelineData).forEach(key => {
-        if (key !== 'id' && pipelineData[key as keyof typeof pipelineData] !== undefined) {
-          pipelinePayload[key] = pipelineData[key as keyof typeof pipelineData];
-        }
-      });
-      
-      pipelinePayload.user_id = user.id;
-      pipelinePayload.updated_at = new Date().toISOString();
+      // Build pipeline payload with only valid fields
+      const pipelinePayload: any = {
+        nome: pipelineData.nome,
+        user_id: user.id,
+        updated_at: new Date().toISOString()
+      };
+
+      // Add optional fields if they exist
+      if (pipelineData.descricao !== undefined) pipelinePayload.descricao = pipelineData.descricao;
+      if (pipelineData.objetivo !== undefined) pipelinePayload.objetivo = pipelineData.objetivo;
+      if (pipelineData.ativo !== undefined) pipelinePayload.ativo = pipelineData.ativo;
+      if (pipelineData.primary_pipeline !== undefined) pipelinePayload.primary_pipeline = pipelineData.primary_pipeline;
       
       if (!isUpdate) {
         pipelinePayload.created_at = new Date().toISOString();
       }
 
-      // Start transaction-like operations
+      // Save pipeline first
       let savedPipeline;
       
-      // Save pipeline first
       if (isUpdate) {
+        // Delete existing stages first to avoid conflicts
+        const { error: deleteError } = await supabase
+          .from('pipeline_stages')
+          .delete()
+          .eq('pipeline_id', complexData.id!);
+
+        if (deleteError) {
+          console.warn('Warning deleting existing stages:', deleteError.message);
+          // Continue anyway as stages might not exist
+        }
+
         const { data, error } = await supabase
           .from('pipelines')
           .update(pipelinePayload)
@@ -186,7 +238,9 @@ export function useSupabasePipelines() {
           .select()
           .single();
         
-        if (error) throw error;
+        if (error) {
+          throw new Error(`Erro ao atualizar pipeline: ${error.message}`);
+        }
         savedPipeline = data;
       } else {
         const { data, error } = await supabase
@@ -195,36 +249,38 @@ export function useSupabasePipelines() {
           .select()
           .single();
         
-        if (error) throw error;
+        if (error) {
+          throw new Error(`Erro ao criar pipeline: ${error.message}`);
+        }
         savedPipeline = data;
       }
 
       // Save stages if provided
       if (stages && stages.length > 0) {
-        for (const stage of stages) {
+        let stagesSaved = 0;
+        let checklistItemsSaved = 0;
+
+        for (const [index, stage] of stages.entries()) {
           const { checklist_items, ...stageData } = stage;
           
-          // Validate required stage fields
-          if (!stageData.nome || !stageData.ordem || !stageData.prazo_em_dias || !stageData.proximo_passo_tipo) {
-            console.warn('Etapa com dados incompletos ignorada:', stageData);
-            continue;
-          }
-          
+          // Ensure required stage fields and proper order
           const stagePayload = {
-            nome: stageData.nome,
-            ordem: stageData.ordem,
-            prazo_em_dias: stageData.prazo_em_dias,
-            proximo_passo_tipo: stageData.proximo_passo_tipo,
-            proximo_passo_label: stageData.proximo_passo_label,
-            entrada_criteria: stageData.entrada_criteria,
-            saida_criteria: stageData.saida_criteria,
-            wip_limit: stageData.wip_limit,
-            gerar_agendamento_auto: stageData.gerar_agendamento_auto,
-            duracao_minutos: stageData.duracao_minutos,
+            nome: stageData.nome!,
+            ordem: index + 1, // Force sequential order
+            prazo_em_dias: stageData.prazo_em_dias!,
+            proximo_passo_tipo: stageData.proximo_passo_tipo || 'Humano',
             pipeline_id: savedPipeline.id,
             updated_at: new Date().toISOString(),
             created_at: new Date().toISOString(),
           };
+
+          // Add optional stage fields
+          if (stageData.proximo_passo_label) stagePayload.proximo_passo_label = stageData.proximo_passo_label;
+          if (stageData.entrada_criteria) stagePayload.entrada_criteria = stageData.entrada_criteria;
+          if (stageData.saida_criteria) stagePayload.saida_criteria = stageData.saida_criteria;
+          if (stageData.wip_limit) stagePayload.wip_limit = stageData.wip_limit;
+          if (stageData.gerar_agendamento_auto !== undefined) stagePayload.gerar_agendamento_auto = stageData.gerar_agendamento_auto;
+          if (stageData.duracao_minutos) stagePayload.duracao_minutos = stageData.duracao_minutos;
 
           const { data: savedStage, error: stageError } = await supabase
             .from('pipeline_stages')
@@ -232,39 +288,48 @@ export function useSupabasePipelines() {
             .select()
             .single();
 
-          if (stageError) throw stageError;
+          if (stageError) {
+            throw new Error(`Erro ao salvar etapa "${stageData.nome}": ${stageError.message}`);
+          }
+
+          stagesSaved++;
 
           // Save checklist items for this stage
           if (checklist_items && checklist_items.length > 0) {
-            const validChecklistItems = checklist_items.filter(item => 
-              item.titulo && item.titulo.trim() !== '' && 
-              typeof item.ordem === 'number' && 
-              typeof item.obrigatorio === 'boolean'
-            );
-            
-            if (validChecklistItems.length > 0) {
-              const checklistPayloads = validChecklistItems.map(item => ({
+            const validChecklistItems = checklist_items
+              .filter(item => item.titulo && item.titulo.trim() !== '')
+              .map((item, itemIndex) => ({
                 titulo: item.titulo!,
-                ordem: item.ordem!,
-                obrigatorio: item.obrigatorio!,
+                ordem: itemIndex + 1, // Force sequential order
+                obrigatorio: item.obrigatorio || false,
                 stage_id: savedStage.id,
                 created_at: new Date().toISOString(),
               }));
-
+            
+            if (validChecklistItems.length > 0) {
               const { error: checklistError } = await supabase
                 .from('stage_checklist_items')
-                .insert(checklistPayloads);
+                .insert(validChecklistItems);
 
-              if (checklistError) throw checklistError;
+              if (checklistError) {
+                throw new Error(`Erro ao salvar checklist da etapa "${stageData.nome}": ${checklistError.message}`);
+              }
+
+              checklistItemsSaved += validChecklistItems.length;
             }
           }
         }
-      }
 
-      toast({
-        title: `Pipeline ${isUpdate ? 'atualizado' : 'criado'} com sucesso`,
-        description: `Pipeline "${savedPipeline.nome}" foi ${isUpdate ? 'atualizado' : 'criado'} com ${stages?.length || 0} etapas`
-      });
+        toast({
+          title: `Pipeline ${isUpdate ? 'atualizado' : 'criado'} com sucesso!`,
+          description: `"${savedPipeline.nome}" - ${stagesSaved} etapas e ${checklistItemsSaved} itens de checklist salvos`,
+        });
+      } else {
+        toast({
+          title: `Pipeline ${isUpdate ? 'atualizado' : 'criado'} com sucesso!`,
+          description: `"${savedPipeline.nome}" foi salvo sem etapas`,
+        });
+      }
 
       await fetchPipelines();
       
@@ -272,10 +337,11 @@ export function useSupabasePipelines() {
     } catch (error) {
       console.error('Erro ao salvar pipeline complexo:', error);
       
-      // Rollback is handled by individual operations failing
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido ao salvar pipeline";
+      
       toast({
         title: "Erro ao salvar pipeline",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
+        description: errorMessage,
         variant: "destructive"
       });
       return null;

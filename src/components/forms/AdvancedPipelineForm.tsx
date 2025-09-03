@@ -486,8 +486,8 @@ export function AdvancedPipelineForm({
         return;
       }
 
-      // Filter only valid database fields
-      const { duplicar_de_pipeline, segmento_alvo, responsaveis, tags, ...validData } = data;
+      // Remove auxiliary field that is not saved to database
+      const { duplicar_de_pipeline, ...validData } = data;
       
       const result = await saveComplexPipeline(validData);
       if (result) {
@@ -518,8 +518,8 @@ export function AdvancedPipelineForm({
         return;
       }
 
-      // Filter only valid database fields
-      const { duplicar_de_pipeline, segmento_alvo, responsaveis, tags, ...validData } = data;
+      // Remove auxiliary field that is not saved to database
+      const { duplicar_de_pipeline, ...validData } = data;
       
       const result = await saveComplexPipeline(validData);
       if (result) {
