@@ -256,6 +256,48 @@ export type Database = {
           },
         ]
       }
+      lead_criteria_state: {
+        Row: {
+          created_at: string
+          criterio_id: string
+          id: string
+          lead_id: string
+          observacoes: string | null
+          stage_id: string
+          status: string
+          updated_at: string
+          validado_em: string | null
+          validado_por: string | null
+          valor_validacao: Json | null
+        }
+        Insert: {
+          created_at?: string
+          criterio_id: string
+          id?: string
+          lead_id: string
+          observacoes?: string | null
+          stage_id: string
+          status: string
+          updated_at?: string
+          validado_em?: string | null
+          validado_por?: string | null
+          valor_validacao?: Json | null
+        }
+        Update: {
+          created_at?: string
+          criterio_id?: string
+          id?: string
+          lead_id?: string
+          observacoes?: string | null
+          stage_id?: string
+          status?: string
+          updated_at?: string
+          validado_em?: string | null
+          validado_por?: string | null
+          valor_validacao?: Json | null
+        }
+        Relationships: []
+      }
       lead_form_submissions: {
         Row: {
           id: string
@@ -898,6 +940,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stage_advancement_criteria: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          obrigatorio: boolean
+          ordem: number
+          regra_condicional: Json | null
+          stage_id: string
+          tipo_criterio: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          obrigatorio?: boolean
+          ordem?: number
+          regra_condicional?: Json | null
+          stage_id: string
+          tipo_criterio: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          obrigatorio?: boolean
+          ordem?: number
+          regra_condicional?: Json | null
+          stage_id?: string
+          tipo_criterio?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       stage_checklist_items: {
         Row: {

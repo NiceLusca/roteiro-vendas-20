@@ -20,6 +20,7 @@ import { Plus, X, GripVertical, Eye, Save, SaveIcon } from 'lucide-react';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useToast } from '@/hooks/use-toast';
 import { memo, useRef, useCallback as useCallbackReact } from 'react';
+import { AdvancedCriteriaManager } from '@/components/criteria/AdvancedCriteriaManager';
 
 // Esquemas de validação expandidos
 const checklistItemSchema = z.object({
@@ -583,9 +584,10 @@ export function AdvancedPipelineForm({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="general">Informações</TabsTrigger>
             <TabsTrigger value="stages">Etapas</TabsTrigger>
+            <TabsTrigger value="criteria">Critérios</TabsTrigger>
             <TabsTrigger value="advanced">Avançado</TabsTrigger>
             <TabsTrigger value="preview">Preview</TabsTrigger>
           </TabsList>
@@ -747,6 +749,50 @@ export function AdvancedPipelineForm({
                       <Plus className="h-4 w-4 mr-2" />
                       Adicionar Primeira Etapa
                     </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Tab: Critérios Avançados */}
+          <TabsContent value="criteria" className="space-y-6">
+            <div>
+              <h3 className="text-lg font-medium mb-4">Critérios de Avanço por Etapa</h3>
+              <p className="text-muted-foreground mb-6">
+                Configure critérios avançados para controlar quando os leads podem avançar entre as etapas.
+              </p>
+              
+              {watchedStages.length > 0 ? (
+                <div className="space-y-6">
+                  {watchedStages.map((stage, index) => (
+                    <Card key={index}>
+                      <CardHeader>
+                        <CardTitle className="text-base">
+                          Etapa {stage.ordem}: {stage.nome || 'Nova Etapa'}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {stage.id ? (
+                          <AdvancedCriteriaManager
+                            stageId={stage.id}
+                            stageName={stage.nome || 'Nova Etapa'}
+                          />
+                        ) : (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <p>Salve o pipeline primeiro para configurar critérios avançados.</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="p-6 text-center">
+                    <p className="text-muted-foreground">
+                      Configure as etapas primeiro na aba "Etapas" para poder definir critérios de avanço.
+                    </p>
                   </CardContent>
                 </Card>
               )}
