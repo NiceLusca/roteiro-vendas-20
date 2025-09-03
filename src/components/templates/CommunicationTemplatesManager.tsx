@@ -395,18 +395,21 @@ export function CommunicationTemplatesManager({
 
                   <div className="bg-muted/20 p-4 rounded-lg">
                     <h4 className="text-sm font-medium mb-2">Variáveis Disponíveis:</h4>
-                    <div className="flex flex-wrap gap-2 text-xs">
-                      {['{{nome}}', '{{email}}', '{{whatsapp}}', '{{closer}}', '{{empresa}}', '{{segmento}}'.map(variable => (
-                        <Badge key={variable} variant="secondary" className="cursor-pointer"
-                          onClick={() => {
-                            const currentContent = templateForm.getValues('conteudo');
-                            templateForm.setValue('conteudo', currentContent + ' ' + variable);
-                          }}
-                        >
-                          {variable}
-                        </Badge>
-                      ))}
-                    </div>
+                     <div className="flex flex-wrap gap-2 text-xs">
+                       {['{{nome}}', '{{email}}', '{{whatsapp}}', '{{closer}}', '{{empresa}}', '{{segmento}}'].map(variable => (
+                         <Badge 
+                           key={variable} 
+                           variant="secondary" 
+                           className="cursor-pointer"
+                           onClick={() => {
+                             const currentContent = templateForm.getValues('conteudo');
+                             templateForm.setValue('conteudo', currentContent + ' ' + variable);
+                           }}
+                         >
+                           {variable}
+                         </Badge>
+                       ))}
+                     </div>
                   </div>
 
                   <div className="flex items-center space-x-6">

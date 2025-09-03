@@ -12,16 +12,18 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Plus, X, GripVertical, Eye, Save, SaveIcon, ChevronLeft, ChevronRight, AlertTriangle, Clock, Minimize2 } from 'lucide-react';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
+import { useSupabasePipelineAnalytics } from '@/hooks/useSupabasePipelineAnalytics';
 import { useToast } from '@/hooks/use-toast';
 import { CommunicationTemplatesManager } from '@/components/templates/CommunicationTemplatesManager';
 import { EmbeddedPipelineAnalytics } from '@/components/analytics/EmbeddedPipelineAnalytics';
+import { AdvancedCriteriaManager } from '@/components/criteria/AdvancedCriteriaManager';
 
 // Validation schemas
 const checklistItemSchema = z.object({
@@ -1306,102 +1308,102 @@ export function ImprovedPipelineForm({
                       </div>
                     ) : (
                       <Card className="border-2 border-dashed">
-                        <CardContent className="p-8 text-center">
-                          <p className="text-muted-foreground">
-                            Configure as etapas primeiro na aba "Etapas" para poder definir critérios de avanço.
-                          </p>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
-                </TabsContent>
+                         <CardContent className="p-8 text-center">
+                           <p className="text-muted-foreground">
+                             Configure as etapas primeiro na aba "Etapas" para poder definir critérios de avanço.
+                           </p>
+                         </CardContent>
+                       </Card>
+                     )}
+                   </div>
+                 </TabsContent>
 
-                {/* Preview */}
-                <TabsContent value="preview" className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Preview do Pipeline</h3>
-                    <p className="text-muted-foreground mb-6">
-                      Revise as informações do pipeline antes de salvar.
-                    </p>
-                    
-                    {/* Pipeline Info Preview */}
-                    <Card className="mb-6">
-                      <CardHeader>
-                        <CardTitle className="text-base">Informações Gerais</CardTitle>
-                      </CardHeader>
-                      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="font-medium">Nome:</p>
-                          <p className="text-muted-foreground">{watchedFormData.nome || 'Não informado'}</p>
-                        </div>
-                        <div>
-                          <p className="font-medium">Segmento:</p>
-                          <p className="text-muted-foreground">{watchedFormData.segmento_alvo || 'Não informado'}</p>
-                        </div>
-                        <div className="md:col-span-2">
-                          <p className="font-medium">Descrição:</p>
-                          <p className="text-muted-foreground">{watchedFormData.descricao || 'Não informada'}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    
-                    {/* Stages Preview */}
-                    {watchedStages.length > 0 ? (
-                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {watchedStages.map((stage, index) => (
-                          <Card key={index} className="shadow-sm hover:shadow-md transition-shadow">
-                            <CardHeader className="pb-3">
-                              <CardTitle className="text-sm flex items-center gap-2">
-                                <span className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold">
-                                  {stage.ordem}
-                                </span>
-                                {stage.nome || 'Sem nome'}
-                              </CardTitle>
-                              <div className="flex items-center gap-2 text-xs">
-                                <Badge variant="outline" className="text-xs">
-                                  {stage.prazo_em_dias} dia{stage.prazo_em_dias !== 1 ? 's' : ''}
-                                </Badge>
-                                <Badge variant="secondary" className="text-xs">
-                                  {stage.proximo_passo_tipo}
-                                </Badge>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="pt-0 space-y-2">
-                              {stage.checklist_items.length > 0 && (
-                                <div className="text-xs text-muted-foreground">
-                                  📋 {stage.checklist_items.length} item{stage.checklist_items.length !== 1 ? 's' : ''} no checklist
-                                </div>
-                              )}
-                              {stage.wip_limit && (
-                                <div className="text-xs text-muted-foreground">
-                                  🎯 Limite WIP: {stage.wip_limit}
-                                </div>
-                              )}
-                              {stage.proximo_passo_label && (
-                                <div className="text-xs text-muted-foreground">
-                                  📝 {stage.proximo_passo_label}
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    ) : (
-                      <Card className="border-2 border-dashed">
-                        <CardContent className="p-8 text-center">
-                          <Eye className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                          <p className="text-muted-foreground">
-                            Adicione etapas para visualizar o preview do pipeline
-                          </p>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </form>
-          </Form>
-        </div>
+                 {/* Preview */}
+                 <TabsContent value="preview" className="space-y-6">
+                   <div>
+                     <h3 className="text-lg font-semibold mb-2">Preview do Pipeline</h3>
+                     <p className="text-muted-foreground mb-6">
+                       Revise as informações do pipeline antes de salvar.
+                     </p>
+                     
+                     {/* Pipeline Info Preview */}
+                     <Card className="mb-6">
+                       <CardHeader>
+                         <CardTitle className="text-base">Informações Gerais</CardTitle>
+                       </CardHeader>
+                       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                         <div>
+                           <p className="font-medium">Nome:</p>
+                           <p className="text-muted-foreground">{watchedFormData.nome || 'Não informado'}</p>
+                         </div>
+                         <div>
+                           <p className="font-medium">Segmento:</p>
+                           <p className="text-muted-foreground">{watchedFormData.segmento_alvo || 'Não informado'}</p>
+                         </div>
+                         <div className="md:col-span-2">
+                           <p className="font-medium">Descrição:</p>
+                           <p className="text-muted-foreground">{watchedFormData.descricao || 'Não informada'}</p>
+                         </div>
+                       </CardContent>
+                     </Card>
+                     
+                     {/* Stages Preview */}
+                     {watchedStages.length > 0 ? (
+                       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                         {watchedStages.map((stage, index) => (
+                           <Card key={index} className="shadow-sm hover:shadow-md transition-shadow">
+                             <CardHeader className="pb-3">
+                               <CardTitle className="text-sm flex items-center gap-2">
+                                 <span className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold">
+                                   {stage.ordem}
+                                 </span>
+                                 {stage.nome || 'Sem nome'}
+                               </CardTitle>
+                               <div className="flex items-center gap-2 text-xs">
+                                 <Badge variant="outline" className="text-xs">
+                                   {stage.prazo_em_dias} dia{stage.prazo_em_dias !== 1 ? 's' : ''}
+                                 </Badge>
+                                 <Badge variant="secondary" className="text-xs">
+                                   {stage.proximo_passo_tipo}
+                                 </Badge>
+                               </div>
+                             </CardHeader>
+                             <CardContent className="pt-0 space-y-2">
+                               {stage.checklist_items.length > 0 && (
+                                 <div className="text-xs text-muted-foreground">
+                                   📋 {stage.checklist_items.length} item{stage.checklist_items.length !== 1 ? 's' : ''} no checklist
+                                 </div>
+                               )}
+                               {stage.wip_limit && (
+                                 <div className="text-xs text-muted-foreground">
+                                   🎯 Limite WIP: {stage.wip_limit}
+                                 </div>
+                               )}
+                               {stage.proximo_passo_label && (
+                                 <div className="text-xs text-muted-foreground">
+                                   📝 {stage.proximo_passo_label}
+                                 </div>
+                               )}
+                             </CardContent>
+                           </Card>
+                         ))}
+                       </div>
+                     ) : (
+                       <Card className="border-2 border-dashed">
+                         <CardContent className="p-8 text-center">
+                           <Eye className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                           <p className="text-muted-foreground">
+                             Adicione etapas para visualizar o preview do pipeline
+                           </p>
+                         </CardContent>
+                       </Card>
+                     )}
+                   </div>
+                 </TabsContent>
+               </Tabs>
+             </form>
+           </Form>
+         </div>
 
         {/* Footer with Navigation */}
         <div className="flex items-center justify-between p-6 border-t bg-card/50">
