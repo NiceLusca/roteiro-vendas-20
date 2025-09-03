@@ -20,7 +20,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Plus, X, GripVertical, Eye, Save, SaveIcon, ChevronLeft, ChevronRight, AlertTriangle, Clock, Minimize2 } from 'lucide-react';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useToast } from '@/hooks/use-toast';
-import { AdvancedCriteriaManager } from '@/components/criteria/AdvancedCriteriaManager';
+import { CommunicationTemplatesManager } from '@/components/templates/CommunicationTemplatesManager';
+import { EmbeddedPipelineAnalytics } from '@/components/analytics/EmbeddedPipelineAnalytics';
 
 // Validation schemas
 const checklistItemSchema = z.object({
@@ -481,8 +482,10 @@ export function ImprovedPipelineForm({
   const wizardSteps = [
     { id: 'general', label: 'Informações Básicas', icon: '1' },
     { id: 'stages', label: 'Configurar Etapas', icon: '2' },
-    { id: 'criteria', label: 'Critérios Avançados', icon: '3' },
-    { id: 'preview', label: 'Revisar & Salvar', icon: '4' }
+    { id: 'templates', label: 'Templates & Automação', icon: '3' },
+    { id: 'analytics', label: 'Analytics & Insights', icon: '4' },
+    { id: 'criteria', label: 'Critérios Avançados', icon: '5' },
+    { id: 'preview', label: 'Revisar & Salvar', icon: '6' }
   ];
   
   const currentStepIndex = wizardSteps.findIndex(step => step.id === activeTab);
@@ -1217,8 +1220,57 @@ export function ImprovedPipelineForm({
                   </div>
                 </TabsContent>
 
-                {/* Advanced Criteria */}
-                <TabsContent value="criteria" className="space-y-6">
+                {/* Templates & Automation */}
+                <TabsContent value="templates" className="space-y-6">
+                  <CommunicationTemplatesManager
+                    pipelineId={watchedFormData.id}
+                    stageName="Pipeline Geral"
+                  />
+                </TabsContent>
+
+                {/* Analytics & Insights */}
+                <TabsContent value="analytics" className="space-y-6">
+                  {watchedFormData.id ? (
+                    <EmbeddedPipelineAnalytics
+                      pipelineId={watchedFormData.id}
+                      pipelineName={watchedFormData.nome || 'Pipeline'}
+                      showHeader={false}
+                    />
+                  ) : (
+                    <Card className="border-2 border-dashed">
+                      <CardContent className="p-8 text-center">
+                        <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <h4 className="text-lg font-medium mb-2">Analytics em Tempo Real</h4>
+                        <p className="text-muted-foreground mb-6">
+                          Após salvar o pipeline, você terá acesso a analytics detalhados com métricas de conversão, 
+                          tempo por etapa, gargalos e tendências em tempo real.
+                        </p>
+                        <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+                          <div className="p-4 bg-muted/20 rounded-lg">
+                            <Target className="h-6 w-6 mx-auto text-primary mb-2" />
+                            <p className="text-sm font-medium">Taxa de Conversão</p>
+                            <p className="text-xs text-muted-foreground">Por etapa e geral</p>
+                          </div>
+                          <div className="p-4 bg-muted/20 rounded-lg">
+                            <Clock className="h-6 w-6 mx-auto text-secondary mb-2" />
+                            <p className="text-sm font-medium">Tempo Médio</p>
+                            <p className="text-xs text-muted-foreground">Ciclo completo</p>
+                          </div>
+                          <div className="p-4 bg-muted/20 rounded-lg">
+                            <TrendingUp className="h-6 w-6 mx-auto text-success mb-2" />
+                            <p className="text-sm font-medium">Tendências</p>
+                            <p className="text-xs text-muted-foreground">Evolução mensal</p>
+                          </div>
+                          <div className="p-4 bg-muted/20 rounded-lg">
+                            <AlertTriangle className="h-6 w-6 mx-auto text-warning mb-2" />
+                            <p className="text-sm font-medium">Gargalos</p>
+                            <p className="text-xs text-muted-foreground">Identificação automática</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </TabsContent>
                   <div>
                     <h3 className="text-lg font-semibold mb-2">Critérios de Avanço por Etapa</h3>
                     <p className="text-muted-foreground mb-6">

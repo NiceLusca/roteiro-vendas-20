@@ -1,10 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { StageTemplatesButton } from '@/components/pipeline/StageTemplatesButton';
+import { StageAnalyticsButton } from '@/components/pipeline/StageAnalyticsButton';
 import { Button } from '@/components/ui/button';
 import { KanbanCard } from './KanbanCard';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
+import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
 import { useDroppable } from '@dnd-kit/core';
 
 interface KanbanColumnProps {
@@ -141,10 +144,24 @@ export function KanbanColumn({
               )}
             </div>
           )}
+          {/* Analytics & Templates Integration */}
+          <div className="flex items-center gap-1 pt-2">
+            <StageTemplatesButton
+              stageId={stage.id}
+              stageName={stage.nome}
+              templateCount={2}
+              compact
+            />
+            <StageAnalyticsButton
+              stageId={stage.id}
+              stageName={stage.nome}
+              pipelineId="pipeline-id"
+              compact
+            />
+          </div>
         </CardHeader>
       </Card>
 
-      {/* Cards dos Leads */}
       <div className="flex-1 space-y-3 overflow-y-auto">
         {sortedEntries.length === 0 ? (
           <div className="text-center py-8">
