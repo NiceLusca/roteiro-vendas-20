@@ -9,11 +9,13 @@ import { KeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help';
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export function AppLayout() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -88,8 +90,12 @@ export function AppLayout() {
   }, []);
 
   const handleCreateLead = () => {
-    const event = new CustomEvent('open-create-lead-dialog');
-    window.dispatchEvent(event);
+    navigate('/leads');
+    // Wait for navigation then dispatch event
+    setTimeout(() => {
+      const event = new CustomEvent('open-create-lead-dialog');
+      window.dispatchEvent(event);
+    }, 100);
   };
 
   return (

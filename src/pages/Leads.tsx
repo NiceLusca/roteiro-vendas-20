@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,19 @@ export default function Leads() {
   const [filterScore, setFilterScore] = useState<string>('all');
   
   const { saveLead } = useLeadData();
+
+  // Listen for global create lead event
+  useEffect(() => {
+    const handleOpenCreateLeadDialog = () => {
+      handleCreateLead();
+    };
+
+    window.addEventListener('open-create-lead-dialog', handleOpenCreateLeadDialog);
+    
+    return () => {
+      window.removeEventListener('open-create-lead-dialog', handleOpenCreateLeadDialog);
+    };
+  }, []);
 
   // Filtrar leads
   const filteredLeads = leads.filter(lead => {
