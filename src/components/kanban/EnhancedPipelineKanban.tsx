@@ -20,6 +20,7 @@ import { useValidatedAdvancement } from '@/hooks/useValidatedAdvancement';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
+import { useMultiPipeline } from '@/hooks/useMultiPipeline';
 import { useSupabaseLeadStageManagement } from '@/hooks/useSupabaseLeadStageManagement';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { useSupabaseChecklistItems } from '@/hooks/useSupabaseChecklistItems';
@@ -66,6 +67,7 @@ export function EnhancedPipelineKanban() {
 
   // Use real Supabase hooks
   const { entries } = useSupabaseLeadPipelineEntries(selectedPipelineId);
+  const { advanceStage } = useMultiPipeline();
   const { stages } = useSupabasePipelineStages(selectedPipelineId);
   const { checklistItems } = useSupabaseChecklistItems();
   const [searchTerm, setSearchTerm] = useState('');
@@ -162,7 +164,7 @@ export function EnhancedPipelineKanban() {
     : 0;
 
   // Event Handlers
-  const handleDragEnd = (result: DragDropResult) => {
+  const handleDragEnd = async (result: DragDropResult) => {
     const { fromStage, toStage, entryId } = result;
     
     if (fromStage === toStage) return;
@@ -172,29 +174,41 @@ export function EnhancedPipelineKanban() {
     
     if (!fromStageData || !toStageData) return;
 
-    // Log da movimentação
-    logChange({
-      entidade: 'LeadPipelineEntry',
-      entidade_id: entryId,
-      alteracao: [
-        { 
-          campo: 'etapa_atual_id', 
-          de: fromStage, 
-          para: toStage 
-        },
-        {
-          campo: 'data_entrada_etapa',
-          de: new Date().toISOString(),
-          para: new Date().toISOString()
-        }
-      ],
-      ator: 'Sistema (Drag & Drop)'
-    });
+    try {
+      // Atualizar a etapa na base de dados
+      await advanceStage(entryId, toStage);
 
-    toast({
-      title: 'Lead movido',
-      description: `Lead movido de "${fromStageData.nome}" para "${toStageData.nome}"`,
-    });
+      // Log da movimentação
+      logChange({
+        entidade: 'LeadPipelineEntry',
+        entidade_id: entryId,
+        alteracao: [
+          { 
+            campo: 'etapa_atual_id', 
+            de: fromStage, 
+            para: toStage 
+          },
+          {
+            campo: 'data_entrada_etapa',
+            de: new Date().toISOString(),
+            para: new Date().toISOString()
+          }
+        ],
+        ator: 'Sistema (Drag & Drop)'
+      });
+
+      toast({
+        title: 'Lead movido',
+        description: `Lead movido de "${fromStageData.nome}" para "${toStageData.nome}"`,
+      });
+    } catch (error) {
+      console.error('Erro ao mover lead:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível mover o lead. Tente novamente.',
+        variant: 'destructive'
+      });
+    }
   };
 
   const handleViewLead = (leadId: string) => {
