@@ -30,7 +30,7 @@ import {
 export default function Leads() {
   const { leads } = useSupabaseLeads();
   const { pipelines } = useSupabasePipelines();
-  const { stages } = useSupabasePipelineStages();
+  const { stages } = useSupabasePipelineStages(); // Carregar todas as stages, não apenas de um pipeline
   const { entries } = useSupabaseLeadPipelineEntries();
   const { inscribePipeline, getLeadPipelineEntries } = useMultiPipeline();
   
@@ -94,21 +94,17 @@ export default function Leads() {
     console.log('handleInscribeLead called with:', lead);
     console.log('Available pipelines:', pipelines);
     console.log('Available stages:', stages);
+    console.log('Stages length:', stages.length);
+    console.log('Stages for pipeline ecd0a55f-f00d-4d76-96d5-4bf9a9e65a59:', stages.filter(s => s.pipeline_id === 'ecd0a55f-f00d-4d76-96d5-4bf9a9e65a59'));
     setSelectedLeadForInscription(lead);
     setShowInscriptionDialog(true);
   };
 
   const handleInscriptionConfirm = async (pipelineId: string, stageId: string) => {
-    console.log('handleInscriptionConfirm called with:', { pipelineId, stageId, selectedLead: selectedLeadForInscription });
-    if (!selectedLeadForInscription) {
-      console.log('No selected lead for inscription');
-      return;
-    }
+    if (!selectedLeadForInscription) return;
     
     try {
-      console.log('Calling inscribePipeline...');
       await inscribePipeline(selectedLeadForInscription.id, pipelineId, stageId);
-      console.log('inscribePipeline completed successfully');
       setShowInscriptionDialog(false);
       setSelectedLeadForInscription(null);
     } catch (error) {

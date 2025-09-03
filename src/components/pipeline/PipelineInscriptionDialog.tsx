@@ -41,27 +41,15 @@ export function PipelineInscriptionDialog({
   );
 
   const handleConfirm = () => {
-    console.log('PipelineInscriptionDialog handleConfirm called');
-    console.log('selectedPipelineId:', selectedPipelineId);
-    
-    if (!selectedPipelineId) {
-      console.log('No pipeline selected, returning');
-      return;
-    }
+    if (!selectedPipelineId) return;
 
     // Encontrar a primeira etapa do pipeline selecionado
     const firstStage = stages
       .filter(s => s.pipeline_id === selectedPipelineId)
       .sort((a, b) => a.ordem - b.ordem)[0];
 
-    console.log('First stage found:', firstStage);
+    if (!firstStage) return;
 
-    if (!firstStage) {
-      console.log('No first stage found, returning');
-      return;
-    }
-
-    console.log('Calling onConfirm with:', selectedPipelineId, firstStage.id);
     onConfirm(selectedPipelineId, firstStage.id);
 
     // Reset form

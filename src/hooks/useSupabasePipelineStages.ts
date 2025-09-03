@@ -26,20 +26,24 @@ export function useSupabasePipelineStages(pipelineId?: string) {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Fetch stages for a specific pipeline
+  // Fetch stages for a specific pipeline or all stages
   const fetchStages = async (targetPipelineId?: string) => {
     if (!user) return;
     
-    const queryPipelineId = targetPipelineId || pipelineId;
-    if (!queryPipelineId) return;
-    
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('pipeline_stages')
-        .select('*')
-        .eq('pipeline_id', queryPipelineId)
-        .order('ordem', { ascending: true });
+        .select('*');
+      
+      const queryPipelineId = targetPipelineId || pipelineId;
+      
+      // If a specific pipeline is provided, filter by it
+      if (queryPipelineId) {
+        query = query.eq('pipeline_id', queryPipelineId);
+      }
+      
+      const { data, error } = await query.order('ordem', { ascending: true });
 
       if (error) {
         console.error('Erro ao buscar etapas:', error);
@@ -168,7 +172,7 @@ export function useSupabasePipelineStages(pipelineId?: string) {
   };
 
   useEffect(() => {
-    if (user && pipelineId) {
+    if (user) {
       fetchStages();
     }
   }, [user, pipelineId]);
