@@ -651,79 +651,48 @@ export function AdvancedPipelineForm({
               />
             </div>
 
-            <Separator />
-
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Metadados</h3>
-              
+            <div className="flex items-center space-x-6">
               <FormField
                 control={form.control}
-                name="segmento_alvo"
+                name="primary_pipeline"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Segmento Alvo</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o segmento" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Captação">Captação</SelectItem>
-                        <SelectItem value="Upsell">Upsell</SelectItem>
-                        <SelectItem value="Pós-Venda">Pós-Venda</SelectItem>
-                        <SelectItem value="Retenção">Retenção</SelectItem>
-                        <SelectItem value="Outro">Outro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Pipeline Primário</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Define como pipeline principal
+                      </p>
+                    </div>
                   </FormItem>
                 )}
               />
 
-              <div className="flex items-center space-x-6">
-                <FormField
-                  control={form.control}
-                  name="primary_pipeline"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Pipeline Primário</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Define como pipeline principal
-                        </p>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="ativo"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Ativo</FormLabel>
-                        <p className="text-sm text-muted-foreground">
-                          Pipeline disponível para uso
-                        </p>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="ativo"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Ativo</FormLabel>
+                      <p className="text-sm text-muted-foreground">
+                        Pipeline disponível para uso
+                      </p>
+                    </div>
+                  </FormItem>
+                )}
+              />
             </div>
           </TabsContent>
 

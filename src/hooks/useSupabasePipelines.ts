@@ -264,7 +264,7 @@ export function useSupabasePipelines() {
           const { checklist_items, ...stageData } = stage;
           
           // Ensure required stage fields and proper order
-          const stagePayload = {
+          const stagePayload: any = {
             nome: stageData.nome!,
             ordem: index + 1, // Force sequential order
             prazo_em_dias: stageData.prazo_em_dias!,
