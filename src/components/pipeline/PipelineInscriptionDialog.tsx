@@ -41,15 +41,27 @@ export function PipelineInscriptionDialog({
   );
 
   const handleConfirm = () => {
-    if (!selectedPipelineId) return;
+    console.log('PipelineInscriptionDialog handleConfirm called');
+    console.log('selectedPipelineId:', selectedPipelineId);
+    
+    if (!selectedPipelineId) {
+      console.log('No pipeline selected, returning');
+      return;
+    }
 
     // Encontrar a primeira etapa do pipeline selecionado
     const firstStage = stages
       .filter(s => s.pipeline_id === selectedPipelineId)
       .sort((a, b) => a.ordem - b.ordem)[0];
 
-    if (!firstStage) return;
+    console.log('First stage found:', firstStage);
 
+    if (!firstStage) {
+      console.log('No first stage found, returning');
+      return;
+    }
+
+    console.log('Calling onConfirm with:', selectedPipelineId, firstStage.id);
     onConfirm(selectedPipelineId, firstStage.id);
 
     // Reset form
@@ -96,7 +108,7 @@ export function PipelineInscriptionDialog({
                     <SelectItem key={pipeline.id} value={pipeline.id}>
                       <div className="flex items-center gap-2">
                         <span>{pipeline.nome}</span>
-                        {(pipeline as any).primary_pipeline && (
+                        {pipeline.primary_pipeline && (
                           <Badge variant="secondary" className="text-xs">
                             Primário
                           </Badge>

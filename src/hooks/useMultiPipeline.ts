@@ -39,38 +39,60 @@ export function useMultiPipeline() {
   }, [transferToPipeline, logChange]);
 
   const inscribePipeline = useCallback(async (leadId: string, pipelineId: string, stageId: string) => {
-    // Check if already inscribed
-    const existingEntry = entries.find(
-      (e) => e.lead_id === leadId && e.pipeline_id === pipelineId && e.status_inscricao === 'Ativo'
-    );
+    console.log('inscribePipeline called with:', { leadId, pipelineId, stageId });
+    console.log('Current entries:', entries);
+    
+    try {
+      // Check if already inscribed
+      const existingEntry = entries.find(
+        (e) => e.lead_id === leadId && e.pipeline_id === pipelineId && e.status_inscricao === 'Ativo'
+      );
 
-    if (existingEntry) {
-      toast({
-        title: 'Já inscrito',
-        description: 'Lead já está inscrito neste pipeline',
-        variant: 'destructive'
+      if (existingEntry) {
+        console.log('Lead already inscribed, showing toast');
+        toast({
+          title: 'Já inscrito',
+          description: 'Lead já está inscrito neste pipeline',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      console.log('Creating new entry...');
+      // Create new entry
+      const newEntry = await createEntry({
+        lead_id: leadId,
+        pipeline_id: pipelineId,
+        etapa_atual_id: stageId
       });
-      return;
-    }
 
-    // Create new entry
-    const newEntry = await createEntry({
-      lead_id: leadId,
-      pipeline_id: pipelineId,
-      etapa_atual_id: stageId
-    });
+      console.log('New entry created:', newEntry);
 
-    if (newEntry) {
-      logChange({
-        entidade: 'LeadPipelineEntry',
-        entidade_id: newEntry.id,
-        alteracao: [
-          { campo: 'lead_id', de: '', para: leadId },
-          { campo: 'pipeline_id', de: '', para: pipelineId },
-          { campo: 'etapa_atual_id', de: '', para: stageId },
-          { campo: 'status_inscricao', de: '', para: 'Ativo' }
-        ],
-        ator: 'Sistema (Inscrição)'
+      if (newEntry) {
+        console.log('Logging change...');
+        logChange({
+          entidade: 'LeadPipelineEntry',
+          entidade_id: newEntry.id,
+          alteracao: [
+            { campo: 'lead_id', de: '', para: leadId },
+            { campo: 'pipeline_id', de: '', para: pipelineId },
+            { campo: 'etapa_atual_id', de: '', para: stageId },
+            { campo: 'status_inscricao', de: '', para: 'Ativo' }
+          ],
+          ator: 'Sistema (Inscrição)'
+        });
+        
+        toast({
+          title: 'Sucesso',
+          description: 'Lead inscrito no pipeline com sucesso!'
+        });
+      }
+    } catch (error) {
+      console.error('Error in inscribePipeline:', error);
+      toast({
+        title: 'Erro',
+        description: 'Erro ao inscrever lead no pipeline',
+        variant: 'destructive'
       });
     }
   }, [entries, createEntry, toast, logChange]);

@@ -91,22 +91,39 @@ export default function Leads() {
   };
 
   const handleInscribeLead = (lead: Lead) => {
+    console.log('handleInscribeLead called with:', lead);
+    console.log('Available pipelines:', pipelines);
+    console.log('Available stages:', stages);
     setSelectedLeadForInscription(lead);
     setShowInscriptionDialog(true);
   };
 
   const handleInscriptionConfirm = async (pipelineId: string, stageId: string) => {
-    if (!selectedLeadForInscription) return;
+    console.log('handleInscriptionConfirm called with:', { pipelineId, stageId, selectedLead: selectedLeadForInscription });
+    if (!selectedLeadForInscription) {
+      console.log('No selected lead for inscription');
+      return;
+    }
     
-    await inscribePipeline(selectedLeadForInscription.id, pipelineId, stageId);
-    setShowInscriptionDialog(false);
-    setSelectedLeadForInscription(null);
+    try {
+      console.log('Calling inscribePipeline...');
+      await inscribePipeline(selectedLeadForInscription.id, pipelineId, stageId);
+      console.log('inscribePipeline completed successfully');
+      setShowInscriptionDialog(false);
+      setSelectedLeadForInscription(null);
+    } catch (error) {
+      console.error('Error in handleInscriptionConfirm:', error);
+    }
   };
 
   const getActivePipelineIds = (leadId: string) => {
-    return getLeadPipelineEntries(leadId)
+    const entries = getLeadPipelineEntries(leadId);
+    console.log('getActivePipelineIds for leadId:', leadId, 'entries:', entries);
+    const activeIds = entries
       .filter(entry => entry.status_inscricao === 'Ativo')
       .map(entry => entry.pipeline_id);
+    console.log('Active pipeline IDs:', activeIds);
+    return activeIds;
   };
 
   const getScoreBadgeClass = (classification: string) => {
