@@ -663,9 +663,12 @@ export function EnhancedPipelineKanban() {
 
       {/* Dialog para Novo Pipeline */}
       <Dialog open={isNewPipelineDialogOpen} onOpenChange={setIsNewPipelineDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" aria-describedby="create-pipeline-description">
           <DialogHeader>
             <DialogTitle>Criar Novo Pipeline</DialogTitle>
+            <div id="create-pipeline-description" className="sr-only">
+              Formulário para criação de um novo pipeline com configurações avançadas
+            </div>
           </DialogHeader>
           <AdvancedPipelineForm
             onSave={handleSaveNewPipeline}
