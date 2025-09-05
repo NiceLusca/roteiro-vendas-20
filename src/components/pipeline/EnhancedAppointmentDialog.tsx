@@ -123,7 +123,8 @@ export function EnhancedAppointmentDialog({
       tipo_sessao: tipoSessao,
       closer_responsavel: closerResponsavel,
       observacao,
-      status: 'Agendado'
+      status: 'Agendado',
+      origem: 'Plataforma'
     };
 
     onSave(appointmentData);

@@ -151,7 +151,7 @@ export default function Agenda() {
                     ...appointmentData,
                     start_at: startAt,
                     end_at: endAt,
-                    origem: 'Agenda'
+                    origem: 'Plataforma'
                   });
                   
                   await refetchAppointments();
