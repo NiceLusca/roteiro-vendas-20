@@ -74,6 +74,18 @@ export interface PipelineStage {
   gerar_agendamento_auto: boolean;
   duracao_minutos?: number;
   
+  // Configurações de agendamento
+  tipo_agendamento?: 'Descoberta' | 'Apresentacao' | 'Fechamento' | 'Follow-up';
+  closer_padrao?: string;
+  horarios_preferenciais?: {
+    dias_semana?: number[];
+    horarios?: string[];
+  };
+  template_agendamento?: {
+    titulo?: string;
+    descricao?: string;
+  };
+  
   // Critérios
   entrada_criteria?: string;
   saida_criteria?: string;

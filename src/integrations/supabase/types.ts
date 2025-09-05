@@ -54,9 +54,11 @@ export type Database = {
       }
       appointments: {
         Row: {
+          closer_responsavel: string | null
           created_at: string | null
           criado_por: string | null
           end_at: string
+          etapa_origem_id: string | null
           id: string
           lead_id: string
           observacao: string | null
@@ -67,12 +69,15 @@ export type Database = {
             | null
           start_at: string
           status: Database["public"]["Enums"]["status_appointment"] | null
+          tipo_sessao: string | null
           updated_at: string | null
         }
         Insert: {
+          closer_responsavel?: string | null
           created_at?: string | null
           criado_por?: string | null
           end_at: string
+          etapa_origem_id?: string | null
           id?: string
           lead_id: string
           observacao?: string | null
@@ -83,12 +88,15 @@ export type Database = {
             | null
           start_at: string
           status?: Database["public"]["Enums"]["status_appointment"] | null
+          tipo_sessao?: string | null
           updated_at?: string | null
         }
         Update: {
+          closer_responsavel?: string | null
           created_at?: string | null
           criado_por?: string | null
           end_at?: string
+          etapa_origem_id?: string | null
           id?: string
           lead_id?: string
           observacao?: string | null
@@ -99,9 +107,17 @@ export type Database = {
             | null
           start_at?: string
           status?: Database["public"]["Enums"]["status_appointment"] | null
+          tipo_sessao?: string | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "appointments_etapa_origem_id_fkey"
+            columns: ["etapa_origem_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "appointments_lead_id_fkey"
             columns: ["lead_id"]
@@ -135,6 +151,39 @@ export type Database = {
           entidade_id?: string
           id?: string
           timestamp?: string | null
+        }
+        Relationships: []
+      }
+      closer_availability: {
+        Row: {
+          ativo: boolean | null
+          closer_name: string
+          created_at: string | null
+          dia_semana: number
+          hora_fim: string
+          hora_inicio: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          closer_name: string
+          created_at?: string | null
+          dia_semana: number
+          hora_fim: string
+          hora_inicio: string
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          closer_name?: string
+          created_at?: string | null
+          dia_semana?: number
+          hora_fim?: string
+          hora_inicio?: string
+          id?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -656,10 +705,12 @@ export type Database = {
       }
       pipeline_stages: {
         Row: {
+          closer_padrao: string | null
           created_at: string | null
           duracao_minutos: number | null
           entrada_criteria: string | null
           gerar_agendamento_auto: boolean | null
+          horarios_preferenciais: Json | null
           id: string
           nome: string
           ordem: number
@@ -670,14 +721,18 @@ export type Database = {
             | Database["public"]["Enums"]["proximo_passo_tipo"]
             | null
           saida_criteria: string | null
+          template_agendamento: Json | null
+          tipo_agendamento: string | null
           updated_at: string | null
           wip_limit: number | null
         }
         Insert: {
+          closer_padrao?: string | null
           created_at?: string | null
           duracao_minutos?: number | null
           entrada_criteria?: string | null
           gerar_agendamento_auto?: boolean | null
+          horarios_preferenciais?: Json | null
           id?: string
           nome: string
           ordem: number
@@ -688,14 +743,18 @@ export type Database = {
             | Database["public"]["Enums"]["proximo_passo_tipo"]
             | null
           saida_criteria?: string | null
+          template_agendamento?: Json | null
+          tipo_agendamento?: string | null
           updated_at?: string | null
           wip_limit?: number | null
         }
         Update: {
+          closer_padrao?: string | null
           created_at?: string | null
           duracao_minutos?: number | null
           entrada_criteria?: string | null
           gerar_agendamento_auto?: boolean | null
+          horarios_preferenciais?: Json | null
           id?: string
           nome?: string
           ordem?: number
@@ -706,6 +765,8 @@ export type Database = {
             | Database["public"]["Enums"]["proximo_passo_tipo"]
             | null
           saida_criteria?: string | null
+          template_agendamento?: Json | null
+          tipo_agendamento?: string | null
           updated_at?: string | null
           wip_limit?: number | null
         }

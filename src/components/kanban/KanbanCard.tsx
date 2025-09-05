@@ -14,16 +14,27 @@ import {
   Clock,
   CheckSquare,
   ArrowLeft,
-  GitBranch
+  GitBranch,
+  CalendarCheck,
+  CalendarX
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+interface AppointmentInfo {
+  id: string;
+  start_at: string;
+  status: string;
+  tipo_sessao?: string;
+  closer_responsavel?: string;
+}
+
 interface KanbanCardProps {
   entry: LeadPipelineEntry;
   lead: Lead;
   stage: PipelineStage;
+  nextAppointment?: AppointmentInfo | null;
   isDragging?: boolean;
   onViewLead?: () => void;
   onCreateAppointment?: () => void;
@@ -38,6 +49,7 @@ export function KanbanCard({
   entry,
   lead,
   stage,
+  nextAppointment,
   isDragging = false,
   onViewLead,
   onCreateAppointment,
@@ -165,6 +177,52 @@ export function KanbanCard({
           )}
         </div>
 
+        {/* Informações de Agendamento */}
+        {nextAppointment && (
+          <div className="mb-3 p-2 bg-primary/5 border border-primary/20 rounded-md">
+            <div className="flex items-center gap-2 mb-1">
+              <CalendarCheck className="h-3 w-3 text-primary" />
+              <span className="text-xs font-medium text-primary">
+                Próxima Sessão
+              </span>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-foreground">
+                {new Date(nextAppointment.start_at).toLocaleDateString('pt-BR')} às{' '}
+                {new Date(nextAppointment.start_at).toLocaleTimeString('pt-BR', { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })}
+              </p>
+              {nextAppointment.tipo_sessao && (
+                <Badge variant="secondary" className="text-xs">
+                  {nextAppointment.tipo_sessao}
+                </Badge>
+              )}
+              {nextAppointment.closer_responsavel && (
+                <p className="text-xs text-muted-foreground">
+                  Com: {nextAppointment.closer_responsavel}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Etapas com agendamento mas sem agendamento ativo */}
+        {(stage.gerar_agendamento_auto || stage.tipo_agendamento) && !nextAppointment && (
+          <div className="mb-3 p-2 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-md">
+            <div className="flex items-center gap-2 mb-1">
+              <CalendarX className="h-3 w-3 text-orange-600" />
+              <span className="text-xs font-medium text-orange-600">
+                Agendamento Necessário
+              </span>
+            </div>
+            <p className="text-xs text-orange-600">
+              {stage.tipo_agendamento && `Tipo: ${stage.tipo_agendamento}`}
+            </p>
+          </div>
+        )}
+
         {/* Observações */}
         {entry.nota_etapa && (
           <div className="mb-3 p-2 bg-accent/50 rounded-md">
@@ -240,18 +298,25 @@ export function KanbanCard({
             <GitBranch className="h-3 w-3" />
           </Button>
           
-          {stage.gerar_agendamento_auto && (
+          {(stage.gerar_agendamento_auto || stage.tipo_agendamento) && (
             <Button
               size="sm"
               variant="ghost"
-              className="h-6 w-6 p-0"
+              className={cn(
+                "h-6 w-6 p-0",
+                !nextAppointment && "text-orange-600 hover:text-orange-700"
+              )}
               onClick={(e) => {
                 e.stopPropagation();
                 onCreateAppointment?.();
               }}
-              title="Criar agendamento"
+              title={nextAppointment ? "Ver/Editar agendamento" : "Criar agendamento"}
             >
-              <Calendar className="h-3 w-3" />
+              {nextAppointment ? (
+                <CalendarCheck className="h-3 w-3" />
+              ) : (
+                <Calendar className="h-3 w-3" />
+              )}
             </Button>
           )}
           

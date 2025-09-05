@@ -12,6 +12,7 @@ import { ChecklistDialog } from '@/components/pipeline/ChecklistDialog';
 import { DealLossDialog } from '@/components/deals/DealLossDialog';
 import { AuditLogsDialog } from '@/components/audit/AuditLogsDialog';
 import { AppointmentDialog } from '@/components/appointment/AppointmentDialog';
+import { EnhancedAppointmentDialog } from '@/components/pipeline/EnhancedAppointmentDialog';
 import { InteractionDialog } from '@/components/interaction/InteractionDialog';
 import { ChecklistValidation } from '@/components/checklist/ChecklistValidation';
 import { PipelineTransferDialog } from '@/components/pipeline/PipelineTransferDialog';
@@ -25,6 +26,8 @@ import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineE
 import { useLeadData } from '@/hooks/useLeadData';
 import { usePipelineAutomation } from '@/hooks/usePipelineAutomation';
 import { useValidatedAdvancement } from '@/hooks/useValidatedAdvancement';
+import { useKanbanAppointments } from '@/hooks/useKanbanAppointments';
+import { usePipelineAppointmentIntegration } from '@/hooks/usePipelineAppointmentIntegration';
 import { ImprovedPipelineForm } from '@/components/forms/ImprovedPipelineForm';
 import { LeadForm } from '@/components/forms/LeadForm';
 import { 
@@ -75,6 +78,8 @@ export function EnhancedPipelineKanban() {
   const { saveLead } = useLeadData();
   const { stages } = useSupabasePipelineStages(selectedPipelineId);
   const { checklistItems } = useSupabaseChecklistItems();
+  const { fetchNextAppointments, getNextAppointmentForLead } = useKanbanAppointments();
+  const { createAutomaticAppointment } = usePipelineAppointmentIntegration();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCloser, setFilterCloser] = useState<string>('all');
   const [filterScore, setFilterScore] = useState<string>('all');
@@ -93,6 +98,8 @@ export function EnhancedPipelineKanban() {
     open: boolean;
     leadId?: string;
     leadName?: string;
+    lead?: Lead;
+    stage?: PipelineStage;
   }>({ open: false });
   
   const [interactionDialog, setInteractionDialog] = useState<{
@@ -167,14 +174,32 @@ export function EnhancedPipelineKanban() {
       return true;
     });
 
+  // Buscar agendamentos quando mudar pipeline ou leads
+  useEffect(() => {
+    if (allEntries.length > 0) {
+      const leadIds = allEntries.map(entry => entry!.lead_id);
+      fetchNextAppointments(leadIds);
+    }
+  }, [allEntries, fetchNextAppointments]);
+
   // Agrupar entries por stage
   const stageEntries = pipelineStages.map(stage => {
     const entries = allEntries.filter(entry => entry?.etapa_atual_id === stage.id);
     const wipExceeded = stage.wip_limit ? entries.length > stage.wip_limit : false;
     
+    // Adicionar informações de agendamento para cada entry
+    const entriesWithAppointments = entries.map(entry => {
+      if (!entry) return null;
+      const nextAppointment = getNextAppointmentForLead(entry.lead_id);
+      return {
+        ...entry,
+        nextAppointment
+      };
+    }).filter(Boolean);
+    
     return {
       stage,
-      entries: entries as Array<typeof allEntries[0] & { lead: typeof leads[0] }>,
+      entries: entriesWithAppointments as Array<typeof allEntries[0] & { lead: typeof leads[0] }>,
       wipExceeded
     };
   });
@@ -254,11 +279,16 @@ export function EnhancedPipelineKanban() {
 
   const handleCreateAppointment = (leadId: string) => {
     const lead = leads.find(l => l.id === leadId);
+    const entry = allEntries.find(e => e?.lead_id === leadId);
+    const stage = entry ? pipelineStages.find(s => s.id === entry.etapa_atual_id) : undefined;
+    
     if (lead) {
       setAppointmentDialog({
         open: true,
         leadId,
-        leadName: lead.nome
+        leadName: lead.nome,
+        lead,
+        stage
       });
     }
   };
@@ -631,13 +661,13 @@ export function EnhancedPipelineKanban() {
         onOpenChange={setAuditDialog}
       />
 
-      <AppointmentDialog
+      <EnhancedAppointmentDialog
         open={appointmentDialog.open}
         onOpenChange={(open) => setAppointmentDialog({ open })}
-        leadId={appointmentDialog.leadId || ''}
-        leadName={appointmentDialog.leadName || ''}
-        onSave={(appointment) => {
-          console.log('Agendamento criado:', appointment);
+        lead={appointmentDialog.lead!}
+        stage={appointmentDialog.stage}
+        onSave={async (appointmentData) => {
+          console.log('Appointment data:', appointmentData);
           toast({
             title: 'Agendamento criado',
             description: `Sessão agendada para ${appointmentDialog.leadName}`,
