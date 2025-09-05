@@ -17,7 +17,7 @@ import { Lead, PipelineStage } from '@/types/crm';
 interface EnhancedAppointmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  lead: Lead;
+  lead: Lead | null;
   stage?: PipelineStage;
   onSave: (appointmentData: any) => void;
 }
@@ -142,6 +142,10 @@ export function EnhancedAppointmentDialog({
   };
 
   const selectedTipoSessao = tiposSessao.find(t => t.value === tipoSessao);
+
+  if (!lead) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
