@@ -192,15 +192,21 @@ export function KanbanCard({
 
         {/* Informações de Agendamento */}
         {nextAppointment && (
-          <div className="mb-3 p-2 bg-primary/5 border border-primary/20 rounded-md">
-            <div className="flex items-center gap-2 mb-1">
-              <CalendarCheck className="h-3 w-3 text-primary" />
-              <span className="text-xs font-medium text-primary">
-                Próxima Sessão
-              </span>
+          <div className="mb-3 p-2 bg-success/10 border border-success/20 rounded-md">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <CalendarCheck className="h-3 w-3 text-success" />
+                <span className="text-xs font-medium text-success">
+                  Próxima Sessão
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
+                <span className="text-xs text-success font-medium">Ativo</span>
+              </div>
             </div>
             <div className="space-y-1">
-              <p className="text-xs text-foreground">
+              <p className="text-xs text-foreground font-medium">
                 {new Date(nextAppointment.start_at).toLocaleDateString('pt-BR')} às{' '}
                 {new Date(nextAppointment.start_at).toLocaleTimeString('pt-BR', { 
                   hour: '2-digit', 

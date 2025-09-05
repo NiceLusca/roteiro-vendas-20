@@ -547,19 +547,44 @@ export default function LeadDetail() {
             <CardContent>
               <div className="space-y-4">
                 {leadAppointments.map((apt) => (
-                  <div key={apt.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{formatDate(new Date(apt.start_at))}</p>
-                        <p className="text-sm text-muted-foreground">Status: {apt.status}</p>
+                  <div key={apt.id} className="p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex flex-col">
+                          <p className="font-medium">{formatDate(new Date(apt.start_at))}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(apt.start_at).toLocaleTimeString('pt-BR', { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })}
+                          </p>
+                        </div>
+                        {apt.tipo_sessao && (
+                          <Badge variant="secondary">{apt.tipo_sessao}</Badge>
+                        )}
                       </div>
-                      <Badge>{apt.status}</Badge>
+                      <Badge className={
+                        apt.status === 'Agendado' ? 'bg-blue-100 text-blue-800' :
+                        apt.status === 'Realizado' ? 'bg-success text-success-foreground' :
+                        apt.status === 'Cancelado' ? 'bg-destructive text-destructive-foreground' :
+                        apt.status === 'Remarcado' ? 'bg-warning text-warning-foreground' :
+                        'bg-muted text-muted-foreground'
+                      }>
+                        {apt.status}
+                      </Badge>
                     </div>
+                    {apt.closer_responsavel && (
+                      <p className="text-sm text-muted-foreground mb-2">
+                        <strong>Responsável:</strong> {apt.closer_responsavel}
+                      </p>
+                    )}
                     {apt.observacao && (
-                      <p className="text-sm text-muted-foreground mt-2">{apt.observacao}</p>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        <strong>Observações:</strong> {apt.observacao}
+                      </p>
                     )}
                     {apt.resultado_obs && (
-                      <p className="text-sm text-muted-foreground mt-2">
+                      <p className="text-sm text-muted-foreground">
                         <strong>Resultado:</strong> {apt.resultado_obs}
                       </p>
                     )}

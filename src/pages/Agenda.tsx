@@ -46,8 +46,9 @@ export default function Agenda() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  const { appointments, saveAppointment, refetch: refetchAppointments } = useSupabaseAppointments();
+  const { appointments, saveAppointment, cancelAppointment, refetch: refetchAppointments } = useSupabaseAppointments();
   const { leads } = useSupabaseLeads();
 
   // Transform appointments into calendar events
@@ -312,11 +313,86 @@ export default function Agenda() {
                 </div>
               )}
               <div className="flex space-x-2">
-                <Button size="sm" disabled>Editar</Button>
-                <Button size="sm" variant="outline" disabled>Remarcar</Button>
-                <Button size="sm" variant="destructive" disabled>Cancelar</Button>
+                <Button 
+                  size="sm" 
+                  onClick={() => {
+                    setIsEditDialogOpen(true);
+                  }}
+                  disabled={selectedEvent.resource.status === 'Realizado' || selectedEvent.resource.status === 'Cancelado'}
+                >
+                  Editar
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditDialogOpen(true);
+                  }}
+                  disabled={selectedEvent.resource.status === 'Realizado' || selectedEvent.resource.status === 'Cancelado'}
+                >
+                  Remarcar
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="destructive"
+                  onClick={async () => {
+                    if (cancelAppointment) {
+                      await cancelAppointment(selectedEvent.resource.id);
+                      await refetchAppointments();
+                      setSelectedEvent(null);
+                    }
+                  }}
+                  disabled={selectedEvent.resource.status === 'Cancelado'}
+                >
+                  Cancelar
+                </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Edit Appointment Dialog */}
+      {selectedEvent && isEditDialogOpen && (
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Editar Agendamento</DialogTitle>
+            </DialogHeader>
+            <AppointmentForm
+              initialData={{
+                lead_id: selectedEvent.resource.lead_id,
+                start_at: selectedEvent.resource.start_at,
+                status: selectedEvent.resource.status,
+                resultado_sessao: selectedEvent.resource.resultado_sessao,
+                observacao: selectedEvent.resource.observacao,
+                resultado_obs: selectedEvent.resource.resultado_obs
+              }}
+              onSave={async (appointmentData) => {
+                try {
+                  const endAt = new Date(new Date(appointmentData.start_at).getTime() + 60 * 60 * 1000).toISOString();
+                  
+                  await saveAppointment({
+                    ...appointmentData,
+                    id: selectedEvent.resource.id,
+                    start_at: new Date(appointmentData.start_at).toISOString(),
+                    end_at: endAt,
+                    tipo_sessao: selectedEvent.resource.tipo_sessao,
+                    closer_responsavel: selectedEvent.resource.closer_responsavel,
+                    origem: selectedEvent.resource.origem
+                  });
+                  
+                  await refetchAppointments();
+                  setIsEditDialogOpen(false);
+                  setSelectedEvent(null);
+                } catch (error) {
+                  console.error('Erro ao editar agendamento:', error);
+                }
+              }}
+              onCancel={() => {
+                setIsEditDialogOpen(false);
+              }}
+            />
           </DialogContent>
         </Dialog>
       )}

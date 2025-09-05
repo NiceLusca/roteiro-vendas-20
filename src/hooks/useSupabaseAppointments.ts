@@ -14,6 +14,8 @@ interface Appointment {
   resultado_obs?: string;
   criado_por?: string;
   origem?: string;
+  tipo_sessao?: string;
+  closer_responsavel?: string;
   created_at: string;
   updated_at: string;
 }
@@ -126,6 +128,43 @@ export function useSupabaseAppointments() {
     return appointments.find(appointment => appointment.id === id);
   };
 
+  const cancelAppointment = async (appointmentId: string) => {
+    if (!user) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .update({ 
+          status: 'Cancelado',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', appointmentId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Erro ao cancelar agendamento:', error);
+        toast({
+          title: "Erro ao cancelar agendamento",
+          description: error.message,
+          variant: "destructive"
+        });
+        return null;
+      }
+
+      toast({
+        title: "Agendamento cancelado",
+        description: "O agendamento foi cancelado com sucesso"
+      });
+
+      fetchAppointments();
+      return data;
+    } catch (error) {
+      console.error('Erro ao cancelar agendamento:', error);
+      return null;
+    }
+  };
+
   const getUpcomingAppointments = (hours: number = 48): Appointment[] => {
     const now = new Date();
     const futureTime = new Date(now.getTime() + hours * 60 * 60 * 1000);
@@ -146,6 +185,7 @@ export function useSupabaseAppointments() {
     appointments,
     loading,
     saveAppointment,
+    cancelAppointment,
     getAppointmentById,
     getUpcomingAppointments,
     refetch: fetchAppointments
