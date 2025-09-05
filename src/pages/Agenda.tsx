@@ -47,7 +47,7 @@ export default function Agenda() {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-  const { appointments } = useSupabaseAppointments();
+  const { appointments, saveAppointment, refetch: refetchAppointments } = useSupabaseAppointments();
   const { leads } = useSupabaseLeads();
 
   // Transform appointments into calendar events
@@ -89,9 +89,17 @@ export default function Agenda() {
 
   const eventStyleGetter = (event: any) => {
     const appointment = event.resource;
+    const statusColors = {
+      'Agendado': '#3b82f6', // blue-500
+      'Realizado': '#22c55e', // green-500
+      'Cancelado': '#ef4444', // red-500
+      'Remarcado': '#eab308', // yellow-500
+      'No-Show': '#6b7280' // gray-500
+    };
+    
     return {
       style: {
-        backgroundColor: getStatusColor(appointment.status).replace('bg-', '#'),
+        backgroundColor: statusColors[appointment.status as keyof typeof statusColors] || '#3b82f6',
         borderRadius: '4px',
         opacity: 0.8,
         color: 'white',
@@ -134,8 +142,23 @@ export default function Agenda() {
               <DialogTitle>Novo Agendamento</DialogTitle>
             </DialogHeader>
             <AppointmentForm
-              onSave={() => {
-                setIsCreateDialogOpen(false);
+              onSave={async (appointmentData) => {
+                try {
+                  const startAt = new Date(appointmentData.start_at).toISOString();
+                  const endAt = new Date(new Date(appointmentData.start_at).getTime() + 60 * 60 * 1000).toISOString(); // 1 hour default
+                  
+                  await saveAppointment({
+                    ...appointmentData,
+                    start_at: startAt,
+                    end_at: endAt,
+                    origem: 'Agenda'
+                  });
+                  
+                  await refetchAppointments();
+                  setIsCreateDialogOpen(false);
+                } catch (error) {
+                  console.error('Erro ao criar agendamento:', error);
+                }
               }}
               onCancel={() => setIsCreateDialogOpen(false)}
             />
@@ -289,9 +312,9 @@ export default function Agenda() {
                 </div>
               )}
               <div className="flex space-x-2">
-                <Button size="sm">Editar</Button>
-                <Button size="sm" variant="outline">Remarcar</Button>
-                <Button size="sm" variant="destructive">Cancelar</Button>
+                <Button size="sm" disabled>Editar</Button>
+                <Button size="sm" variant="outline" disabled>Remarcar</Button>
+                <Button size="sm" variant="destructive" disabled>Cancelar</Button>
               </div>
             </div>
           </DialogContent>

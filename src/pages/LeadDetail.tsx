@@ -25,6 +25,7 @@ import { ChecklistDialog } from '@/components/pipeline/ChecklistDialog';
 import { UnifiedTimeline } from '@/components/timeline/UnifiedTimeline';
 import { DealLossDialog } from '@/components/deals/DealLossDialog';
 import { OrderForm } from '@/components/orders/OrderForm';
+import { EnhancedAppointmentDialog } from '@/components/pipeline/EnhancedAppointmentDialog';
 import { useFormAudit } from '@/hooks/useFormAudit';
 import { useLeadData } from '@/hooks/useLeadData';
 import { useMultiPipeline } from '@/hooks/useMultiPipeline';
@@ -43,7 +44,7 @@ export default function LeadDetail() {
   const { stages: pipelineStages } = useSupabasePipelineStages();
   const { pipelines } = useSupabasePipelines();
   const { checklistItems } = useSupabaseChecklistItems();
-  const { appointments } = useSupabaseAppointments();
+  const { appointments, saveAppointment } = useSupabaseAppointments();
   const { deals } = useSupabaseDeals();
   const { interactions } = useSupabaseInteractions();
   const { orders } = useSupabaseOrders();
@@ -69,6 +70,7 @@ export default function LeadDetail() {
   }>({ open: false });
   
   const [showOrderForm, setShowOrderForm] = useState(false);
+  const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
 
   const { logChange, getAuditLogs } = useAudit();
   const { toast } = useToast();
@@ -531,7 +533,16 @@ export default function LeadDetail() {
         <TabsContent value="agenda">
           <Card>
             <CardHeader>
-              <CardTitle>Agendamentos</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Agendamentos</CardTitle>
+                <Button 
+                  size="sm"
+                  onClick={() => setIsAppointmentDialogOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Agendamento
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -544,13 +555,25 @@ export default function LeadDetail() {
                       </div>
                       <Badge>{apt.status}</Badge>
                     </div>
+                    {apt.observacao && (
+                      <p className="text-sm text-muted-foreground mt-2">{apt.observacao}</p>
+                    )}
                     {apt.resultado_obs && (
-                      <p className="text-sm text-muted-foreground mt-2">{apt.resultado_obs}</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        <strong>Resultado:</strong> {apt.resultado_obs}
+                      </p>
                     )}
                   </div>
                 ))}
                 {leadAppointments.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">Nenhum agendamento encontrado</p>
+                  <div className="text-center py-8">
+                    <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground mb-4">Nenhum agendamento encontrado</p>
+                    <Button onClick={() => setIsAppointmentDialogOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Criar Primeiro Agendamento
+                    </Button>
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -675,6 +698,33 @@ export default function LeadDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Enhanced Appointment Dialog */}
+      {isAppointmentDialogOpen && (
+        <EnhancedAppointmentDialog
+          open={isAppointmentDialogOpen}
+          onOpenChange={setIsAppointmentDialogOpen}
+          lead={lead}
+          stage={leadEntries[0] ? pipelineStages.find(s => s.id === leadEntries[0].etapa_atual_id) : undefined}
+          onSave={async (appointmentData) => {
+            try {
+              await saveAppointment(appointmentData);
+              toast({
+                title: 'Agendamento criado',
+                description: `Sessão agendada para ${lead.nome}`,
+              });
+              setIsAppointmentDialogOpen(false);
+            } catch (error) {
+              console.error('Erro ao criar agendamento:', error);
+              toast({
+                title: 'Erro ao criar agendamento',
+                description: 'Tente novamente em alguns instantes',
+                variant: 'destructive'
+              });
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

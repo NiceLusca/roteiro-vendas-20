@@ -28,6 +28,7 @@ import { usePipelineAutomation } from '@/hooks/usePipelineAutomation';
 import { useValidatedAdvancement } from '@/hooks/useValidatedAdvancement';
 import { useKanbanAppointments } from '@/hooks/useKanbanAppointments';
 import { usePipelineAppointmentIntegration } from '@/hooks/usePipelineAppointmentIntegration';
+import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
 import { ImprovedPipelineForm } from '@/components/forms/ImprovedPipelineForm';
 import { LeadForm } from '@/components/forms/LeadForm';
 import { 
@@ -80,6 +81,7 @@ export function EnhancedPipelineKanban() {
   const { checklistItems } = useSupabaseChecklistItems();
   const { fetchNextAppointments, getNextAppointmentForLead } = useKanbanAppointments();
   const { createAutomaticAppointment } = usePipelineAppointmentIntegration();
+  const { saveAppointment, refetch: refetchAppointments } = useSupabaseAppointments();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCloser, setFilterCloser] = useState<string>('all');
   const [filterScore, setFilterScore] = useState<string>('all');
@@ -667,12 +669,25 @@ export function EnhancedPipelineKanban() {
         lead={appointmentDialog.lead!}
         stage={appointmentDialog.stage}
         onSave={async (appointmentData) => {
-          console.log('Appointment data:', appointmentData);
-          toast({
-            title: 'Agendamento criado',
-            description: `Sessão agendada para ${appointmentDialog.leadName}`,
-          });
-          setAppointmentDialog({ open: false });
+          try {
+            const savedAppointment = await saveAppointment(appointmentData);
+            if (savedAppointment) {
+              await refetchAppointments();
+              refetch(); // Refresh pipeline entries
+              toast({
+                title: 'Agendamento criado',
+                description: `Sessão agendada para ${appointmentDialog.leadName}`,
+              });
+              setAppointmentDialog({ open: false });
+            }
+          } catch (error) {
+            console.error('Erro ao salvar agendamento:', error);
+            toast({
+              title: 'Erro ao criar agendamento',
+              description: 'Tente novamente em alguns instantes',
+              variant: 'destructive'
+            });
+          }
         }}
       />
 
