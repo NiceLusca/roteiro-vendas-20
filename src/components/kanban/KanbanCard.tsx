@@ -32,7 +32,7 @@ interface AppointmentInfo {
 
 interface KanbanCardProps {
   entry: LeadPipelineEntry;
-  lead: Lead;
+  lead: Lead | null | undefined;
   stage: PipelineStage;
   nextAppointment?: AppointmentInfo | null;
   isDragging?: boolean;
@@ -59,6 +59,19 @@ export function KanbanCard({
   onRegressStage,
   onTransferPipeline
 }: KanbanCardProps) {
+  // Early return if lead is not loaded yet
+  if (!lead) {
+    return (
+      <Card className="kanban-card opacity-50">
+        <CardContent className="p-4">
+          <div className="animate-pulse">
+            <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+            <div className="h-3 bg-muted rounded w-1/2"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
   const {
     attributes,
     listeners,

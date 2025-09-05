@@ -129,7 +129,7 @@ export function DragDropKanban({
       </div>
 
       <DragOverlay>
-        {activeEntry && (
+        {activeEntry && activeEntry.lead && (
           <KanbanCard
             entry={activeEntry}
             lead={activeEntry.lead}
