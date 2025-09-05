@@ -1113,11 +1113,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_lead_score: {
+        Args: {
+          faturamento_medio: number
+          ja_vendeu_digital: boolean
+          meta_faturamento: number
+          objecao_principal: string
+          origem: string
+          seguidores: number
+        }
+        Returns: number
+      }
+      get_lead_score_classification: {
+        Args: { score: number }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      validate_mandatory_checklist: {
+        Args: { checklist_state_param: Json; stage_id_param: string }
         Returns: boolean
       }
     }
