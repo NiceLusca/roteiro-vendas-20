@@ -6,12 +6,47 @@ import { useAdvancedCriteria, useLeadCriteriaState } from './useAdvancedCriteria
 import { useSupabaseLeadStageManagement } from './useSupabaseLeadStageManagement';
 import { useSupabasePipelineStages } from './useSupabasePipelineStages';
 import { useSupabaseChecklistItems } from './useSupabaseChecklistItems';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export function useEnhancedValidatedAdvancement() {
   const { advanceStage } = useSupabaseLeadStageManagement();
   const { stages } = useSupabasePipelineStages();
   const { toast } = useToast();
+
+  const validateMandatoryChecklist = useCallback(async (stageId: string, checklistState: Record<string, boolean>): Promise<{
+    canAdvance: boolean;
+    missingItems: string[];
+  }> => {
+    try {
+      // Buscar itens obrigatórios da etapa
+      const { data: mandatoryItems, error } = await supabase
+        .from('stage_checklist_items')
+        .select('id, titulo')
+        .eq('stage_id', stageId)
+        .eq('obrigatorio', true);
+
+      if (error) {
+        console.error('Erro ao buscar itens obrigatórios:', error);
+        return { canAdvance: false, missingItems: [] };
+      }
+
+      const missingItems: string[] = [];
+      
+      for (const item of mandatoryItems || []) {
+        const isCompleted = checklistState[item.id] === true;
+        if (!isCompleted) {
+          missingItems.push(item.titulo);
+        }
+      }
+
+      const canAdvance = missingItems.length === 0;
+      return { canAdvance, missingItems };
+    } catch (error) {
+      console.error('Erro ao validar avanço:', error);
+      return { canAdvance: false, missingItems: [] };
+    }
+  }, []);
 
   const getNextStage = useCallback((currentStageId: string, pipelineId: string) => {
     const pipelineStages = stages.filter(s => s.pipeline_id === pipelineId).sort((a, b) => a.ordem - b.ordem);
@@ -45,6 +80,24 @@ export function useEnhancedValidatedAdvancement() {
     const criteria: any[] = [];
     const criteriaStates: any[] = [];
 
+    // Validate mandatory checklist items first
+    const checklistState = entry.checklist_state as Record<string, boolean> || {};
+    const { canAdvance, missingItems } = await validateMandatoryChecklist(entry.etapa_atual_id, checklistState);
+    
+    if (!canAdvance) {
+      return {
+        canAdvance: false,
+        blockers: [{
+          criteriaId: 'mandatory_checklist',
+          valid: false,
+          status: 'bloqueado',
+          message: `Complete os itens obrigatórios: ${missingItems.join(', ')}`
+        }],
+        warnings: [],
+        passedCriteria: []
+      };
+    }
+
     // Get additional context for validation
     const context = await getValidationContext(lead, entry);
     
@@ -56,7 +109,7 @@ export function useEnhancedValidatedAdvancement() {
       criteriaStates,
       context
     );
-  }, [getNextStage]);
+  }, [validateMandatoryChecklist, getNextStage]);
 
   const attemptStageAdvancement = useCallback(async (
     entry: LeadPipelineEntry,
