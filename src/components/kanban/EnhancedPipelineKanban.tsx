@@ -149,22 +149,22 @@ export function EnhancedPipelineKanban() {
       const lead = leads.find(l => l.id === entry.lead_id);
       return lead ? { ...entry, lead } : null;
     })
-    .filter(Boolean)
+    .filter((entry): entry is NonNullable<typeof entry> => {
+      return entry !== null && entry !== undefined && entry.lead !== undefined;
+    })
     .filter(entry => {
-      if (!entry) return false;
-      
-      // Filtro de busca
-      if (searchTerm && !entry.lead.nome.toLowerCase().includes(searchTerm.toLowerCase())) {
+      // Filtro de busca - safe access to lead.nome
+      if (searchTerm && (!entry.lead?.nome || !entry.lead.nome.toLowerCase().includes(searchTerm.toLowerCase()))) {
         return false;
       }
       
       // Filtro de closer
-      if (filterCloser !== 'all' && entry.lead.closer !== filterCloser) {
+      if (filterCloser !== 'all' && entry.lead?.closer !== filterCloser) {
         return false;
       }
       
       // Filtro de score
-      if (filterScore !== 'all' && entry.lead.lead_score_classification !== filterScore) {
+      if (filterScore !== 'all' && entry.lead?.lead_score_classification !== filterScore) {
         return false;
       }
       
