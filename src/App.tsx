@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import React, { lazy, Suspense } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { AuditProvider } from "@/contexts/AuditContext";
+import { GlobalErrorBoundary } from "@/components/ui/GlobalErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
@@ -47,10 +48,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <AuditProvider>
-          <TooltipProvider>
+    <GlobalErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <AuditProvider>
+            <TooltipProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
@@ -109,10 +111,11 @@ function App() {
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
-          </TooltipProvider>
-        </AuditProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+            </TooltipProvider>
+          </AuditProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </GlobalErrorBoundary>
   );
 }
 

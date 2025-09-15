@@ -121,6 +121,46 @@ export function useSupabaseProducts() {
     return products.find(product => product.id === id);
   };
 
+  // Delete product
+  const deleteProduct = async (productId: string) => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', productId);
+
+      if (error) {
+        console.error('Erro ao excluir produto:', error);
+        toast({
+          title: "Erro ao excluir produto",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Produto excluído",
+        description: "O produto foi removido com sucesso"
+      });
+      
+      await fetchProducts();
+    } catch (error) {
+      console.error('Erro ao excluir produto:', error);
+      toast({
+        title: "Erro ao excluir produto", 
+        description: "Erro inesperado ao excluir produto",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchProducts();
@@ -131,6 +171,7 @@ export function useSupabaseProducts() {
     products,
     loading,
     saveProduct,
+    deleteProduct,
     getProductById,
     refetch: fetchProducts
   };

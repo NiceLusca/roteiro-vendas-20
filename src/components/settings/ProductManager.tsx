@@ -15,7 +15,7 @@ export function ProductManager() {
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   
-  const { products, loading } = useSupabaseProducts();
+  const { products, loading, deleteProduct } = useSupabaseProducts();
   const { toast } = useToast();
 
   const handleEditProduct = (product: Product) => {
@@ -28,14 +28,14 @@ export function ProductManager() {
     setIsProductDialogOpen(true);
   };
 
-  const handleDeleteProduct = (productId: string) => {
-    // Implementar delete do produto
+  const handleDeleteProduct = async (productId: string) => {
     if (window.confirm('Tem certeza que deseja excluir este produto?')) {
-      // TODO: Implement with Supabase
-      toast({
-        title: "Produto excluído",
-        description: "O produto foi removido com sucesso",
-      });
+      try {
+        await deleteProduct(productId);
+      } catch (error) {
+        // Error handling já está no hook
+        console.error('Erro ao excluir produto:', error);
+      }
     }
   };
 

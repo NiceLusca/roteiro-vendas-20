@@ -1,9 +1,10 @@
-const CACHE_NAME = 'crm-v1';
+const CACHE_NAME = 'crm-v2-production';
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',
   '/static/css/main.css',
-  '/manifest.json'
+  '/manifest.json',
+  '/assets/lumen-logo.png'
 ];
 
 // Install event
@@ -11,20 +12,41 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
+        console.log('Cache opened');
         return cache.addAll(urlsToCache);
       })
+      .catch((error) => {
+        console.error('Cache install failed:', error);
+      })
   );
+  // Force activation immediately
+  self.skipWaiting();
 });
 
-// Fetch event
+// Fetch event - Network first, cache fallback strategy for better performance
 self.addEventListener('fetch', (event) => {
+  // Skip cross-origin requests
+  if (!event.request.url.startsWith(self.location.origin)) {
+    return;
+  }
+  
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      }
-    )
+        // If network request succeeds, cache the response
+        if (response.status === 200) {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME)
+            .then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+        }
+        return response;
+      })
+      .catch(() => {
+        // If network fails, try cache
+        return caches.match(event.request);
+      })
   );
 });
 
