@@ -5,11 +5,7 @@ export function GlobalKeyboardShortcuts() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Only enable shortcuts when router context is available
-  const isRouterAvailable = Boolean(location);
-
   useEffect(() => {
-    if (!isRouterAvailable) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       // Help shortcuts
@@ -63,7 +59,7 @@ export function GlobalKeyboardShortcuts() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [navigate, isRouterAvailable]);
+  }, [navigate, location]);
 
   return null; // This component doesn't render anything
 }

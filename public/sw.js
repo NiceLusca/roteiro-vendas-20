@@ -59,8 +59,12 @@ self.addEventListener('activate', (event) => {
           if (cacheName !== CACHE_NAME) {
             return caches.delete(cacheName);
           }
+          return Promise.resolve();
         })
       );
     })
   );
 });
+
+// Service Worker for Lúmen CRM
+// Simple cache-first strategy

@@ -59,10 +59,10 @@ function App() {
             <AuditProvider>
               <AllLogsAuditProvider>
                 <TooltipProvider>
-                <GlobalKeyboardShortcuts />
                 <Toaster />
                 <Sonner />
                 <BrowserRouter>
+                  <GlobalKeyboardShortcuts />
                   <Routes>
                     <Route path="/auth" element={<Auth />} />
                     <Route path="/" element={
