@@ -52,34 +52,29 @@ export function useAdvancedAnalytics(selectedPipelineId: string, timeRange: stri
        // Get leads data  
        const leadsData: any[] = [];
        
-       if (selectedPipelineId !== 'all') {
-         // Get pipeline stages first
-         const { data: stages } = await supabase
-           .from('pipeline_stages')
-           .select('id')
-           .eq('pipeline_id', selectedPipelineId);
-         
-         const stageIds = stages?.map((stage) => stage.id) || [];
-         
-         if (stageIds.length > 0) {
-           const { data: leads } = await supabase
-             .from('leads')
-             .select('*')
-             .gte('created_at', startIso)
-             .lte('created_at', endIso)
-             .in('etapa_atual_id', stageIds);
-           
-           leadsData.push(...(leads || []));
-         }
-       } else {
-         const { data: leads } = await supabase
-           .from('leads')
-           .select('*')
-           .gte('created_at', startIso)
-           .lte('created_at', endIso);
-         
-         leadsData.push(...(leads || []));
-       }
+        if (selectedPipelineId !== 'all') {
+          // Get leads through pipeline entries
+          const { data: pipelineEntries } = await supabase
+            .from('lead_pipeline_entries')
+            .select(`
+              lead_id,
+              leads!inner(*)
+            `)
+            .eq('pipeline_id', selectedPipelineId)
+            .gte('leads.created_at', startIso)
+            .lte('leads.created_at', endIso);
+          
+          const leads = pipelineEntries?.map(entry => entry.leads).filter(Boolean) || [];
+          leadsData.push(...leads);
+        } else {
+          const { data: leads } = await supabase
+            .from('leads')
+            .select('*')
+            .gte('created_at', startIso)
+            .lte('created_at', endIso);
+          
+          leadsData.push(...(leads || []));
+        }
 
       // Get deals and orders
       const dealsResponse = await supabase
