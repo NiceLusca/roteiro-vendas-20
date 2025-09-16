@@ -32,12 +32,14 @@ export function HelpFeedback({ sectionId }: HelpFeedbackProps) {
   };
 
   const handleSubmitFeedback = () => {
-    // Here you would typically send the feedback to your backend
-    console.log('Feedback submitted:', {
-      sectionId,
-      rating,
-      feedback
-    });
+    // Send feedback to backend in production
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Feedback submitted:', {
+        sectionId,
+        rating,
+        feedback
+      });
+    }
     
     toast({
       title: 'Feedback enviado!',

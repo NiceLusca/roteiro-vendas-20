@@ -1,10 +1,16 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export function GlobalKeyboardShortcuts() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Only enable shortcuts when router context is available
+  const isRouterAvailable = Boolean(location);
 
   useEffect(() => {
+    if (!isRouterAvailable) return;
+
     const handleKeyDown = (event: KeyboardEvent) => {
       // Help shortcuts
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === '?') {
@@ -57,7 +63,7 @@ export function GlobalKeyboardShortcuts() {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [navigate]);
+  }, [navigate, isRouterAvailable]);
 
   return null; // This component doesn't render anything
 }

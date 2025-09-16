@@ -182,7 +182,9 @@ export function PipelineAnalyticsDashboard() {
 
   const handleExportData = () => {
     // Implementation for data export
-    console.log('Exporting analytics data...');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Exporting analytics data...');
+    }
   };
 
   if (loading) {

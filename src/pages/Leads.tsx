@@ -91,11 +91,13 @@ export default function Leads() {
   };
 
   const handleInscribeLead = (lead: Lead) => {
-    console.log('handleInscribeLead called with:', lead);
-    console.log('Available pipelines:', pipelines);
-    console.log('Available stages:', stages);
-    console.log('Stages length:', stages.length);
-    console.log('Stages for pipeline ecd0a55f-f00d-4d76-96d5-4bf9a9e65a59:', stages.filter(s => s.pipeline_id === 'ecd0a55f-f00d-4d76-96d5-4bf9a9e65a59'));
+    if (process.env.NODE_ENV === 'development') {
+      console.log('handleInscribeLead called with:', lead);
+      console.log('Available pipelines:', pipelines);
+      console.log('Available stages:', stages);
+      console.log('Stages length:', stages.length);
+      console.log('Stages for pipeline ecd0a55f-f00d-4d76-96d5-4bf9a9e65a59:', stages.filter(s => s.pipeline_id === 'ecd0a55f-f00d-4d76-96d5-4bf9a9e65a59'));
+    }
     setSelectedLeadForInscription(lead);
     setShowInscriptionDialog(true);
   };
@@ -114,11 +116,15 @@ export default function Leads() {
 
   const getActivePipelineIds = (leadId: string) => {
     const entries = getLeadPipelineEntries(leadId);
-    console.log('getActivePipelineIds for leadId:', leadId, 'entries:', entries);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('getActivePipelineIds for leadId:', leadId, 'entries:', entries);
+    }
     const activeIds = entries
       .filter(entry => entry.status_inscricao === 'Ativo')
       .map(entry => entry.pipeline_id);
-    console.log('Active pipeline IDs:', activeIds);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Active pipeline IDs:', activeIds);
+    }
     return activeIds;
   };
 

@@ -61,9 +61,11 @@ export default function Settings() {
                 onClick={() => {
                   // Importar e abrir dialog de auditoria
                   import('@/components/audit/AuditLogsDialog').then(({ AuditLogsDialog }) => {
-                    // Implementar abertura do dialog
-                    console.log('Abrir logs de auditoria');
-                  });
+                    // TODO: Implement audit logs dialog
+                    if (process.env.NODE_ENV === 'development') {
+                      console.log('Abrir logs de auditoria');
+                    }
+                  });                
                 }}
               >
                 Ver Logs de Auditoria

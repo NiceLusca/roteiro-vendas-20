@@ -57,7 +57,9 @@ export function EnhancedPipelineKanban() {
   const { pipelines, loading: pipelinesLoading, savePipeline } = useSupabasePipelines();
   const { leads } = useSupabaseLeads();
   
-  console.log('EnhancedPipelineKanban render:', { pipelines, pipelinesLoading });
+  if (process.env.NODE_ENV === 'development') {
+    console.log('EnhancedPipelineKanban render:', { pipelines, pipelinesLoading });
+  }
   
   const [selectedPipelineId, setSelectedPipelineId] = useState('');
   const [isNewPipelineDialogOpen, setIsNewPipelineDialogOpen] = useState(false);
@@ -714,7 +716,9 @@ export function EnhancedPipelineKanban() {
         leadId={interactionDialog.leadId || ''}
         leadName={interactionDialog.leadName || ''}
         onSave={(interaction) => {
-          console.log('Interação registrada:', interaction);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Interação registrada:', interaction);
+          }
           toast({
             title: 'Interação registrada',
             description: `Interação registrada para ${interactionDialog.leadName}`,

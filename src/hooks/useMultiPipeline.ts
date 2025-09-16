@@ -39,8 +39,10 @@ export function useMultiPipeline() {
   }, [transferToPipeline, logChange]);
 
   const inscribePipeline = useCallback(async (leadId: string, pipelineId: string, stageId: string) => {
-    console.log('inscribePipeline called with:', { leadId, pipelineId, stageId });
-    console.log('Current entries:', entries);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('inscribePipeline called with:', { leadId, pipelineId, stageId });
+      console.log('Current entries:', entries);
+    }
     
     try {
       // Check if already inscribed
@@ -49,7 +51,9 @@ export function useMultiPipeline() {
       );
 
       if (existingEntry) {
-        console.log('Lead already inscribed, showing toast');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Lead already inscribed, showing toast');
+        }
         toast({
           title: 'Já inscrito',
           description: 'Lead já está inscrito neste pipeline',
@@ -58,7 +62,9 @@ export function useMultiPipeline() {
         return;
       }
 
-      console.log('Creating new entry...');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Creating new entry...');
+      }
       // Create new entry
       const newEntry = await createEntry({
         lead_id: leadId,
@@ -66,10 +72,14 @@ export function useMultiPipeline() {
         etapa_atual_id: stageId
       });
 
-      console.log('New entry created:', newEntry);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('New entry created:', newEntry);
+      }
 
       if (newEntry) {
-        console.log('Logging change...');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Logging change...');
+        }
         logChange({
           entidade: 'LeadPipelineEntry',
           entidade_id: newEntry.id,

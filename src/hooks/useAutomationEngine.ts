@@ -141,7 +141,9 @@ export function useAutomationEngine() {
 
           case 'send_notification':
             // Send notification (would integrate with notification system)
-            console.log(`Sending notification: ${action.parameters.message}`);
+            if (process.env.NODE_ENV === 'development') {
+              console.log(`Sending notification: ${action.parameters.message}`);
+            }
             break;
         }
       }

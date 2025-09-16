@@ -218,8 +218,10 @@ export function EmbeddedPipelineAnalytics({
   };
 
   const handleExport = () => {
-    // Mock export functionality
-    console.log('Exporting analytics data...');
+    // Mock export functionality - replace with actual implementation
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Exporting analytics data...');
+    }
   };
 
   if (compact) {

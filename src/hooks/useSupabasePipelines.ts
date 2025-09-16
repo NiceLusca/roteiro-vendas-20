@@ -157,7 +157,9 @@ export function useSupabasePipelines() {
 
   // Save complex pipeline with stages and checklist items (with better error handling)
   const saveComplexPipeline = async (complexData: ComplexPipelineData & { id?: string }) => {
-    console.log('saveComplexPipeline called with:', { complexData, user: user?.id });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('saveComplexPipeline called with:', { complexData, user: user?.id });
+    }
     
     if (!user || !user.id) {
       console.error('No user found:', user);
@@ -225,8 +227,9 @@ export function useSupabasePipelines() {
         user_id: user.id,
         updated_at: new Date().toISOString()
       };
-
-      console.log('Pipeline payload:', pipelinePayload);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Pipeline payload:', pipelinePayload);
+      }
 
       // Add optional fields if they exist
       if (pipelineData.descricao !== undefined) pipelinePayload.descricao = pipelineData.descricao;

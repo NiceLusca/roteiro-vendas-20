@@ -289,7 +289,9 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
           table: 'lead_pipeline_entries'
         },
         (payload) => {
-          console.log('Real-time update received:', payload);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Real-time update received:', payload);
+          }
           // Refetch entries when any change occurs
           fetchEntries();
         }

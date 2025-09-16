@@ -1,10 +1,8 @@
-const CACHE_NAME = 'crm-v2-production';
+const CACHE_NAME = 'lumen-crm-v1.0.0';
 const urlsToCache = [
   '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css',
   '/manifest.json',
-  '/assets/lumen-logo.png'
+  // Assets will be cached dynamically
 ];
 
 // Install event
@@ -12,7 +10,9 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Cache opened');
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Cache opened');
+        }
         return cache.addAll(urlsToCache);
       })
       .catch((error) => {

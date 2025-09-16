@@ -334,7 +334,9 @@ export default function Deals() {
             // Update deal status and save loss reason
             saveDeal({ ...lossDialogDeal, status: 'Perdida' });
             // TODO: Save loss reason to database
-            console.log('Deal lost reason:', lossReason);
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Deal lost reason:', lossReason);
+            }
             setLossDialogDeal(null);
           }}
         />
