@@ -1,6 +1,19 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Lead, Deal, Order } from '@/types/crm';
+
+interface KPIMetric {
+  metric: string;
+  value: number | string;
+  change: number;
+  trend: 'up' | 'down' | 'stable';
+}
+
+interface InsightData {
+  type: 'opportunity' | 'warning' | 'info';
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+}
 
 interface AnalyticsMetrics {
   totalLeads: number;
@@ -22,9 +35,9 @@ interface ForecastData {
   factors: string[];
 }
 
-export function useAdvancedAnalytics(dateRange?: { start: Date; end: Date }) {
-  const [metrics, setMetrics] = useState<AnalyticsMetrics | null>(null);
-  const [forecast, setForecast] = useState<ForecastData | null>(null);
+export function useAdvancedAnalytics(selectedPipelineId: string, timeRange: string) {
+  const [kpiMetrics, setKpiMetrics] = useState<KPIMetric[]>([]);
+  const [insights, setInsights] = useState<InsightData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,125 +46,180 @@ export function useAdvancedAnalytics(dateRange?: { start: Date; end: Date }) {
       setLoading(true);
       setError(null);
 
-      // Base date filter
-      const startDate = dateRange?.start || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const endDate = dateRange?.end || new Date();
+      // Calculate date range
+      const endDate = new Date();
+      const startDate = new Date();
+      
+      switch (timeRange) {
+        case '7d':
+          startDate.setDate(endDate.getDate() - 7);
+          break;
+        case '30d':
+          startDate.setDate(endDate.getDate() - 30);
+          break;
+        case '90d':
+          startDate.setDate(endDate.getDate() - 90);
+          break;
+        case '1y':
+          startDate.setFullYear(endDate.getFullYear() - 1);
+          break;
+      }
 
-      // Fetch leads data
-      const { data: leads, error: leadsError } = await supabase
+      // Build base query
+      let leadsQuery = supabase
         .from('leads')
         .select('*')
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString());
 
-      if (leadsError) throw leadsError;
-
-      // Fetch deals data
-      const { data: deals, error: dealsError } = await supabase
+      let dealsQuery = supabase
         .from('deals')
-        .select('*, leads!inner(*)')
+        .select('*')
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString());
 
-      if (dealsError) throw dealsError;
-
-      // Fetch orders data
-      const { data: orders, error: ordersError } = await supabase
+      let ordersQuery = supabase
         .from('orders')
-        .select('*, leads!inner(*)')
+        .select('*')
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString());
 
-      if (ordersError) throw ordersError;
+      // Filter by pipeline if specified
+      if (selectedPipelineId !== 'all') {
+        const { data: pipelineStages } = await supabase
+          .from('pipeline_stages')
+          .select('id')
+          .eq('pipeline_id', selectedPipelineId);
 
-      // Fetch pipeline entries for stage performance
-      const { data: pipelineEntries, error: pipelineError } = await supabase
-        .from('lead_pipeline_entries')
-        .select('*, pipeline_stages!inner(nome), leads!inner(*)')
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString());
+        const stageIds = pipelineStages?.map(stage => stage.id) || [];
+        
+        if (stageIds.length > 0) {
+          leadsQuery = leadsQuery.in('etapa_atual_id', stageIds);
+        }
+      }
 
-      if (pipelineError) throw pipelineError;
+      // Execute queries
+      const [leadsResult, dealsResult, ordersResult] = await Promise.all([
+        leadsQuery,
+        dealsQuery,
+        ordersQuery
+      ]);
 
-      // Calculate metrics
-      const totalLeads = leads?.length || 0;
-      const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.total || 0), 0) || 0;
-      const wonDeals = deals?.filter(deal => deal.status === 'Ganha') || [];
+      if (leadsResult.error) throw leadsResult.error;
+      if (dealsResult.error) throw dealsResult.error;
+      if (ordersResult.error) throw ordersResult.error;
+
+      const leads = leadsResult.data || [];
+      const deals = dealsResult.data || [];
+      const orders = ordersResult.data || [];
+
+      // Calculate previous period for comparison
+      const previousStartDate = new Date(startDate);
+      const periodLength = endDate.getTime() - startDate.getTime();
+      previousStartDate.setTime(startDate.getTime() - periodLength);
+
+      const { data: previousLeads } = await supabase
+        .from('leads')
+        .select('id')
+        .gte('created_at', previousStartDate.toISOString())
+        .lt('created_at', startDate.toISOString());
+
+      const { data: previousOrders } = await supabase
+        .from('orders')
+        .select('total')
+        .gte('created_at', previousStartDate.toISOString())
+        .lt('created_at', startDate.toISOString());
+
+      // Calculate KPI metrics
+      const totalLeads = leads.length;
+      const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+      const wonDeals = deals.filter(deal => deal.status === 'Ganha');
       const conversionRate = totalLeads > 0 ? (wonDeals.length / totalLeads) * 100 : 0;
-      const avgDealSize = wonDeals.length > 0 ? totalRevenue / wonDeals.length : 0;
+      
+      const previousTotalLeads = previousLeads?.length || 0;
+      const previousTotalRevenue = previousOrders?.reduce((sum, order) => sum + Number(order.total || 0), 0) || 0;
+      
+      const leadGrowth = previousTotalLeads > 0 ? 
+        ((totalLeads - previousTotalLeads) / previousTotalLeads) * 100 : 0;
+      const revenueGrowth = previousTotalRevenue > 0 ? 
+        ((totalRevenue - previousTotalRevenue) / previousTotalRevenue) * 100 : 0;
 
-      // Lead sources analysis
-      const sourceCounts = leads?.reduce((acc: Record<string, number>, lead) => {
-        const source = lead.origem || 'Desconhecido';
-        acc[source] = (acc[source] || 0) + 1;
-        return acc;
-      }, {}) || {};
+      // Calculate pipeline velocity (average days in pipeline)
+      const pipelineVelocity = leads.reduce((sum, lead) => {
+        const created = new Date(lead.created_at);
+        const now = new Date();
+        return sum + Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+      }, 0) / (totalLeads || 1);
 
-      const leadSources = Object.entries(sourceCounts).map(([source, count]) => ({
-        source,
-        count,
-        percentage: totalLeads > 0 ? (count / totalLeads) * 100 : 0
-      }));
-
-      // Stage performance analysis
-      const stageStats = pipelineEntries?.reduce((acc: Record<string, { total: number; avgTime: number; conversions: number }>, entry) => {
-        const stageName = entry.pipeline_stages?.nome || 'Desconhecido';
-        if (!acc[stageName]) {
-          acc[stageName] = { total: 0, avgTime: 0, conversions: 0 };
+      const kpiData: KPIMetric[] = [
+        {
+          metric: 'total_revenue',
+          value: totalRevenue.toFixed(0),
+          change: revenueGrowth,
+          trend: revenueGrowth > 0 ? 'up' : revenueGrowth < 0 ? 'down' : 'stable'
+        },
+        {
+          metric: 'conversion_rate',
+          value: conversionRate.toFixed(1),
+          change: 0, // Would need historical data
+          trend: 'stable'
+        },
+        {
+          metric: 'active_leads',
+          value: totalLeads,
+          change: leadGrowth,
+          trend: leadGrowth > 0 ? 'up' : leadGrowth < 0 ? 'down' : 'stable'
+        },
+        {
+          metric: 'pipeline_velocity',
+          value: pipelineVelocity.toFixed(1),
+          change: 0, // Would need historical comparison
+          trend: 'stable'
         }
-        acc[stageName].total += 1;
-        acc[stageName].avgTime += entry.tempo_em_etapa_dias || 0;
-        return acc;
-      }, {}) || {};
+      ];
 
-      const stagePerformance = Object.entries(stageStats).map(([stage, stats]) => ({
-        stage,
-        avgTime: stats.total > 0 ? stats.avgTime / stats.total : 0,
-        conversionRate: stats.total > 0 ? (stats.conversions / stats.total) * 100 : 0
-      }));
+      setKpiMetrics(kpiData);
 
-      // Revenue by period (weekly)
-      const revenueByPeriod = generateWeeklyRevenue(orders || []);
+      // Generate insights based on data
+      const generatedInsights: InsightData[] = [];
 
-      // Top performers
-      const performerStats = orders?.reduce((acc: Record<string, { deals: number; revenue: number }>, order) => {
-        const closer = order.closer || 'Desconhecido';
-        if (!acc[closer]) {
-          acc[closer] = { deals: 0, revenue: 0 };
-        }
-        acc[closer].deals += 1;
-        acc[closer].revenue += Number(order.total || 0);
-        return acc;
-      }, {}) || {};
+      if (conversionRate < 10) {
+        generatedInsights.push({
+          type: 'warning',
+          title: 'Taxa de conversão baixa',
+          description: `A taxa de conversão atual de ${conversionRate.toFixed(1)}% está abaixo do ideal. Considere revisar a qualificação de leads.`,
+          priority: 'high'
+        });
+      }
 
-      const topPerformers = Object.entries(performerStats)
-        .map(([closer, stats]) => ({ closer, ...stats }))
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 5);
+      if (pipelineVelocity > 30) {
+        generatedInsights.push({
+          type: 'opportunity',
+          title: 'Oportunidade de otimização',
+          description: `O tempo médio no pipeline é de ${pipelineVelocity.toFixed(0)} dias. Considere implementar automações para acelerar o processo.`,
+          priority: 'medium'
+        });
+      }
 
-      // Pipeline health calculation
-      const avgStageTime = stagePerformance.reduce((sum, stage) => sum + stage.avgTime, 0) / stagePerformance.length;
-      const pipelineHealth = calculatePipelineHealth(conversionRate, avgStageTime, totalLeads);
+      if (revenueGrowth > 20) {
+        generatedInsights.push({
+          type: 'opportunity',
+          title: 'Crescimento acelerado',
+          description: `A receita cresceu ${revenueGrowth.toFixed(1)}% no período. Considere expandir a equipe de vendas.`,
+          priority: 'high'
+        });
+      }
 
-      // Monthly growth calculation
-      const monthlyGrowth = calculateMonthlyGrowth(orders || []);
+      if (totalLeads === 0) {
+        generatedInsights.push({
+          type: 'warning',
+          title: 'Sem leads no período',
+          description: 'Não foram encontrados leads no período selecionado. Verifique suas campanhas de aquisição.',
+          priority: 'high'
+        });
+      }
 
-      setMetrics({
-        totalLeads,
-        totalRevenue,
-        conversionRate,
-        avgDealSize,
-        pipelineHealth,
-        monthlyGrowth,
-        leadSources,
-        stagePerformance,
-        revenueByPeriod,
-        topPerformers
-      });
-
-      // Generate forecast
-      const forecastData = generateForecast(orders || [], leads || []);
-      setForecast(forecastData);
+      setInsights(generatedInsights);
 
     } catch (err) {
       console.error('Error fetching analytics:', err);
@@ -161,85 +229,19 @@ export function useAdvancedAnalytics(dateRange?: { start: Date; end: Date }) {
     }
   };
 
+  const refreshAnalytics = async () => {
+    await fetchAnalytics();
+  };
+
   useEffect(() => {
     fetchAnalytics();
-  }, [dateRange]);
-
-  const refetch = () => {
-    fetchAnalytics();
-  };
+  }, [selectedPipelineId, timeRange]);
 
   return {
-    metrics,
-    forecast,
+    kpiMetrics,
+    insights,
     loading,
     error,
-    refetch
-  };
-}
-
-function generateWeeklyRevenue(orders: any[]): Array<{ period: string; revenue: number }> {
-  const weeklyData: Record<string, number> = {};
-  
-  orders.forEach(order => {
-    const date = new Date(order.created_at);
-    const weekStart = new Date(date);
-    weekStart.setDate(date.getDate() - date.getDay());
-    const weekKey = weekStart.toISOString().split('T')[0];
-    
-    weeklyData[weekKey] = (weeklyData[weekKey] || 0) + Number(order.total || 0);
-  });
-
-  return Object.entries(weeklyData)
-    .map(([period, revenue]) => ({ period, revenue }))
-    .sort((a, b) => a.period.localeCompare(b.period));
-}
-
-function calculatePipelineHealth(conversionRate: number, avgStageTime: number, totalLeads: number): 'excellent' | 'good' | 'warning' | 'critical' {
-  if (conversionRate > 20 && avgStageTime < 7 && totalLeads > 50) return 'excellent';
-  if (conversionRate > 15 && avgStageTime < 14 && totalLeads > 20) return 'good';
-  if (conversionRate > 10 && avgStageTime < 21) return 'warning';
-  return 'critical';
-}
-
-function calculateMonthlyGrowth(orders: any[]): number {
-  const now = new Date();
-  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  const lastMonthRevenue = orders
-    .filter(order => new Date(order.created_at) >= lastMonth && new Date(order.created_at) < thisMonth)
-    .reduce((sum, order) => sum + Number(order.total || 0), 0);
-
-  const thisMonthRevenue = orders
-    .filter(order => new Date(order.created_at) >= thisMonth)
-    .reduce((sum, order) => sum + Number(order.total || 0), 0);
-
-  if (lastMonthRevenue === 0) return 0;
-  return ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
-}
-
-function generateForecast(orders: any[], leads: any[]): ForecastData {
-  const recentOrders = orders.slice(-30); // Last 30 orders
-  const avgOrderValue = recentOrders.reduce((sum, order) => sum + Number(order.total || 0), 0) / recentOrders.length;
-  const recentLeads = leads.slice(-30); // Last 30 leads
-  
-  const trend = recentOrders.length > orders.length / 2 ? 'up' : 
-                recentOrders.length < orders.length / 3 ? 'down' : 'stable';
-  
-  const predictedRevenue = avgOrderValue * recentLeads.length * 0.15; // Assuming 15% conversion
-  const confidence = Math.min(90, Math.max(60, (recentOrders.length / 30) * 100));
-  
-  const factors = [
-    trend === 'up' ? 'Tendência de crescimento positiva' : 'Tendência estável',
-    `Valor médio por pedido: R$ ${avgOrderValue.toFixed(2)}`,
-    `${recentLeads.length} leads recentes no pipeline`
-  ];
-
-  return {
-    predictedRevenue,
-    confidence,
-    trend,
-    factors
+    refreshAnalytics
   };
 }
