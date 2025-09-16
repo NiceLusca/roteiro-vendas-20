@@ -20,52 +20,70 @@ export function AppLayout() {
   // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Command palette
+      // Check if user is typing in form elements
+      const activeElement = document.activeElement as HTMLElement;
+      const isFormElement = activeElement && (
+        activeElement.tagName === 'INPUT' ||
+        activeElement.tagName === 'TEXTAREA' ||
+        activeElement.tagName === 'SELECT' ||
+        activeElement.isContentEditable ||
+        activeElement.closest('[role="combobox"]') ||
+        activeElement.closest('[role="textbox"]')
+      );
+
+      // Command palette (always works)
       if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setCommandPaletteOpen(true);
+        return;
       }
       
-      // Keyboard shortcuts help
+      // Keyboard shortcuts help (always works)
       if (e.key === '/' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setShortcutsHelpOpen(true);
+        return;
       }
 
-      // Global navigation shortcuts
+      // Skip navigation shortcuts when typing in forms
+      if (isFormElement) {
+        return;
+      }
+
+      // Global navigation shortcuts (only when not in form elements)
       if (e.metaKey || e.ctrlKey) {
         switch (e.key) {
           case 'd':
             e.preventDefault();
-            window.location.href = '/';
+            navigate('/');
             break;
           case 'p':
             e.preventDefault();
-            window.location.href = '/pipelines';
+            navigate('/pipelines');
             break;
           case 'l':
             e.preventDefault();
-            window.location.href = '/leads';
+            navigate('/leads');
             break;
           case 'a':
             e.preventDefault();
-            window.location.href = '/agenda';
+            navigate('/agenda');
             break;
           case 'n':
             e.preventDefault();
-            window.location.href = '/deals';
+            navigate('/deals');
             break;
           case 'v':
             e.preventDefault();
-            window.location.href = '/orders';
+            navigate('/orders');
             break;
           case 'r':
             e.preventDefault();
-            window.location.href = '/reports';
+            navigate('/reports');
             break;
           case ',':
             e.preventDefault();
-            window.location.href = '/settings';
+            navigate('/settings');
             break;
         }
       }
@@ -91,11 +109,9 @@ export function AppLayout() {
 
   const handleCreateLead = () => {
     navigate('/leads');
-    // Wait for navigation then dispatch event
-    setTimeout(() => {
-      const event = new CustomEvent('open-create-lead-dialog');
-      window.dispatchEvent(event);
-    }, 100);
+    // Dispatch event immediately - React Router handles timing
+    const event = new CustomEvent('open-create-lead-dialog');
+    window.dispatchEvent(event);
   };
 
   return (
