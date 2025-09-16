@@ -16,6 +16,7 @@ import { EnhancedAppointmentDialog } from '@/components/pipeline/EnhancedAppoint
 import { InteractionDialog } from '@/components/interaction/InteractionDialog';
 import { ChecklistValidation } from '@/components/checklist/ChecklistValidation';
 import { PipelineTransferDialog } from '@/components/pipeline/PipelineTransferDialog';
+import { SuccessAnimation } from './SuccessAnimation';
 import { useMultiPipeline } from '@/hooks/useMultiPipeline';
 import { useSupabaseLeadStageManagement } from '@/hooks/useSupabaseLeadStageManagement';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
@@ -60,6 +61,10 @@ export function EnhancedPipelineKanban() {
   
   const [selectedPipelineId, setSelectedPipelineId] = useState('');
   const [isNewPipelineDialogOpen, setIsNewPipelineDialogOpen] = useState(false);
+  const [successAnimation, setSuccessAnimation] = useState({
+    show: false,
+    message: ''
+  });
 
   // Update selectedPipelineId when pipelines are loaded
   useEffect(() => {
@@ -235,9 +240,10 @@ export function EnhancedPipelineKanban() {
       
       if (!validation.valid) {
         toast({
-          title: 'Não é possível mover o lead',
-          description: validation.errors.join('\n'),
-          variant: 'destructive'
+          title: '❌ Movimento bloqueado',
+          description: `${validation.errors[0]}\n\n💡 Dica: Complete o checklist da etapa "${fromStage.nome}" antes de avançar.`,
+          variant: 'destructive',
+          duration: 5000
         });
         return;
       }
@@ -259,9 +265,14 @@ export function EnhancedPipelineKanban() {
         ]
       });
 
+      setSuccessAnimation({
+        show: true,
+        message: `Lead movido para "${toStage.nome}"`
+      });
+
       toast({
-        title: 'Lead movido com sucesso',
-        description: `Movido de "${fromStage.nome}" para "${toStage.nome}"`
+        title: '✅ Lead movido com sucesso',
+        description: `Lead foi movido de "${fromStage.nome}" para "${toStage.nome}"`
       });
 
       refetch();
@@ -342,9 +353,10 @@ export function EnhancedPipelineKanban() {
       
       if (!validation.valid) {
         toast({
-          title: 'Não é possível avançar',
-          description: validation.errors[0],
-          variant: 'destructive'
+          title: '🚫 Avanço bloqueado',
+          description: `${validation.errors[0]}\n\n📋 Complete todos os itens obrigatórios do checklist para prosseguir.`,
+          variant: 'destructive',
+          duration: 5000
         });
         return;
       }
@@ -398,8 +410,13 @@ export function EnhancedPipelineKanban() {
       }, 1000);
       
       toast({
-        title: 'Lead criado com sucesso',
+        title: '✅ Lead criado com sucesso',
         description: `Lead adicionado na etapa "${addLeadDialog.stageName}"`
+      });
+      
+      setSuccessAnimation({
+        show: true,
+        message: `Novo lead criado em "${addLeadDialog.stageName}"`
       });
     } catch (error) {
       console.error('Erro ao criar lead:', error);
@@ -736,7 +753,14 @@ export function EnhancedPipelineKanban() {
             />
           </DialogContent>
         </Dialog>
-      )}
+        )}
+      
+      {/* Success Animation */}
+      <SuccessAnimation
+        show={successAnimation.show}
+        message={successAnimation.message}
+        onComplete={() => setSuccessAnimation({ show: false, message: '' })}
+      />
     </div>
   );
 }

@@ -65,8 +65,8 @@ export function KanbanColumn({
     <div 
       ref={setNodeRef}
       className={cn(
-        "flex flex-col h-full min-w-80",
-        isDragAndDrop && isOver && "ring-2 ring-primary ring-opacity-50"
+        "flex flex-col h-full min-w-80 transition-all duration-300",
+        isDragAndDrop && isOver && "ring-2 ring-primary/50 bg-primary/5 scale-[1.02]"
       )}
     >
       {/* Header da Coluna */}

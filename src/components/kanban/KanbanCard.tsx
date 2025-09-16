@@ -114,8 +114,8 @@ export function KanbanCard({
       {...attributes}
       {...listeners}
       className={cn(
-        "kanban-card cursor-grab active:cursor-grabbing",
-        (dragActive || isDragging) && "opacity-50 rotate-2 scale-105 shadow-lg z-50"
+        "kanban-card group cursor-grab active:cursor-grabbing transition-all duration-300 hover:shadow-md hover:-translate-y-1",
+        (dragActive || isDragging) && "opacity-60 rotate-2 scale-105 shadow-2xl z-50 ring-2 ring-primary/50"
       )}
     >
       <CardContent className="p-4">
@@ -252,11 +252,11 @@ export function KanbanCard({
         )}
 
         {/* Ações Rápidas */}
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <Button
             size="sm"
             variant="ghost"
-            className="text-xs h-6 px-2"
+            className="text-xs h-6 px-2 hover:bg-primary/10 hover:text-primary transition-all duration-200"
             onClick={(e) => {
               e.stopPropagation();
               onViewLead?.();
@@ -268,12 +268,12 @@ export function KanbanCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0"
+            className="h-6 w-6 p-0 hover:bg-accent/80 hover:scale-110 transition-all duration-200"
             onClick={(e) => {
               e.stopPropagation();
               onOpenChecklist?.();
             }}
-            title="Checklist"
+            title="Abrir checklist da etapa"
           >
             <CheckSquare className="h-3 w-3" />
           </Button>
@@ -281,12 +281,12 @@ export function KanbanCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0"
+            className="h-6 w-6 p-0 hover:bg-orange-100 hover:text-orange-600 hover:scale-110 transition-all duration-200"
             onClick={(e) => {
               e.stopPropagation();
               onRegressStage?.();
             }}
-            title="Voltar etapa"
+            title="Regredir para etapa anterior"
           >
             <ArrowLeft className="h-3 w-3" />
           </Button>
@@ -294,12 +294,12 @@ export function KanbanCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0"
+            className="h-6 w-6 p-0 hover:bg-success/20 hover:text-success hover:scale-110 transition-all duration-200"
             onClick={(e) => {
               e.stopPropagation();
               onAdvanceStage?.();
             }}
-            title="Avançar etapa"
+            title="Avançar para próxima etapa"
           >
             <ArrowRight className="h-3 w-3" />
           </Button>
@@ -307,12 +307,12 @@ export function KanbanCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0"
+            className="h-6 w-6 p-0 hover:bg-blue-100 hover:text-blue-600 hover:scale-110 transition-all duration-200"
             onClick={(e) => {
               e.stopPropagation();
               onTransferPipeline?.();
             }}
-            title="Transferir pipeline"
+            title="Transferir para outro pipeline"
           >
             <GitBranch className="h-3 w-3" />
           </Button>
@@ -322,14 +322,16 @@ export function KanbanCard({
               size="sm"
               variant="ghost"
               className={cn(
-                "h-6 w-6 p-0",
-                !nextAppointment && "text-orange-600 hover:text-orange-700"
+                "h-6 w-6 p-0 hover:scale-110 transition-all duration-200",
+                nextAppointment 
+                  ? "hover:bg-success/20 hover:text-success" 
+                  : "text-orange-600 hover:bg-orange-100 hover:text-orange-700"
               )}
               onClick={(e) => {
                 e.stopPropagation();
                 onCreateAppointment?.();
               }}
-              title={nextAppointment ? "Ver/Editar agendamento" : "Criar agendamento"}
+              title={nextAppointment ? "Ver/Editar agendamento existente" : "Criar novo agendamento"}
             >
               {nextAppointment ? (
                 <CalendarCheck className="h-3 w-3" />
@@ -343,12 +345,12 @@ export function KanbanCard({
             <Button
               size="sm"
               variant="ghost"
-              className="h-6 w-6 p-0"
+              className="h-6 w-6 p-0 hover:bg-blue-100 hover:text-blue-600 hover:scale-110 transition-all duration-200"
               onClick={(e) => {
                 e.stopPropagation();
                 onRegisterInteraction?.();
               }}
-              title="Registrar interação"
+              title="Registrar nova interação com o lead"
             >
               <MessageCircle className="h-3 w-3" />
             </Button>

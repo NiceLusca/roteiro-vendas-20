@@ -130,12 +130,14 @@ export function DragDropKanban({
 
       <DragOverlay>
         {activeEntry && activeEntry.lead && (
-          <KanbanCard
-            entry={activeEntry}
-            lead={activeEntry.lead}
-            stage={stageEntries.find(s => s.stage.id === activeEntry.etapa_atual_id)?.stage!}
-            isDragging={true}
-          />
+          <div className="transform rotate-6 scale-110 shadow-2xl">
+            <KanbanCard
+              entry={activeEntry}
+              lead={activeEntry.lead}
+              stage={stageEntries.find(s => s.stage.id === activeEntry.etapa_atual_id)?.stage!}
+              isDragging={true}
+            />
+          </div>
         )}
       </DragOverlay>
     </DndContext>
