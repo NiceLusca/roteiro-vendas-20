@@ -11,6 +11,7 @@ import { CRMProvider } from "@/contexts/CRMContext";
 import { GlobalErrorBoundary } from "@/components/ui/GlobalErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { GlobalKeyboardShortcuts } from "@/components/help/GlobalKeyboardShortcuts";
 import Index from "./pages/Index";
 import Pipelines from "./pages/Pipelines";
 import Leads from "./pages/Leads";
@@ -26,6 +27,7 @@ const Analytics = lazy(() => import('./pages/Analytics'));
 const Settings = lazy(() => import('./pages/Settings'));
 const LeadDetail = lazy(() => import('./pages/LeadDetail'));
 const Intelligence = lazy(() => import('./pages/Intelligence'));
+const Help = lazy(() => import('./pages/Help'));
 
 const queryClient = new QueryClient();
 
@@ -57,6 +59,7 @@ function App() {
             <AuditProvider>
               <AllLogsAuditProvider>
                 <TooltipProvider>
+                <GlobalKeyboardShortcuts />
                 <Toaster />
                 <Sonner />
                 <BrowserRouter>
@@ -108,6 +111,11 @@ function App() {
                       <Route path="leads/:id" element={
                         <Suspense fallback={<div>Carregando...</div>}>
                           <LeadDetail />
+                        </Suspense>
+                      } />
+                      <Route path="help" element={
+                        <Suspense fallback={<div>Carregando...</div>}>
+                          <Help />
                         </Suspense>
                       } />
                     </Route>

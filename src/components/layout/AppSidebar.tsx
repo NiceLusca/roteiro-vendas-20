@@ -22,7 +22,8 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  Brain
+  Brain,
+  HelpCircle
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -81,6 +82,14 @@ const configItems = [
     title: 'Configurações',
     url: '/settings',
     icon: Settings,
+  },
+];
+
+const helpItems = [
+  {
+    title: 'Central de Ajuda',
+    url: '/help',
+    icon: HelpCircle,
   },
 ];
 
@@ -180,6 +189,24 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {configItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink to={item.url} end className={getNavCls}>
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Ajuda */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {helpItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} end className={getNavCls}>
