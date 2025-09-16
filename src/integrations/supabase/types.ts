@@ -1002,6 +1002,39 @@ export type Database = {
           },
         ]
       }
+      security_events: {
+        Row: {
+          details: Json | null
+          event_type: string
+          id: string
+          ip_address: unknown | null
+          success: boolean
+          timestamp: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          details?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: unknown | null
+          success?: boolean
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          details?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: unknown | null
+          success?: boolean
+          timestamp?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       stage_advancement_criteria: {
         Row: {
           ativo: boolean
@@ -1124,6 +1157,26 @@ export type Database = {
         }
         Returns: number
       }
+      cleanup_inactive_leads: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      cleanup_old_audit_logs: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      cleanup_old_security_events: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      detect_suspicious_activity: {
+        Args: {
+          _ip_address: unknown
+          _max_attempts?: number
+          _time_window?: unknown
+        }
+        Returns: boolean
+      }
       get_lead_score_classification: {
         Args: { score: number }
         Returns: string
@@ -1134,6 +1187,21 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      log_security_event: {
+        Args: {
+          _details?: Json
+          _event_type: string
+          _ip_address?: unknown
+          _success?: boolean
+          _user_agent?: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      sanitize_log_data: {
+        Args: { log_data: Json }
+        Returns: Json
       }
       validate_mandatory_checklist: {
         Args: { checklist_state_param: Json; stage_id_param: string }

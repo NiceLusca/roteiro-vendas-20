@@ -1,5 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { SecurityHeaders } from "@/components/security/SecurityHeaders";
+import { HelmetProvider } from 'react-helmet-async';
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -9,8 +11,8 @@ import { AuditProvider } from "@/contexts/AuditContext";
 import { AllLogsAuditProvider } from "@/contexts/AllLogsAuditContext";
 import { CRMProvider } from "@/contexts/CRMContext";
 import { GlobalErrorBoundary } from "@/components/ui/GlobalErrorBoundary";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { useAuth } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/contexts/AuthContextSecure";
+import { useAuth } from "@/contexts/AuthContextSecure";
 import { GlobalKeyboardShortcuts } from "@/components/help/GlobalKeyboardShortcuts";
 import Index from "./pages/Index";
 import Pipelines from "./pages/Pipelines";
@@ -28,6 +30,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const LeadDetail = lazy(() => import('./pages/LeadDetail'));
 const Intelligence = lazy(() => import('./pages/Intelligence'));
 const Help = lazy(() => import('./pages/Help'));
+const Security = lazy(() => import('./pages/Security'));
 
 const queryClient = new QueryClient();
 
@@ -52,84 +55,92 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <GlobalErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <CRMProvider>
-            <AuditProvider>
-              <AllLogsAuditProvider>
-                <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <GlobalKeyboardShortcuts />
-                  <Routes>
-                    <Route path="/auth" element={<Auth />} />
-                    <Route path="/" element={
-                      <ProtectedRoute>
-                        <AppLayout />
-                      </ProtectedRoute>
-                    }>
-                      <Route index element={<Index />} />
-                      <Route path="pipelines" element={<Pipelines />} />
-                      <Route path="leads" element={<Leads />} />
-                      <Route path="agenda" element={
-                        <Suspense fallback={<div>Carregando...</div>}>
-                          <Agenda />
-                        </Suspense>
-                      } />
-                      <Route path="deals" element={
-                        <Suspense fallback={<div>Carregando...</div>}>
-                          <Deals />
-                        </Suspense>
-                      } />
-                      <Route path="orders" element={
-                        <Suspense fallback={<div>Carregando...</div>}>
-                          <Orders />
-                        </Suspense>
-                      } />
-                      <Route path="reports" element={
-                        <Suspense fallback={<div>Carregando...</div>}>
-                          <Reports />
-                        </Suspense>
-                      } />
-                      <Route path="analytics" element={
-                        <Suspense fallback={<div>Carregando...</div>}>
-                          <Analytics />
-                        </Suspense>
-                      } />
-                      <Route path="intelligence" element={
-                        <Suspense fallback={<div>Carregando...</div>}>
-                          <Intelligence />
-                        </Suspense>
-                      } />
-                      <Route path="settings" element={
-                        <Suspense fallback={<div>Carregando...</div>}>
-                          <Settings />
-                        </Suspense>
-                      } />
-                      <Route path="leads/:id" element={
-                        <Suspense fallback={<div>Carregando...</div>}>
-                          <LeadDetail />
-                        </Suspense>
-                      } />
-                      <Route path="help" element={
-                        <Suspense fallback={<div>Carregando...</div>}>
-                          <Help />
-                        </Suspense>
-                      } />
-                    </Route>
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </BrowserRouter>
-                </TooltipProvider>
-              </AllLogsAuditProvider>
-            </AuditProvider>
-          </CRMProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </GlobalErrorBoundary>
+    <HelmetProvider>
+      <GlobalErrorBoundary>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <CRMProvider>
+              <AuditProvider>
+                <AllLogsAuditProvider>
+                  <TooltipProvider>
+                    <SecurityHeaders environment={process.env.NODE_ENV as 'development' | 'production'} />
+                    <Toaster />
+                    <Sonner />
+                    <BrowserRouter>
+                      <GlobalKeyboardShortcuts />
+                      <Routes>
+                        <Route path="/auth" element={<Auth />} />
+                        <Route path="/" element={
+                          <ProtectedRoute>
+                            <AppLayout />
+                          </ProtectedRoute>
+                        }>
+                          <Route index element={<Index />} />
+                          <Route path="pipelines" element={<Pipelines />} />
+                          <Route path="leads" element={<Leads />} />
+                          <Route path="agenda" element={
+                            <Suspense fallback={<div>Carregando...</div>}>
+                              <Agenda />
+                            </Suspense>
+                          } />
+                          <Route path="deals" element={
+                            <Suspense fallback={<div>Carregando...</div>}>
+                              <Deals />
+                            </Suspense>
+                          } />
+                          <Route path="orders" element={
+                            <Suspense fallback={<div>Carregando...</div>}>
+                              <Orders />
+                            </Suspense>
+                          } />
+                          <Route path="reports" element={
+                            <Suspense fallback={<div>Carregando...</div>}>
+                              <Reports />
+                            </Suspense>
+                          } />
+                          <Route path="analytics" element={
+                            <Suspense fallback={<div>Carregando...</div>}>
+                              <Analytics />
+                            </Suspense>
+                          } />
+                          <Route path="intelligence" element={
+                            <Suspense fallback={<div>Carregando...</div>}>
+                              <Intelligence />
+                            </Suspense>
+                          } />
+                          <Route path="settings" element={
+                            <Suspense fallback={<div>Carregando...</div>}>
+                              <Settings />
+                            </Suspense>
+                          } />
+                          <Route path="security" element={
+                            <Suspense fallback={<div>Carregando...</div>}>
+                              <Security />
+                            </Suspense>
+                          } />
+                          <Route path="leads/:id" element={
+                            <Suspense fallback={<div>Carregando...</div>}>
+                              <LeadDetail />
+                            </Suspense>
+                          } />
+                          <Route path="help" element={
+                            <Suspense fallback={<div>Carregando...</div>}>
+                              <Help />
+                            </Suspense>
+                          } />
+                        </Route>
+                        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </BrowserRouter>
+                  </TooltipProvider>
+                </AllLogsAuditProvider>
+              </AuditProvider>
+            </CRMProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </GlobalErrorBoundary>
+    </HelmetProvider>
   );
 }
 

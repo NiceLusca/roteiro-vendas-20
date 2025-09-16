@@ -23,9 +23,10 @@ import {
   Settings,
   LogOut,
   Brain,
-  HelpCircle
+  HelpCircle,
+  Shield
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextSecure';
 import { Button } from '@/components/ui/button';
 
 const mainMenuItems = [
@@ -82,6 +83,11 @@ const configItems = [
     title: 'Configurações',
     url: '/settings',
     icon: Settings,
+  },
+  {
+    title: 'Segurança',
+    url: '/security',
+    icon: Shield,
   },
 ];
 
