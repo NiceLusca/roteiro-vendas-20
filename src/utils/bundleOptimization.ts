@@ -234,10 +234,12 @@ export class BundleAnalyzer {
       const observer = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           if (entry.entryType === 'resource') {
-            logger.debug('Resource loaded:', {
-              name: entry.name,
-              duration: entry.duration,
-              size: (entry as any).transferSize || 0
+            logger.debug('Resource loaded', {
+              metadata: {
+                name: entry.name,
+                duration: entry.duration,
+                size: (entry as any).transferSize || 0
+              }
             });
           }
         }
@@ -268,10 +270,12 @@ export class BundleAnalyzer {
       }, 0);
 
       logger.debug('Loading performance calculated', {
-        domContentLoaded: navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart,
-        totalResources: resources.length,
-        jsResources: jsResources.length,
-        totalJSSize: Math.round(totalJSSize / 1024)
+        metadata: {
+          domContentLoaded: navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart,
+          totalResources: resources.length,
+          jsResources: jsResources.length,
+          totalJSSize: Math.round(totalJSSize / 1024)
+        }
       });
   }
 

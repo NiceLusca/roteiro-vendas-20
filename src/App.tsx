@@ -33,6 +33,7 @@ const LeadDetail = lazy(() => import('./pages/LeadDetail'));
 const Intelligence = lazy(() => import('./pages/Intelligence'));
 const Help = lazy(() => import('./pages/Help'));
 const Security = lazy(() => import('./pages/Security'));
+const Performance = lazy(() => import('./pages/Performance'));
 const Production = lazy(() => import('./pages/Production'));
 
 const queryClient = new QueryClient();
@@ -126,6 +127,11 @@ function App() {
                           <Route path="security" element={
                             <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <Security />
+                            </Suspense>
+                          } />
+                          <Route path="performance" element={
+                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+                              <Performance />
                             </Suspense>
                           } />
                           <Route path="production" element={
