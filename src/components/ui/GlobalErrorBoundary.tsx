@@ -13,7 +13,7 @@ interface State {
   errorInfo?: ErrorInfo;
 }
 
-export class GlobalErrorBoundary extends React.Component<Props, State> {
+class GlobalErrorBoundary extends React.Component<Props, State> {
   public state: State = {
     hasError: false
   };
@@ -114,3 +114,5 @@ export class GlobalErrorBoundary extends React.Component<Props, State> {
     return this.props.children;
   }
 }
+
+export { GlobalErrorBoundary };
