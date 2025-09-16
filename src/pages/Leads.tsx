@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LeadForm } from '@/components/forms/LeadForm';
 import { PipelineInscriptionDialog } from '@/components/pipeline/PipelineInscriptionDialog';
+import { GlobalErrorBoundary } from '@/components/ui/GlobalErrorBoundary';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
@@ -24,11 +25,12 @@ import {
   Mail,
   MessageCircle,
   TrendingUp,
-  GitBranch
+  GitBranch,
+  Loader2
 } from 'lucide-react';
 
 export default function Leads() {
-  const { leads } = useSupabaseLeads();
+  const { leads, loading: leadsLoading } = useSupabaseLeads();
   const { pipelines } = useSupabasePipelines();
   const { stages } = useSupabasePipelineStages(); // Carregar todas as stages, não apenas de um pipeline
   const { entries } = useSupabaseLeadPipelineEntries();
@@ -41,6 +43,7 @@ export default function Leads() {
   const [filterScore, setFilterScore] = useState<string>('all');
   const [showInscriptionDialog, setShowInscriptionDialog] = useState(false);
   const [selectedLeadForInscription, setSelectedLeadForInscription] = useState<Lead | null>(null);
+  const [formLoading, setFormLoading] = useState(false);
   
   const { saveLead } = useLeadData();
 
@@ -79,10 +82,18 @@ export default function Leads() {
     setShowForm(true);
   };
 
-  const handleSubmitLead = (leadData: Partial<Lead>) => {
-    saveLead(leadData);
-    setShowForm(false);
-    setEditingLead(undefined);
+  const handleSubmitLead = async (leadData: Partial<Lead>) => {
+    try {
+      setFormLoading(true);
+      await saveLead(leadData);
+      setShowForm(false);
+      setEditingLead(undefined);
+    } catch (error) {
+      console.error('Error saving lead:', error);
+      // Error will be handled by toast in saveLead
+    } finally {
+      setFormLoading(false);
+    }
   };
 
   const handleCancelForm = () => {
@@ -147,16 +158,36 @@ export default function Leads() {
 
   if (showForm) {
     return (
-      <LeadForm
-        lead={editingLead}
-        onSubmit={handleSubmitLead}
-        onCancel={handleCancelForm}
-      />
+      <GlobalErrorBoundary>
+        <LeadForm
+          lead={editingLead}
+          onSubmit={handleSubmitLead}
+          onCancel={handleCancelForm}
+          loading={formLoading}
+        />
+      </GlobalErrorBoundary>
+    );
+  }
+
+  if (leadsLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Leads</h1>
+            <p className="text-muted-foreground">Carregando leads...</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <GlobalErrorBoundary>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -332,5 +363,6 @@ export default function Leads() {
         />
       )}
     </div>
+    </GlobalErrorBoundary>
   );
 }

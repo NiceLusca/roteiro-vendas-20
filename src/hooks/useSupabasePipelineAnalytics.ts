@@ -63,8 +63,7 @@ export function useSupabasePipelineAnalytics(pipelineId?: string, dateRange?: { 
         .from('lead_pipeline_entries')
         .select(`
           *,
-          leads!inner(user_id, nome),
-          deals(valor_proposto, status)
+          leads!inner(user_id, nome)
         `)
         .eq('leads.user_id', user.id);
 
@@ -96,10 +95,9 @@ export function useSupabasePipelineAnalytics(pipelineId?: string, dateRange?: { 
         ? entries.reduce((acc, entry) => acc + (entry.tempo_em_etapa_dias || 0), 0) / entries.length 
         : 0;
 
-      // Calculate total and average deal values
-      const deals = entries?.flatMap(e => e.deals || []) || [];
-      const totalValue = deals.reduce((acc, deal) => acc + (deal?.valor_proposto || 0), 0);
-      const averageValue = deals.length > 0 ? totalValue / deals.length : 0;
+      // Calculate total and average deal values (without deals table for now)
+      const totalValue = 0;
+      const averageValue = 0;
 
       setPipelineMetrics({
         totalLeads,
@@ -201,8 +199,7 @@ export function useSupabasePipelineAnalytics(pipelineId?: string, dateRange?: { 
         .select(`
           created_at,
           status_inscricao,
-          leads!inner(user_id),
-          deals(valor_proposto, status)
+          leads!inner(user_id)
         `)
         .eq('leads.user_id', user.id)
         .gte('created_at', startDate.toISOString())
@@ -222,10 +219,7 @@ export function useSupabasePipelineAnalytics(pipelineId?: string, dateRange?: { 
         date,
         newLeads: entries.length,
         completedLeads: entries.filter(e => e.status_inscricao === 'Concluído').length,
-        revenue: entries.reduce((acc, entry) => {
-          const deals = entry.deals || [];
-          return acc + deals.reduce((dealAcc: number, deal: any) => dealAcc + (deal?.valor_proposto || 0), 0);
-        }, 0)
+        revenue: 0 // Without deals table for now
       }));
 
       setTimeSeriesData(timeSeriesData.sort((a, b) => a.date.localeCompare(b.date)));
@@ -241,28 +235,18 @@ export function useSupabasePipelineAnalytics(pipelineId?: string, dateRange?: { 
 
     try {
       // Get overall counts
-      const [pipelinesResult, stagesResult, dealsResult, entriesResult] = await Promise.all([
+      const [pipelinesResult, stagesResult, entriesResult] = await Promise.all([
         supabase.from('pipelines').select('id', { count: 'exact' }).eq('user_id', user.id),
         supabase.from('pipeline_stages').select('id', { count: 'exact' }).eq('pipelines.user_id', user.id),
-        supabase.from('deals').select('valor_proposto', { count: 'exact' }).eq('leads.user_id', user.id),
         supabase.from('lead_pipeline_entries').select('*').eq('leads.user_id', user.id)
       ]);
 
       const totalPipelines = pipelinesResult.count || 0;
       const totalStages = stagesResult.count || 0;
-      const totalDeals = dealsResult.count || 0;
+      const totalDeals = 0; // Without deals table for now
       
-      // Calculate total revenue
-      const { data: deals } = await supabase
-        .from('deals')
-        .select(`
-          valor_proposto,
-          leads!inner(user_id)
-        `)
-        .eq('leads.user_id', user.id)
-        .eq('status', 'Ganha');
-
-      const totalRevenue = deals?.reduce((acc, deal) => acc + (deal.valor_proposto || 0), 0) || 0;
+      // Calculate total revenue (without deals table for now)
+      const totalRevenue = 0;
 
       // Calculate SLA metrics
       const entries = entriesResult.data || [];
