@@ -162,7 +162,7 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
     }
   };
 
-  const HealthIcon = getPipelineHealthIcon(metrics.pipelineHealth);
+  const HealthIcon = getPipelineHealthIcon(mockMetrics.pipelineHealth);
 
   return (
     <div className={cn('space-y-6', className)}>
@@ -210,16 +210,16 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
               <Users className="h-8 w-8 text-primary" />
             </div>
             <div className="flex items-center mt-2">
-              {metrics.monthlyGrowth > 0 ? (
+              {mockMetrics.monthlyGrowth > 0 ? (
                 <TrendingUp className="h-4 w-4 text-success mr-1" />
               ) : (
                 <TrendingDown className="h-4 w-4 text-destructive mr-1" />
               )}
               <span className={cn(
                 'text-sm font-medium',
-                metrics.monthlyGrowth > 0 ? 'text-success' : 'text-destructive'
+                mockMetrics.monthlyGrowth > 0 ? 'text-success' : 'text-destructive'
               )}>
-                {Math.abs(metrics.monthlyGrowth).toFixed(1)}%
+                {Math.abs(mockMetrics.monthlyGrowth).toFixed(1)}%
               </span>
               <span className="text-xs text-muted-foreground ml-1">vs mês anterior</span>
             </div>
@@ -231,13 +231,13 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Receita Total</p>
-                <p className="text-3xl font-bold">{formatCurrency(metrics.totalRevenue)}</p>
+                <p className="text-3xl font-bold">{formatCurrency(mockMetrics.totalRevenue)}</p>
               </div>
               <DollarSign className="h-8 w-8 text-primary" />
             </div>
             <div className="flex items-center mt-2">
               <span className="text-sm text-muted-foreground">
-                Ticket médio: {formatCurrency(metrics.avgDealSize)}
+                Ticket médio: {formatCurrency(mockMetrics.avgDealSize)}
               </span>
             </div>
           </CardContent>
@@ -248,13 +248,13 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
-                <p className="text-3xl font-bold">{metrics.conversionRate.toFixed(1)}%</p>
+                <p className="text-3xl font-bold">{mockMetrics.conversionRate.toFixed(1)}%</p>
               </div>
               <Target className="h-8 w-8 text-primary" />
             </div>
             <div className="flex items-center mt-2">
-              <Badge variant={metrics.conversionRate > 15 ? 'default' : 'secondary'}>
-                {metrics.conversionRate > 15 ? 'Excelente' : 'Bom'}
+              <Badge variant={mockMetrics.conversionRate > 15 ? 'default' : 'secondary'}>
+                {mockMetrics.conversionRate > 15 ? 'Excelente' : 'Bom'}
               </Badge>
             </div>
           </CardContent>
@@ -265,11 +265,11 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Saúde do Pipeline</p>
-                <p className={cn('text-3xl font-bold capitalize', getPipelineHealthColor(metrics.pipelineHealth))}>
-                  {metrics.pipelineHealth}
+                <p className={cn('text-3xl font-bold capitalize', getPipelineHealthColor(mockMetrics.pipelineHealth))}>
+                  {mockMetrics.pipelineHealth}
                 </p>
               </div>
-              <HealthIcon className={cn('h-8 w-8', getPipelineHealthColor(metrics.pipelineHealth))} />
+              <HealthIcon className={cn('h-8 w-8', getPipelineHealthColor(mockMetrics.pipelineHealth))} />
             </div>
             <div className="flex items-center mt-2">
               <Badge variant="outline">
@@ -297,7 +297,7 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={metrics.revenueByPeriod}>
+                  <LineChart data={mockMetrics.revenueByPeriod}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="period" />
                     <YAxis />
@@ -322,7 +322,7 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
-                      data={metrics.leadSources}
+                      data={mockMetrics.leadSources}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
@@ -331,7 +331,7 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
                       fill="#8884d8"
                       dataKey="count"
                     >
-                      {metrics.leadSources.map((entry, index) => (
+                      {mockMetrics.leadSources.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -352,7 +352,7 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {metrics.topPerformers.map((performer, index) => (
+                {mockMetrics.topPerformers.map((performer, index) => (
                   <div key={performer.closer} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -382,7 +382,7 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={metrics.stagePerformance}>
+                <BarChart data={mockMetrics.stagePerformance}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="stage" />
                   <YAxis yAxisId="left" />
@@ -398,7 +398,7 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
         </TabsContent>
 
         <TabsContent value="forecast" className="space-y-6">
-          {forecast && (
+          {mockForecast && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Revenue Forecast */}
               <Card>
@@ -411,25 +411,25 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
                 <CardContent>
                   <div className="space-y-4">
                     <div className="text-center">
-                      <p className="text-3xl font-bold text-primary">
-                        {formatCurrency(forecast.predictedRevenue)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Próximos 30 dias</p>
-                    </div>
-                    
-                    <div className="flex items-center justify-center gap-2">
-                      <Badge variant={forecast.confidence > 80 ? 'default' : 'secondary'}>
-                        {forecast.confidence.toFixed(0)}% de confiança
-                      </Badge>
-                      <Badge variant="outline">
-                        Tendência {forecast.trend === 'up' ? '↗️' : forecast.trend === 'down' ? '↘️' : '→'}
-                      </Badge>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <p className="font-medium">Fatores considerados:</p>
-                      <ul className="space-y-1">
-                        {forecast.factors.map((factor, index) => (
+                       <p className="text-3xl font-bold text-primary">
+                         {formatCurrency(mockForecast.predictedRevenue)}
+                       </p>
+                       <p className="text-sm text-muted-foreground">Próximos 30 dias</p>
+                     </div>
+                     
+                     <div className="flex items-center justify-center gap-2">
+                       <Badge variant={mockForecast.confidence > 80 ? 'default' : 'secondary'}>
+                         {mockForecast.confidence.toFixed(0)}% de confiança
+                       </Badge>
+                       <Badge variant="outline">
+                         Tendência {mockForecast.trend === 'up' ? '↗️' : mockForecast.trend === 'down' ? '↘️' : '→'}
+                       </Badge>
+                     </div>
+                     
+                     <div className="space-y-2">
+                       <p className="font-medium">Fatores considerados:</p>
+                       <ul className="space-y-1">
+                         {mockForecast.factors.map((factor, index) => (
                           <li key={index} className="text-sm text-muted-foreground flex items-center gap-2">
                             <div className="w-1 h-1 rounded-full bg-primary" />
                             {factor}

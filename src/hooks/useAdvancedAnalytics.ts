@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface KPIMetric {
@@ -13,26 +13,6 @@ interface InsightData {
   title: string;
   description: string;
   priority: 'high' | 'medium' | 'low';
-}
-
-interface AnalyticsMetrics {
-  totalLeads: number;
-  totalRevenue: number;
-  conversionRate: number;
-  avgDealSize: number;
-  pipelineHealth: 'excellent' | 'good' | 'warning' | 'critical';
-  monthlyGrowth: number;
-  leadSources: Array<{ source: string; count: number; percentage: number }>;
-  stagePerformance: Array<{ stage: string; avgTime: number; conversionRate: number }>;
-  revenueByPeriod: Array<{ period: string; revenue: number }>;
-  topPerformers: Array<{ closer: string; deals: number; revenue: number }>;
-}
-
-interface ForecastData {
-  predictedRevenue: number;
-  confidence: number;
-  trend: 'up' | 'down' | 'stable';
-  factors: string[];
 }
 
 export function useAdvancedAnalytics(selectedPipelineId: string, timeRange: string) {
@@ -65,79 +45,89 @@ export function useAdvancedAnalytics(selectedPipelineId: string, timeRange: stri
           break;
       }
 
-      // Build base query
-      let leadsQuery = supabase
-        .from('leads')
-        .select('*')
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString());
+      // Fetch data with simplified queries
+      const startIso = startDate.toISOString();
+      const endIso = endDate.toISOString();
 
-      let dealsQuery = supabase
+       // Get leads data  
+       const leadsData: any[] = [];
+       
+       if (selectedPipelineId !== 'all') {
+         // Get pipeline stages first
+         const { data: stages } = await supabase
+           .from('pipeline_stages')
+           .select('id')
+           .eq('pipeline_id', selectedPipelineId);
+         
+         const stageIds = stages?.map((stage) => stage.id) || [];
+         
+         if (stageIds.length > 0) {
+           const { data: leads } = await supabase
+             .from('leads')
+             .select('*')
+             .gte('created_at', startIso)
+             .lte('created_at', endIso)
+             .in('etapa_atual_id', stageIds);
+           
+           leadsData.push(...(leads || []));
+         }
+       } else {
+         const { data: leads } = await supabase
+           .from('leads')
+           .select('*')
+           .gte('created_at', startIso)
+           .lte('created_at', endIso);
+         
+         leadsData.push(...(leads || []));
+       }
+
+      // Get deals and orders
+      const dealsResponse = await supabase
         .from('deals')
         .select('*')
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString());
+        .gte('created_at', startIso)
+        .lte('created_at', endIso);
 
-      let ordersQuery = supabase
+      const ordersResponse = await supabase
         .from('orders')
         .select('*')
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString());
+        .gte('created_at', startIso)
+        .lte('created_at', endIso);
 
-      // Filter by pipeline if specified
-      if (selectedPipelineId !== 'all') {
-        const { data: pipelineStages } = await supabase
-          .from('pipeline_stages')
-          .select('id')
-          .eq('pipeline_id', selectedPipelineId);
+      if (dealsResponse.error) throw dealsResponse.error;
+      if (ordersResponse.error) throw ordersResponse.error;
 
-        const stageIds = pipelineStages?.map(stage => stage.id) || [];
-        
-        if (stageIds.length > 0) {
-          leadsQuery = leadsQuery.in('etapa_atual_id', stageIds);
-        }
-      }
-
-      // Execute queries
-      const [leadsResult, dealsResult, ordersResult] = await Promise.all([
-        leadsQuery,
-        dealsQuery,
-        ordersQuery
-      ]);
-
-      if (leadsResult.error) throw leadsResult.error;
-      if (dealsResult.error) throw dealsResult.error;
-      if (ordersResult.error) throw ordersResult.error;
-
-      const leads = leadsResult.data || [];
-      const deals = dealsResult.data || [];
-      const orders = ordersResult.data || [];
+      const dealsData = dealsResponse.data || [];
+      const ordersData = ordersResponse.data || [];
 
       // Calculate previous period for comparison
       const previousStartDate = new Date(startDate);
       const periodLength = endDate.getTime() - startDate.getTime();
       previousStartDate.setTime(startDate.getTime() - periodLength);
 
-      const { data: previousLeads } = await supabase
+      const previousLeadsResponse = await supabase
         .from('leads')
         .select('id')
         .gte('created_at', previousStartDate.toISOString())
         .lt('created_at', startDate.toISOString());
 
-      const { data: previousOrders } = await supabase
+      const previousOrdersResponse = await supabase
         .from('orders')
         .select('total')
         .gte('created_at', previousStartDate.toISOString())
         .lt('created_at', startDate.toISOString());
 
+      const previousLeads = previousLeadsResponse.data || [];
+      const previousOrders = previousOrdersResponse.data || [];
+
       // Calculate KPI metrics
-      const totalLeads = leads.length;
-      const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
-      const wonDeals = deals.filter(deal => deal.status === 'Ganha');
+      const totalLeads = leadsData.length;
+      const totalRevenue = ordersData.reduce((sum: number, order: any) => sum + Number(order.total || 0), 0);
+      const wonDeals = dealsData.filter((deal: any) => deal.status === 'Ganha');
       const conversionRate = totalLeads > 0 ? (wonDeals.length / totalLeads) * 100 : 0;
       
-      const previousTotalLeads = previousLeads?.length || 0;
-      const previousTotalRevenue = previousOrders?.reduce((sum, order) => sum + Number(order.total || 0), 0) || 0;
+      const previousTotalLeads = previousLeads.length;
+      const previousTotalRevenue = previousOrders.reduce((sum: number, order: any) => sum + Number(order.total || 0), 0);
       
       const leadGrowth = previousTotalLeads > 0 ? 
         ((totalLeads - previousTotalLeads) / previousTotalLeads) * 100 : 0;
@@ -145,7 +135,7 @@ export function useAdvancedAnalytics(selectedPipelineId: string, timeRange: stri
         ((totalRevenue - previousTotalRevenue) / previousTotalRevenue) * 100 : 0;
 
       // Calculate pipeline velocity (average days in pipeline)
-      const pipelineVelocity = leads.reduce((sum, lead) => {
+      const pipelineVelocity = leadsData.reduce((sum: number, lead: any) => {
         const created = new Date(lead.created_at);
         const now = new Date();
         return sum + Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
