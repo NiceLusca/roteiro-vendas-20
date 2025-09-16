@@ -19,8 +19,10 @@ import Pipelines from "./pages/Pipelines";
 import Leads from "./pages/Leads";
 import NotFound from "./pages/NotFound";
 import { Auth } from "./pages/Auth";
+import { EnhancedInstallPrompt, InstallBanner } from "@/components/pwa/EnhancedInstallPrompt";
+import { EnhancedLoading } from "@/components/ui/enhanced-loading";
 
-// Lazy imports
+// Lazy imports with enhanced loading
 const Agenda = lazy(() => import('./pages/Agenda'));
 const Deals = lazy(() => import('./pages/Deals'));
 const Orders = lazy(() => import('./pages/Orders'));
@@ -31,6 +33,7 @@ const LeadDetail = lazy(() => import('./pages/LeadDetail'));
 const Intelligence = lazy(() => import('./pages/Intelligence'));
 const Help = lazy(() => import('./pages/Help'));
 const Security = lazy(() => import('./pages/Security'));
+const Production = lazy(() => import('./pages/Production'));
 
 const queryClient = new QueryClient();
 
@@ -40,9 +43,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <EnhancedLoading 
+        loading={true} 
+        fallback={
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        }
+      >
+        <></>
+      </EnhancedLoading>
     );
   }
 
@@ -79,52 +89,57 @@ function App() {
                           <Route path="pipelines" element={<Pipelines />} />
                           <Route path="leads" element={<Leads />} />
                           <Route path="agenda" element={
-                            <Suspense fallback={<div>Carregando...</div>}>
+                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <Agenda />
                             </Suspense>
                           } />
                           <Route path="deals" element={
-                            <Suspense fallback={<div>Carregando...</div>}>
+                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <Deals />
                             </Suspense>
                           } />
                           <Route path="orders" element={
-                            <Suspense fallback={<div>Carregando...</div>}>
+                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <Orders />
                             </Suspense>
                           } />
                           <Route path="reports" element={
-                            <Suspense fallback={<div>Carregando...</div>}>
+                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <Reports />
                             </Suspense>
                           } />
                           <Route path="analytics" element={
-                            <Suspense fallback={<div>Carregando...</div>}>
+                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <Analytics />
                             </Suspense>
                           } />
                           <Route path="intelligence" element={
-                            <Suspense fallback={<div>Carregando...</div>}>
+                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <Intelligence />
                             </Suspense>
                           } />
                           <Route path="settings" element={
-                            <Suspense fallback={<div>Carregando...</div>}>
+                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <Settings />
                             </Suspense>
                           } />
                           <Route path="security" element={
-                            <Suspense fallback={<div>Carregando...</div>}>
+                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <Security />
                             </Suspense>
                           } />
+                          <Route path="production" element={
+                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+                              <Production />
+                            </Suspense>
+                          } />
                           <Route path="leads/:id" element={
-                            <Suspense fallback={<div>Carregando...</div>}>
+                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <LeadDetail />
                             </Suspense>
                           } />
                           <Route path="help" element={
-                            <Suspense fallback={<div>Carregando...</div>}>
+                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <Help />
                             </Suspense>
                           } />
@@ -133,6 +148,8 @@ function App() {
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </BrowserRouter>
+                    <EnhancedInstallPrompt />
+                    <InstallBanner />
                   </TooltipProvider>
                 </AllLogsAuditProvider>
               </AuditProvider>
