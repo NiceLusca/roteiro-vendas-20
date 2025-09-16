@@ -35,6 +35,7 @@ const Help = lazy(() => import('./pages/Help'));
 const Security = lazy(() => import('./pages/Security'));
 const Performance = lazy(() => import('./pages/Performance'));
 const Production = lazy(() => import('./pages/Production'));
+const Automation = lazy(() => import('./pages/Automation'));
 
 const queryClient = new QueryClient();
 
@@ -147,6 +148,11 @@ function App() {
                           <Route path="help" element={
                             <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <Help />
+                            </Suspense>
+                          } />
+                          <Route path="automation" element={
+                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+                              <Automation />
                             </Suspense>
                           } />
                         </Route>
