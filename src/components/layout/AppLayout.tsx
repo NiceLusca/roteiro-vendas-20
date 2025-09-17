@@ -8,7 +8,7 @@ import { CommandPalette } from '@/components/ui/command-palette';
 import { KeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextSecure';
 import { useNavigate } from 'react-router-dom';
 
 export function AppLayout() {

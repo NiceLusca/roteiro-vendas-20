@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Activity, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextSecure';
 import { formatCurrency } from '@/utils/formatters';
 
 interface RealtimeData {

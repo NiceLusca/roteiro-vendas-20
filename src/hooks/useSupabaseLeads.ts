@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/crm';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContextSecure';
 
 export function useSupabaseLeads() {
   const [leads, setLeads] = useState<Lead[]>([]);
