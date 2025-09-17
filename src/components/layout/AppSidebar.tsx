@@ -24,8 +24,7 @@ import {
   LogOut,
   Brain,
   HelpCircle,
-  Shield,
-  Zap
+  Shield
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextSecure';
 import { Button } from '@/components/ui/button';
@@ -77,11 +76,6 @@ const analyticsItems = [
     url: '/analytics',
     icon: TrendingUp,
   },
-  {
-    title: 'IA & ML',
-    url: '/ai',
-    icon: Brain,
-  },
 ];
 
 const configItems = [
@@ -94,11 +88,6 @@ const configItems = [
     title: 'Segurança',
     url: '/security',
     icon: Shield,
-  },
-  {
-    title: 'Performance',
-    url: '/performance',
-    icon: Zap,
   },
 ];
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAuth } from '@/contexts/AuthContextSecure';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UseOptimizedQueryOptions {
   enabled?: boolean;

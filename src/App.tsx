@@ -33,10 +33,7 @@ const LeadDetail = lazy(() => import('./pages/LeadDetail'));
 const Intelligence = lazy(() => import('./pages/Intelligence'));
 const Help = lazy(() => import('./pages/Help'));
 const Security = lazy(() => import('./pages/Security'));
-const Performance = lazy(() => import('./pages/Performance'));
 const Production = lazy(() => import('./pages/Production'));
-const Automation = lazy(() => import('./pages/Automation'));
-const AI = lazy(() => import('./pages/AI'));
 
 const queryClient = new QueryClient();
 
@@ -131,11 +128,6 @@ function App() {
                               <Security />
                             </Suspense>
                           } />
-                          <Route path="performance" element={
-                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-                              <Performance />
-                            </Suspense>
-                          } />
                           <Route path="production" element={
                             <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <Production />
@@ -149,16 +141,6 @@ function App() {
                           <Route path="help" element={
                             <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <Help />
-                            </Suspense>
-                          } />
-                          <Route path="automation" element={
-                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-                              <Automation />
-                            </Suspense>
-                          } />
-                          <Route path="ai" element={
-                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-                              <AI />
                             </Suspense>
                           } />
                         </Route>

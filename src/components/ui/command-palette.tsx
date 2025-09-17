@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/AuthContextSecure';
+import { useAuth } from '@/contexts/AuthContext';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 

@@ -74,48 +74,7 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
     return { start, end };
   };
 
-  const { kpiMetrics, insights, loading, error, refreshAnalytics } = useAdvancedAnalytics('all', dateRange);
-
-  // Mock metrics for now - would be replaced with real data
-  const mockMetrics = {
-    totalLeads: 150,
-    totalRevenue: 280000,
-    conversionRate: 24.5,
-    avgDealSize: 5600,
-    pipelineHealth: 'good' as const,
-    monthlyGrowth: 12.5,
-    leadSources: [
-      { source: 'Website', count: 45, percentage: 30 },
-      { source: 'Referral', count: 38, percentage: 25.3 },
-      { source: 'Social Media', count: 32, percentage: 21.3 },
-      { source: 'Email', count: 23, percentage: 15.3 },
-      { source: 'Others', count: 12, percentage: 8 }
-    ],
-    stagePerformance: [
-      { stage: 'Qualificação', avgTime: 3, conversionRate: 85 },
-      { stage: 'Proposta', avgTime: 7, conversionRate: 65 },
-      { stage: 'Negociação', avgTime: 12, conversionRate: 45 },
-      { stage: 'Fechamento', avgTime: 5, conversionRate: 80 }
-    ],
-    revenueByPeriod: [
-      { period: 'Jan', revenue: 45000 },
-      { period: 'Fev', revenue: 52000 },
-      { period: 'Mar', revenue: 48000 },
-      { period: 'Abr', revenue: 65000 }
-    ],
-    topPerformers: [
-      { closer: 'João Silva', deals: 8, revenue: 45000 },
-      { closer: 'Maria Santos', deals: 6, revenue: 38000 },
-      { closer: 'Carlos Lima', deals: 5, revenue: 32000 }
-    ]
-  };
-
-  const mockForecast = {
-    predictedRevenue: 75000,
-    confidence: 85,
-    trend: 'up' as const,
-    factors: ['Crescimento de leads', 'Melhoria na conversão', 'Novos produtos']
-  };
+  const { metrics, forecast, loading, error, refetch } = useAdvancedAnalytics(getDateRange(dateRange));
 
   if (loading) {
     return (
@@ -135,12 +94,14 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
           <AlertTriangle className="h-5 w-5" />
           <span>Erro ao carregar dados: {error}</span>
         </div>
-        <Button onClick={refreshAnalytics} className="mt-4">
+        <Button onClick={refetch} className="mt-4">
           Tentar Novamente
         </Button>
       </Card>
     );
   }
+
+  if (!metrics) return null;
 
   const getPipelineHealthColor = (health: string) => {
     switch (health) {
@@ -162,7 +123,7 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
     }
   };
 
-  const HealthIcon = getPipelineHealthIcon(mockMetrics.pipelineHealth);
+  const HealthIcon = getPipelineHealthIcon(metrics.pipelineHealth);
 
   return (
     <div className={cn('space-y-6', className)}>
@@ -186,7 +147,7 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
             </SelectContent>
           </Select>
           
-          <Button onClick={refreshAnalytics} variant="outline" size="sm">
+          <Button onClick={refetch} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
             Atualizar
           </Button>
@@ -205,21 +166,21 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total de Leads</p>
-                <p className="text-3xl font-bold">{mockMetrics.totalLeads}</p>
+                <p className="text-3xl font-bold">{metrics.totalLeads}</p>
               </div>
               <Users className="h-8 w-8 text-primary" />
             </div>
             <div className="flex items-center mt-2">
-              {mockMetrics.monthlyGrowth > 0 ? (
+              {metrics.monthlyGrowth > 0 ? (
                 <TrendingUp className="h-4 w-4 text-success mr-1" />
               ) : (
                 <TrendingDown className="h-4 w-4 text-destructive mr-1" />
               )}
               <span className={cn(
                 'text-sm font-medium',
-                mockMetrics.monthlyGrowth > 0 ? 'text-success' : 'text-destructive'
+                metrics.monthlyGrowth > 0 ? 'text-success' : 'text-destructive'
               )}>
-                {Math.abs(mockMetrics.monthlyGrowth).toFixed(1)}%
+                {Math.abs(metrics.monthlyGrowth).toFixed(1)}%
               </span>
               <span className="text-xs text-muted-foreground ml-1">vs mês anterior</span>
             </div>
@@ -231,13 +192,13 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Receita Total</p>
-                <p className="text-3xl font-bold">{formatCurrency(mockMetrics.totalRevenue)}</p>
+                <p className="text-3xl font-bold">{formatCurrency(metrics.totalRevenue)}</p>
               </div>
               <DollarSign className="h-8 w-8 text-primary" />
             </div>
             <div className="flex items-center mt-2">
               <span className="text-sm text-muted-foreground">
-                Ticket médio: {formatCurrency(mockMetrics.avgDealSize)}
+                Ticket médio: {formatCurrency(metrics.avgDealSize)}
               </span>
             </div>
           </CardContent>
@@ -248,13 +209,13 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Taxa de Conversão</p>
-                <p className="text-3xl font-bold">{mockMetrics.conversionRate.toFixed(1)}%</p>
+                <p className="text-3xl font-bold">{metrics.conversionRate.toFixed(1)}%</p>
               </div>
               <Target className="h-8 w-8 text-primary" />
             </div>
             <div className="flex items-center mt-2">
-              <Badge variant={mockMetrics.conversionRate > 15 ? 'default' : 'secondary'}>
-                {mockMetrics.conversionRate > 15 ? 'Excelente' : 'Bom'}
+              <Badge variant={metrics.conversionRate > 15 ? 'default' : 'secondary'}>
+                {metrics.conversionRate > 15 ? 'Excelente' : 'Bom'}
               </Badge>
             </div>
           </CardContent>
@@ -265,11 +226,11 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Saúde do Pipeline</p>
-                <p className={cn('text-3xl font-bold capitalize', getPipelineHealthColor(mockMetrics.pipelineHealth))}>
-                  {mockMetrics.pipelineHealth}
+                <p className={cn('text-3xl font-bold capitalize', getPipelineHealthColor(metrics.pipelineHealth))}>
+                  {metrics.pipelineHealth}
                 </p>
               </div>
-              <HealthIcon className={cn('h-8 w-8', getPipelineHealthColor(mockMetrics.pipelineHealth))} />
+              <HealthIcon className={cn('h-8 w-8', getPipelineHealthColor(metrics.pipelineHealth))} />
             </div>
             <div className="flex items-center mt-2">
               <Badge variant="outline">
@@ -297,7 +258,7 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={mockMetrics.revenueByPeriod}>
+                  <LineChart data={metrics.revenueByPeriod}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="period" />
                     <YAxis />
@@ -322,7 +283,7 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
-                      data={mockMetrics.leadSources}
+                      data={metrics.leadSources}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
@@ -331,7 +292,7 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
                       fill="#8884d8"
                       dataKey="count"
                     >
-                      {mockMetrics.leadSources.map((entry, index) => (
+                      {metrics.leadSources.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -352,7 +313,7 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockMetrics.topPerformers.map((performer, index) => (
+                {metrics.topPerformers.map((performer, index) => (
                   <div key={performer.closer} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -382,7 +343,7 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={mockMetrics.stagePerformance}>
+                <BarChart data={metrics.stagePerformance}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="stage" />
                   <YAxis yAxisId="left" />
@@ -398,7 +359,7 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
         </TabsContent>
 
         <TabsContent value="forecast" className="space-y-6">
-          {mockForecast && (
+          {forecast && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Revenue Forecast */}
               <Card>
@@ -411,25 +372,25 @@ export function BusinessIntelligenceDashboard({ className }: BusinessIntelligenc
                 <CardContent>
                   <div className="space-y-4">
                     <div className="text-center">
-                       <p className="text-3xl font-bold text-primary">
-                         {formatCurrency(mockForecast.predictedRevenue)}
-                       </p>
-                       <p className="text-sm text-muted-foreground">Próximos 30 dias</p>
-                     </div>
-                     
-                     <div className="flex items-center justify-center gap-2">
-                       <Badge variant={mockForecast.confidence > 80 ? 'default' : 'secondary'}>
-                         {mockForecast.confidence.toFixed(0)}% de confiança
-                       </Badge>
-                       <Badge variant="outline">
-                         Tendência {mockForecast.trend === 'up' ? '↗️' : mockForecast.trend === 'down' ? '↘️' : '→'}
-                       </Badge>
-                     </div>
-                     
-                     <div className="space-y-2">
-                       <p className="font-medium">Fatores considerados:</p>
-                       <ul className="space-y-1">
-                         {mockForecast.factors.map((factor, index) => (
+                      <p className="text-3xl font-bold text-primary">
+                        {formatCurrency(forecast.predictedRevenue)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">Próximos 30 dias</p>
+                    </div>
+                    
+                    <div className="flex items-center justify-center gap-2">
+                      <Badge variant={forecast.confidence > 80 ? 'default' : 'secondary'}>
+                        {forecast.confidence.toFixed(0)}% de confiança
+                      </Badge>
+                      <Badge variant="outline">
+                        Tendência {forecast.trend === 'up' ? '↗️' : forecast.trend === 'down' ? '↘️' : '→'}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <p className="font-medium">Fatores considerados:</p>
+                      <ul className="space-y-1">
+                        {forecast.factors.map((factor, index) => (
                           <li key={index} className="text-sm text-muted-foreground flex items-center gap-2">
                             <div className="w-1 h-1 rounded-full bg-primary" />
                             {factor}
