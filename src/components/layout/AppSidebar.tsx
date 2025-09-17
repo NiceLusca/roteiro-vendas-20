@@ -77,6 +77,11 @@ const analyticsItems = [
     url: '/analytics',
     icon: TrendingUp,
   },
+  {
+    title: 'IA & ML',
+    url: '/ai',
+    icon: Brain,
+  },
 ];
 
 const configItems = [
