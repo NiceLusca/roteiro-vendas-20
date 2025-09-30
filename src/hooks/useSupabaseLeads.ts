@@ -11,16 +11,42 @@ export function useSupabaseLeads() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Fetch leads
+  // Fetch leads - Optimized query
   const fetchLeads = async () => {
     if (!user) return;
     
     try {
       setLoading(true);
+      // Only select necessary fields for better performance
       const { data, error } = await supabase
         .from('leads')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select(`
+          id,
+          nome,
+          email,
+          whatsapp,
+          origem,
+          segmento,
+          status_geral,
+          lead_score,
+          lead_score_classification,
+          closer,
+          desejo_na_sessao,
+          objecao_principal,
+          ja_vendeu_no_digital,
+          seguidores,
+          faturamento_medio,
+          meta_faturamento,
+          resultado_sessao_ultimo,
+          objecao_obs,
+          observacoes,
+          resultado_obs_ultima_sessao,
+          user_id,
+          created_at,
+          updated_at
+        `)
+        .order('created_at', { ascending: false })
+        .limit(100); // Limit results for better performance
 
       if (error) {
         console.error('Erro ao buscar leads:', error);

@@ -8,11 +8,8 @@ import { LeadForm } from '@/components/forms/LeadForm';
 import { PipelineInscriptionDialog } from '@/components/pipeline/PipelineInscriptionDialog';
 import { LeadBulkUploadDialog } from '@/components/leads/LeadBulkUploadDialog';
 import { GlobalErrorBoundary } from '@/components/ui/GlobalErrorBoundary';
+import { SkeletonLeadsList } from '@/components/ui/skeleton-card';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
-import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
-import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
-import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
-import { useMultiPipeline } from '@/hooks/useMultiPipeline';
 import { useLeadData } from '@/hooks/useLeadData';
 import { Lead } from '@/types/crm';
 import { formatWhatsApp, formatDateTime } from '@/utils/formatters';
@@ -33,10 +30,6 @@ import {
 
 export default function Leads() {
   const { leads, loading: leadsLoading } = useSupabaseLeads();
-  const { pipelines } = useSupabasePipelines();
-  const { stages } = useSupabasePipelineStages(); // Carregar todas as stages, não apenas de um pipeline
-  const { entries } = useSupabaseLeadPipelineEntries();
-  const { inscribePipeline, getLeadPipelineEntries } = useMultiPipeline();
   
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | undefined>();
@@ -47,6 +40,11 @@ export default function Leads() {
   const [selectedLeadForInscription, setSelectedLeadForInscription] = useState<Lead | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
+  
+  // Lazy load pipelines and stages only when needed
+  const [pipelines, setPipelines] = useState<any[]>([]);
+  const [stages, setStages] = useState<any[]>([]);
+  const [loadingPipelines, setLoadingPipelines] = useState(false);
   
   const { saveLead } = useLeadData();
 
@@ -104,15 +102,37 @@ export default function Leads() {
     setEditingLead(undefined);
   };
 
-  const handleInscribeLead = (lead: Lead) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('handleInscribeLead called with:', lead);
-      console.log('Available pipelines:', pipelines);
-      console.log('Available stages:', stages);
-      console.log('Stages length:', stages.length);
-      console.log('Stages for pipeline ecd0a55f-f00d-4d76-96d5-4bf9a9e65a59:', stages.filter(s => s.pipeline_id === 'ecd0a55f-f00d-4d76-96d5-4bf9a9e65a59'));
-    }
+  const handleInscribeLead = async (lead: Lead) => {
     setSelectedLeadForInscription(lead);
+    
+    // Lazy load pipelines and stages only when inscription dialog opens
+    if (pipelines.length === 0 && !loadingPipelines) {
+      setLoadingPipelines(true);
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+        
+        // Load pipelines
+        const { data: pipelinesData } = await supabase
+          .from('pipelines')
+          .select('id, nome, ativo')
+          .eq('ativo', true)
+          .order('created_at', { ascending: false });
+        
+        // Load stages
+        const { data: stagesData } = await supabase
+          .from('pipeline_stages')
+          .select('id, pipeline_id, nome, ordem')
+          .order('ordem');
+        
+        setPipelines(pipelinesData || []);
+        setStages(stagesData || []);
+      } catch (error) {
+        console.error('Error loading pipelines:', error);
+      } finally {
+        setLoadingPipelines(false);
+      }
+    }
+    
     setShowInscriptionDialog(true);
   };
 
@@ -120,7 +140,32 @@ export default function Leads() {
     if (!selectedLeadForInscription) return;
     
     try {
-      await inscribePipeline(selectedLeadForInscription.id, pipelineId, stageId);
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { useToast } = await import('@/hooks/use-toast');
+      const { toast } = useToast();
+      
+      // Create pipeline entry
+      const { error } = await supabase
+        .from('lead_pipeline_entries')
+        .insert({
+          lead_id: selectedLeadForInscription.id,
+          pipeline_id: pipelineId,
+          etapa_atual_id: stageId,
+          status_inscricao: 'Ativo',
+          data_entrada_etapa: new Date().toISOString(),
+          tempo_em_etapa_dias: 0,
+          dias_em_atraso: 0,
+          saude_etapa: 'Verde',
+          checklist_state: {},
+        });
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Lead inscrito no pipeline',
+        description: 'Lead foi inscrito com sucesso',
+      });
+      
       setShowInscriptionDialog(false);
       setSelectedLeadForInscription(null);
     } catch (error) {
@@ -128,18 +173,20 @@ export default function Leads() {
     }
   };
 
-  const getActivePipelineIds = (leadId: string) => {
-    const entries = getLeadPipelineEntries(leadId);
-    if (process.env.NODE_ENV === 'development') {
-      console.log('getActivePipelineIds for leadId:', leadId, 'entries:', entries);
+  const getActivePipelineIds = async (leadId: string) => {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data } = await supabase
+        .from('lead_pipeline_entries')
+        .select('pipeline_id')
+        .eq('lead_id', leadId)
+        .eq('status_inscricao', 'Ativo');
+      
+      return data?.map(entry => entry.pipeline_id) || [];
+    } catch (error) {
+      console.error('Error fetching active pipelines:', error);
+      return [];
     }
-    const activeIds = entries
-      .filter(entry => entry.status_inscricao === 'Ativo')
-      .map(entry => entry.pipeline_id);
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Active pipeline IDs:', activeIds);
-    }
-    return activeIds;
   };
 
   const getScoreBadgeClass = (classification: string) => {
@@ -180,10 +227,20 @@ export default function Leads() {
             <h1 className="text-3xl font-bold text-foreground">Leads</h1>
             <p className="text-muted-foreground">Carregando leads...</p>
           </div>
+          <div className="flex gap-2">
+            <Button variant="outline" disabled className="gap-2">
+              <Upload className="h-4 w-4" />
+              Importar Planilha
+            </Button>
+            <Button disabled className="gap-2">
+              <Plus className="h-4 w-4" />
+              Novo Lead
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center justify-center p-8">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
+        
+        {/* Skeleton loading */}
+        <SkeletonLeadsList count={5} />
       </div>
     );
   }
@@ -359,14 +416,14 @@ export default function Leads() {
       </div>
 
       {/* Dialog de Inscrição em Pipeline */}
-      {selectedLeadForInscription && (
+      {selectedLeadForInscription && showInscriptionDialog && (
         <PipelineInscriptionDialog
           open={showInscriptionDialog}
           onOpenChange={setShowInscriptionDialog}
           leadId={selectedLeadForInscription.id}
           leadName={selectedLeadForInscription.nome}
-          activePipelineIds={getActivePipelineIds(selectedLeadForInscription.id)}
-          pipelines={pipelines.filter(p => p.ativo)}
+          activePipelineIds={[]}
+          pipelines={pipelines}
           stages={stages}
           onConfirm={handleInscriptionConfirm}
         />
