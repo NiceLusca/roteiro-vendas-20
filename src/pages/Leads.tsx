@@ -9,8 +9,7 @@ import { PipelineInscriptionDialog } from '@/components/pipeline/PipelineInscrip
 import { LeadBulkUploadDialog } from '@/components/leads/LeadBulkUploadDialog';
 import { GlobalErrorBoundary } from '@/components/ui/GlobalErrorBoundary';
 import { SkeletonLeadsList } from '@/components/ui/skeleton-card';
-import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
-import { useLeadData } from '@/hooks/useLeadData';
+import { useOptimizedLeads } from '@/hooks/useOptimizedLeads';
 import { Lead } from '@/types/crm';
 import { formatWhatsApp, formatDateTime } from '@/utils/formatters';
 import { 
@@ -29,16 +28,14 @@ import {
 } from 'lucide-react';
 
 export default function Leads() {
-  const { leads, loading: leadsLoading } = useSupabaseLeads();
-  
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterScore, setFilterScore] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [showInscriptionDialog, setShowInscriptionDialog] = useState(false);
   const [selectedLeadForInscription, setSelectedLeadForInscription] = useState<Lead | null>(null);
-  const [formLoading, setFormLoading] = useState(false);
   const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
   
   // Lazy load pipelines and stages only when needed
@@ -46,7 +43,21 @@ export default function Leads() {
   const [stages, setStages] = useState<any[]>([]);
   const [loadingPipelines, setLoadingPipelines] = useState(false);
   
-  const { saveLead } = useLeadData();
+  // Use optimized hook with React Query
+  const { 
+    leads, 
+    totalCount,
+    totalPages,
+    isLoading: leadsLoading, 
+    saveLead, 
+    savingLead,
+    refetch
+  } = useOptimizedLeads({
+    page: currentPage,
+    searchTerm,
+    filterStatus,
+    filterScore
+  });
 
   // Listen for global create lead event
   useEffect(() => {
@@ -61,17 +72,8 @@ export default function Leads() {
     };
   }, []);
 
-  // Filtrar leads
-  const filteredLeads = leads.filter(lead => {
-    const matchesSearch = lead.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         lead.whatsapp.includes(searchTerm);
-    
-    const matchesStatus = filterStatus === 'all' || lead.status_geral === filterStatus;
-    const matchesScore = filterScore === 'all' || lead.lead_score_classification === filterScore;
-    
-    return matchesSearch && matchesStatus && matchesScore;
-  });
+  // Filtering is now done server-side via useOptimizedLeads
+  const filteredLeads = leads;
 
   const handleCreateLead = () => {
     setEditingLead(undefined);
@@ -84,17 +86,9 @@ export default function Leads() {
   };
 
   const handleSubmitLead = async (leadData: Partial<Lead>) => {
-    try {
-      setFormLoading(true);
-      await saveLead(leadData);
-      setShowForm(false);
-      setEditingLead(undefined);
-    } catch (error) {
-      console.error('Error saving lead:', error);
-      // Error will be handled by toast in saveLead
-    } finally {
-      setFormLoading(false);
-    }
+    await saveLead(leadData);
+    setShowForm(false);
+    setEditingLead(undefined);
   };
 
   const handleCancelForm = () => {
@@ -213,7 +207,7 @@ export default function Leads() {
           lead={editingLead}
           onSubmit={handleSubmitLead}
           onCancel={handleCancelForm}
-          loading={formLoading}
+          loading={savingLead}
         />
       </GlobalErrorBoundary>
     );
@@ -317,24 +311,25 @@ export default function Leads() {
             </Select>
 
             <div className="text-sm text-muted-foreground ml-auto">
-              {filteredLeads.length} de {leads.length} leads
+              Mostrando {filteredLeads.length} de {totalCount} leads
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Lista de Leads */}
-      <div className="grid gap-4">
-        {filteredLeads.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">
-                Nenhum lead encontrado com os filtros aplicados
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredLeads.map((lead) => (
+      <div className="space-y-4">
+        <div className="grid gap-4">
+          {filteredLeads.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">
+                  Nenhum lead encontrado com os filtros aplicados
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredLeads.map((lead) => (
             <Card key={lead.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
@@ -413,6 +408,62 @@ export default function Leads() {
             </Card>
           ))
         )}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-6">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1 || leadsLoading}
+            >
+              Anterior
+            </Button>
+            
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+                
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNum)}
+                    disabled={leadsLoading}
+                    className="w-10"
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages || leadsLoading}
+            >
+              Próxima
+            </Button>
+            
+            <span className="text-sm text-muted-foreground ml-4">
+              Página {currentPage} de {totalPages}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Dialog de Inscrição em Pipeline */}
@@ -434,8 +485,9 @@ export default function Leads() {
         open={showBulkUploadDialog}
         onOpenChange={setShowBulkUploadDialog}
         onSuccess={() => {
-          // Recarregar leads após importação
-          window.location.reload();
+          // Refetch leads após importação
+          refetch();
+          setCurrentPage(1);
         }}
       />
     </div>

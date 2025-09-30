@@ -1,0 +1,173 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Lead } from '@/types/crm';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContextSecure';
+
+const LEADS_PER_PAGE = 50;
+
+interface UseOptimizedLeadsOptions {
+  page?: number;
+  searchTerm?: string;
+  filterStatus?: string;
+  filterScore?: string;
+}
+
+export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
+  const { page = 1, searchTerm = '', filterStatus = 'all', filterScore = 'all' } = options;
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Fetch leads with pagination and filters
+  const {
+    data: leadsData,
+    isLoading,
+    error,
+    refetch
+  } = useQuery({
+    queryKey: ['leads', page, searchTerm, filterStatus, filterScore, user?.id],
+    queryFn: async () => {
+      if (!user) throw new Error('User not authenticated');
+
+      let query = supabase
+        .from('leads')
+        .select(`
+          id,
+          nome,
+          email,
+          whatsapp,
+          origem,
+          segmento,
+          status_geral,
+          lead_score,
+          lead_score_classification,
+          closer,
+          desejo_na_sessao,
+          objecao_principal,
+          ja_vendeu_no_digital,
+          seguidores,
+          faturamento_medio,
+          meta_faturamento,
+          resultado_sessao_ultimo,
+          objecao_obs,
+          observacoes,
+          resultado_obs_ultima_sessao,
+          user_id,
+          created_at,
+          updated_at
+        `, { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+      // Apply filters
+      if (filterStatus !== 'all') {
+        query = query.eq('status_geral', filterStatus as any);
+      }
+      
+      if (filterScore !== 'all') {
+        query = query.eq('lead_score_classification', filterScore as any);
+      }
+
+      // Apply search with trigram similarity
+      if (searchTerm) {
+        query = query.or(`nome.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,whatsapp.ilike.%${searchTerm}%`);
+      }
+
+      // Pagination
+      const from = (page - 1) * LEADS_PER_PAGE;
+      const to = from + LEADS_PER_PAGE - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
+
+      if (error) throw error;
+
+      return {
+        leads: data?.map(lead => ({
+          ...lead,
+          created_at: new Date(lead.created_at),
+          updated_at: new Date(lead.updated_at)
+        })) || [],
+        totalCount: count || 0,
+        totalPages: Math.ceil((count || 0) / LEADS_PER_PAGE)
+      };
+    },
+    enabled: !!user,
+    staleTime: 30000, // Cache for 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+  });
+
+  // Mutation for saving leads
+  const saveMutation = useMutation({
+    mutationFn: async (leadData: Partial<Lead> & { id?: string }) => {
+      if (!user) throw new Error('User not authenticated');
+
+      const isUpdate = !!leadData.id;
+      const payload: any = {};
+
+      Object.keys(leadData).forEach(key => {
+        if (key !== 'id' && leadData[key as keyof typeof leadData] !== undefined) {
+          payload[key] = leadData[key as keyof typeof leadData];
+        }
+      });
+
+      payload.user_id = user.id;
+      payload.updated_at = new Date().toISOString();
+
+      if (!isUpdate) {
+        payload.created_at = new Date().toISOString();
+      }
+
+      if (isUpdate) {
+        const { data, error } = await supabase
+          .from('leads')
+          .update(payload)
+          .eq('id', leadData.id!)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      } else {
+        const { data, error } = await supabase
+          .from('leads')
+          .insert(payload)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      }
+    },
+    onSuccess: (data, variables) => {
+      const isUpdate = !!variables.id;
+      
+      toast({
+        title: `Lead ${isUpdate ? 'atualizado' : 'criado'} com sucesso`,
+        description: `Lead ${data.nome} foi ${isUpdate ? 'atualizado' : 'criado'}`
+      });
+
+      // Invalidate and refetch leads
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Erro ao salvar lead',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  });
+
+  return {
+    leads: leadsData?.leads || [],
+    totalCount: leadsData?.totalCount || 0,
+    totalPages: leadsData?.totalPages || 0,
+    currentPage: page,
+    isLoading,
+    error,
+    saveLead: saveMutation.mutate,
+    savingLead: saveMutation.isPending,
+    refetch
+  };
+}
