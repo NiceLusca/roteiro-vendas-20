@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -72,31 +72,32 @@ export default function Leads() {
     };
   }, []);
 
-  // Filtering is now done server-side via useOptimizedLeads
-  const filteredLeads = leads;
+  // Memoize filtered leads to prevent unnecessary re-renders
+  const filteredLeads = useMemo(() => leads, [leads]);
 
-  const handleCreateLead = () => {
+  // Memoized handlers to prevent re-renders
+  const handleCreateLead = useCallback(() => {
     setEditingLead(undefined);
     setShowForm(true);
-  };
+  }, []);
 
-  const handleEditLead = (lead: Lead) => {
+  const handleEditLead = useCallback((lead: Lead) => {
     setEditingLead(lead);
     setShowForm(true);
-  };
+  }, []);
 
-  const handleSubmitLead = async (leadData: Partial<Lead>) => {
+  const handleSubmitLead = useCallback(async (leadData: Partial<Lead>) => {
     await saveLead(leadData);
     setShowForm(false);
     setEditingLead(undefined);
-  };
+  }, [saveLead]);
 
-  const handleCancelForm = () => {
+  const handleCancelForm = useCallback(() => {
     setShowForm(false);
     setEditingLead(undefined);
-  };
+  }, []);
 
-  const handleInscribeLead = async (lead: Lead) => {
+  const handleInscribeLead = useCallback(async (lead: Lead) => {
     setSelectedLeadForInscription(lead);
     
     // Lazy load pipelines and stages only when inscription dialog opens
@@ -128,7 +129,7 @@ export default function Leads() {
     }
     
     setShowInscriptionDialog(true);
-  };
+  }, [pipelines.length, loadingPipelines]);
 
   const handleInscriptionConfirm = async (pipelineId: string, stageId: string) => {
     if (!selectedLeadForInscription) return;
@@ -183,22 +184,23 @@ export default function Leads() {
     }
   };
 
-  const getScoreBadgeClass = (classification: string) => {
+  // Memoized style functions
+  const getScoreBadgeClass = useCallback((classification: string) => {
     switch (classification) {
       case 'Alto': return 'score-alto';
       case 'Médio': return 'score-medio';
       default: return 'score-baixo';
     }
-  };
+  }, []);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case 'Ativo': return 'bg-primary/10 text-primary border-primary/20';
       case 'Cliente': return 'bg-success/10 text-success border-success/20';
       case 'Perdido': return 'bg-danger/10 text-danger border-danger/20';
       default: return 'bg-muted text-muted-foreground border-border';
     }
-  };
+  }, []);
 
   if (showForm) {
     return (
@@ -319,96 +321,96 @@ export default function Leads() {
 
       {/* Lista de Leads */}
       <div className="space-y-4">
-        <div className="grid gap-4">
-          {filteredLeads.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">
-                  Nenhum lead encontrado com os filtros aplicados
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredLeads.map((lead) => (
-            <Card key={lead.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    {/* Header do Lead */}
-                    <div className="flex items-center gap-3 mb-3">
-                      <h3 className="font-semibold text-lg">{lead.nome}</h3>
-                      <Badge className={getScoreBadgeClass(lead.lead_score_classification)}>
-                        {lead.lead_score} ({lead.lead_score_classification})
-                      </Badge>
-                      <Badge className={getStatusColor(lead.status_geral)}>
-                        {lead.status_geral}
-                      </Badge>
-                    </div>
-
-                    {/* Informações do Lead */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Phone className="h-4 w-4" />
-                        <span>{formatWhatsApp(lead.whatsapp)}</span>
+        {filteredLeads.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">
+                Nenhum lead encontrado com os filtros aplicados
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4">
+            {filteredLeads.map((lead) => (
+              <Card key={lead.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      {/* Header do Lead */}
+                      <div className="flex items-center gap-3 mb-3">
+                        <h3 className="font-semibold text-lg">{lead.nome}</h3>
+                        <Badge className={getScoreBadgeClass(lead.lead_score_classification)}>
+                          {lead.lead_score} ({lead.lead_score_classification})
+                        </Badge>
+                        <Badge className={getStatusColor(lead.status_geral)}>
+                          {lead.status_geral}
+                        </Badge>
                       </div>
-                      
-                      {lead.email && (
+
+                      {/* Informações do Lead */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Mail className="h-4 w-4" />
-                          <span className="truncate">{lead.email}</span>
+                          <Phone className="h-4 w-4" />
+                          <span>{formatWhatsApp(lead.whatsapp)}</span>
+                        </div>
+                        
+                        {lead.email && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Mail className="h-4 w-4" />
+                            <span className="truncate">{lead.email}</span>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <TrendingUp className="h-4 w-4" />
+                          <span>{lead.origem} • {lead.segmento}</span>
+                        </div>
+                      </div>
+
+                      {/* Detalhes adicionais */}
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        {lead.closer && (
+                          <span>Closer: {lead.closer}</span>
+                        )}
+                        <span>Criado: {formatDateTime(lead.created_at)}</span>
+                        {lead.objecao_principal && (
+                          <Badge variant="outline" className="text-xs">
+                            Objeção: {lead.objecao_principal}
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Desejo na sessão */}
+                      {lead.desejo_na_sessao && (
+                        <div className="mt-3 p-3 bg-accent/50 rounded-md">
+                          <p className="text-sm text-foreground">
+                            <strong>Desejo:</strong> {lead.desejo_na_sessao}
+                          </p>
                         </div>
                       )}
-                      
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <TrendingUp className="h-4 w-4" />
-                        <span>{lead.origem} • {lead.segmento}</span>
-                      </div>
                     </div>
 
-                    {/* Detalhes adicionais */}
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      {lead.closer && (
-                        <span>Closer: {lead.closer}</span>
-                      )}
-                      <span>Criado: {formatDateTime(lead.created_at)}</span>
-                      {lead.objecao_principal && (
-                        <Badge variant="outline" className="text-xs">
-                          Objeção: {lead.objecao_principal}
-                        </Badge>
-                      )}
+                    {/* Ações */}
+                    <div className="flex items-center gap-2 ml-4">
+                      <Button variant="ghost" size="sm">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleEditLead(lead)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleInscribeLead(lead)}>
+                        <GitBranch className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm">
+                        <MessageCircle className="h-4 w-4" />
+                      </Button>
                     </div>
-
-                    {/* Desejo na sessão */}
-                    {lead.desejo_na_sessao && (
-                      <div className="mt-3 p-3 bg-accent/50 rounded-md">
-                        <p className="text-sm text-foreground">
-                          <strong>Desejo:</strong> {lead.desejo_na_sessao}
-                        </p>
-                      </div>
-                    )}
                   </div>
-
-                  {/* Ações */}
-                  <div className="flex items-center gap-2 ml-4">
-                    <Button variant="ghost" size="sm">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleEditLead(lead)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleInscribeLead(lead)}>
-                      <GitBranch className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      <MessageCircle className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
-        </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
