@@ -154,6 +154,39 @@ export type Database = {
         }
         Relationships: []
       }
+      bulk_import_logs: {
+        Row: {
+          created_at: string
+          erros: Json | null
+          id: string
+          linhas_erro: number
+          linhas_sucesso: number
+          nome_arquivo: string
+          total_linhas: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          erros?: Json | null
+          id?: string
+          linhas_erro?: number
+          linhas_sucesso?: number
+          nome_arquivo: string
+          total_linhas: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          erros?: Json | null
+          id?: string
+          linhas_erro?: number
+          linhas_sucesso?: number
+          nome_arquivo?: string
+          total_linhas?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       closer_availability: {
         Row: {
           ativo: boolean | null
@@ -451,6 +484,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lead_tag_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          lead_id: string
+          tag_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lead_id: string
+          tag_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lead_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_tag_assignments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_tag_assignments_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "lead_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_tags: {
+        Row: {
+          cor: string
+          created_at: string
+          id: string
+          nome: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          cor?: string
+          created_at?: string
+          id?: string
+          nome: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          cor?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       leads: {
         Row: {

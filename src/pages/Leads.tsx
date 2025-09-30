@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LeadForm } from '@/components/forms/LeadForm';
 import { PipelineInscriptionDialog } from '@/components/pipeline/PipelineInscriptionDialog';
+import { LeadBulkUploadDialog } from '@/components/leads/LeadBulkUploadDialog';
 import { GlobalErrorBoundary } from '@/components/ui/GlobalErrorBoundary';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
@@ -26,7 +27,8 @@ import {
   MessageCircle,
   TrendingUp,
   GitBranch,
-  Loader2
+  Loader2,
+  Upload
 } from 'lucide-react';
 
 export default function Leads() {
@@ -44,6 +46,7 @@ export default function Leads() {
   const [showInscriptionDialog, setShowInscriptionDialog] = useState(false);
   const [selectedLeadForInscription, setSelectedLeadForInscription] = useState<Lead | null>(null);
   const [formLoading, setFormLoading] = useState(false);
+  const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
   
   const { saveLead } = useLeadData();
 
@@ -196,10 +199,16 @@ export default function Leads() {
             Gerencie todos os seus leads e contatos
           </p>
         </div>
-        <Button onClick={handleCreateLead} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Lead
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowBulkUploadDialog(true)} className="gap-2">
+            <Upload className="h-4 w-4" />
+            Importar Planilha
+          </Button>
+          <Button onClick={handleCreateLead} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Novo Lead
+          </Button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -362,6 +371,16 @@ export default function Leads() {
           onConfirm={handleInscriptionConfirm}
         />
       )}
+
+      {/* Dialog de Upload em Massa */}
+      <LeadBulkUploadDialog
+        open={showBulkUploadDialog}
+        onOpenChange={setShowBulkUploadDialog}
+        onSuccess={() => {
+          // Recarregar leads após importação
+          window.location.reload();
+        }}
+      />
     </div>
     </GlobalErrorBoundary>
   );
