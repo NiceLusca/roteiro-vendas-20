@@ -14,54 +14,118 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Session cache key
+const SESSION_CACHE_KEY = 'supabase_session_cache';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+interface CachedSession {
+  session: Session;
+  timestamp: number;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Helper para log de eventos de segurança
-  const logSecurityEvent = async (
+  // Helper para log de eventos de segurança (ASSÍNCRONO)
+  const logSecurityEventAsync = (
     eventType: string, 
+    userId: string | null,
     success: boolean, 
     details?: any
   ) => {
+    // Use setTimeout to defer RPC calls and prevent deadlock
+    setTimeout(async () => {
+      try {
+        await supabase.rpc('log_security_event', {
+          _user_id: userId,
+          _event_type: eventType,
+          _ip_address: null,
+          _user_agent: typeof window !== 'undefined' ? navigator.userAgent : null,
+          _success: success,
+          _details: details || null
+        });
+      } catch (error) {
+        console.error('Erro ao registrar evento de segurança:', error);
+      }
+    }, 0);
+  };
+
+  // Load cached session
+  const loadCachedSession = (): Session | null => {
     try {
-      await supabase.rpc('log_security_event', {
-        _user_id: user?.id || null,
-        _event_type: eventType,
-        _ip_address: null, // Em produção, seria obtido do servidor
-        _user_agent: typeof window !== 'undefined' ? navigator.userAgent : null,
-        _success: success,
-        _details: details || null
-      });
+      const cached = localStorage.getItem(SESSION_CACHE_KEY);
+      if (!cached) return null;
+
+      const { session, timestamp }: CachedSession = JSON.parse(cached);
+      
+      // Check if cache is still valid
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        return session;
+      }
+      
+      // Cache expired, remove it
+      localStorage.removeItem(SESSION_CACHE_KEY);
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Save session to cache
+  const cacheSession = (session: Session | null) => {
+    try {
+      if (session) {
+        const cached: CachedSession = {
+          session,
+          timestamp: Date.now()
+        };
+        localStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(cached));
+      } else {
+        localStorage.removeItem(SESSION_CACHE_KEY);
+      }
     } catch (error) {
-      console.error('Erro ao registrar evento de segurança:', error);
+      console.error('Error caching session:', error);
     }
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // Try to load from cache first for instant initialization
+    const cachedSession = loadCachedSession();
+    if (cachedSession) {
+      setSession(cachedSession);
+      setUser(cachedSession.user);
+      setLoading(false);
+    }
+
+    // Set up auth state listener (SYNCHRONOUS only)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
+        // CRITICAL: Only synchronous operations here to prevent deadlock
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // Cache the session
+        cacheSession(session);
 
-        // Log de eventos de autenticação
+        // Defer RPC calls with setTimeout to prevent deadlock
         if (event === 'SIGNED_IN') {
-          await logSecurityEvent('login_attempt', true, { method: 'password' });
+          logSecurityEventAsync('login_attempt', session?.user?.id || null, true, { method: 'password' });
         } else if (event === 'SIGNED_OUT') {
-          await logSecurityEvent('logout', true);
+          logSecurityEventAsync('logout', null, true);
         }
       }
     );
 
-    // THEN check for existing session
+    // THEN check for existing session (this validates the cache)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      cacheSession(session);
     });
 
     return () => subscription.unsubscribe();
@@ -73,45 +137,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password
     });
 
-    // Log da tentativa de login
-    await logSecurityEvent('login_attempt', !error, { 
-      email, 
-      error: error?.message 
-    });
-
     if (error) {
-      // Verificar se há atividade suspeita
-      try {
-        const { data: isSuspicious } = await supabase.rpc('detect_suspicious_activity', {
-          _ip_address: '127.0.0.1' // Em produção, seria o IP real
-        });
+      // Log async (non-blocking)
+      logSecurityEventAsync('login_attempt', null, false, { 
+        email, 
+        error: error.message 
+      });
 
-        if (isSuspicious) {
-          await logSecurityEvent('suspicious_activity', false, {
-            reason: 'Multiple failed login attempts',
-            email
+      // Check for suspicious activity (async)
+      setTimeout(async () => {
+        try {
+          const { data: isSuspicious } = await supabase.rpc('detect_suspicious_activity', {
+            _ip_address: '127.0.0.1'
           });
-          
-          toast({
-            title: "Atividade Suspeita",
-            description: "Múltiplas tentativas de login falharam. Aguarde antes de tentar novamente.",
-            variant: "destructive"
-          });
-        } else {
+
+          if (isSuspicious) {
+            logSecurityEventAsync('suspicious_activity', null, false, {
+              reason: 'Multiple failed login attempts',
+              email
+            });
+            
+            toast({
+              title: "Atividade Suspeita",
+              description: "Múltiplas tentativas de login falharam. Aguarde antes de tentar novamente.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Erro no login",
+              description: error.message,
+              variant: "destructive"
+            });
+          }
+        } catch {
           toast({
             title: "Erro no login",
             description: error.message,
             variant: "destructive"
           });
         }
-      } catch (detectionError) {
-        console.error('Erro na detecção de atividade suspeita:', detectionError);
-        toast({
-          title: "Erro no login",
-          description: error.message,
-          variant: "destructive"
-        });
-      }
+      }, 0);
     }
 
     return { error };
@@ -128,8 +193,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    // Log da tentativa de registro
-    await logSecurityEvent('signup_attempt', !error, { email });
+    // Log async (non-blocking)
+    logSecurityEventAsync('signup_attempt', null, !error, { email });
 
     if (error) {
       toast({
@@ -148,8 +213,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await logSecurityEvent('logout', true);
+    const userId = user?.id;
     await supabase.auth.signOut();
+    
+    // Clear cache
+    cacheSession(null);
+    
+    // Log async (non-blocking)
+    logSecurityEventAsync('logout', userId || null, true);
+    
     toast({
       title: "Logout realizado",
       description: "Você foi desconectado com sucesso"

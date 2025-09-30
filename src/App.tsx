@@ -7,9 +7,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import React, { lazy, Suspense } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { AuditProvider } from "@/contexts/AuditContext";
-import { AllLogsAuditProvider } from "@/contexts/AllLogsAuditContext";
-import { CRMProvider } from "@/contexts/CRMContext";
 import { GlobalErrorBoundary } from "@/components/ui/GlobalErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContextSecure";
 import { useAuth } from "@/contexts/AuthContextSecure";
@@ -35,7 +32,16 @@ const Help = lazy(() => import('./pages/Help'));
 const Security = lazy(() => import('./pages/Security'));
 const Production = lazy(() => import('./pages/Production'));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30000, // 30 seconds
+      gcTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -69,25 +75,22 @@ function App() {
       <GlobalErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <CRMProvider>
-              <AuditProvider>
-                <AllLogsAuditProvider>
-                  <TooltipProvider>
-                    <SecurityHeaders environment={process.env.NODE_ENV as 'development' | 'production'} />
-                    <Toaster />
-                    <Sonner />
-                    <BrowserRouter>
-                      <GlobalKeyboardShortcuts />
-                      <Routes>
-                        <Route path="/auth" element={<Auth />} />
-                        <Route path="/" element={
-                          <ProtectedRoute>
-                            <AppLayout />
-                          </ProtectedRoute>
-                        }>
-                          <Route index element={<Index />} />
-                          <Route path="pipelines" element={<Pipelines />} />
-                          <Route path="leads" element={<Leads />} />
+            <TooltipProvider>
+              <SecurityHeaders environment={process.env.NODE_ENV as 'development' | 'production'} />
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <GlobalKeyboardShortcuts />
+                <Routes>
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/" element={
+                    <ProtectedRoute>
+                      <AppLayout />
+                    </ProtectedRoute>
+                  }>
+                    <Route index element={<Index />} />
+                    <Route path="pipelines" element={<Pipelines />} />
+                    <Route path="leads" element={<Leads />} />
                           <Route path="agenda" element={
                             <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <Agenda />
@@ -147,13 +150,10 @@ function App() {
                         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                         <Route path="*" element={<NotFound />} />
                       </Routes>
-                    </BrowserRouter>
-                    <EnhancedInstallPrompt />
-                    <InstallBanner />
-                  </TooltipProvider>
-                </AllLogsAuditProvider>
-              </AuditProvider>
-            </CRMProvider>
+                  </BrowserRouter>
+                  <EnhancedInstallPrompt />
+                  <InstallBanner />
+                </TooltipProvider>
           </AuthProvider>
         </QueryClientProvider>
       </GlobalErrorBoundary>
