@@ -17,8 +17,8 @@ interface ColumnMappingStepProps {
 const LEAD_FIELDS: Array<{ key: keyof Lead; label: string; required: boolean }> = [
   { key: 'nome', label: 'Nome', required: true },
   { key: 'whatsapp', label: 'WhatsApp', required: true },
+  { key: 'origem', label: 'Origem', required: true },
   { key: 'email', label: 'Email', required: false },
-  { key: 'origem', label: 'Origem', required: false },
   { key: 'segmento', label: 'Segmento', required: false },
   { key: 'closer', label: 'Closer', required: false },
   { key: 'desejo_na_sessao', label: 'Desejo na Sessão', required: false },
@@ -77,15 +77,7 @@ export function ColumnMappingStep({ headers, sampleRows, onComplete, onBack }: C
   };
 
   const handleContinue = () => {
-    // Verificar se campos obrigatórios foram mapeados
-    const requiredFields = LEAD_FIELDS.filter(f => f.required);
-    const mappedRequiredFields = mapping.filter(m => m.targetField && requiredFields.some(f => f.key === m.targetField));
-
-    if (mappedRequiredFields.length < requiredFields.length) {
-      alert('Por favor, mapeie todos os campos obrigatórios (Nome e WhatsApp)');
-      return;
-    }
-
+    // Não precisa validar aqui - a próxima etapa vai pedir valores padrão para campos não mapeados
     onComplete(mapping);
   };
 

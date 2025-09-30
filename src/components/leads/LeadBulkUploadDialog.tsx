@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ImportStep } from '@/types/bulkImport';
 import { ColumnMappingStep } from './ColumnMappingStep';
+import { DefaultValuesStep } from './DefaultValuesStep';
 import { TagSelectionStep } from './TagSelectionStep';
 import { PipelineSelectionStep } from './PipelineSelectionStep';
 import { PreviewAndConfirmStep } from './PreviewAndConfirmStep';
@@ -21,6 +22,7 @@ export function LeadBulkUploadDialog({ open, onOpenChange, onSuccess }: LeadBulk
   const [currentStep, setCurrentStep] = useState<ImportStep>('upload');
   const [fileData, setFileData] = useState<{ headers: string[]; rows: any[][]; fileName: string } | null>(null);
   const [mapping, setMapping] = useState<any[]>([]);
+  const [defaultValues, setDefaultValues] = useState<Record<string, any>>({});
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedPipelines, setSelectedPipelines] = useState<Array<{ pipelineId: string; stageId: string }>>([]);
   
@@ -40,6 +42,11 @@ export function LeadBulkUploadDialog({ open, onOpenChange, onSuccess }: LeadBulk
 
   const handleMappingComplete = (mappingData: any[]) => {
     setMapping(mappingData);
+    setCurrentStep('defaults');
+  };
+
+  const handleDefaultsComplete = (defaults: Record<string, any>) => {
+    setDefaultValues(defaults);
     setCurrentStep('tags');
   };
 
@@ -57,7 +64,7 @@ export function LeadBulkUploadDialog({ open, onOpenChange, onSuccess }: LeadBulk
     if (!fileData) return;
 
     setCurrentStep('processing');
-    const parsedLeads = parseLeads(fileData.rows, fileData.headers, mapping);
+    const parsedLeads = parseLeads(fileData.rows, fileData.headers, mapping, defaultValues);
     const result = await importLeads(parsedLeads, selectedTags, selectedPipelines);
 
     if (result.success) {
@@ -70,13 +77,14 @@ export function LeadBulkUploadDialog({ open, onOpenChange, onSuccess }: LeadBulk
     setCurrentStep('upload');
     setFileData(null);
     setMapping([]);
+    setDefaultValues({});
     setSelectedTags([]);
     setSelectedPipelines([]);
     onOpenChange(false);
   };
 
   const getStepNumber = () => {
-    const steps: ImportStep[] = ['upload', 'mapping', 'tags', 'pipelines', 'preview', 'processing'];
+    const steps: ImportStep[] = ['upload', 'mapping', 'defaults', 'tags', 'pipelines', 'preview', 'processing'];
     return steps.indexOf(currentStep) + 1;
   };
 
@@ -93,10 +101,10 @@ export function LeadBulkUploadDialog({ open, onOpenChange, onSuccess }: LeadBulk
           {currentStep !== 'upload' && (
             <div className="mt-4">
               <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
-                <span>Passo {getStepNumber()} de 5</span>
-                <span>{Math.round((getStepNumber() / 5) * 100)}%</span>
+                <span>Passo {getStepNumber()} de 6</span>
+                <span>{Math.round((getStepNumber() / 6) * 100)}%</span>
               </div>
-              <Progress value={(getStepNumber() / 5) * 100} className="h-2" />
+              <Progress value={(getStepNumber() / 6) * 100} className="h-2" />
             </div>
           )}
         </DialogHeader>
@@ -146,10 +154,18 @@ export function LeadBulkUploadDialog({ open, onOpenChange, onSuccess }: LeadBulk
             />
           )}
 
+          {currentStep === 'defaults' && (
+            <DefaultValuesStep
+              mapping={mapping}
+              onComplete={handleDefaultsComplete}
+              onBack={() => setCurrentStep('mapping')}
+            />
+          )}
+
           {currentStep === 'tags' && (
             <TagSelectionStep
               onComplete={handleTagsComplete}
-              onBack={() => setCurrentStep('mapping')}
+              onBack={() => setCurrentStep('defaults')}
             />
           )}
 

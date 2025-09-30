@@ -49,4 +49,4 @@ export interface BulkImportLog {
   created_at: string;
 }
 
-export type ImportStep = 'upload' | 'mapping' | 'tags' | 'pipelines' | 'preview' | 'processing';
+export type ImportStep = 'upload' | 'mapping' | 'defaults' | 'tags' | 'pipelines' | 'preview' | 'processing';

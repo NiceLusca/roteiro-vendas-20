@@ -27,7 +27,8 @@ export function useBulkLeadImport() {
   const parseLeads = useCallback((
     rows: any[][],
     headers: string[],
-    mapping: ColumnMapping[]
+    mapping: ColumnMapping[],
+    defaultValues: Record<string, any> = {}
   ): ParsedLead[] => {
     return rows.map((row, index) => {
       const leadData: Partial<Lead> & { user_id?: string } = {
@@ -43,14 +44,16 @@ export function useBulkLeadImport() {
 
         const value = row[columnIndex];
 
-        if (map.isRequired && (!value || value === '')) {
-          errors.push(`Campo obrigatório "${map.targetField}" está vazio`);
-          return;
-        }
-
         // Mapeamento de campos
         if (value !== undefined && value !== null && value !== '') {
           (leadData as any)[map.targetField] = String(value).trim();
+        }
+      });
+
+      // Aplicar valores padrão para campos não mapeados
+      Object.keys(defaultValues).forEach((key) => {
+        if (!leadData[key as keyof Lead]) {
+          (leadData as any)[key] = defaultValues[key];
         }
       });
 
@@ -60,6 +63,9 @@ export function useBulkLeadImport() {
       }
       if (!leadData.whatsapp) {
         errors.push('WhatsApp é obrigatório');
+      }
+      if (!leadData.origem) {
+        errors.push('Origem é obrigatória');
       }
 
       return {
