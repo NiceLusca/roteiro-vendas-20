@@ -10,6 +10,7 @@ import { LeadBulkUploadDialog } from '@/components/leads/LeadBulkUploadDialog';
 import { GlobalErrorBoundary } from '@/components/ui/GlobalErrorBoundary';
 import { SkeletonLeadsList } from '@/components/ui/skeleton-card';
 import { useOptimizedLeads } from '@/hooks/useOptimizedLeads';
+import { CRMProviderWrapper } from '@/contexts/CRMProviderWrapper';
 import { Lead } from '@/types/crm';
 import { formatWhatsApp, formatDateTime } from '@/utils/formatters';
 import { 
@@ -27,7 +28,7 @@ import {
   Upload
 } from 'lucide-react';
 
-export default function Leads() {
+function LeadsContent() {
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
@@ -494,5 +495,13 @@ export default function Leads() {
       />
     </div>
     </GlobalErrorBoundary>
+  );
+}
+
+export default function Leads() {
+  return (
+    <CRMProviderWrapper>
+      <LeadsContent />
+    </CRMProviderWrapper>
   );
 }
