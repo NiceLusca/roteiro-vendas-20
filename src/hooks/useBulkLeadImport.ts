@@ -67,7 +67,15 @@ export function useBulkLeadImport() {
       // Aplicar valores padrão para campos não mapeados
       Object.keys(defaultValues).forEach((key) => {
         if (!leadData[key as keyof Lead]) {
-          (leadData as any)[key] = defaultValues[key];
+          const dv = defaultValues[key];
+          if (key === 'origem') {
+            const candidate = typeof dv === 'string' ? dv.trim() : String(dv ?? '');
+            (leadData as any)[key] = VALID_ORIGENS.includes(candidate as any) ? candidate : 'Outro';
+          } else if (typeof dv === 'string') {
+            (leadData as any)[key] = dv.trim();
+          } else {
+            (leadData as any)[key] = dv;
+          }
         }
       });
 
@@ -135,8 +143,12 @@ export function useBulkLeadImport() {
               continue;
             }
 
-            // Salvar lead
-            await saveLead(parsed.data);
+            // Salvar lead (sanitiza origem novamente por segurança)
+            const sanitizedData = { ...parsed.data } as any;
+            if (sanitizedData.origem && !VALID_ORIGENS.includes(String(sanitizedData.origem) as any)) {
+              sanitizedData.origem = 'Outro';
+            }
+            await saveLead(sanitizedData);
 
             // Buscar o lead recém-criado (buscar por nome e whatsapp únicos)
             const { data: createdLead, error: fetchError } = await supabase
