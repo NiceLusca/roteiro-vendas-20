@@ -376,7 +376,7 @@ function LeadsContent() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       {/* Header do Lead */}
-                      <div className="flex items-center gap-3 mb-3">
+                      <div className="flex items-center gap-3 mb-3 flex-wrap">
                         <h3 className="font-semibold text-lg">{lead.nome}</h3>
                         <Badge className={getScoreBadgeClass(lead.lead_score_classification)}>
                           {lead.lead_score} ({lead.lead_score_classification})
@@ -384,6 +384,24 @@ function LeadsContent() {
                         <Badge className={getStatusColor(lead.status_geral)}>
                           {lead.status_geral}
                         </Badge>
+                        {/* Tags do Lead */}
+                        {(lead as any).tags?.map((tag: any) => (
+                          <Badge 
+                            key={tag.id} 
+                            variant="outline"
+                            className="gap-1"
+                            style={{ 
+                              borderColor: tag.cor,
+                              color: tag.cor
+                            }}
+                          >
+                            <div 
+                              className="w-2 h-2 rounded-full" 
+                              style={{ backgroundColor: tag.cor }}
+                            />
+                            {tag.nome}
+                          </Badge>
+                        ))}
                       </div>
 
                       {/* Informações do Lead */}

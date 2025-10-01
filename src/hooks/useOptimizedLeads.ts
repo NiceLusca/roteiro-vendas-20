@@ -56,7 +56,10 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
           resultado_obs_ultima_sessao,
           user_id,
           created_at,
-          updated_at
+          updated_at,
+          lead_tag_assignments(
+            lead_tags(id, nome, cor)
+          )
         `, { count: 'exact' })
         .order('created_at', { ascending: false });
 
@@ -104,7 +107,8 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
         leads: data?.map(lead => ({
           ...lead,
           created_at: new Date(lead.created_at),
-          updated_at: new Date(lead.updated_at)
+          updated_at: new Date(lead.updated_at),
+          tags: lead.lead_tag_assignments?.map((assignment: any) => assignment.lead_tags).filter(Boolean) || []
         })) || [],
         totalCount: count || 0,
         totalPages: Math.ceil((count || 0) / LEADS_PER_PAGE)
