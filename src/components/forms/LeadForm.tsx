@@ -109,8 +109,7 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
         faturamento_medio: lead.faturamento_medio || 0,
         meta_faturamento: lead.meta_faturamento || 0,
         resultado_sessao_ultimo: lead.resultado_sessao_ultimo,
-        resultado_obs_ultima_sessao: lead.resultado_obs_ultima_sessao,
-        status_geral: lead.status_geral || 'Ativo'
+        resultado_obs_ultima_sessao: lead.resultado_obs_ultima_sessao
       };
       setFormData(prev => ({ ...prev, ...sanitized }));
     }
