@@ -34,6 +34,7 @@ function LeadsContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterScore, setFilterScore] = useState<string>('all');
+  const [filterTag, setFilterTag] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [showInscriptionDialog, setShowInscriptionDialog] = useState(false);
   const [selectedLeadForInscription, setSelectedLeadForInscription] = useState<Lead | null>(null);
@@ -57,8 +58,24 @@ function LeadsContent() {
     page: currentPage,
     searchTerm,
     filterStatus,
-    filterScore
+    filterScore,
+    filterTag
   });
+
+  // Load tags for filter
+  const [availableTags, setAvailableTags] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const loadTags = async () => {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data } = await supabase
+        .from('lead_tags')
+        .select('id, nome, cor')
+        .order('nome');
+      setAvailableTags(data || []);
+    };
+    loadTags();
+  }, []);
 
   // Listen for global create lead event
   useEffect(() => {
@@ -310,6 +327,27 @@ function LeadsContent() {
                 <SelectItem value="Alto">Alto</SelectItem>
                 <SelectItem value="Médio">Médio</SelectItem>
                 <SelectItem value="Baixo">Baixo</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Filtro Tag */}
+            <Select value={filterTag} onValueChange={setFilterTag}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Tag" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as tags</SelectItem>
+                {availableTags.map((tag) => (
+                  <SelectItem key={tag.id} value={tag.id}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: tag.cor }}
+                      />
+                      {tag.nome}
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 

@@ -11,10 +11,11 @@ interface UseOptimizedLeadsOptions {
   searchTerm?: string;
   filterStatus?: string;
   filterScore?: string;
+  filterTag?: string;
 }
 
 export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
-  const { page = 1, searchTerm = '', filterStatus = 'all', filterScore = 'all' } = options;
+  const { page = 1, searchTerm = '', filterStatus = 'all', filterScore = 'all', filterTag = 'all' } = options;
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -26,7 +27,7 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
     error,
     refetch
   } = useQuery({
-    queryKey: ['leads', page, searchTerm, filterStatus, filterScore, user?.id],
+    queryKey: ['leads', page, searchTerm, filterStatus, filterScore, filterTag, user?.id],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
 
@@ -66,6 +67,23 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
       
       if (filterScore !== 'all') {
         query = query.eq('lead_score_classification', filterScore as any);
+      }
+
+      // Apply tag filter
+      if (filterTag !== 'all') {
+        // Filter leads that have the selected tag
+        const { data: tagAssignments } = await supabase
+          .from('lead_tag_assignments')
+          .select('lead_id')
+          .eq('tag_id', filterTag);
+        
+        const leadIdsWithTag = tagAssignments?.map(a => a.lead_id) || [];
+        if (leadIdsWithTag.length > 0) {
+          query = query.in('id', leadIdsWithTag);
+        } else {
+          // If no leads have this tag, return empty result
+          return { leads: [], totalCount: 0, totalPages: 0 };
+        }
       }
 
       // Apply search with trigram similarity
