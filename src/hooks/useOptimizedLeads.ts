@@ -146,13 +146,28 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
       if (!user) throw new Error('User not authenticated');
 
       const isUpdate = !!leadData.id;
+      
+      // Permit only known lead columns
+      const allowedKeys = new Set([
+        'nome','email','whatsapp','origem','segmento','status_geral','closer','desejo_na_sessao',
+        'objecao_principal','objecao_obs','observacoes','ja_vendeu_no_digital','seguidores',
+        'faturamento_medio','meta_faturamento','lead_score','lead_score_classification',
+        'resultado_sessao_ultimo','resultado_obs_ultima_sessao'
+      ] as const);
+
       const payload: any = {};
 
-      Object.keys(leadData).forEach(key => {
-        if (key !== 'id' && leadData[key as keyof typeof leadData] !== undefined) {
-          payload[key] = leadData[key as keyof typeof leadData];
+      Object.keys(leadData).forEach((key) => {
+        if (key === 'id') return;
+        if (allowedKeys.has(key as any) && (leadData as any)[key] !== undefined) {
+          (payload as any)[key] = (leadData as any)[key];
         }
       });
+
+      // Ensure whatsapp is normalized string
+      if (payload.whatsapp && typeof payload.whatsapp === 'string') {
+        payload.whatsapp = payload.whatsapp.toString();
+      }
 
       payload.user_id = user.id;
       payload.updated_at = new Date().toISOString();
@@ -162,20 +177,22 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
       }
 
       if (isUpdate) {
+        console.log('[useOptimizedLeads] Update payload:', payload);
         const { data, error } = await supabase
           .from('leads')
           .update(payload)
           .eq('id', leadData.id!)
-          .select()
+          .select('id, nome')
           .single();
 
         if (error) throw error;
         return data;
       } else {
+        console.log('[useOptimizedLeads] Insert payload:', payload);
         const { data, error } = await supabase
           .from('leads')
           .insert(payload)
-          .select()
+          .select('id, nome')
           .single();
 
         if (error) throw error;

@@ -89,6 +89,33 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
     objecao_principal: formData.objecao_principal
   });
 
+  // Sanitize lead data to keep only valid fields when editing
+  useEffect(() => {
+    if (lead) {
+      const sanitized: Partial<Lead> = {
+        nome: lead.nome || '',
+        email: lead.email,
+        whatsapp: lead.whatsapp || '',
+        origem: lead.origem || 'Outro',
+        segmento: lead.segmento,
+        status_geral: lead.status_geral || 'Ativo',
+        closer: lead.closer,
+        desejo_na_sessao: lead.desejo_na_sessao,
+        objecao_principal: lead.objecao_principal,
+        objecao_obs: lead.objecao_obs,
+        observacoes: lead.observacoes,
+        ja_vendeu_no_digital: lead.ja_vendeu_no_digital || false,
+        seguidores: lead.seguidores || 0,
+        faturamento_medio: lead.faturamento_medio || 0,
+        meta_faturamento: lead.meta_faturamento || 0,
+        resultado_sessao_ultimo: lead.resultado_sessao_ultimo,
+        resultado_obs_ultima_sessao: lead.resultado_obs_ultima_sessao,
+        status_geral: lead.status_geral || 'Ativo'
+      };
+      setFormData(prev => ({ ...prev, ...sanitized }));
+    }
+  }, [lead]);
+
   const handleInputChange = (field: keyof Lead, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
