@@ -41,6 +41,7 @@ export function useSupabaseLeads() {
           objecao_obs,
           observacoes,
           resultado_obs_ultima_sessao,
+          valor_lead,
           user_id,
           created_at,
           updated_at

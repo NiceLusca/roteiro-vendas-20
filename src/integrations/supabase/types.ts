@@ -578,6 +578,7 @@ export type Database = {
           status_geral: Database["public"]["Enums"]["status_geral"]
           updated_at: string | null
           user_id: string | null
+          valor_lead: number | null
           whatsapp: string
         }
         Insert: {
@@ -609,6 +610,7 @@ export type Database = {
           status_geral?: Database["public"]["Enums"]["status_geral"]
           updated_at?: string | null
           user_id?: string | null
+          valor_lead?: number | null
           whatsapp: string
         }
         Update: {
@@ -640,6 +642,7 @@ export type Database = {
           status_geral?: Database["public"]["Enums"]["status_geral"]
           updated_at?: string | null
           user_id?: string | null
+          valor_lead?: number | null
           whatsapp?: string
         }
         Relationships: [

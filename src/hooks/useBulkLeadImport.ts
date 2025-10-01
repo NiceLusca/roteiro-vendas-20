@@ -50,18 +50,26 @@ export function useBulkLeadImport() {
 
         const value = row[columnIndex];
 
-        // Mapeamento de campos
-        if (value !== undefined && value !== null && value !== '') {
-          const trimmedValue = String(value).trim();
-          
-          // Validação especial para o campo origem
-          if (map.targetField === 'origem') {
-            const isValidOrigem = VALID_ORIGENS.includes(trimmedValue as any);
-            (leadData as any)[map.targetField] = isValidOrigem ? trimmedValue : 'Outro';
-          } else {
-            (leadData as any)[map.targetField] = trimmedValue;
+          // Mapeamento de campos
+          if (value !== undefined && value !== null && value !== '') {
+            const trimmedValue = String(value).trim();
+            
+            // Validação especial para o campo origem
+            if (map.targetField === 'origem') {
+              const isValidOrigem = VALID_ORIGENS.includes(trimmedValue as any);
+              (leadData as any)[map.targetField] = isValidOrigem ? trimmedValue : 'Outro';
+            } else if (map.targetField === 'valor_lead') {
+              // Validar e limitar valor_lead entre 0 e 110
+              const numValue = parseInt(trimmedValue);
+              if (!isNaN(numValue)) {
+                (leadData as any)[map.targetField] = Math.min(110, Math.max(0, numValue));
+              } else {
+                (leadData as any)[map.targetField] = 0;
+              }
+            } else {
+              (leadData as any)[map.targetField] = trimmedValue;
+            }
           }
-        }
       });
 
       // Aplicar valores padrão para campos não mapeados
@@ -71,6 +79,14 @@ export function useBulkLeadImport() {
           if (key === 'origem') {
             const candidate = typeof dv === 'string' ? dv.trim() : String(dv ?? '');
             (leadData as any)[key] = VALID_ORIGENS.includes(candidate as any) ? candidate : 'Outro';
+          } else if (key === 'valor_lead') {
+            // Validar e limitar valor_lead entre 0 e 110
+            const numValue = parseInt(String(dv));
+            if (!isNaN(numValue)) {
+              (leadData as any)[key] = Math.min(110, Math.max(0, numValue));
+            } else {
+              (leadData as any)[key] = 0;
+            }
           } else if (typeof dv === 'string') {
             (leadData as any)[key] = dv.trim();
           } else {

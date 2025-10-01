@@ -109,7 +109,8 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
         faturamento_medio: lead.faturamento_medio || 0,
         meta_faturamento: lead.meta_faturamento || 0,
         resultado_sessao_ultimo: lead.resultado_sessao_ultimo,
-        resultado_obs_ultima_sessao: lead.resultado_obs_ultima_sessao
+        resultado_obs_ultima_sessao: lead.resultado_obs_ultima_sessao,
+        valor_lead: lead.valor_lead || 0
       };
       setFormData(prev => ({ ...prev, ...sanitized }));
     }
@@ -414,6 +415,25 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
                   {formatCurrency(formData.meta_faturamento)}
                 </p>
               )}
+            </div>
+
+            <div>
+              <Label htmlFor="valor_lead">Valor do Lead (0-110)</Label>
+              <Input
+                id="valor_lead"
+                type="number"
+                min="0"
+                max="110"
+                value={formData.valor_lead || 0}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 0;
+                  handleInputChange('valor_lead', Math.min(110, Math.max(0, value)));
+                }}
+                placeholder="Valor potencial do lead"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Defina o valor potencial deste lead (0 a 110)
+              </p>
             </div>
 
             <div>

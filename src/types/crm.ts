@@ -38,6 +38,9 @@ export interface Lead {
   resultado_sessao_ultimo?: ResultadoSessao;
   resultado_obs_ultima_sessao?: string;
   
+  // Valor do lead
+  valor_lead?: number; // 0-110
+  
   created_at: Date;
   updated_at: Date;
 }

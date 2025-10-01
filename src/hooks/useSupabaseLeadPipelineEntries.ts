@@ -32,14 +32,29 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     
     try {
       setLoading(true);
+      
+      console.log('[Pipeline Entries] Fetching entries for pipelineId:', targetPipelineId || pipelineId);
+      
       let query = supabase
         .from('lead_pipeline_entries')
         .select(`
           *,
-          leads!inner(user_id, nome, email, whatsapp),
-          pipeline_stages!inner(nome, ordem)
+          leads!inner(
+            id,
+            nome,
+            email,
+            whatsapp,
+            status_geral,
+            closer,
+            lead_score,
+            lead_score_classification,
+            valor_lead,
+            user_id
+          ),
+          pipeline_stages!inner(nome, ordem, pipeline_id)
         `)
-        .eq('leads.user_id', user.id);
+        .eq('leads.user_id', user.id)
+        .eq('status_inscricao', 'Ativo');
 
       if (targetPipelineId || pipelineId) {
         query = query.eq('pipeline_id', targetPipelineId || pipelineId);
@@ -57,6 +72,8 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         return;
       }
 
+      console.log('[Pipeline Entries] Fetched entries:', data?.length || 0);
+      
       setEntries((data || []).map(entry => ({
         ...entry,
         checklist_state: (entry.checklist_state as any) || {}

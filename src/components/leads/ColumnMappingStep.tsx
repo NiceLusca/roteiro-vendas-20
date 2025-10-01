@@ -24,6 +24,7 @@ const LEAD_FIELDS: Array<{ key: keyof Lead; label: string; required: boolean }> 
   { key: 'desejo_na_sessao', label: 'Desejo na Sessão', required: false },
   { key: 'objecao_principal', label: 'Objeção Principal', required: false },
   { key: 'observacoes', label: 'Observações', required: false },
+  { key: 'valor_lead', label: 'Valor do Lead (0-110)', required: false },
 ];
 
 export function ColumnMappingStep({ headers, sampleRows, onComplete, onBack }: ColumnMappingStepProps) {
@@ -54,6 +55,8 @@ export function ColumnMappingStep({ headers, sampleRows, onComplete, onBack }: C
         targetField = 'objecao_principal';
       } else if (normalized.includes('obs') || normalized.includes('notes')) {
         targetField = 'observacoes';
+      } else if (normalized.includes('valor') && (normalized.includes('lead') || normalized.includes('potencial'))) {
+        targetField = 'valor_lead';
       }
 
       const field = LEAD_FIELDS.find(f => f.key === targetField);

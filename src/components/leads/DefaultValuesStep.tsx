@@ -28,6 +28,7 @@ const OPTIONAL_FIELDS = [
   { key: 'status_geral', label: 'Status Geral', type: 'select', options: ['Ativo', 'Cliente', 'Perdido', 'Inativo'] },
   { key: 'desejo_na_sessao', label: 'Desejo na Sessão', type: 'text' },
   { key: 'observacoes', label: 'Observações', type: 'textarea' },
+  { key: 'valor_lead', label: 'Valor do Lead (0-110)', type: 'number', min: 0, max: 110 },
 ];
 
 export function DefaultValuesStep({ mapping, onComplete, onBack }: DefaultValuesStepProps) {
@@ -69,6 +70,18 @@ export function DefaultValuesStep({ mapping, onComplete, onBack }: DefaultValues
       {field.type === 'text' && (
         <Input
           id={field.key}
+          placeholder={`Digite o valor padrão para ${field.label}`}
+          value={defaultValues[field.key] || ''}
+          onChange={(e) => handleValueChange(field.key, e.target.value)}
+        />
+      )}
+
+      {field.type === 'number' && (
+        <Input
+          id={field.key}
+          type="number"
+          min={field.min}
+          max={field.max}
           placeholder={`Digite o valor padrão para ${field.label}`}
           value={defaultValues[field.key] || ''}
           onChange={(e) => handleValueChange(field.key, e.target.value)}
