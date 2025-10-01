@@ -39,32 +39,22 @@ export function useMultiPipeline() {
   }, [transferToPipeline, logChange]);
 
   const inscribePipeline = useCallback(async (leadId: string, pipelineId: string, stageId: string) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('inscribePipeline called with:', { leadId, pipelineId, stageId });
-      console.log('Current entries:', entries);
-    }
-    
     try {
-      // Check if already inscribed
-      const existingEntry = entries.find(
-        (e) => e.lead_id === leadId && e.pipeline_id === pipelineId && e.status_inscricao === 'Ativo'
-      );
+      // Check in database if already inscribed (more reliable than local state for bulk imports)
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: existingEntries } = await supabase
+        .from('lead_pipeline_entries')
+        .select('id')
+        .eq('lead_id', leadId)
+        .eq('pipeline_id', pipelineId)
+        .eq('status_inscricao', 'Ativo')
+        .maybeSingle();
 
-      if (existingEntry) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Lead already inscribed, showing toast');
-        }
-        toast({
-          title: 'Já inscrito',
-          description: 'Lead já está inscrito neste pipeline',
-          variant: 'destructive'
-        });
+      if (existingEntries) {
+        // Silently skip if already inscribed during bulk import
         return;
       }
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Creating new entry...');
-      }
       // Create new entry
       const newEntry = await createEntry({
         lead_id: leadId,
@@ -72,14 +62,7 @@ export function useMultiPipeline() {
         etapa_atual_id: stageId
       });
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log('New entry created:', newEntry);
-      }
-
       if (newEntry) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('Logging change...');
-        }
         logChange({
           entidade: 'LeadPipelineEntry',
           entidade_id: newEntry.id,
@@ -91,21 +74,12 @@ export function useMultiPipeline() {
           ],
           ator: 'Sistema (Inscrição)'
         });
-        
-        toast({
-          title: 'Sucesso',
-          description: 'Lead inscrito no pipeline com sucesso!'
-        });
       }
     } catch (error) {
       console.error('Error in inscribePipeline:', error);
-      toast({
-        title: 'Erro',
-        description: 'Erro ao inscrever lead no pipeline',
-        variant: 'destructive'
-      });
+      throw error; // Re-throw to be handled by caller
     }
-  }, [entries, createEntry, toast, logChange]);
+  }, [createEntry, logChange]);
 
   const archivePipelineEntry = useCallback(async (entryId: string, motivo: string = 'Arquivado manualmente') => {
     const success = await archiveEntry(entryId, motivo);

@@ -18,7 +18,7 @@ interface DefaultValuesStepProps {
 const REQUIRED_FIELDS = [
   { key: 'nome', label: 'Nome', type: 'text', canBeEmpty: false },
   { key: 'whatsapp', label: 'WhatsApp', type: 'text', canBeEmpty: false },
-  { key: 'origem', label: 'Origem', type: 'select', canBeEmpty: false, options: ['Indicação', 'Orgânico', 'Tráfego Pago', 'Evento', 'Cold Call', 'WhatsApp', 'Instagram', 'Facebook', 'Google', 'LinkedIn', 'Outro'] },
+  { key: 'origem', label: 'Origem', type: 'text', canBeEmpty: false, placeholder: 'Ex: Indicação, Instagram, Facebook, etc.' },
 ];
 
 const OPTIONAL_FIELDS = [
