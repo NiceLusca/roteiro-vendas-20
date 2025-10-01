@@ -38,21 +38,18 @@ export function RealtimeMetrics() {
       const { data: newLeads } = await supabase
         .from('leads')
         .select('id', { count: 'exact' })
-        .eq('user_id', user.id)
         .gte('created_at', todayISO);
 
       // Fetch active deals
       const { data: activeDeals } = await supabase
         .from('deals')
         .select('id', { count: 'exact' })
-        .eq('leads.user_id', user.id)
         .eq('status', 'Aberta');
 
       // Fetch today's completed deals
       const { data: completedDeals } = await supabase
         .from('deals')
         .select('valor_proposto', { count: 'exact' })
-        .eq('leads.user_id', user.id)
         .eq('status', 'Ganha')
         .gte('updated_at', todayISO);
 
@@ -60,7 +57,6 @@ export function RealtimeMetrics() {
       const { data: revenueData } = await supabase
         .from('deals')
         .select('valor_proposto')
-        .eq('leads.user_id', user.id)
         .eq('status', 'Ganha')
         .gte('updated_at', todayISO);
 
@@ -94,8 +90,7 @@ export function RealtimeMetrics() {
         {
           event: '*',
           schema: 'public',
-          table: 'leads',
-          filter: `user_id=eq.${user.id}`
+          table: 'leads'
         },
         () => {
           fetchCurrentData();

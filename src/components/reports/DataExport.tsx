@@ -108,7 +108,6 @@ export function DataExport() {
           const { data: leadsData, error: leadsError } = await supabase
             .from('leads')
             .select('*')
-            .eq('user_id', user.id)
             .gte('created_at', options.dateRange.start)
             .lte('created_at', options.dateRange.end);
           

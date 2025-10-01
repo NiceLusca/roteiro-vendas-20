@@ -128,7 +128,6 @@ export function useBulkLeadImport() {
             const { data: createdLead, error: fetchError } = await supabase
               .from('leads')
               .select('id')
-              .eq('user_id', user.id)
               .eq('nome', parsed.data.nome)
               .eq('whatsapp', parsed.data.whatsapp)
               .order('created_at', { ascending: false })
