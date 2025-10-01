@@ -53,7 +53,6 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
           ),
           pipeline_stages!inner(nome, ordem, pipeline_id)
         `)
-        .eq('leads.user_id', user.id)
         .eq('status_inscricao', 'Ativo');
 
       if (targetPipelineId || pipelineId) {
