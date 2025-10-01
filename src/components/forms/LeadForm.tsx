@@ -113,10 +113,26 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
     if (!formData.whatsapp?.trim()) {
       newErrors.whatsapp = 'WhatsApp é obrigatório';
     } else {
-      // Remove apenas espaços, hífens e parênteses para validação
-      const cleanPhone = formData.whatsapp.replace(/[\s\-\(\)]/g, '');
-      if (!/^\+55\d{10,11}$/.test(cleanPhone)) {
+      // Remove tudo exceto dígitos para validar
+      const digits = formData.whatsapp.replace(/\D/g, '');
+      
+      // Deve ter 13 dígitos (55 + DDD + número) ou 11 (sem código do país)
+      if (digits.length !== 13 && digits.length !== 11) {
         newErrors.whatsapp = 'WhatsApp deve ter formato válido (+55DDDNÚMERO)';
+      } else if (digits.length === 13 && !digits.startsWith('55')) {
+        newErrors.whatsapp = 'WhatsApp deve começar com +55';
+      } else if (digits.length === 11) {
+        // Validar DDD brasileiro (11-99)
+        const ddd = parseInt(digits.substring(0, 2));
+        if (ddd < 11 || ddd > 99) {
+          newErrors.whatsapp = 'DDD inválido';
+        }
+      } else if (digits.length === 13) {
+        // Validar DDD brasileiro (11-99) após o código do país
+        const ddd = parseInt(digits.substring(2, 4));
+        if (ddd < 11 || ddd > 99) {
+          newErrors.whatsapp = 'DDD inválido';
+        }
       }
     }
 
