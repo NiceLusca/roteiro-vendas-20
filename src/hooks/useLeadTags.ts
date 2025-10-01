@@ -18,6 +18,7 @@ export function useLeadTags() {
       const { data, error } = await supabase
         .from('lead_tags')
         .select('*')
+        .eq('user_id', user.id)
         .order('nome');
 
       if (error) throw error;
