@@ -10,6 +10,12 @@ import { useMultiPipeline } from './useMultiPipeline';
 
 const BATCH_SIZE = 50;
 
+// Valores válidos do enum origem_lead
+const VALID_ORIGENS = [
+  'Facebook', 'Instagram', 'Google', 'Indicação', 'Orgânico', 
+  'WhatsApp', 'LinkedIn', 'Evento', 'Outro'
+] as const;
+
 export function useBulkLeadImport() {
   const [progress, setProgress] = useState<ImportProgress>({
     total: 0,
@@ -46,7 +52,15 @@ export function useBulkLeadImport() {
 
         // Mapeamento de campos
         if (value !== undefined && value !== null && value !== '') {
-          (leadData as any)[map.targetField] = String(value).trim();
+          const trimmedValue = String(value).trim();
+          
+          // Validação especial para o campo origem
+          if (map.targetField === 'origem') {
+            const isValidOrigem = VALID_ORIGENS.includes(trimmedValue as any);
+            (leadData as any)[map.targetField] = isValidOrigem ? trimmedValue : 'Outro';
+          } else {
+            (leadData as any)[map.targetField] = trimmedValue;
+          }
         }
       });
 
