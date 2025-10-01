@@ -73,18 +73,18 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     if (!user) return null;
 
     try {
+      const now = new Date().toISOString();
+      
       const insertData = {
         lead_id: entryData.lead_id!,
         pipeline_id: entryData.pipeline_id!,
         etapa_atual_id: entryData.etapa_atual_id!,
         status_inscricao: 'Ativo',
-        data_entrada_etapa: new Date().toISOString(),
+        data_entrada_etapa: now,
         tempo_em_etapa_dias: 0,
         dias_em_atraso: 0,
         saude_etapa: 'Verde' as const,
         checklist_state: {},
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
         ...(entryData.nota_etapa && { nota_etapa: entryData.nota_etapa })
       };
 
@@ -92,7 +92,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         .from('lead_pipeline_entries')
         .insert([insertData])
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Erro ao criar entry:', error);
@@ -101,6 +101,11 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
           description: error.message,
           variant: "destructive"
         });
+        return null;
+      }
+
+      if (!data) {
+        console.error('Entry não foi criado');
         return null;
       }
 
@@ -140,7 +145,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         .update(updateData)
         .eq('id', entryId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Erro ao atualizar entry:', error);
@@ -215,7 +220,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         .from('lead_pipeline_entries')
         .select('lead_id')
         .eq('id', entryId)
-        .single();
+        .maybeSingle();
 
       if (fetchError || !originalEntry) {
         throw new Error('Entry original não encontrado');

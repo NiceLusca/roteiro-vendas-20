@@ -102,7 +102,7 @@ export function useSupabaseLeads() {
           .update(payload)
           .eq('id', leadData.id!)
           .select()
-          .single();
+          .maybeSingle();
         
         result = { data, error };
       } else {
@@ -110,7 +110,7 @@ export function useSupabaseLeads() {
           .from('leads')
           .insert(payload)
           .select()
-          .single();
+          .maybeSingle();
         
         result = { data, error };
       }
