@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,11 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Lead, OrigemLead, ObjecaoPrincipal, StatusGeral } from '@/types/crm';
 import { formatCurrency, normalizeWhatsApp, calculateLeadScore } from '@/utils/formatters';
-import { X, User, Phone, Mail, Building2, Target, Star, AlertCircle, Save } from 'lucide-react';
+import { X, User, Phone, Mail, Building2, Target, Star, AlertCircle, Save, Tag, Plus } from 'lucide-react';
+import { useLeadTags } from '@/hooks/useLeadTags';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface LeadFormProps {
   lead?: Partial<Lead>;
-  onSubmit: (lead: Partial<Lead>) => void;
+  onSubmit: (lead: Partial<Lead>, selectedTagIds?: string[]) => void;
   onCancel: () => void;
   loading?: boolean;
 }
@@ -29,6 +34,11 @@ const objecaoOptions: ObjecaoPrincipal[] = [
 const statusOptions: StatusGeral[] = ['Ativo', 'Cliente', 'Perdido', 'Inativo'];
 
 export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadFormProps) {
+  const { tags, loading: loadingTags, getLeadTags, createTag } = useLeadTags();
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [openTagSelector, setOpenTagSelector] = useState(false);
+  const [newTagName, setNewTagName] = useState('');
+
   const [formData, setFormData] = useState<Partial<Lead>>({
     nome: '',
     email: '',
@@ -49,6 +59,17 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Load existing tags for the lead
+  useEffect(() => {
+    const loadLeadTags = async () => {
+      if (lead?.id) {
+        const leadTags = await getLeadTags(lead.id);
+        setSelectedTagIds(leadTags.map(t => t.id));
+      }
+    };
+    loadLeadTags();
+  }, [lead?.id, getLeadTags]);
 
   // Calcular score em tempo real
   const { score, classification } = calculateLeadScore({
@@ -114,8 +135,28 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
       ...(lead?.id ? {} : { created_at: new Date() })
     };
 
-    onSubmit(finalData);
+    onSubmit(finalData, selectedTagIds);
   };
+
+  const handleToggleTag = (tagId: string) => {
+    setSelectedTagIds(prev => 
+      prev.includes(tagId) 
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId]
+    );
+  };
+
+  const handleCreateNewTag = async () => {
+    if (newTagName.trim()) {
+      const newTag = await createTag(newTagName.trim());
+      if (newTag) {
+        setSelectedTagIds(prev => [...prev, newTag.id]);
+        setNewTagName('');
+      }
+    }
+  };
+
+  const selectedTags = tags.filter(tag => selectedTagIds.includes(tag.id));
 
   const getScoreColor = (classification: string) => {
     switch (classification) {
@@ -370,6 +411,90 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
           </CardContent>
         </Card>
       </div>
+
+      {/* Tags */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Tag className="h-5 w-5" />
+            Tags
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {selectedTags.map(tag => (
+              <Badge 
+                key={tag.id}
+                variant="outline"
+                className="gap-2 cursor-pointer hover:bg-muted"
+                style={{ borderColor: tag.cor, color: tag.cor }}
+                onClick={() => handleToggleTag(tag.id)}
+              >
+                <div 
+                  className="w-2 h-2 rounded-full" 
+                  style={{ backgroundColor: tag.cor }}
+                />
+                {tag.nome}
+                <X className="h-3 w-3" />
+              </Badge>
+            ))}
+            {selectedTags.length === 0 && (
+              <p className="text-sm text-muted-foreground">Nenhuma tag selecionada</p>
+            )}
+          </div>
+
+          <Popover open={openTagSelector} onOpenChange={setOpenTagSelector}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full">
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Tags
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0" align="start">
+              <Command>
+                <CommandInput 
+                  placeholder="Buscar ou criar tag..." 
+                  value={newTagName}
+                  onValueChange={setNewTagName}
+                />
+                <CommandEmpty>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="w-full"
+                    onClick={handleCreateNewTag}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Criar "{newTagName}"
+                  </Button>
+                </CommandEmpty>
+                <CommandGroup className="max-h-[200px] overflow-auto">
+                  {tags.map(tag => (
+                    <CommandItem
+                      key={tag.id}
+                      onSelect={() => {
+                        handleToggleTag(tag.id);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedTagIds.includes(tag.id) ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <div 
+                        className="w-2 h-2 rounded-full mr-2" 
+                        style={{ backgroundColor: tag.cor }}
+                      />
+                      {tag.nome}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </CardContent>
+      </Card>
 
       {/* Observações */}
       <Card>

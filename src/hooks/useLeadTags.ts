@@ -86,6 +86,41 @@ export function useLeadTags() {
     }
   }, []);
 
+  const removeTagFromLead = useCallback(async (leadId: string, tagId: string) => {
+    try {
+      const { error } = await supabase
+        .from('lead_tag_assignments')
+        .delete()
+        .eq('lead_id', leadId)
+        .eq('tag_id', tagId);
+
+      if (error) throw error;
+    } catch (error: any) {
+      console.error('Error removing tag:', error);
+      throw error;
+    }
+  }, []);
+
+  const updateLeadTags = useCallback(async (leadId: string, newTagIds: string[]) => {
+    try {
+      // Remove all existing tags
+      const { error: deleteError } = await supabase
+        .from('lead_tag_assignments')
+        .delete()
+        .eq('lead_id', leadId);
+
+      if (deleteError) throw deleteError;
+
+      // Add new tags if any
+      if (newTagIds.length > 0) {
+        await assignTagsToLead(leadId, newTagIds);
+      }
+    } catch (error: any) {
+      console.error('Error updating tags:', error);
+      throw error;
+    }
+  }, [assignTagsToLead]);
+
   const getLeadTags = useCallback(async (leadId: string) => {
     try {
       const { data, error } = await supabase
@@ -112,6 +147,8 @@ export function useLeadTags() {
     loading,
     createTag,
     assignTagsToLead,
+    removeTagFromLead,
+    updateLeadTags,
     getLeadTags,
     refetch: fetchTags,
   };

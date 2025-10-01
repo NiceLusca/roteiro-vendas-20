@@ -10,6 +10,7 @@ import { LeadBulkUploadDialog } from '@/components/leads/LeadBulkUploadDialog';
 import { GlobalErrorBoundary } from '@/components/ui/GlobalErrorBoundary';
 import { SkeletonLeadsList } from '@/components/ui/skeleton-card';
 import { useOptimizedLeads } from '@/hooks/useOptimizedLeads';
+import { useLeadTags } from '@/hooks/useLeadTags';
 import { CRMProviderWrapper } from '@/contexts/CRMProviderWrapper';
 import { Lead } from '@/types/crm';
 import { formatWhatsApp, formatDateTime } from '@/utils/formatters';
@@ -62,6 +63,8 @@ function LeadsContent() {
     filterTag
   });
 
+  const { updateLeadTags } = useLeadTags();
+
   // Load tags for filter
   const [availableTags, setAvailableTags] = useState<any[]>([]);
   
@@ -104,11 +107,25 @@ function LeadsContent() {
     setShowForm(true);
   }, []);
 
-  const handleSubmitLead = useCallback(async (leadData: Partial<Lead>) => {
-    await saveLead(leadData);
+  const handleSubmitLead = useCallback(async (leadData: Partial<Lead>, selectedTagIds?: string[]) => {
+    saveLead(leadData);
+    
+    // Update tags if provided and we have a lead ID
+    if (selectedTagIds !== undefined) {
+      const leadId = leadData.id;
+      if (leadId) {
+        await updateLeadTags(leadId, selectedTagIds);
+      }
+    }
+    
     setShowForm(false);
     setEditingLead(undefined);
-  }, [saveLead]);
+    
+    // Wait a bit to ensure save is complete before refetching
+    setTimeout(() => {
+      refetch();
+    }, 500);
+  }, [saveLead, updateLeadTags, refetch]);
 
   const handleCancelForm = useCallback(() => {
     setShowForm(false);
