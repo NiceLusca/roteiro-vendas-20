@@ -49,27 +49,35 @@ export const formatWhatsApp = (phone: string): string => {
 
 // Normalizar WhatsApp para armazenamento
 export const normalizeWhatsApp = (phone: string): string => {
-  // Preserva o + se já existir
-  const hasPlus = phone.startsWith('+');
+  // Remove tudo que não for número
   const cleaned = phone.replace(/\D/g, '');
   
-  // Se tem 11 dígitos (número brasileiro), adiciona +55
+  // Se vazio, retorna vazio
+  if (cleaned.length === 0) return '';
+  
+  // Se tem 11 dígitos (número brasileiro sem código do país)
   if (cleaned.length === 11) {
     return `+55${cleaned}`;
   }
   
-  // Se já tem 13 dígitos e começa com 55, adiciona + se não tiver
-  if (cleaned.startsWith('55') && cleaned.length === 13) {
-    return hasPlus ? `+${cleaned}` : `+${cleaned}`;
-  }
-  
-  // Se já está no formato correto, mantém
-  if (hasPlus && cleaned.length === 13 && cleaned.startsWith('55')) {
+  // Se tem 13 dígitos e começa com 55 (já tem código do país)
+  if (cleaned.length === 13 && cleaned.startsWith('55')) {
     return `+${cleaned}`;
   }
   
-  // Para outros casos, retorna o número limpo com + se necessário
-  return hasPlus ? `+${cleaned}` : cleaned.length > 0 ? `+55${cleaned}` : phone;
+  // Se tem 12 dígitos e começa com 55, remove o primeiro 5 (provavelmente erro)
+  if (cleaned.length === 12 && cleaned.startsWith('55')) {
+    return `+${cleaned.slice(0, 13)}`;
+  }
+  
+  // Para qualquer outro caso com 10+ dígitos, tenta adicionar +55
+  if (cleaned.length >= 10) {
+    const lastDigits = cleaned.slice(-11);
+    return `+55${lastDigits}`;
+  }
+  
+  // Se for muito curto, retorna com +55 mesmo assim
+  return `+55${cleaned}`;
 };
 
 // Validar WhatsApp brasileiro

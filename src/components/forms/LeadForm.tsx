@@ -71,6 +71,14 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
     loadLeadTags();
   }, [lead?.id, getLeadTags]);
 
+  // Normalize WhatsApp when lead is loaded
+  useEffect(() => {
+    if (lead?.whatsapp && lead.whatsapp !== formData.whatsapp) {
+      const normalized = normalizeWhatsApp(lead.whatsapp);
+      setFormData(prev => ({ ...prev, whatsapp: normalized }));
+    }
+  }, [lead?.whatsapp]);
+
   // Calcular score em tempo real
   const { score, classification } = calculateLeadScore({
     ja_vendeu_no_digital: formData.ja_vendeu_no_digital || false,
