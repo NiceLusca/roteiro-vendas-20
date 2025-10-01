@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -17,11 +17,16 @@ const TAG_COLORS = [
 ];
 
 export function TagSelectionStep({ onComplete, onBack }: TagSelectionStepProps) {
-  const { tags, loading, createTag } = useLeadTags();
+  const { tags, loading, createTag, refetch } = useLeadTags();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [newTagName, setNewTagName] = useState('');
   const [selectedColor, setSelectedColor] = useState(TAG_COLORS[0]);
   const [creatingTag, setCreatingTag] = useState(false);
+
+  // Recarregar tags quando o componente é montado
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   const handleToggleTag = (tagId: string) => {
     setSelectedTags(prev =>
