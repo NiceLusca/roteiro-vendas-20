@@ -56,10 +56,7 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
           resultado_obs_ultima_sessao,
           user_id,
           created_at,
-          updated_at,
-          lead_tag_assignments(
-            lead_tags(id, nome, cor)
-          )
+          updated_at
         `, { count: 'exact' })
         .order('created_at', { ascending: false });
 
@@ -103,12 +100,36 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
 
       if (error) throw error;
 
+      // Fetch tags for all leads in a single query
+      const leadIds = data?.map(lead => lead.id) || [];
+      let tagsMap: Record<string, any[]> = {};
+      
+      if (leadIds.length > 0) {
+        const { data: tagAssignments } = await supabase
+          .from('lead_tag_assignments')
+          .select(`
+            lead_id,
+            lead_tags(id, nome, cor)
+          `)
+          .in('lead_id', leadIds);
+        
+        // Create a map of lead_id to tags
+        tagAssignments?.forEach(assignment => {
+          if (!tagsMap[assignment.lead_id]) {
+            tagsMap[assignment.lead_id] = [];
+          }
+          if (assignment.lead_tags) {
+            tagsMap[assignment.lead_id].push(assignment.lead_tags);
+          }
+        });
+      }
+
       return {
         leads: data?.map(lead => ({
           ...lead,
           created_at: new Date(lead.created_at),
           updated_at: new Date(lead.updated_at),
-          tags: lead.lead_tag_assignments?.map((assignment: any) => assignment.lead_tags).filter(Boolean) || []
+          tags: tagsMap[lead.id] || []
         })) || [],
         totalCount: count || 0,
         totalPages: Math.ceil((count || 0) / LEADS_PER_PAGE)
