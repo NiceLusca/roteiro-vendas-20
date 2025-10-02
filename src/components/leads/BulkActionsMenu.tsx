@@ -6,11 +6,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { CheckSquare, Tag, Trash2 } from 'lucide-react';
+import { CheckSquare, Tag, Trash2, GitBranch, TrendingUp } from 'lucide-react';
 
 interface BulkActionsMenuProps {
   leadCount: number;
   onTagAction: () => void;
+  onPipelineAction: () => void;
+  onScoreAction: () => void;
   onDeleteAction: () => void;
   disabled?: boolean;
 }
@@ -18,6 +20,8 @@ interface BulkActionsMenuProps {
 export function BulkActionsMenu({
   leadCount,
   onTagAction,
+  onPipelineAction,
+  onScoreAction,
   onDeleteAction,
   disabled = false
 }: BulkActionsMenuProps) {
@@ -35,6 +39,14 @@ export function BulkActionsMenu({
         <DropdownMenuItem onClick={onTagAction}>
           <Tag className="h-4 w-4 mr-2" />
           Gerenciar Tags
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onPipelineAction}>
+          <GitBranch className="h-4 w-4 mr-2" />
+          Inscrever em Pipeline
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onScoreAction}>
+          <TrendingUp className="h-4 w-4 mr-2" />
+          Ajustar Score
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem 

@@ -10,6 +10,8 @@ import { LeadBulkUploadDialog } from '@/components/leads/LeadBulkUploadDialog';
 import { BulkActionsMenu } from '@/components/leads/BulkActionsMenu';
 import { BulkTaggingDialog } from '@/components/leads/BulkTaggingDialog';
 import { BulkDeleteDialog } from '@/components/leads/BulkDeleteDialog';
+import { BulkPipelineInscriptionDialog } from '@/components/leads/BulkPipelineInscriptionDialog';
+import { BulkScoreAdjustmentDialog } from '@/components/leads/BulkScoreAdjustmentDialog';
 import { GlobalErrorBoundary } from '@/components/ui/GlobalErrorBoundary';
 import { SkeletonLeadsList } from '@/components/ui/skeleton-card';
 import { useOptimizedLeads } from '@/hooks/useOptimizedLeads';
@@ -46,6 +48,8 @@ function LeadsContent() {
   const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
   const [showBulkTagDialog, setShowBulkTagDialog] = useState(false);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [showBulkPipelineDialog, setShowBulkPipelineDialog] = useState(false);
+  const [showBulkScoreDialog, setShowBulkScoreDialog] = useState(false);
   const [filteredLeadIds, setFilteredLeadIds] = useState<string[]>([]);
   const [previewLeads, setPreviewLeads] = useState<Lead[]>([]);
   
@@ -80,6 +84,8 @@ function LeadsContent() {
     removeTagsFromLeads,
     replaceTagsOnLeads,
     deleteLeads,
+    bulkInscribePipeline,
+    bulkAdjustScore,
     isLoading: bulkActionsLoading,
     progress: bulkActionsProgress
   } = useBulkLeadActions();
@@ -291,6 +297,49 @@ function LeadsContent() {
     await refetch();
   }, [filteredLeadIds, deleteLeads, refetch]);
 
+  const handleOpenBulkPipelineDialog = useCallback(async () => {
+    try {
+      const ids = await getFilteredLeadIds({
+        searchTerm,
+        filterStatus,
+        filterScore,
+        filterTag
+      });
+      setFilteredLeadIds(ids);
+      setPreviewLeads(leads.slice(0, 10));
+      setShowBulkPipelineDialog(true);
+    } catch (error) {
+      console.error('Error getting filtered leads:', error);
+    }
+  }, [searchTerm, filterStatus, filterScore, filterTag, leads, getFilteredLeadIds]);
+
+  const handleOpenBulkScoreDialog = useCallback(async () => {
+    try {
+      const ids = await getFilteredLeadIds({
+        searchTerm,
+        filterStatus,
+        filterScore,
+        filterTag
+      });
+      setFilteredLeadIds(ids);
+      setShowBulkScoreDialog(true);
+    } catch (error) {
+      console.error('Error getting filtered leads:', error);
+    }
+  }, [searchTerm, filterStatus, filterScore, filterTag, getFilteredLeadIds]);
+
+  const handleBulkInscribePipeline = useCallback(async (pipelineId: string, stageId: string, skipExisting: boolean) => {
+    await bulkInscribePipeline(filteredLeadIds, pipelineId, stageId, skipExisting);
+    setShowBulkPipelineDialog(false);
+    await refetch();
+  }, [filteredLeadIds, bulkInscribePipeline, refetch]);
+
+  const handleBulkAdjustScore = useCallback(async (scoreAdjustment: number, mode: 'add' | 'set') => {
+    await bulkAdjustScore(filteredLeadIds, scoreAdjustment, mode);
+    setShowBulkScoreDialog(false);
+    await refetch();
+  }, [filteredLeadIds, bulkAdjustScore, refetch]);
+
   // Memoized style functions
   const getScoreBadgeClass = useCallback((classification: string) => {
     switch (classification) {
@@ -363,6 +412,8 @@ function LeadsContent() {
           <BulkActionsMenu
             leadCount={totalCount}
             onTagAction={handleOpenBulkTagDialog}
+            onPipelineAction={handleOpenBulkPipelineDialog}
+            onScoreAction={handleOpenBulkScoreDialog}
             onDeleteAction={handleOpenBulkDeleteDialog}
             disabled={bulkActionsLoading}
           />
@@ -665,6 +716,27 @@ function LeadsContent() {
         leadCount={filteredLeadIds.length}
         previewLeads={previewLeads}
         onConfirmDelete={handleBulkDelete}
+        isLoading={bulkActionsLoading}
+        progress={bulkActionsProgress}
+      />
+
+      {/* Dialog de Inscrição em Pipeline em Massa */}
+      <BulkPipelineInscriptionDialog
+        open={showBulkPipelineDialog}
+        onOpenChange={setShowBulkPipelineDialog}
+        leadIds={filteredLeadIds}
+        previewLeads={previewLeads}
+        onConfirm={handleBulkInscribePipeline}
+        isLoading={bulkActionsLoading}
+        progress={bulkActionsProgress}
+      />
+
+      {/* Dialog de Ajuste de Score em Massa */}
+      <BulkScoreAdjustmentDialog
+        open={showBulkScoreDialog}
+        onOpenChange={setShowBulkScoreDialog}
+        leadIds={filteredLeadIds}
+        onConfirm={handleBulkAdjustScore}
         isLoading={bulkActionsLoading}
         progress={bulkActionsProgress}
       />

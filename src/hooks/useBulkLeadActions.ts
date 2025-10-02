@@ -241,12 +241,153 @@ export function useBulkLeadActions() {
     }
   };
 
+  const bulkInscribePipeline = async (
+    leadIds: string[],
+    pipelineId: string,
+    stageId: string,
+    skipExisting: boolean = true
+  ) => {
+    setIsLoading(true);
+    setProgress(0);
+
+    try {
+      let filteredLeadIds = leadIds;
+
+      // Se skipExisting, buscar leads já inscritos
+      if (skipExisting) {
+        const { data: existing } = await supabase
+          .from('lead_pipeline_entries')
+          .select('lead_id')
+          .in('lead_id', leadIds)
+          .eq('pipeline_id', pipelineId)
+          .eq('status_inscricao', 'Ativo');
+
+        const existingLeadIds = new Set(existing?.map(e => e.lead_id) || []);
+        filteredLeadIds = leadIds.filter(id => !existingLeadIds.has(id));
+      }
+
+      if (filteredLeadIds.length === 0) {
+        toast({
+          title: 'Nenhuma inscrição necessária',
+          description: 'Todos os leads já estão inscritos neste pipeline.'
+        });
+        return;
+      }
+
+      setProgress(30);
+
+      // Criar inscrições em batch
+      const entries = filteredLeadIds.map(leadId => ({
+        lead_id: leadId,
+        pipeline_id: pipelineId,
+        etapa_atual_id: stageId,
+        status_inscricao: 'Ativo'
+      }));
+
+      const batchSize = 500;
+      for (let i = 0; i < entries.length; i += batchSize) {
+        const batch = entries.slice(i, i + batchSize);
+        const { error } = await supabase
+          .from('lead_pipeline_entries')
+          .insert(batch);
+
+        if (error) throw error;
+
+        setProgress(30 + Math.round(((i + batch.length) / entries.length) * 70));
+      }
+
+      toast({
+        title: 'Leads inscritos com sucesso',
+        description: `${filteredLeadIds.length} leads foram inscritos no pipeline.`
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao inscrever leads',
+        description: error.message,
+        variant: 'destructive'
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+      setProgress(0);
+    }
+  };
+
+  const bulkAdjustScore = async (
+    leadIds: string[],
+    scoreAdjustment: number,
+    mode: 'add' | 'set'
+  ) => {
+    setIsLoading(true);
+    setProgress(0);
+
+    try {
+      // Buscar scores atuais
+      const { data: leads, error: fetchError } = await supabase
+        .from('leads')
+        .select('id, lead_score')
+        .in('id', leadIds);
+
+      if (fetchError) throw fetchError;
+
+      setProgress(30);
+
+      // Calcular novos scores
+      const updates = leads?.map(lead => {
+        const currentScore = lead.lead_score || 0;
+        const newScore = mode === 'add' 
+          ? currentScore + scoreAdjustment
+          : scoreAdjustment;
+        
+        // Validar limites (0-100)
+        return {
+          id: lead.id,
+          lead_score: Math.max(0, Math.min(100, newScore))
+        };
+      }) || [];
+
+      // Update em batch
+      const batchSize = 500;
+      for (let i = 0; i < updates.length; i += batchSize) {
+        const batch = updates.slice(i, i + batchSize);
+        
+        for (const update of batch) {
+          const { error } = await supabase
+            .from('leads')
+            .update({ lead_score: update.lead_score })
+            .eq('id', update.id);
+
+          if (error) throw error;
+        }
+
+        setProgress(30 + Math.round(((i + batch.length) / updates.length) * 70));
+      }
+
+      toast({
+        title: 'Scores atualizados com sucesso',
+        description: `${leadIds.length} leads tiveram seus scores ajustados.`
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao ajustar scores',
+        description: error.message,
+        variant: 'destructive'
+      });
+      throw error;
+    } finally {
+      setIsLoading(false);
+      setProgress(0);
+    }
+  };
+
   return {
     getFilteredLeadIds,
     addTagsToLeads,
     removeTagsFromLeads,
     replaceTagsOnLeads,
     deleteLeads,
+    bulkInscribePipeline,
+    bulkAdjustScore,
     isLoading,
     progress
   };
