@@ -7,10 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LeadForm } from '@/components/forms/LeadForm';
 import { PipelineInscriptionDialog } from '@/components/pipeline/PipelineInscriptionDialog';
 import { LeadBulkUploadDialog } from '@/components/leads/LeadBulkUploadDialog';
+import { BulkActionsMenu } from '@/components/leads/BulkActionsMenu';
+import { BulkTaggingDialog } from '@/components/leads/BulkTaggingDialog';
+import { BulkDeleteDialog } from '@/components/leads/BulkDeleteDialog';
 import { GlobalErrorBoundary } from '@/components/ui/GlobalErrorBoundary';
 import { SkeletonLeadsList } from '@/components/ui/skeleton-card';
 import { useOptimizedLeads } from '@/hooks/useOptimizedLeads';
 import { useLeadTags } from '@/hooks/useLeadTags';
+import { useBulkLeadActions } from '@/hooks/useBulkLeadActions';
 import { CRMProviderWrapper } from '@/contexts/CRMProviderWrapper';
 import { Lead } from '@/types/crm';
 import { formatWhatsApp, formatDateTime } from '@/utils/formatters';
@@ -40,6 +44,10 @@ function LeadsContent() {
   const [showInscriptionDialog, setShowInscriptionDialog] = useState(false);
   const [selectedLeadForInscription, setSelectedLeadForInscription] = useState<Lead | null>(null);
   const [showBulkUploadDialog, setShowBulkUploadDialog] = useState(false);
+  const [showBulkTagDialog, setShowBulkTagDialog] = useState(false);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [filteredLeadIds, setFilteredLeadIds] = useState<string[]>([]);
+  const [previewLeads, setPreviewLeads] = useState<Lead[]>([]);
   
   // Lazy load pipelines and stages only when needed
   const [pipelines, setPipelines] = useState<any[]>([]);
@@ -64,6 +72,17 @@ function LeadsContent() {
   });
 
   const { updateLeadTags } = useLeadTags();
+
+  // Bulk actions hook
+  const {
+    getFilteredLeadIds,
+    addTagsToLeads,
+    removeTagsFromLeads,
+    replaceTagsOnLeads,
+    deleteLeads,
+    isLoading: bulkActionsLoading,
+    progress: bulkActionsProgress
+  } = useBulkLeadActions();
 
   // Load tags for filter
   const [availableTags, setAvailableTags] = useState<any[]>([]);
@@ -219,6 +238,59 @@ function LeadsContent() {
     }
   };
 
+  // Bulk actions handlers
+  const handleOpenBulkTagDialog = useCallback(async () => {
+    try {
+      const ids = await getFilteredLeadIds({
+        searchTerm,
+        filterStatus,
+        filterScore,
+        filterTag
+      });
+      setFilteredLeadIds(ids);
+      setPreviewLeads(leads.slice(0, 10));
+      setShowBulkTagDialog(true);
+    } catch (error) {
+      console.error('Error getting filtered leads:', error);
+    }
+  }, [searchTerm, filterStatus, filterScore, filterTag, leads, getFilteredLeadIds]);
+
+  const handleOpenBulkDeleteDialog = useCallback(async () => {
+    try {
+      const ids = await getFilteredLeadIds({
+        searchTerm,
+        filterStatus,
+        filterScore,
+        filterTag
+      });
+      setFilteredLeadIds(ids);
+      setPreviewLeads(leads.slice(0, 10));
+      setShowBulkDeleteDialog(true);
+    } catch (error) {
+      console.error('Error getting filtered leads:', error);
+    }
+  }, [searchTerm, filterStatus, filterScore, filterTag, leads, getFilteredLeadIds]);
+
+  const handleBulkAddTags = useCallback(async (tagIds: string[]) => {
+    await addTagsToLeads(filteredLeadIds, tagIds);
+    await refetch();
+  }, [filteredLeadIds, addTagsToLeads, refetch]);
+
+  const handleBulkRemoveTags = useCallback(async (tagIds: string[]) => {
+    await removeTagsFromLeads(filteredLeadIds, tagIds);
+    await refetch();
+  }, [filteredLeadIds, removeTagsFromLeads, refetch]);
+
+  const handleBulkReplaceTags = useCallback(async (tagIds: string[]) => {
+    await replaceTagsOnLeads(filteredLeadIds, tagIds);
+    await refetch();
+  }, [filteredLeadIds, replaceTagsOnLeads, refetch]);
+
+  const handleBulkDelete = useCallback(async () => {
+    await deleteLeads(filteredLeadIds);
+    await refetch();
+  }, [filteredLeadIds, deleteLeads, refetch]);
+
   // Memoized style functions
   const getScoreBadgeClass = useCallback((classification: string) => {
     switch (classification) {
@@ -288,6 +360,12 @@ function LeadsContent() {
           </p>
         </div>
         <div className="flex gap-2">
+          <BulkActionsMenu
+            leadCount={totalCount}
+            onTagAction={handleOpenBulkTagDialog}
+            onDeleteAction={handleOpenBulkDeleteDialog}
+            disabled={bulkActionsLoading}
+          />
           <Button variant="outline" onClick={() => setShowBulkUploadDialog(true)} className="gap-2">
             <Upload className="h-4 w-4" />
             Importar Planilha
@@ -565,6 +643,30 @@ function LeadsContent() {
           refetch();
           setCurrentPage(1);
         }}
+      />
+
+      {/* Dialog de Tagueamento em Massa */}
+      <BulkTaggingDialog
+        open={showBulkTagDialog}
+        onOpenChange={setShowBulkTagDialog}
+        leadCount={filteredLeadIds.length}
+        availableTags={availableTags}
+        onAddTags={handleBulkAddTags}
+        onRemoveTags={handleBulkRemoveTags}
+        onReplaceTags={handleBulkReplaceTags}
+        isLoading={bulkActionsLoading}
+        progress={bulkActionsProgress}
+      />
+
+      {/* Dialog de Exclusão em Massa */}
+      <BulkDeleteDialog
+        open={showBulkDeleteDialog}
+        onOpenChange={setShowBulkDeleteDialog}
+        leadCount={filteredLeadIds.length}
+        previewLeads={previewLeads}
+        onConfirmDelete={handleBulkDelete}
+        isLoading={bulkActionsLoading}
+        progress={bulkActionsProgress}
       />
     </div>
     </GlobalErrorBoundary>
