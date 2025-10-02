@@ -46,8 +46,7 @@ export function useSupabaseLeads() {
           created_at,
           updated_at
         `)
-        .order('created_at', { ascending: false })
-        .limit(100); // Limit results for better performance
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Erro ao buscar leads:', error);
