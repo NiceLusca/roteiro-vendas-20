@@ -55,7 +55,8 @@ export function ColumnMappingStep({ headers, sampleRows, onComplete, onBack }: C
         targetField = 'objecao_principal';
       } else if (normalized.includes('obs') || normalized.includes('notes')) {
         targetField = 'observacoes';
-      } else if (normalized.includes('valor') && (normalized.includes('lead') || normalized.includes('potencial'))) {
+      } else if (normalized === 'score' || normalized.includes('pontuação') || 
+                 (normalized.includes('valor') && (normalized.includes('lead') || normalized.includes('potencial')))) {
         targetField = 'valor_lead';
       }
 

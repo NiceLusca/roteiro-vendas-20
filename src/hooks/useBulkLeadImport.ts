@@ -212,6 +212,22 @@ export function useBulkLeadImport() {
             const leadId = createdLead.id;
             console.log('Lead criado com ID:', leadId);
 
+            // Se valor_lead foi importado, copiar para lead_score e calcular classificação
+            if (createdLead.valor_lead && createdLead.valor_lead > 0) {
+              const scoreValue = createdLead.valor_lead;
+              const classification = scoreValue >= 60 ? 'Alto' : scoreValue >= 30 ? 'Médio' : 'Baixo';
+              
+              await supabase
+                .from('leads')
+                .update({
+                  lead_score: scoreValue,
+                  lead_score_classification: classification
+                })
+                .eq('id', leadId);
+              
+              console.log('Score importado:', scoreValue, '- Classificação:', classification);
+            }
+
             // Atribuir tags
             if (selectedTags.length > 0) {
               try {
