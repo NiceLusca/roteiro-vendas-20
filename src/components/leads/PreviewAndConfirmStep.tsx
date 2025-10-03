@@ -87,13 +87,15 @@ export function PreviewAndConfirmStep({
         </div>
 
         {/* Tags */}
-        {selectedTagsData.length > 0 && (
-          <div className="border rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Tag className="h-4 w-4" />
-              <span className="font-medium text-sm">Tags</span>
+        <div className="border rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Tag className="h-4 w-4" />
+            <span className="font-medium text-sm">Tags</span>
+            {selectedTagsData.length > 0 && (
               <Badge variant="secondary">{selectedTagsData.length}</Badge>
-            </div>
+            )}
+          </div>
+          {selectedTagsData.length > 0 ? (
             <div className="flex gap-2 flex-wrap">
               {selectedTagsData.map((tag) => (
                 <Badge
@@ -104,17 +106,21 @@ export function PreviewAndConfirmStep({
                 </Badge>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-sm text-muted-foreground">Nenhuma tag selecionada</p>
+          )}
+        </div>
 
         {/* Pipelines */}
-        {selectedPipelines.length > 0 && (
-          <div className="border rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <GitBranch className="h-4 w-4" />
-              <span className="font-medium text-sm">Pipelines</span>
+        <div className="border rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <GitBranch className="h-4 w-4" />
+            <span className="font-medium text-sm">Pipelines</span>
+            {selectedPipelines.length > 0 && (
               <Badge variant="secondary">{selectedPipelines.length}</Badge>
-            </div>
+            )}
+          </div>
+          {selectedPipelines.length > 0 ? (
             <div className="space-y-2">
               {selectedPipelines.map((selected) => (
                 <div key={selected.pipelineId} className="text-sm">
@@ -123,8 +129,10 @@ export function PreviewAndConfirmStep({
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-sm text-muted-foreground">Nenhum pipeline selecionado</p>
+          )}
+        </div>
       </div>
 
       <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
