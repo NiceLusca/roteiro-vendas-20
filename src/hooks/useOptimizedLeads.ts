@@ -177,7 +177,6 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
       }
 
       if (isUpdate) {
-        console.log('[useOptimizedLeads] Update payload:', payload);
         const { data, error } = await supabase
           .from('leads')
           .update(payload)
@@ -188,7 +187,6 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
         if (error) throw error;
         return data;
       } else {
-        console.log('[useOptimizedLeads] Insert payload:', payload);
         const { data, error } = await supabase
           .from('leads')
           .insert(payload)

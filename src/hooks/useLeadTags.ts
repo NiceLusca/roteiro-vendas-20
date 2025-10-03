@@ -84,17 +84,12 @@ export function useLeadTags() {
         tag_id: tagId,
       }));
 
-      console.log('Atribuindo tags ao lead:', { leadId, tagIds: uniqueTagIds });
-
       const { error } = await supabase
         .from('lead_tag_assignments')
         .insert(assignments);
 
       if (error) throw error;
-
-      console.log('Tags atribuídas com sucesso:', { leadId, count: assignments.length });
     } catch (error: any) {
-      console.error('Error assigning tags:', error);
       throw error;
     }
   }, []);

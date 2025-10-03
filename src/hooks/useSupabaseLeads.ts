@@ -49,7 +49,6 @@ export function useSupabaseLeads() {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Erro ao buscar leads:', error);
         toast({
           title: "Erro ao carregar leads",
           description: error.message,
@@ -64,7 +63,7 @@ export function useSupabaseLeads() {
         updated_at: new Date(lead.updated_at)
       })) || []);
     } catch (error) {
-      console.error('Erro ao buscar leads:', error);
+      // Error already handled by toast
     } finally {
       setLoading(false);
     }
@@ -116,7 +115,6 @@ export function useSupabaseLeads() {
       }
 
       if (result.error) {
-        console.error('Erro ao salvar lead:', result.error);
         toast({
           title: `Erro ao ${isUpdate ? 'atualizar' : 'criar'} lead`,
           description: result.error.message,
@@ -135,7 +133,6 @@ export function useSupabaseLeads() {
       
       return result.data as Lead;
     } catch (error) {
-      console.error('Erro ao salvar lead:', error);
       return null;
     }
   };

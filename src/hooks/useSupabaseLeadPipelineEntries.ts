@@ -33,8 +33,6 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     try {
       setLoading(true);
       
-      console.log('[Pipeline Entries] Fetching entries for pipelineId:', targetPipelineId || pipelineId);
-      
       let query = supabase
         .from('lead_pipeline_entries')
         .select(`
@@ -70,8 +68,6 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         });
         return;
       }
-
-      console.log('[Pipeline Entries] Fetched entries:', data?.length || 0);
       
       setEntries((data || []).map(entry => ({
         ...entry,
@@ -309,10 +305,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
           schema: 'public',
           table: 'lead_pipeline_entries'
         },
-        (payload) => {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('Real-time update received:', payload);
-          }
+        () => {
           // Refetch entries when any change occurs
           fetchEntries();
         }

@@ -210,15 +210,12 @@ export function useBulkLeadImport() {
             }
 
             const leadId = createdLead.id;
-            console.log('Lead criado com ID:', leadId, 'valor_lead:', createdLead.valor_lead);
 
             // Atribuir tags
             if (selectedTags.length > 0) {
               try {
                 await assignTagsToLead(leadId, selectedTags);
-                console.log('Tags atribuídas ao lead:', leadId);
               } catch (tagError: any) {
-                console.error('Erro ao atribuir tags ao lead:', leadId, tagError);
                 // Continue even if tags fail - lead is already created
               }
             }
@@ -227,9 +224,7 @@ export function useBulkLeadImport() {
             for (const pipeline of selectedPipelines) {
               try {
                 await inscribePipeline(leadId, pipeline.pipelineId, pipeline.stageId);
-                console.log('Lead inscrito no pipeline:', leadId, pipeline.pipelineId);
               } catch (pipelineError: any) {
-                console.error('Erro ao inscrever lead no pipeline:', leadId, pipelineError);
                 // Continue even if pipeline inscription fails
               }
             }
