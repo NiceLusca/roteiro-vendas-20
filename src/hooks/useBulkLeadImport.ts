@@ -54,11 +54,29 @@ export function useBulkLeadImport() {
           if (value !== undefined && value !== null && value !== '') {
             const trimmedValue = String(value).trim();
             
+            // Boolean fields
+            if (map.targetField === 'ja_vendeu_no_digital') {
+              (leadData as any)[map.targetField] = 
+                trimmedValue.toLowerCase() === 'true' || 
+                trimmedValue.toLowerCase() === 'sim' ||
+                trimmedValue === '1';
+            }
+            // Integer fields
+            else if (['seguidores'].includes(map.targetField)) {
+              const num = parseInt(trimmedValue);
+              (leadData as any)[map.targetField] = isNaN(num) ? 0 : num;
+            }
+            // Numeric/decimal fields
+            else if (['faturamento_medio', 'meta_faturamento'].includes(map.targetField)) {
+              const num = parseFloat(trimmedValue.replace(',', '.'));
+              (leadData as any)[map.targetField] = isNaN(num) ? 0 : num;
+            }
             // Validação especial para o campo origem
-            if (map.targetField === 'origem') {
+            else if (map.targetField === 'origem') {
               const isValidOrigem = VALID_ORIGENS.includes(trimmedValue as any);
               (leadData as any)[map.targetField] = isValidOrigem ? trimmedValue : 'Outro';
-            } else if (map.targetField === 'valor_lead') {
+            } 
+            else if (map.targetField === 'valor_lead') {
               // Validar e limitar valor_lead entre 0 e 110
               const numValue = parseInt(trimmedValue);
               if (!isNaN(numValue)) {
@@ -66,7 +84,8 @@ export function useBulkLeadImport() {
               } else {
                 (leadData as any)[map.targetField] = 0;
               }
-            } else {
+            } 
+            else {
               (leadData as any)[map.targetField] = trimmedValue;
             }
           }
@@ -76,10 +95,27 @@ export function useBulkLeadImport() {
       Object.keys(defaultValues).forEach((key) => {
         if (!leadData[key as keyof Lead]) {
           const dv = defaultValues[key];
-          if (key === 'origem') {
+          
+          // Boolean fields
+          if (key === 'ja_vendeu_no_digital') {
+            const strValue = String(dv ?? '').trim().toLowerCase();
+            (leadData as any)[key] = strValue === 'true' || strValue === 'sim' || strValue === '1';
+          }
+          // Integer fields
+          else if (['seguidores'].includes(key)) {
+            const num = parseInt(String(dv));
+            (leadData as any)[key] = isNaN(num) ? 0 : num;
+          }
+          // Numeric/decimal fields
+          else if (['faturamento_medio', 'meta_faturamento'].includes(key)) {
+            const num = parseFloat(String(dv).replace(',', '.'));
+            (leadData as any)[key] = isNaN(num) ? 0 : num;
+          }
+          else if (key === 'origem') {
             const candidate = typeof dv === 'string' ? dv.trim() : String(dv ?? '');
             (leadData as any)[key] = VALID_ORIGENS.includes(candidate as any) ? candidate : 'Outro';
-          } else if (key === 'valor_lead') {
+          } 
+          else if (key === 'valor_lead') {
             // Validar e limitar valor_lead entre 0 e 110
             const numValue = parseInt(String(dv));
             if (!isNaN(numValue)) {
@@ -87,7 +123,8 @@ export function useBulkLeadImport() {
             } else {
               (leadData as any)[key] = 0;
             }
-          } else if (typeof dv === 'string') {
+          } 
+          else if (typeof dv === 'string') {
             (leadData as any)[key] = dv.trim();
           } else {
             (leadData as any)[key] = dv;
