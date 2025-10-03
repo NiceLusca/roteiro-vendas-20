@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContextSecure';
 import { useToast } from '@/hooks/use-toast';
 import { Lead } from '@/types/crm';
 import { ColumnMapping, ParsedLead, ImportResult, ImportProgress } from '@/types/bulkImport';
-import { useLeadData } from './useLeadData';
+import { useSupabaseLeads } from './useSupabaseLeads';
 import { useLeadTags } from './useLeadTags';
 import { useMultiPipeline } from './useMultiPipeline';
 
@@ -26,7 +26,7 @@ export function useBulkLeadImport() {
   const [importing, setImporting] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
-  const { saveLead } = useLeadData();
+  const { saveLead } = useSupabaseLeads();
   const { assignTagsToLead } = useLeadTags();
   const { inscribePipeline } = useMultiPipeline();
 
@@ -164,30 +164,37 @@ export function useBulkLeadImport() {
             if (sanitizedData.origem && !VALID_ORIGENS.includes(String(sanitizedData.origem) as any)) {
               sanitizedData.origem = 'Outro';
             }
-            await saveLead(sanitizedData);
+            
+            // Save lead and get the created lead object with ID
+            const createdLead = await saveLead(sanitizedData);
 
-            // Buscar o lead recém-criado (buscar por nome e whatsapp únicos)
-            const { data: createdLead, error: fetchError } = await supabase
-              .from('leads')
-              .select('id')
-              .eq('nome', parsed.data.nome)
-              .eq('whatsapp', parsed.data.whatsapp)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
-
-            if (fetchError || !createdLead) {
-              throw new Error('Erro ao recuperar lead criado');
+            if (!createdLead || !createdLead.id) {
+              throw new Error('Erro ao criar lead - ID não retornado');
             }
+
+            const leadId = createdLead.id;
+            console.log('Lead criado com ID:', leadId);
 
             // Atribuir tags
             if (selectedTags.length > 0) {
-              await assignTagsToLead(createdLead.id, selectedTags);
+              try {
+                await assignTagsToLead(leadId, selectedTags);
+                console.log('Tags atribuídas ao lead:', leadId);
+              } catch (tagError: any) {
+                console.error('Erro ao atribuir tags ao lead:', leadId, tagError);
+                // Continue even if tags fail - lead is already created
+              }
             }
 
             // Inscrever em pipelines
             for (const pipeline of selectedPipelines) {
-              await inscribePipeline(createdLead.id, pipeline.pipelineId, pipeline.stageId);
+              try {
+                await inscribePipeline(leadId, pipeline.pipelineId, pipeline.stageId);
+                console.log('Lead inscrito no pipeline:', leadId, pipeline.pipelineId);
+              } catch (pipelineError: any) {
+                console.error('Erro ao inscrever lead no pipeline:', leadId, pipelineError);
+                // Continue even if pipeline inscription fails
+              }
             }
 
             successCount++;

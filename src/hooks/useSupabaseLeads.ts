@@ -70,8 +70,8 @@ export function useSupabaseLeads() {
     }
   };
 
-  // Save lead
-  const saveLead = async (leadData: Partial<Lead> & { id?: string }) => {
+  // Save lead - Returns the created/updated lead with ID
+  const saveLead = async (leadData: Partial<Lead> & { id?: string }): Promise<Lead | null> => {
     if (!user) return null;
 
     try {
@@ -102,7 +102,7 @@ export function useSupabaseLeads() {
           .update(payload)
           .eq('id', leadData.id!)
           .select()
-          .maybeSingle();
+          .single();
         
         result = { data, error };
       } else {
@@ -110,7 +110,7 @@ export function useSupabaseLeads() {
           .from('leads')
           .insert(payload)
           .select()
-          .maybeSingle();
+          .single();
         
         result = { data, error };
       }
@@ -127,13 +127,13 @@ export function useSupabaseLeads() {
 
       toast({
         title: `Lead ${isUpdate ? 'atualizado' : 'criado'} com sucesso`,
-        description: `Lead ${result.data.nome} foi ${isUpdate ? 'atualizado' : 'criado'}`
+        description: `Lead ${result.data?.nome} foi ${isUpdate ? 'atualizado' : 'criado'}`
       });
 
       // Refresh leads
       fetchLeads();
       
-      return result.data;
+      return result.data as Lead;
     } catch (error) {
       console.error('Erro ao salvar lead:', error);
       return null;

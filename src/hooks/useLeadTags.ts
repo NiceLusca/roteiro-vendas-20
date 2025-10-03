@@ -70,16 +70,29 @@ export function useLeadTags() {
 
   const assignTagsToLead = useCallback(async (leadId: string, tagIds: string[]) => {
     try {
-      const assignments = tagIds.map(tagId => ({
+      // Validate input
+      if (!leadId || !tagIds || tagIds.length === 0) {
+        console.warn('assignTagsToLead: leadId ou tagIds inválidos', { leadId, tagIds });
+        return;
+      }
+
+      // Remove duplicates
+      const uniqueTagIds = [...new Set(tagIds)];
+
+      const assignments = uniqueTagIds.map(tagId => ({
         lead_id: leadId,
         tag_id: tagId,
       }));
+
+      console.log('Atribuindo tags ao lead:', { leadId, tagIds: uniqueTagIds });
 
       const { error } = await supabase
         .from('lead_tag_assignments')
         .insert(assignments);
 
       if (error) throw error;
+
+      console.log('Tags atribuídas com sucesso:', { leadId, count: assignments.length });
     } catch (error: any) {
       console.error('Error assigning tags:', error);
       throw error;
