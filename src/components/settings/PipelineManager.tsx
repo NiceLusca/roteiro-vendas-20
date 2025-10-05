@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight } from 'lucide-react';
@@ -301,19 +302,19 @@ export function PipelineManager() {
           </p>
         </div>
         
-        <Dialog open={isPipelineDialogOpen} onOpenChange={setIsPipelineDialogOpen}>
-          <DialogTrigger asChild>
+        <Sheet open={isPipelineDialogOpen} onOpenChange={setIsPipelineDialogOpen}>
+          <SheetTrigger asChild>
             <Button onClick={() => setSelectedPipeline(null)}>
               <Plus className="w-4 h-4 mr-2" />
               Novo Pipeline
             </Button>
-          </DialogTrigger>
-          <DialogContent data-size="full" className="max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[95vw] max-w-7xl overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>
                 {selectedPipeline ? 'Editar Pipeline' : 'Novo Pipeline'}
-              </DialogTitle>
-            </DialogHeader>
+              </SheetTitle>
+            </SheetHeader>
             <AdvancedPipelineForm
               pipeline={selectedPipeline}
               onSave={async (data) => {
@@ -328,8 +329,8 @@ export function PipelineManager() {
                 setSelectedPipeline(null);
               }}
             />
-          </DialogContent>
-        </Dialog>
+          </SheetContent>
+        </Sheet>
       </div>
 
       {/* Pipeline Cards */}
