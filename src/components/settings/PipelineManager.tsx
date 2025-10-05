@@ -308,7 +308,7 @@ export function PipelineManager() {
               Novo Pipeline
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-7xl w-[95vw] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {selectedPipeline ? 'Editar Pipeline' : 'Novo Pipeline'}
