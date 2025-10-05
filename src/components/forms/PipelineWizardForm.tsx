@@ -9,7 +9,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, ChevronRight, ChevronLeft, Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { Loader2, ChevronRight, ChevronLeft, Plus, Trash2, CheckCircle2, ChevronDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 // Schema para dados básicos do pipeline
 const basicDataSchema = z.object({
@@ -47,6 +48,7 @@ export function PipelineWizardForm({ onSave, onCancel }: PipelineWizardFormProps
   const [newStagePrazo, setNewStagePrazo] = React.useState(7);
   const [editingStageIndex, setEditingStageIndex] = React.useState<number | null>(null);
   const [newChecklistItem, setNewChecklistItem] = React.useState('');
+  const [advancedOpen, setAdvancedOpen] = React.useState(false);
 
   const form = useForm<BasicDataFormData>({
     resolver: zodResolver(basicDataSchema),
@@ -254,6 +256,117 @@ export function PipelineWizardForm({ onSave, onCancel }: PipelineWizardFormProps
                 )}
               />
             </div>
+
+            {/* Configurações Avançadas (Colapsável) */}
+            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="border-t pt-4">
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="flex items-center justify-between w-full p-0 hover:bg-transparent"
+                >
+                  <span className="text-sm font-semibold">Configurações Avançadas</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent className="space-y-4 pt-4">
+                {/* Segmento Alvo */}
+                <FormField
+                  control={form.control}
+                  name="segmento_alvo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Segmento Alvo</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Ex: Pequenas empresas de tecnologia..."
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        Defina o público-alvo deste pipeline
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Responsáveis */}
+                <FormField
+                  control={form.control}
+                  name="responsaveis"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Responsáveis</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Ex: João Silva, Maria Santos..."
+                          value={arrayToString(field.value)}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(value ? value.split(',').map(s => s.trim()).filter(Boolean) : []);
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        Liste os responsáveis (separados por vírgula)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Tags */}
+                <FormField
+                  control={form.control}
+                  name="tags"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tags</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Ex: vendas, consultoria..."
+                          value={arrayToString(field.value)}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            field.onChange(value ? value.split(',').map(s => s.trim()).filter(Boolean) : []);
+                          }}
+                        />
+                      </FormControl>
+                      <FormDescription className="text-xs">
+                        Tags para organizar (separadas por vírgula)
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Pipeline padrão para novos leads */}
+                <FormField
+                  control={form.control}
+                  name="default_para_novos_leads"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="font-medium">
+                          Pipeline Padrão para Novos Leads
+                        </FormLabel>
+                        <FormDescription className="text-xs">
+                          Novos leads serão automaticamente atribuídos
+                        </FormDescription>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </CollapsibleContent>
+            </Collapsible>
 
             <div className="flex justify-end gap-3 pt-4">
               <Button type="button" variant="outline" onClick={onCancel}>

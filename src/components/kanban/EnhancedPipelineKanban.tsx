@@ -31,7 +31,9 @@ import { useKanbanAppointments } from '@/hooks/useKanbanAppointments';
 import { usePipelineAppointmentIntegration } from '@/hooks/usePipelineAppointmentIntegration';
 import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
 import { SimplePipelineForm } from '@/components/forms/SimplePipelineForm';
+import { PipelineWizardForm } from '@/components/forms/PipelineWizardForm';
 import { LeadForm } from '@/components/forms/LeadForm';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { 
   DragDropResult,
   LeadPipelineEntry,
@@ -54,7 +56,7 @@ import {
 
 export function EnhancedPipelineKanban() {
   const navigate = useNavigate();
-  const { pipelines, loading: pipelinesLoading, savePipeline } = useSupabasePipelines();
+  const { pipelines, loading: pipelinesLoading, savePipeline, saveComplexPipeline } = useSupabasePipelines();
   const { leads } = useSupabaseLeads();
   
   if (process.env.NODE_ENV === 'development') {
@@ -63,6 +65,7 @@ export function EnhancedPipelineKanban() {
   
   const [selectedPipelineId, setSelectedPipelineId] = useState('');
   const [isNewPipelineDialogOpen, setIsNewPipelineDialogOpen] = useState(false);
+  const [isPipelineWizardDialogOpen, setIsPipelineWizardDialogOpen] = useState(false);
   const [successAnimation, setSuccessAnimation] = useState({
     show: false,
     message: ''
@@ -488,8 +491,12 @@ export function EnhancedPipelineKanban() {
     navigate('/settings');
   };
 
-  const handleCreatePipeline = () => {
+  const handleCreateSimplePipeline = () => {
     setIsNewPipelineDialogOpen(true);
+  };
+
+  const handleCreateComplexPipeline = () => {
+    setIsPipelineWizardDialogOpen(true);
   };
 
   const handleSaveNewPipeline = async (pipelineData: any) => {
@@ -497,16 +504,46 @@ export function EnhancedPipelineKanban() {
     setIsNewPipelineDialogOpen(false);
   };
 
+  const handleSaveComplexPipeline = async (complexData: any) => {
+    await saveComplexPipeline(complexData);
+    setIsPipelineWizardDialogOpen(false);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header com Seletor de Pipeline */}
-      <PipelineSelector
-        pipelines={pipelines as any}
-        selectedPipelineId={selectedPipelineId}
-        onPipelineChange={setSelectedPipelineId}
-        onConfigurePipeline={handleConfigurePipeline}
-        onCreatePipeline={handleCreatePipeline}
-      />
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <PipelineSelector
+            pipelines={pipelines as any}
+            selectedPipelineId={selectedPipelineId}
+            onPipelineChange={setSelectedPipelineId}
+            onConfigurePipeline={handleConfigurePipeline}
+          />
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Pipeline
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuItem onClick={handleCreateSimplePipeline}>
+              <div className="flex flex-col">
+                <span className="font-medium">Pipeline Simples</span>
+                <span className="text-xs text-muted-foreground">Criação rápida sem etapas</span>
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleCreateComplexPipeline}>
+              <div className="flex flex-col">
+                <span className="font-medium">Pipeline Completo</span>
+                <span className="text-xs text-muted-foreground">Com etapas e checklists</span>
+              </div>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       {/* Métricas Rápidas */}
       <div className="flex items-center gap-4">
@@ -727,22 +764,35 @@ export function EnhancedPipelineKanban() {
         }}
       />
 
-      {/* Dialog para Novo Pipeline */}
+      {/* Dialog para Pipeline Simples */}
       <Dialog open={isNewPipelineDialogOpen} onOpenChange={setIsNewPipelineDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" aria-describedby="create-pipeline-description">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" aria-describedby="create-simple-pipeline-description">
           <DialogHeader>
-            <DialogTitle>Criar Novo Pipeline</DialogTitle>
-            <div id="create-pipeline-description" className="sr-only">
-              Formulário para criação de um novo pipeline com configurações avançadas
+            <DialogTitle>Criar Pipeline Simples</DialogTitle>
+            <div id="create-simple-pipeline-description" className="sr-only">
+              Formulário para criação rápida de um novo pipeline
             </div>
           </DialogHeader>
           <SimplePipelineForm
             pipeline={null}
-            onSave={async (data) => {
-              await handleSaveNewPipeline(data);
-              setIsNewPipelineDialogOpen(false);
-            }}
+            onSave={handleSaveNewPipeline}
             onCancel={() => setIsNewPipelineDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para Pipeline Completo (Wizard) */}
+      <Dialog open={isPipelineWizardDialogOpen} onOpenChange={setIsPipelineWizardDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" aria-describedby="create-complex-pipeline-description">
+          <DialogHeader>
+            <DialogTitle>Criar Pipeline Completo</DialogTitle>
+            <div id="create-complex-pipeline-description" className="sr-only">
+              Assistente para criação de pipeline com etapas e checklists
+            </div>
+          </DialogHeader>
+          <PipelineWizardForm
+            onSave={handleSaveComplexPipeline}
+            onCancel={() => setIsPipelineWizardDialogOpen(false)}
           />
         </DialogContent>
       </Dialog>
