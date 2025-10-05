@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight, Zap, Layers } from 'lucide-react';
 import { SimplePipelineForm } from '@/components/forms/SimplePipelineForm';
+import { PipelineWizardForm } from '@/components/forms/PipelineWizardForm';
 import { StageForm } from '@/components/forms/StageForm';
 import { StageChecklistManager } from '@/components/settings/StageChecklistManager';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
@@ -43,6 +45,7 @@ interface StageData {
 
 export function PipelineManager() {
   const [isPipelineDialogOpen, setIsPipelineDialogOpen] = useState(false);
+  const [isWizardDialogOpen, setIsWizardDialogOpen] = useState(false);
   const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
   const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null);
   const [selectedStage, setSelectedStage] = useState<StageData | null>(null);
@@ -50,7 +53,7 @@ export function PipelineManager() {
   const [selectedStageForChecklist, setSelectedStageForChecklist] = useState<{ id: string; nome: string } | null>(null);
   const [pipelineToDelete, setPipelineToDelete] = useState<Pipeline | null>(null);
   
-  const { pipelines, loading, savePipeline, deletePipeline } = useSupabasePipelines();
+  const { pipelines, loading, savePipeline, saveComplexPipeline, deletePipeline } = useSupabasePipelines();
   const { stages, saveStage, deleteStage, refetch: refetchStages } = useSupabasePipelineStages();
   const { checklistItems, refetch: refetchChecklistItems } = useSupabaseChecklistItems();
   const { toast } = useToast();
@@ -301,17 +304,38 @@ export function PipelineManager() {
           </p>
         </div>
         
-        <Dialog open={isPipelineDialogOpen} onOpenChange={setIsPipelineDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setSelectedPipeline(null)}>
+        {/* Dropdown Menu para escolher tipo de pipeline */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button>
               <Plus className="w-4 h-4 mr-2" />
               Novo Pipeline
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => setIsPipelineDialogOpen(true)}>
+              <Zap className="w-4 h-4 mr-2" />
+              <div className="flex flex-col">
+                <span className="font-medium">Pipeline Simples</span>
+                <span className="text-xs text-muted-foreground">Configuração rápida básica</span>
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setIsWizardDialogOpen(true)}>
+              <Layers className="w-4 h-4 mr-2" />
+              <div className="flex flex-col">
+                <span className="font-medium">Pipeline Completo</span>
+                <span className="text-xs text-muted-foreground">Com etapas e checklists</span>
+              </div>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Dialog: Pipeline Simples */}
+        <Dialog open={isPipelineDialogOpen} onOpenChange={setIsPipelineDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {selectedPipeline ? 'Editar Pipeline' : 'Novo Pipeline'}
+                {selectedPipeline ? 'Editar Pipeline' : 'Criar Pipeline Simples'}
               </DialogTitle>
               <DialogDescription>
                 Configure as informações básicas do pipeline. As etapas e checklists podem ser adicionados depois.
@@ -330,6 +354,27 @@ export function PipelineManager() {
                 setIsPipelineDialogOpen(false);
                 setSelectedPipeline(null);
               }}
+            />
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog: Pipeline Wizard */}
+        <Dialog open={isWizardDialogOpen} onOpenChange={setIsWizardDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Criar Pipeline Completo</DialogTitle>
+              <DialogDescription>
+                Configure o pipeline com etapas e checklists em um processo guiado.
+              </DialogDescription>
+            </DialogHeader>
+            <PipelineWizardForm
+              onSave={async (data) => {
+                const result = await saveComplexPipeline(data);
+                if (result) {
+                  setIsWizardDialogOpen(false);
+                }
+              }}
+              onCancel={() => setIsWizardDialogOpen(false)}
             />
           </DialogContent>
         </Dialog>
