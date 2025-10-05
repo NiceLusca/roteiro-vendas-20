@@ -6,7 +6,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight, Zap, Layers } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight, Zap, Layers, Copy } from 'lucide-react';
 import { SimplePipelineForm } from '@/components/forms/SimplePipelineForm';
 import { PipelineWizardForm } from '@/components/forms/PipelineWizardForm';
 import { StageForm } from '@/components/forms/StageForm';
@@ -47,13 +48,16 @@ export function PipelineManager() {
   const [isPipelineDialogOpen, setIsPipelineDialogOpen] = useState(false);
   const [isWizardDialogOpen, setIsWizardDialogOpen] = useState(false);
   const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
+  const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null);
+  const [pipelineToDuplicate, setPipelineToDuplicate] = useState<Pipeline | null>(null);
+  const [duplicateName, setDuplicateName] = useState('');
   const [selectedStage, setSelectedStage] = useState<StageData | null>(null);
   const [expandedPipeline, setExpandedPipeline] = useState<string | null>(null);
   const [selectedStageForChecklist, setSelectedStageForChecklist] = useState<{ id: string; nome: string } | null>(null);
   const [pipelineToDelete, setPipelineToDelete] = useState<Pipeline | null>(null);
   
-  const { pipelines, loading, savePipeline, saveComplexPipeline, deletePipeline } = useSupabasePipelines();
+  const { pipelines, loading, savePipeline, saveComplexPipeline, duplicatePipeline, deletePipeline } = useSupabasePipelines();
   const { stages, saveStage, deleteStage, refetch: refetchStages } = useSupabasePipelineStages();
   const { checklistItems, refetch: refetchChecklistItems } = useSupabaseChecklistItems();
   const { toast } = useToast();
@@ -81,6 +85,34 @@ export function PipelineManager() {
       gerar_agendamento_auto: false
     } as StageData);
     setIsStageDialogOpen(true);
+  };
+
+  const handleDuplicatePipeline = (pipeline: Pipeline) => {
+    setPipelineToDuplicate(pipeline);
+    setDuplicateName(`${pipeline.nome} (Cópia)`);
+    setIsDuplicateDialogOpen(true);
+  };
+
+  const confirmDuplicate = async () => {
+    if (!pipelineToDuplicate || !duplicateName.trim()) {
+      toast({
+        title: "Nome inválido",
+        description: "Por favor, insira um nome para o pipeline duplicado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const success = await duplicatePipeline(pipelineToDuplicate.id, duplicateName.trim());
+    if (success) {
+      setIsDuplicateDialogOpen(false);
+      setPipelineToDuplicate(null);
+      setDuplicateName('');
+      toast({
+        title: "Pipeline duplicado!",
+        description: `O pipeline "${duplicateName}" foi criado com sucesso.`,
+      });
+    }
   };
 
   const getPipelineStages = (pipelineId: string) => {
@@ -137,6 +169,17 @@ export function PipelineManager() {
               >
                 <Edit className="w-3 h-3 mr-1" />
                 Editar
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDuplicatePipeline(pipeline);
+                }}
+              >
+                <Copy className="w-3 h-3 mr-1" />
+                Duplicar
               </Button>
               <Button 
                 size="sm" 
@@ -441,6 +484,52 @@ export function PipelineManager() {
               stageName={selectedStageForChecklist.nome}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Duplicar Pipeline */}
+      <Dialog open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Duplicar Pipeline</DialogTitle>
+            <DialogDescription>
+              Crie uma cópia completa do pipeline "{pipelineToDuplicate?.nome}" incluindo todas as etapas e checklists.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="duplicate-name" className="text-sm font-medium">
+                Nome do novo pipeline
+              </label>
+              <Input
+                id="duplicate-name"
+                value={duplicateName}
+                onChange={(e) => setDuplicateName(e.target.value)}
+                placeholder="Digite o nome..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    confirmDuplicate();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDuplicateDialogOpen(false);
+                setPipelineToDuplicate(null);
+                setDuplicateName('');
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={confirmDuplicate}>
+              <Copy className="w-4 h-4 mr-2" />
+              Duplicar Pipeline
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
