@@ -813,40 +813,9 @@ export function AdvancedPipelineForm({
       {/* Barra de progresso do wizard */}
       <div className="space-y-3">
         <div className="flex items-center justify-between text-sm">
-          <span>Progresso: Etapa {currentStepIndex + 1} de {wizardSteps.length}</span>
-          <span>{Math.round(progressPercentage)}% completo</span>
+          <span>Progresso: {Math.round(progressPercentage)}% completo</span>
         </div>
         <Progress value={progressPercentage} className="w-full" />
-        
-        {/* Steps indicator */}
-        <div className="flex items-center justify-between">
-          {wizardSteps.map((step, index) => (
-            <div
-              key={step.id}
-              className={`flex items-center gap-2 cursor-pointer transition-colors ${
-                index === currentStepIndex
-                  ? 'text-primary'
-                  : index < currentStepIndex
-                  ? 'text-muted-foreground'
-                  : 'text-muted-foreground/50'
-              }`}
-              onClick={() => setActiveTab(step.id)}
-            >
-              <div
-                className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium ${
-                  index === currentStepIndex
-                    ? 'bg-primary text-primary-foreground'
-                    : index < currentStepIndex
-                    ? 'bg-muted text-muted-foreground'
-                    : 'bg-muted/50 text-muted-foreground/50'
-                }`}
-              >
-                {step.icon}
-              </div>
-              <span className="hidden sm:block text-xs">{step.label}</span>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Validation errors */}
@@ -869,8 +838,7 @@ export function AdvancedPipelineForm({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              {/* Hidden tabs list - navigation is handled by the progress bar */}
-              <TabsList className="sr-only">
+              <TabsList className="grid w-full grid-cols-5 mb-6">
                 {wizardSteps.map(step => (
                   <TabsTrigger key={step.id} value={step.id}>
                     {step.label}
