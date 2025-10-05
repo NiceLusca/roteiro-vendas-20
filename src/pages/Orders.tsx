@@ -14,11 +14,12 @@ import { OrderForm } from '@/components/orders/OrderForm';
 import { RefundDialog } from '@/components/orders/RefundDialog';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { Order, StatusPedido } from '@/types/crm';
-
-type StatusOrder = StatusPedido;
+import { CRMProviderWrapper } from '@/contexts/CRMProviderWrapper';
 import { useLeadData } from '@/hooks/useLeadData';
 
-export default function Orders() {
+type StatusOrder = StatusPedido;
+
+function OrdersContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [closerFilter, setCloserFilter] = useState<string>('all');
@@ -349,5 +350,13 @@ export default function Orders() {
         />
       )}
     </div>
+  );
+}
+
+export default function Orders() {
+  return (
+    <CRMProviderWrapper>
+      <OrdersContent />
+    </CRMProviderWrapper>
   );
 }
