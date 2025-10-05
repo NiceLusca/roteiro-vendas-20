@@ -30,7 +30,7 @@ import { useValidatedAdvancement } from '@/hooks/useValidatedAdvancement';
 import { useKanbanAppointments } from '@/hooks/useKanbanAppointments';
 import { usePipelineAppointmentIntegration } from '@/hooks/usePipelineAppointmentIntegration';
 import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
-import { ImprovedPipelineForm } from '@/components/forms/ImprovedPipelineForm';
+import { SimplePipelineForm } from '@/components/forms/SimplePipelineForm';
 import { LeadForm } from '@/components/forms/LeadForm';
 import { 
   DragDropResult,
@@ -736,8 +736,12 @@ export function EnhancedPipelineKanban() {
               Formulário para criação de um novo pipeline com configurações avançadas
             </div>
           </DialogHeader>
-          <ImprovedPipelineForm
-            onSave={handleSaveNewPipeline}
+          <SimplePipelineForm
+            pipeline={null}
+            onSave={async (data) => {
+              await handleSaveNewPipeline(data);
+              setIsNewPipelineDialogOpen(false);
+            }}
             onCancel={() => setIsNewPipelineDialogOpen(false)}
           />
         </DialogContent>
