@@ -10,7 +10,7 @@ import { Users, Shield, Settings, Trash2 } from 'lucide-react';
 interface UserRole {
   id: string;
   user_id: string;
-  role: 'admin' | 'manager' | 'closer' | 'user';
+  role: 'admin' | 'moderator' | 'user';
   created_at: string;
 }
 
@@ -28,7 +28,7 @@ interface UserWithRoles {
 export function RoleManager() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRole, setSelectedRole] = useState<'admin' | 'manager' | 'closer' | 'user'>('user');
+  const [selectedRole, setSelectedRole] = useState<'admin' | 'moderator' | 'user'>('user');
   const { toast } = useToast();
 
   const fetchUsersAndRoles = async () => {
@@ -52,7 +52,7 @@ export function RoleManager() {
       // Combinar dados
       const usersWithRoles: UserWithRoles[] = (profiles || []).map(profile => ({
         profile,
-        roles: (roles || []).filter(role => role.user_id === profile.id)
+        roles: (roles || []).filter(role => role.user_id === profile.user_id)
       }));
 
       setUsers(usersWithRoles);
@@ -68,11 +68,11 @@ export function RoleManager() {
     }
   };
 
-  const assignRole = async (userId: string, role: 'admin' | 'manager' | 'closer' | 'user') => {
+  const assignRole = async (userId: string, role: 'admin' | 'moderator' | 'user') => {
     try {
       // Verificar se o usuário já tem esse role
       const existingRole = users
-        .find(u => u.profile.id === userId)
+        .find(u => u.profile.user_id === userId)
         ?.roles.find(r => r.role === role);
 
       if (existingRole) {
@@ -150,8 +150,7 @@ export function RoleManager() {
   const getRoleLabel = (role: string) => {
     const labels = {
       admin: 'Administrador',
-      manager: 'Gerente',
-      closer: 'Closer',
+      moderator: 'Moderador',
       user: 'Usuário'
     };
     return labels[role as keyof typeof labels] || role;
@@ -160,8 +159,7 @@ export function RoleManager() {
   const getRoleDescription = (role: string) => {
     const descriptions = {
       admin: 'Acesso total ao sistema, incluindo configurações de segurança',
-      manager: 'Acesso a relatórios e gestão de equipe',
-      closer: 'Acesso a funcionalidades de vendas e agendamentos',
+      moderator: 'Acesso a relatórios e gestão de equipe',
       user: 'Acesso básico às funcionalidades do sistema'
     };
     return descriptions[role as keyof typeof descriptions] || '';
@@ -210,12 +208,12 @@ export function RoleManager() {
           <CardHeader className="pb-3">
             <div className="flex items-center space-x-2">
               <Settings className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Gerente</CardTitle>
+              <CardTitle className="text-lg">Moderador</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              {getRoleDescription('manager')}
+              {getRoleDescription('moderator')}
             </p>
           </CardContent>
         </Card>
@@ -285,13 +283,12 @@ export function RoleManager() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="user">Usuário</SelectItem>
-                        <SelectItem value="closer">Closer</SelectItem>
-                        <SelectItem value="manager">Gerente</SelectItem>
+                        <SelectItem value="moderator">Moderador</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
                     <Button
-                      onClick={() => assignRole(user.profile.id, selectedRole)}
+                      onClick={() => assignRole(user.profile.user_id, selectedRole)}
                       size="sm"
                     >
                       Atribuir

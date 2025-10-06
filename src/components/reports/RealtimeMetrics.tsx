@@ -44,20 +44,20 @@ export function RealtimeMetrics() {
       const { data: activeDeals } = await supabase
         .from('deals')
         .select('id', { count: 'exact' })
-        .eq('status', 'Aberta');
+        .eq('status', 'aberto');
 
       // Fetch today's completed deals
       const { data: completedDeals } = await supabase
         .from('deals')
         .select('valor_proposto', { count: 'exact' })
-        .eq('status', 'Ganha')
+        .eq('status', 'ganho')
         .gte('updated_at', todayISO);
 
       // Calculate today's revenue
       const { data: revenueData } = await supabase
         .from('deals')
         .select('valor_proposto')
-        .eq('status', 'Ganha')
+        .eq('status', 'ganho')
         .gte('updated_at', todayISO);
 
       const revenueToday = revenueData?.reduce((sum, deal) => sum + (deal.valor_proposto || 0), 0) || 0;

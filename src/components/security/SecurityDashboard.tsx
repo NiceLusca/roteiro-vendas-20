@@ -83,17 +83,13 @@ export function SecurityDashboard() {
 
   const runSecurityScan = async () => {
     try {
-      const { error } = await supabase.rpc('detect_suspicious_activity', {
-        _ip_address: '0.0.0.0', // IP fictício para teste
-        _time_window: '15 minutes',
-        _max_attempts: 5
-      });
+      const { data, error } = await supabase.rpc('detect_suspicious_activity');
 
       if (error) throw error;
 
       toast({
         title: "Scan de Segurança",
-        description: "Verificação de atividades suspeitas concluída"
+        description: `Verificação concluída. Encontradas ${data?.length || 0} atividades suspeitas.`
       });
 
       fetchSecurityData();
