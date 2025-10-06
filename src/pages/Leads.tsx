@@ -59,6 +59,7 @@ function LeadsContent() {
   const [pipelines, setPipelines] = useState<any[]>([]);
   const [stages, setStages] = useState<any[]>([]);
   const [loadingPipelines, setLoadingPipelines] = useState(false);
+  const [pipelineEntries, setPipelineEntries] = useState<any[]>([]);
   
   // Use optimized hook with React Query
   const { 
@@ -181,8 +182,16 @@ function LeadsContent() {
           .select('id, pipeline_id, nome, ordem')
           .order('ordem');
         
+        // Load pipeline entries for this lead
+        const { data: entriesData } = await supabase
+          .from('lead_pipeline_entries')
+          .select('id, pipeline_id, lead_id, status_inscricao')
+          .eq('lead_id', lead.id)
+          .eq('status_inscricao', 'Ativo');
+        
         setPipelines(pipelinesData || []);
         setStages(stagesData || []);
+        setPipelineEntries(entriesData || []);
       } catch (error) {
         console.error('Error loading pipelines:', error);
       } finally {
@@ -705,7 +714,7 @@ function LeadsContent() {
           onOpenChange={setShowInscriptionDialog}
           leadId={selectedLeadForInscription.id}
           leadName={selectedLeadForInscription.nome}
-          activePipelineIds={[]}
+          activePipelineIds={pipelineEntries.map(e => e.pipeline_id)}
           pipelines={pipelines}
           stages={stages}
           onConfirm={handleInscriptionConfirm}

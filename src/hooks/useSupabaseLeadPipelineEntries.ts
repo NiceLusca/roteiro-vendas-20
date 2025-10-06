@@ -30,6 +30,14 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
   const fetchEntries = async (targetPipelineId?: string) => {
     if (!user) return;
     
+    // ✅ Guard: Não fazer query se não houver pipeline selecionado
+    const effectivePipelineId = targetPipelineId || pipelineId;
+    if (!effectivePipelineId) {
+      console.log('⚠️ Sem pipeline selecionado, pulando fetch');
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
       
