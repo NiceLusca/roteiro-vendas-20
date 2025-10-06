@@ -17,6 +17,7 @@ import { SkeletonLeadsList } from '@/components/ui/skeleton-card';
 import { useOptimizedLeads } from '@/hooks/useOptimizedLeads';
 import { useLeadTags } from '@/hooks/useLeadTags';
 import { useBulkLeadActions } from '@/hooks/useBulkLeadActions';
+import { useToast } from '@/hooks/use-toast';
 import { CRMProviderWrapper } from '@/contexts/CRMProviderWrapper';
 import { Lead } from '@/types/crm';
 import { formatWhatsApp, formatDateTime } from '@/utils/formatters';
@@ -36,6 +37,7 @@ import {
 } from 'lucide-react';
 
 function LeadsContent() {
+  const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
@@ -196,8 +198,6 @@ function LeadsContent() {
     
     try {
       const { supabase } = await import('@/integrations/supabase/client');
-      const { useToast } = await import('@/hooks/use-toast');
-      const { toast } = useToast();
       
       // Create pipeline entry
       const { error } = await supabase
@@ -225,6 +225,11 @@ function LeadsContent() {
       setSelectedLeadForInscription(null);
     } catch (error) {
       console.error('Error in handleInscriptionConfirm:', error);
+      toast({
+        title: 'Erro ao inscrever lead',
+        description: 'Ocorreu um erro ao inscrever o lead no pipeline',
+        variant: 'destructive'
+      });
     }
   };
 
