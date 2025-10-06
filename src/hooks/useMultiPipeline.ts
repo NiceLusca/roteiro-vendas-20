@@ -9,13 +9,18 @@ import { useToast } from '@/hooks/use-toast';
 export function useMultiPipeline() {
   const { logChange } = useAudit();
   const { toast } = useToast();
-  const { entries, createEntry, archiveEntry, transferToPipeline, updateEntry } = useSupabaseLeadPipelineEntries();
+  const { createEntry, archiveEntry, transferToPipeline, updateEntry } = useSupabaseLeadPipelineEntries(undefined);
 
-  const getLeadPipelineEntries = useCallback((leadId: string): any[] => {
-    return entries.filter(
-      (entry) => entry.lead_id === leadId && entry.status_inscricao === 'Ativo'
-    );
-  }, [entries]);
+  const getLeadPipelineEntries = useCallback(async (leadId: string): Promise<any[]> => {
+    const { supabase } = await import('@/integrations/supabase/client');
+    const { data } = await supabase
+      .from('lead_pipeline_entries')
+      .select('*')
+      .eq('lead_id', leadId)
+      .eq('status_inscricao', 'Ativo');
+    
+    return data || [];
+  }, []);
 
   const transferPipeline = useCallback(async (transfer: PipelineTransferRequest) => {
     const success = await transferToPipeline(
@@ -110,7 +115,14 @@ export function useMultiPipeline() {
   }, [archiveEntry, logChange]);
 
   const advanceStage = useCallback(async (entryId: string, newStageId: string) => {
-    const entry = entries.find((e) => e.id === entryId);
+    // Buscar entry atual para ter os dados antigos
+    const { supabase } = await import('@/integrations/supabase/client');
+    const { data: entry } = await supabase
+      .from('lead_pipeline_entries')
+      .select('etapa_atual_id, data_entrada_etapa')
+      .eq('id', entryId)
+      .single();
+    
     const oldStageId = entry?.etapa_atual_id;
 
     const success = await updateEntry(entryId, {
@@ -129,7 +141,7 @@ export function useMultiPipeline() {
         ator: 'Sistema (Avanço de Etapa)'
       });
     }
-  }, [entries, updateEntry, logChange]);
+  }, [updateEntry, logChange]);
 
   return {
     getLeadPipelineEntries,
