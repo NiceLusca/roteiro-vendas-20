@@ -9,7 +9,10 @@ import { useToast } from '@/hooks/use-toast';
 export function useMultiPipeline() {
   const { logChange } = useAudit();
   const { toast } = useToast();
-  const { createEntry, archiveEntry, transferToPipeline, updateEntry } = useSupabaseLeadPipelineEntries(undefined);
+  
+  // We don't need to subscribe to entries here, just use the CRUD functions
+  // Pass null to avoid triggering the realtime listener
+  const { createEntry, archiveEntry, transferToPipeline, updateEntry } = useSupabaseLeadPipelineEntries(null as any);
 
   const getLeadPipelineEntries = useCallback(async (leadId: string): Promise<any[]> => {
     const { supabase } = await import('@/integrations/supabase/client');
