@@ -21,7 +21,6 @@ const pipelineSchema = z.object({
   segmento_alvo: z.string().max(200, 'Segmento muito longo').optional(),
   responsaveis: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
-  default_para_novos_leads: z.boolean().default(false),
 });
 
 type PipelineFormData = z.infer<typeof pipelineSchema>;
@@ -36,7 +35,6 @@ interface Pipeline {
   segmento_alvo?: string;
   responsaveis?: string[];
   tags?: string[];
-  default_para_novos_leads?: boolean;
   user_id?: string;
   created_at?: string;
   updated_at?: string;
@@ -66,7 +64,6 @@ export function SimplePipelineForm({ pipeline, onSave, onCancel }: SimplePipelin
       segmento_alvo: pipeline?.segmento_alvo || '',
       responsaveis: pipeline?.responsaveis || [],
       tags: pipeline?.tags || [],
-      default_para_novos_leads: pipeline?.default_para_novos_leads || false,
     },
   });
 
@@ -286,31 +283,6 @@ export function SimplePipelineForm({ pipeline, onSave, onCancel }: SimplePipelin
                     Tags para organizar e filtrar pipelines (separadas por vírgula)
                   </FormDescription>
                   <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Pipeline padrão para novos leads */}
-            <FormField
-              control={form.control}
-              name="default_para_novos_leads"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      disabled={isSaving}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel className="font-medium">
-                      Pipeline Padrão para Novos Leads
-                    </FormLabel>
-                    <FormDescription className="text-xs">
-                      Novos leads serão automaticamente atribuídos a este pipeline
-                    </FormDescription>
-                  </div>
                 </FormItem>
               )}
             />

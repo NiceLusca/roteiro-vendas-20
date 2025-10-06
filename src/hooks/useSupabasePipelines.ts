@@ -16,7 +16,6 @@ interface Pipeline {
   segmento_alvo?: string;
   responsaveis?: string[];
   tags?: string[];
-  default_para_novos_leads?: boolean;
 }
 
 interface PipelineStage {

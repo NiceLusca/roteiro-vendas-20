@@ -22,7 +22,6 @@ const basicDataSchema = z.object({
   segmento_alvo: z.string().max(200, 'Segmento muito longo').optional(),
   responsaveis: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
-  default_para_novos_leads: z.boolean().default(false),
 });
 
 type BasicDataFormData = z.infer<typeof basicDataSchema>;
@@ -61,7 +60,6 @@ export function PipelineWizardForm({ onSave, onCancel }: PipelineWizardFormProps
       segmento_alvo: '',
       responsaveis: [],
       tags: [],
-      default_para_novos_leads: false,
     },
   });
 
@@ -338,30 +336,6 @@ export function PipelineWizardForm({ onSave, onCancel }: PipelineWizardFormProps
                         Tags para organizar (separadas por vírgula)
                       </FormDescription>
                       <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Pipeline padrão para novos leads */}
-                <FormField
-                  control={form.control}
-                  name="default_para_novos_leads"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel className="font-medium">
-                          Pipeline Padrão para Novos Leads
-                        </FormLabel>
-                        <FormDescription className="text-xs">
-                          Novos leads serão automaticamente atribuídos
-                        </FormDescription>
-                      </div>
                     </FormItem>
                   )}
                 />
