@@ -23,6 +23,7 @@ interface KanbanColumnProps {
   onOpenChecklist?: (entryId: string) => void;
   onRegressStage?: (entryId: string) => void;
   onTransferPipeline?: (leadId: string) => void;
+  onQuickEdit?: (leadId: string) => void;
 }
 
 export function KanbanColumn({
@@ -37,7 +38,8 @@ export function KanbanColumn({
   onRegisterInteraction,
   onOpenChecklist,
   onRegressStage,
-  onTransferPipeline
+  onTransferPipeline,
+  onQuickEdit
 }: KanbanColumnProps) {
   // Contar leads por saúde
   const healthCounts = entries.reduce((acc, entry) => {
@@ -174,6 +176,7 @@ export function KanbanColumn({
               onOpenChecklist={() => onOpenChecklist?.(entry.id)}
               onRegressStage={() => onRegressStage?.(entry.id)}
               onTransferPipeline={() => onTransferPipeline?.(entry.lead.id)}
+              onQuickEdit={() => onQuickEdit?.(entry.lead.id)}
             />
           ))
         )}

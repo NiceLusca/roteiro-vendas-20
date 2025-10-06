@@ -17,7 +17,8 @@ import {
   ArrowLeft,
   GitBranch,
   CalendarCheck,
-  CalendarX
+  CalendarX,
+  Edit
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -42,6 +43,7 @@ interface KanbanCardProps {
   onOpenChecklist?: () => void;
   onRegressStage?: () => void;
   onTransferPipeline?: () => void;
+  onQuickEdit?: () => void;
 }
 
 const KanbanCardComponent = ({
@@ -56,7 +58,8 @@ const KanbanCardComponent = ({
   onRegisterInteraction,
   onOpenChecklist,
   onRegressStage,
-  onTransferPipeline
+  onTransferPipeline,
+  onQuickEdit
 }: KanbanCardProps) => {
   // Early return if lead is not loaded yet
   if (!lead) {
@@ -249,6 +252,19 @@ const KanbanCardComponent = ({
           
           {/* Botões Secundários */}
           <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 w-9 p-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuickEdit?.();
+              }}
+              title="Editar lead"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+
             <Button
               size="sm"
               variant="outline"

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { LeadQuickEditDialog } from '@/components/leads/LeadQuickEditDialog';
 import { 
   Breadcrumb, 
   BreadcrumbItem, 
@@ -152,6 +153,12 @@ export function EnhancedPipelineKanban({ pipelineId: urlPipelineId }: EnhancedPi
     currentPipelineId?: string;
   }>({ open: false });
 
+  const [quickEditDialog, setQuickEditDialog] = useState<{
+    open: boolean;
+    lead?: Lead;
+    entry?: LeadPipelineEntry;
+  }>({ open: false });
+
   const { logChange } = useAudit();
   const { toast } = useToast();
   const selectedPipeline = pipelines.find(p => p.id === selectedPipelineId);
@@ -294,6 +301,63 @@ export function EnhancedPipelineKanban({ pipelineId: urlPipelineId }: EnhancedPi
         leadId,
         leadName: lead.nome,
         currentPipelineId: currentEntry.pipeline_id
+      });
+    }
+  };
+
+  const handleQuickEdit = (leadId: string) => {
+    const lead = leads.find(l => l.id === leadId);
+    const entry = allEntries.find(e => e?.lead_id === leadId);
+    if (lead && entry) {
+      setQuickEditDialog({ open: true, lead, entry: entry as unknown as LeadPipelineEntry });
+    }
+  };
+
+  const handleQuickEditSave = async (updates: { leadId: string; closer?: string; note?: string }) => {
+    try {
+      // Update lead closer if changed
+      if (updates.closer !== undefined) {
+        await saveLead({ id: updates.leadId, closer: updates.closer });
+        toast({
+          title: '✅ Closer atualizado',
+          description: 'Responsável do lead foi alterado com sucesso.'
+        });
+      }
+
+      // Add note to entry if provided
+      if (updates.note) {
+        const entry = allEntries.find(e => e?.lead_id === updates.leadId);
+        if (entry) {
+          const currentNote = entry.nota_etapa || '';
+          const newNote = currentNote 
+            ? `${currentNote}\n\n[${new Date().toLocaleString('pt-BR')}] ${updates.note}`
+            : `[${new Date().toLocaleString('pt-BR')}] ${updates.note}`;
+          
+          await updateEntry(entry.id, { nota_etapa: newNote });
+          
+          logChange({
+            entidade: 'LeadPipelineEntry',
+            entidade_id: entry.id,
+            alteracao: [
+              { campo: 'nota_etapa', de: currentNote, para: newNote }
+            ]
+          });
+
+          toast({
+            title: '✅ Nota adicionada',
+            description: 'Comentário foi registrado na etapa.'
+          });
+        }
+      }
+
+      await refetch();
+      setQuickEditDialog({ open: false });
+    } catch (error) {
+      console.error('Erro ao salvar edições:', error);
+      toast({
+        title: '❌ Erro ao salvar',
+        description: 'Não foi possível salvar as alterações.',
+        variant: 'destructive'
       });
     }
   };
@@ -585,7 +649,9 @@ export function EnhancedPipelineKanban({ pipelineId: urlPipelineId }: EnhancedPi
           <PipelineSelector
             pipelines={pipelines as any}
             selectedPipelineId={selectedPipelineId}
-            onPipelineChange={setSelectedPipelineId}
+            onPipelineChange={(pipelineId) => {
+              navigate(`/pipelines/${pipelineId}`);
+            }}
             onConfigurePipeline={handleConfigurePipeline}
           />
         </div>
@@ -733,6 +799,7 @@ export function EnhancedPipelineKanban({ pipelineId: urlPipelineId }: EnhancedPi
             onOpenChecklist={handleOpenChecklist}
             onRegressStage={handleRegressStage}
             onTransferPipeline={handleTransferPipeline}
+            onQuickEdit={handleQuickEdit}
           />
         ))}
       </div>
@@ -749,6 +816,26 @@ export function EnhancedPipelineKanban({ pipelineId: urlPipelineId }: EnhancedPi
           onConfirm={(transfer) => {
             transferPipeline(transfer);
             setTransferDialog({ open: false });
+          }}
+        />
+
+        {/* Quick Edit Dialog */}
+        <LeadQuickEditDialog
+          open={quickEditDialog.open}
+          onOpenChange={(open) => setQuickEditDialog({ open })}
+          lead={quickEditDialog.lead}
+          entry={quickEditDialog.entry}
+          closers={closers}
+          onSave={handleQuickEditSave}
+          onTransferPipeline={() => {
+            if (quickEditDialog.lead) {
+              handleTransferPipeline(quickEditDialog.lead.id);
+            }
+          }}
+          onViewFull={() => {
+            if (quickEditDialog.lead) {
+              handleViewLead(quickEditDialog.lead.id);
+            }
           }}
         />
 
