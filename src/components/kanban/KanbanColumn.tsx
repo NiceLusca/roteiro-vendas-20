@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-import { useDroppable } from '@dnd-kit/core';
+
 
 interface KanbanColumnProps {
   stage: PipelineStage;
@@ -39,9 +39,6 @@ export function KanbanColumn({
   onRegressStage,
   onTransferPipeline
 }: KanbanColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: stage.id,
-  });
   // Contar leads por saúde
   const healthCounts = entries.reduce((acc, entry) => {
     acc[entry.saude_etapa] = (acc[entry.saude_etapa] || 0) + 1;
@@ -62,13 +59,7 @@ export function KanbanColumn({
   });
 
   return (
-    <div 
-      ref={setNodeRef}
-      className={cn(
-        "flex flex-col h-full min-w-80 transition-all duration-300",
-        isDragAndDrop && isOver && "ring-2 ring-primary/50 bg-primary/5 scale-[1.02]"
-      )}
-    >
+    <div className="flex flex-col h-full min-w-80">
       {/* Header da Coluna */}
       <Card className={cn('mb-4', wipExceeded && 'border-warning')}>
         <CardHeader className="pb-3">

@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
-import { DragDropKanban } from './DragDropKanban';
+import { KanbanColumn } from './KanbanColumn';
 import { ChecklistDialog } from '@/components/pipeline/ChecklistDialog';
 import { DealLossDialog } from '@/components/deals/DealLossDialog';
 import { AuditLogsDialog } from '@/components/audit/AuditLogsDialog';
@@ -241,69 +241,6 @@ export function EnhancedPipelineKanban({ pipelineId: urlPipelineId }: EnhancedPi
     : 0;
 
   // Event Handlers
-  const handleDragEnd = async (result: DragDropResult) => {
-    if (!currentPipeline) return;
-
-    try {
-      const currentEntry = leadPipelineEntries.find(e => e.id === result.entryId);
-      if (!currentEntry) return;
-
-      const fromStage = pipelineStages.find(s => s.id === result.fromStage);
-      const toStage = pipelineStages.find(s => s.id === result.toStage);
-      
-      if (!fromStage || !toStage) return;
-
-      // Validate checklist before allowing drag
-      const stageChecklistItems = checklistItems.filter(item => item.stage_id === fromStage.id);
-      const validation = ChecklistValidation.validateStageAdvancement(currentEntry as any, stageChecklistItems);
-      
-      if (!validation.valid) {
-        toast({
-          title: '❌ Movimento bloqueado',
-          description: `${validation.errors[0]}\n\n💡 Dica: Complete o checklist da etapa "${fromStage.nome}" antes de avançar.`,
-          variant: 'destructive',
-          duration: 5000
-        });
-        return;
-      }
-
-      // Update the lead's stage
-      await updateEntry(result.entryId, {
-        etapa_atual_id: result.toStage,
-        data_entrada_etapa: new Date().toISOString(),
-        tempo_em_etapa_dias: 0,
-        dias_em_atraso: 0
-      });
-
-      // Log the movement
-      logChange({
-        entidade: 'LeadPipelineEntry',
-        entidade_id: result.entryId,
-        alteracao: [
-          { campo: 'etapa', de: fromStage.nome, para: toStage.nome }
-        ]
-      });
-
-      setSuccessAnimation({
-        show: true,
-        message: `Lead movido para "${toStage.nome}"`
-      });
-
-      toast({
-        title: '✅ Lead movido com sucesso',
-        description: `Lead foi movido de "${fromStage.nome}" para "${toStage.nome}"`
-      });
-
-      refetch();
-    } catch (error) {
-      console.error('Erro ao mover lead:', error);
-      toast({
-        title: 'Erro ao mover lead',
-        description: 'Não foi possível completar a movimentação.',
-        variant: 'destructive'
-      });
-    }
-  };
 
   const handleViewLead = (leadId: string) => {
     window.open(`/leads/${leadId}`, '_blank');
@@ -361,29 +298,86 @@ export function EnhancedPipelineKanban({ pipelineId: urlPipelineId }: EnhancedPi
     }
   };
 
-  const handleAdvanceStage = (entryId: string) => {
+  const handleAdvanceStage = async (entryId: string) => {
     const entry = allEntries.find(e => e?.id === entryId);
-    const stage = pipelineStages.find(s => s.id === entry?.etapa_atual_id);
+    const currentStage = pipelineStages.find(s => s.id === entry?.etapa_atual_id);
     
-    if (entry && stage) {
-      // Check checklist validation
-      const stageChecklistItems = checklistItems.filter(item => item.stage_id === stage.id);
-      const validation = ChecklistValidation.validateStageAdvancement(entry as any, stageChecklistItems);
+    if (!entry || !currentStage) return;
+
+    try {
+      // Find next stage
+      const currentIndex = pipelineStages.findIndex(s => s.id === currentStage.id);
+      const nextStage = pipelineStages[currentIndex + 1];
       
-      if (!validation.valid) {
+      if (!nextStage) {
         toast({
-          title: '🚫 Avanço bloqueado',
-          description: `${validation.errors[0]}\n\n📋 Complete todos os itens obrigatórios do checklist para prosseguir.`,
-          variant: 'destructive',
-          duration: 5000
+          title: '⚠️ Última etapa',
+          description: 'Este lead já está na última etapa do pipeline.',
+          variant: 'default'
         });
         return;
       }
 
-      setChecklistDialog({
-        open: true,
-        entry: entry as any,
-        stage
+      // Check for mandatory checklist items (soft validation)
+      const stageChecklistItems = checklistItems.filter(item => item.stage_id === currentStage.id && item.obrigatorio);
+      const missingItems = stageChecklistItems.filter(item => !entry.checklist_state?.[item.id]);
+      
+      if (missingItems.length > 0) {
+        toast({
+          title: '⚠️ Itens pendentes',
+          description: `Há ${missingItems.length} item(ns) obrigatório(s) pendente(s). Complete o checklist após o avanço.`,
+          variant: 'default',
+          duration: 4000
+        });
+      }
+
+      // MOVE FIRST (não bloqueia mais)
+      await updateEntry(entryId, {
+        etapa_atual_id: nextStage.id,
+        data_entrada_etapa: new Date().toISOString(),
+        tempo_em_etapa_dias: 0,
+        dias_em_atraso: 0
+      });
+
+      // Log the movement
+      logChange({
+        entidade: 'LeadPipelineEntry',
+        entidade_id: entryId,
+        alteracao: [
+          { campo: 'etapa', de: currentStage.nome, para: nextStage.nome }
+        ]
+      });
+
+      setSuccessAnimation({
+        show: true,
+        message: `✅ Lead avançou para "${nextStage.nome}"`
+      });
+
+      toast({
+        title: '✅ Lead avançou!',
+        description: `Movido de "${currentStage.nome}" para "${nextStage.nome}"`,
+        duration: 3000
+      });
+
+      await refetch();
+
+      // THEN open checklist if there are items (optional review)
+      const nextStageChecklistItems = checklistItems.filter(item => item.stage_id === nextStage.id);
+      if (nextStageChecklistItems.length > 0) {
+        setTimeout(() => {
+          setChecklistDialog({
+            open: true,
+            entry: { ...entry, etapa_atual_id: nextStage.id } as any,
+            stage: nextStage
+          });
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Erro ao avançar lead:', error);
+      toast({
+        title: '❌ Erro ao avançar',
+        description: 'Não foi possível avançar o lead. Tente novamente.',
+        variant: 'destructive'
       });
     }
   };
@@ -723,19 +717,25 @@ export function EnhancedPipelineKanban({ pipelineId: urlPipelineId }: EnhancedPi
         </CardContent>
       </Card>
 
-      {/* Kanban com Drag & Drop */}
-      <DragDropKanban
-        stageEntries={stageEntries as any}
-        onDragEnd={handleDragEnd}
-        onAddLead={handleAddLead}
-        onViewLead={handleViewLead}
-        onCreateAppointment={handleCreateAppointment}
+      {/* Kanban Board - Simplified */}
+      <div className="flex gap-6 overflow-x-auto pb-6">
+        {stageEntries.map(({ stage, entries, wipExceeded }) => (
+          <KanbanColumn
+            key={stage.id}
+            stage={stage}
+            entries={entries as any}
+            wipExceeded={wipExceeded}
+            onAddLead={handleAddLead}
+            onViewLead={handleViewLead}
+            onCreateAppointment={handleCreateAppointment}
             onAdvanceStage={handleAdvanceStage}
             onRegisterInteraction={handleRegisterInteraction}
             onOpenChecklist={handleOpenChecklist}
             onRegressStage={handleRegressStage}
             onTransferPipeline={handleTransferPipeline}
-      />
+          />
+        ))}
+      </div>
 
         {/* Pipeline Transfer Dialog */}
         <PipelineTransferDialog

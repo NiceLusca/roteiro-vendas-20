@@ -17,12 +17,9 @@ import {
   ArrowLeft,
   GitBranch,
   CalendarCheck,
-  CalendarX,
-  GripVertical
+  CalendarX
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
 interface AppointmentInfo {
   id: string;
@@ -74,21 +71,6 @@ const KanbanCardComponent = ({
       </Card>
     );
   }
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging: dragActive,
-  } = useSortable({ id: entry.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    contain: 'layout style paint' as const,
-    willChange: dragActive ? 'transform' : 'auto',
-  };
   const getScoreBadgeClass = (classification: string) => {
     switch (classification) {
       case 'Alto':
@@ -113,31 +95,19 @@ const KanbanCardComponent = ({
 
   return (
     <Card 
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      className={cn(
-        "kanban-card group",
-        !dragActive && !isDragging && "transition-[box-shadow,transform] duration-200 hover:shadow-md hover:-translate-y-1",
-        (dragActive || isDragging) && "opacity-50 shadow-lg z-50 ring-2 ring-primary/50"
-      )}
+      className="kanban-card transition-[box-shadow] duration-200 hover:shadow-md"
+      onClick={() => onViewLead?.()}
     >
       <CardContent className="p-4">
-        {/* Header do Card - Drag Handle */}
-        <div 
-          className="flex items-start justify-between mb-3 cursor-grab active:cursor-grabbing -mx-1 px-1 py-1 rounded hover:bg-accent/50 transition-colors"
-          {...listeners}
-        >
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-sm text-foreground truncate">
-                {lead.nome}
-              </h4>
-              <p className="text-xs text-muted-foreground">
-                {lead.segmento} • {lead.origem}
-              </p>
-            </div>
+        {/* Header do Card */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1 min-w-0">
+            <h4 className="font-semibold text-sm text-foreground truncate">
+              {lead.nome}
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              {lead.segmento} • {lead.origem}
+            </p>
           </div>
           <div className="flex items-center gap-1 ml-2 flex-shrink-0">
             <Badge className={getScoreBadgeClass(lead.lead_score_classification)}>
@@ -261,110 +231,100 @@ const KanbanCardComponent = ({
           </div>
         )}
 
-        {/* Ações Rápidas */}
-        <div className="flex flex-wrap items-center gap-1 invisible group-hover:visible transition-[visibility] duration-150">
+        {/* Ações Rápidas - Sempre visíveis e maiores */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
+          {/* Botão Principal: Avançar */}
           <Button
             size="sm"
-            variant="ghost"
-            className="text-xs h-6 px-2 hover:bg-primary/10 hover:text-primary transition-colors duration-150"
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewLead?.();
-            }}
-          >
-            Ver Lead
-          </Button>
-          
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 w-6 p-0 hover:bg-accent/80 transition-colors duration-150"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenChecklist?.();
-            }}
-            title="Abrir checklist da etapa"
-          >
-            <CheckSquare className="h-3 w-3" />
-          </Button>
-          
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 w-6 p-0 hover:bg-orange-100 hover:text-orange-600 transition-colors duration-150"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRegressStage?.();
-            }}
-            title="Regredir para etapa anterior"
-          >
-            <ArrowLeft className="h-3 w-3" />
-          </Button>
-          
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 w-6 p-0 hover:bg-success/20 hover:text-success transition-colors duration-150"
+            variant="default"
+            className="flex-1 h-9 bg-success hover:bg-success/90 text-white font-medium"
             onClick={(e) => {
               e.stopPropagation();
               onAdvanceStage?.();
             }}
-            title="Avançar para próxima etapa"
           >
-            <ArrowRight className="h-3 w-3" />
+            <ArrowRight className="h-4 w-4 mr-1" />
+            Avançar
           </Button>
           
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 w-6 p-0 hover:bg-blue-100 hover:text-blue-600 transition-colors duration-150"
-            onClick={(e) => {
-              e.stopPropagation();
-              onTransferPipeline?.();
-            }}
-            title="Transferir para outro pipeline"
-          >
-            <GitBranch className="h-3 w-3" />
-          </Button>
-          
-          {(stage.gerar_agendamento_auto || stage.tipo_agendamento) && (
+          {/* Botões Secundários */}
+          <div className="flex items-center gap-1">
             <Button
               size="sm"
-              variant="ghost"
-              className={cn(
-                "h-6 w-6 p-0 transition-colors duration-150",
-                nextAppointment 
-                  ? "hover:bg-success/20 hover:text-success" 
-                  : "text-orange-600 hover:bg-orange-100 hover:text-orange-700"
-              )}
+              variant="outline"
+              className="h-9 w-9 p-0"
               onClick={(e) => {
                 e.stopPropagation();
-                onCreateAppointment?.();
+                onOpenChecklist?.();
               }}
-              title={nextAppointment ? "Ver/Editar agendamento existente" : "Criar novo agendamento"}
+              title="Checklist"
             >
-              {nextAppointment ? (
-                <CalendarCheck className="h-3 w-3" />
-              ) : (
-                <Calendar className="h-3 w-3" />
-              )}
+              <CheckSquare className="h-4 w-4" />
             </Button>
-          )}
-          
-          {stage.proximo_passo_tipo === 'Mensagem' && (
+            
             <Button
               size="sm"
-              variant="ghost"
-              className="h-6 w-6 p-0 hover:bg-blue-100 hover:text-blue-600 transition-colors duration-150"
+              variant="outline"
+              className="h-9 w-9 p-0"
               onClick={(e) => {
                 e.stopPropagation();
-                onRegisterInteraction?.();
+                onRegressStage?.();
               }}
-              title="Registrar nova interação com o lead"
+              title="Voltar etapa"
             >
-              <MessageCircle className="h-3 w-3" />
+              <ArrowLeft className="h-4 w-4" />
             </Button>
-          )}
+            
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 w-9 p-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onTransferPipeline?.();
+              }}
+              title="Transferir pipeline"
+            >
+              <GitBranch className="h-4 w-4" />
+            </Button>
+            
+            {(stage.gerar_agendamento_auto || stage.tipo_agendamento) && (
+              <Button
+                size="sm"
+                variant="outline"
+                className={cn(
+                  "h-9 w-9 p-0",
+                  nextAppointment && "border-success text-success"
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCreateAppointment?.();
+                }}
+                title={nextAppointment ? "Ver agendamento" : "Criar agendamento"}
+              >
+                {nextAppointment ? (
+                  <CalendarCheck className="h-4 w-4" />
+                ) : (
+                  <Calendar className="h-4 w-4" />
+                )}
+              </Button>
+            )}
+            
+            {stage.proximo_passo_tipo === 'Mensagem' && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 w-9 p-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRegisterInteraction?.();
+                }}
+                title="Registrar interação"
+              >
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
