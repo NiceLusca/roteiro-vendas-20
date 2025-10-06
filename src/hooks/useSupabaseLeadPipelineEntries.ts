@@ -84,21 +84,39 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
   const createEntry = async (entryData: Partial<LeadPipelineEntry>) => {
     if (!user) return null;
 
+    // Validar campos obrigatórios
+    if (!entryData.lead_id || !entryData.pipeline_id || !entryData.etapa_atual_id) {
+      console.error('❌ Campos obrigatórios faltando:', {
+        lead_id: entryData.lead_id,
+        pipeline_id: entryData.pipeline_id,
+        etapa_atual_id: entryData.etapa_atual_id
+      });
+      toast({
+        title: "Erro de validação",
+        description: "Campos obrigatórios não fornecidos para criar entrada no pipeline",
+        variant: "destructive"
+      });
+      return null;
+    }
+
     try {
-      const now = new Date().toISOString();
+      const now = new Date();
+      const isoTimestamp = now.toISOString();
       
       const insertData = {
-        lead_id: entryData.lead_id!,
-        pipeline_id: entryData.pipeline_id!,
-        etapa_atual_id: entryData.etapa_atual_id!,
+        lead_id: entryData.lead_id,
+        pipeline_id: entryData.pipeline_id,
+        etapa_atual_id: entryData.etapa_atual_id,
         status_inscricao: 'Ativo',
-        data_entrada_etapa: now,
+        data_entrada_etapa: isoTimestamp,
         tempo_em_etapa_dias: 0,
         dias_em_atraso: 0,
         saude_etapa: 'Verde' as const,
         checklist_state: {},
         ...(entryData.nota_etapa && { nota_etapa: entryData.nota_etapa })
       };
+
+      console.log('📝 Criando entry no pipeline:', insertData);
 
       const { data, error } = await supabase
         .from('lead_pipeline_entries')
@@ -107,7 +125,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         .maybeSingle();
 
       if (error) {
-        console.error('Erro ao criar entry:', error);
+        console.error('❌ Erro ao criar entry:', error);
         toast({
           title: "Erro ao inscrever lead",
           description: error.message,
@@ -117,9 +135,11 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
       }
 
       if (!data) {
-        console.error('Entry não foi criado');
+        console.error('❌ Entry não foi criado - sem dados retornados');
         return null;
       }
+
+      console.log('✅ Entry criado com sucesso:', data.id);
 
       toast({
         title: "Lead inscrito no pipeline",
@@ -129,7 +149,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
       fetchEntries();
       return data;
     } catch (error) {
-      console.error('Erro ao criar entry:', error);
+      console.error('❌ Exceção ao criar entry:', error);
       return null;
     }
   };

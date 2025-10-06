@@ -397,18 +397,44 @@ export function EnhancedPipelineKanban() {
   };
 
   const handleAddLeadSubmit = async (leadData: Partial<Lead>) => {
-    if (!addLeadDialog.stageId) return;
+    // Validação crítica antes de iniciar
+    if (!addLeadDialog.stageId) {
+      console.error('❌ stageId está vazio!');
+      toast({
+        title: 'Erro de configuração',
+        description: 'Etapa não identificada. Por favor, tente novamente.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    console.log('📍 Iniciando criação de lead:', {
+      leadData,
+      stageId: addLeadDialog.stageId,
+      stageName: addLeadDialog.stageName,
+      pipelineId: selectedPipelineId
+    });
 
     try {
       // Salvar o lead e obter o ID retornado
       const createdLead = await saveLead(leadData);
       
-      if (!createdLead) {
-        throw new Error('Falha ao criar o lead');
+      if (!createdLead || !createdLead.id) {
+        throw new Error('Lead criado mas sem ID retornado');
       }
 
-      console.log('✅ Lead criado:', createdLead);
+      console.log('✅ Lead criado com ID:', createdLead.id);
       
+      // Validar IDs antes de inscrever
+      if (!createdLead.id || !selectedPipelineId || !addLeadDialog.stageId) {
+        console.error('❌ IDs inválidos para inscrição:', {
+          leadId: createdLead.id,
+          pipelineId: selectedPipelineId,
+          stageId: addLeadDialog.stageId
+        });
+        throw new Error('IDs inválidos para inscrição no pipeline');
+      }
+
       // Inscrever o lead no pipeline com a etapa selecionada
       await inscribePipeline(createdLead.id, selectedPipelineId, addLeadDialog.stageId);
       
@@ -419,7 +445,7 @@ export function EnhancedPipelineKanban() {
       
       toast({
         title: '✅ Lead criado com sucesso',
-        description: `Lead adicionado na etapa "${addLeadDialog.stageName}"`
+        description: `Lead foi criado e adicionado à etapa "${addLeadDialog.stageName}"`
       });
       
       setSuccessAnimation({
@@ -432,7 +458,7 @@ export function EnhancedPipelineKanban() {
       console.error('❌ Erro ao criar lead:', error);
       toast({
         title: 'Erro',
-        description: 'Não foi possível criar o lead. Tente novamente.',
+        description: error instanceof Error ? error.message : 'Não foi possível criar o lead. Tente novamente.',
         variant: 'destructive'
       });
     }
