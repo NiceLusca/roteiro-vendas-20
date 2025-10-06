@@ -7,7 +7,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight, Zap, Layers, Copy } from 'lucide-react';
+import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight, Zap, Layers, Copy, GripVertical } from 'lucide-react';
+import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { SimplePipelineForm } from '@/components/forms/SimplePipelineForm';
 import { PipelineWizardForm } from '@/components/forms/PipelineWizardForm';
 import { StageForm } from '@/components/forms/StageForm';
@@ -121,6 +124,133 @@ export function PipelineManager() {
 
   const getStageChecklistCount = (stageId: string) => {
     return checklistItems.filter(item => item.stage_id === stageId).length;
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent, pipelineId: string) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) return;
+
+    const pipelineStages = getPipelineStages(pipelineId);
+    const oldIndex = pipelineStages.findIndex((s) => s.id === active.id);
+    const newIndex = pipelineStages.findIndex((s) => s.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    // Criar nova ordem
+    const reorderedStages = [...pipelineStages];
+    const [movedStage] = reorderedStages.splice(oldIndex, 1);
+    reorderedStages.splice(newIndex, 0, movedStage);
+
+    // Atualizar ordem de todas as etapas
+    const updates = reorderedStages.map((stage, index) => ({
+      ...stage,
+      ordem: index + 1,
+    }));
+
+    // Salvar todas as etapas com nova ordem
+    try {
+      await Promise.all(updates.map(stage => saveStage(stage)));
+      await refetchStages();
+      toast({
+        title: "Ordem atualizada",
+        description: "A ordem das etapas foi atualizada com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao reordenar",
+        description: "Não foi possível atualizar a ordem das etapas.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const SortableStageRow = ({ stage, pipelineId }: { stage: StageData; pipelineId: string }) => {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: stage.id! });
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <TableRow ref={setNodeRef} style={style} className={isDragging ? 'shadow-lg' : ''}>
+        <TableCell>
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing"
+          >
+            <GripVertical className="w-4 h-4 text-muted-foreground" />
+          </div>
+        </TableCell>
+        <TableCell className="font-medium">{stage.ordem}</TableCell>
+        <TableCell>{stage.nome}</TableCell>
+        <TableCell>{stage.prazo_em_dias}</TableCell>
+        <TableCell>
+          <div>
+            <p className="text-sm">{stage.proximo_passo_label}</p>
+            <Badge variant="outline" className="text-xs">
+              {stage.proximo_passo_tipo}
+            </Badge>
+          </div>
+        </TableCell>
+        <TableCell>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setSelectedStageForChecklist({ id: stage.id!, nome: stage.nome })}
+          >
+            <Badge variant="secondary" className="mr-1">
+              {getStageChecklistCount(stage.id!)}
+            </Badge>
+            Checklist
+          </Button>
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center gap-1">
+            <Button 
+              size="sm" 
+              variant="ghost"
+              onClick={() => handleEditStage(stage)}
+            >
+              <Edit className="w-3 h-3" />
+            </Button>
+            <Button 
+              size="sm" 
+              variant="ghost"
+              onClick={async () => {
+                if (window.confirm('Tem certeza que deseja excluir esta etapa?')) {
+                  const success = await deleteStage(stage.id!);
+                  if (success) {
+                    refetchStages();
+                    refetchChecklistItems();
+                  }
+                }
+              }}
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    );
   };
 
   const renderPipelineCard = (pipeline: Pipeline) => {
@@ -263,73 +393,39 @@ export function PipelineManager() {
                 </Button>
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Ordem</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>SLA (dias)</TableHead>
-                    <TableHead>Próximo Passo</TableHead>
-                    <TableHead>Checklist</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pipelineStages.map((stage) => (
-                    <TableRow key={stage.id}>
-                      <TableCell className="font-medium">{stage.ordem}</TableCell>
-                      <TableCell>{stage.nome}</TableCell>
-                      <TableCell>{stage.prazo_em_dias}</TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="text-sm">{stage.proximo_passo_label}</p>
-                          <Badge variant="outline" className="text-xs">
-                            {stage.proximo_passo_tipo}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setSelectedStageForChecklist({ id: stage.id, nome: stage.nome })}
-                        >
-                          <Badge variant="secondary" className="mr-1">
-                            {getStageChecklistCount(stage.id)}
-                          </Badge>
-                          Checklist
-                        </Button>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => handleEditStage(stage)}
-                          >
-                            <Edit className="w-3 h-3" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={async () => {
-                              if (window.confirm('Tem certeza que deseja excluir esta etapa?')) {
-                                const success = await deleteStage(stage.id);
-                                if (success) {
-                                  refetchStages();
-                                  refetchChecklistItems();
-                                }
-                              }
-                            }}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(event) => handleDragEnd(event, pipeline.id)}
+              >
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12"></TableHead>
+                      <TableHead>Ordem</TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>SLA (dias)</TableHead>
+                      <TableHead>Próximo Passo</TableHead>
+                      <TableHead>Checklist</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    <SortableContext
+                      items={pipelineStages.map(s => s.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {pipelineStages.map((stage) => (
+                        <SortableStageRow
+                          key={stage.id}
+                          stage={stage}
+                          pipelineId={pipeline.id}
+                        />
+                      ))}
+                    </SortableContext>
+                  </TableBody>
+                </Table>
+              </DndContext>
             </div>
           </CardContent>
         )}
