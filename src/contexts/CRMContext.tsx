@@ -118,22 +118,17 @@ export function CRMProvider({ children }: CRMProviderProps) {
         return false;
       }
 
-      // Insert new entry
-      const { error } = await supabase
-        .from('lead_pipeline_entries')
-        .insert([{
-          lead_id: leadId,
-          pipeline_id: pipelineId,
-          etapa_atual_id: stageId,
-          status_inscricao: 'Ativo',
-          data_entrada_etapa: new Date().toISOString(),
-          tempo_em_etapa_dias: 0,
-          dias_em_atraso: 0,
-          saude_etapa: 'Verde',
-          checklist_state: {}
-        }]);
+      // Use hook to create entry (this has .select() to avoid URL encoding issues)
+      const { createEntry } = useSupabaseLeadPipelineEntries();
+      const newEntry = await createEntry({
+        lead_id: leadId,
+        pipeline_id: pipelineId,
+        etapa_atual_id: stageId
+      });
 
-      if (error) throw error;
+      if (!newEntry) {
+        return false; // createEntry já mostra o toast de erro
+      }
 
       toast({
         title: 'Sucesso',
@@ -172,22 +167,17 @@ export function CRMProvider({ children }: CRMProviderProps) {
 
       if (!entry) throw new Error('Entry not found');
 
-      // Create new entry in new pipeline
-      const { error: createError } = await supabase
-        .from('lead_pipeline_entries')
-        .insert([{
-          lead_id: entry.lead_id,
-          pipeline_id: newPipelineId,
-          etapa_atual_id: newStageId,
-          status_inscricao: 'Ativo',
-          data_entrada_etapa: new Date().toISOString(),
-          tempo_em_etapa_dias: 0,
-          dias_em_atraso: 0,
-          saude_etapa: 'Verde',
-          checklist_state: {}
-        }]);
+      // Use hook to create entry (this has .select() to avoid URL encoding issues)
+      const { createEntry } = useSupabaseLeadPipelineEntries();
+      const newEntry = await createEntry({
+        lead_id: entry.lead_id,
+        pipeline_id: newPipelineId,
+        etapa_atual_id: newStageId
+      });
 
-      if (createError) throw createError;
+      if (!newEntry) {
+        return false; // createEntry já mostra o toast de erro
+      }
 
       toast({
         title: 'Transferência realizada',
