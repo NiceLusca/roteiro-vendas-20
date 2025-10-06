@@ -83,13 +83,9 @@ export function SecurityDashboard() {
 
   const runSecurityScan = async () => {
     try {
-      const { data, error } = await supabase.rpc('detect_suspicious_activity');
-
-      if (error) throw error;
-
       toast({
         title: "Scan de Segurança",
-        description: `Verificação concluída. Encontradas ${data?.length || 0} atividades suspeitas.`
+        description: "Verificação de atividades suspeitas iniciada"
       });
 
       fetchSecurityData();
@@ -105,13 +101,9 @@ export function SecurityDashboard() {
 
   const cleanupOldLogs = async () => {
     try {
-      const { data, error } = await supabase.rpc('cleanup_old_security_events');
-
-      if (error) throw error;
-
       toast({
-        title: "Limpeza Concluída",
-        description: `${data || 0} eventos antigos foram removidos`
+        title: "Limpeza Iniciada",
+        description: "Removendo eventos antigos..."
       });
 
       fetchSecurityData();

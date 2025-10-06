@@ -16,8 +16,10 @@ interface UserRole {
 
 interface Profile {
   id: string;
+  user_id: string;
   email: string;
   full_name: string;
+  nome: string;
 }
 
 interface UserWithRoles {
