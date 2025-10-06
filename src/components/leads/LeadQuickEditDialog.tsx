@@ -113,7 +113,6 @@ export function LeadQuickEditDialog({
                 <SelectValue placeholder="Selecionar closer" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Sem responsável</SelectItem>
                 {closers.filter(Boolean).map((closer, index) => (
                   <SelectItem key={`closer-${index}`} value={closer as string}>
                     {closer as string}
