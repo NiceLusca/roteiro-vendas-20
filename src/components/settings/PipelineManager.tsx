@@ -547,7 +547,7 @@ export function PipelineManager() {
 
       {/* Stage Dialog */}
       <Dialog open={isStageDialogOpen} onOpenChange={setIsStageDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {selectedStage?.id ? 'Editar Etapa' : 'Nova Etapa'}
