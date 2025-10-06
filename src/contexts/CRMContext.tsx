@@ -54,6 +54,7 @@ export function CRMProvider({ children }: CRMProviderProps) {
   const { leads, loading: leadsLoading, saveLead, refetch: refetchLeads } = useSupabaseLeads();
   const { pipelines, loading: pipelinesLoading, refetch: refetchPipelines } = useSupabasePipelines();
   const { stages, loading: stagesLoading, refetch: refetchStages } = useSupabasePipelineStages();
+  const { createEntry } = useSupabaseLeadPipelineEntries();
 
   // CRM Operations
   const createLead = async (leadData: Partial<Lead>): Promise<Lead | null> => {
@@ -119,7 +120,6 @@ export function CRMProvider({ children }: CRMProviderProps) {
       }
 
       // Use hook to create entry (this has .select() to avoid URL encoding issues)
-      const { createEntry } = useSupabaseLeadPipelineEntries();
       const newEntry = await createEntry({
         lead_id: leadId,
         pipeline_id: pipelineId,
@@ -168,7 +168,6 @@ export function CRMProvider({ children }: CRMProviderProps) {
       if (!entry) throw new Error('Entry not found');
 
       // Use hook to create entry (this has .select() to avoid URL encoding issues)
-      const { createEntry } = useSupabaseLeadPipelineEntries();
       const newEntry = await createEntry({
         lead_id: entry.lead_id,
         pipeline_id: newPipelineId,
