@@ -237,8 +237,35 @@ export function EnhancedPipelineKanban({ pipelineId: urlPipelineId }: EnhancedPi
     };
   });
 
-  // Obter closers únicos
-  const closers = Array.from(new Set(leads.map(l => l.closer).filter(Boolean)));
+  // Closers fixos do sistema com suas cores
+  const CLOSERS = [
+    { 
+      name: 'Uilma', 
+      color: '#ec4899',
+      cardClass: 'bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-950/30 dark:to-pink-900/20 border-pink-200 dark:border-pink-800'
+    },
+    { 
+      name: 'Gabriel', 
+      color: '#fbbf24',
+      cardClass: 'bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+    },
+    { 
+      name: 'Vagner', 
+      color: '#60a5fa',
+      cardClass: 'bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-200 dark:border-blue-800'
+    },
+    { 
+      name: 'Lucas', 
+      color: '#c084fc',
+      cardClass: 'bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/20 border-purple-200 dark:border-purple-800'
+    }
+  ];
+
+  const closers = CLOSERS.map(c => c.name);
+
+  const getCloserCardClass = (closerName: string | null | undefined) => {
+    return CLOSERS.find(c => c.name === closerName)?.cardClass || '';
+  };
 
   // Métricas do pipeline
   const totalLeads = allEntries.length;
@@ -791,6 +818,7 @@ export function EnhancedPipelineKanban({ pipelineId: urlPipelineId }: EnhancedPi
             stage={stage}
             entries={entries as any}
             wipExceeded={wipExceeded}
+            getCloserCardClass={getCloserCardClass}
             onAddLead={handleAddLead}
             onViewLead={handleViewLead}
             onCreateAppointment={handleCreateAppointment}

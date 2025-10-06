@@ -15,6 +15,7 @@ interface KanbanColumnProps {
   entries: Array<LeadPipelineEntry & { lead: Lead }>;
   wipExceeded: boolean;
   isDragAndDrop?: boolean;
+  getCloserCardClass?: (closerName: string | null | undefined) => string;
   onAddLead?: (stageId: string) => void;
   onViewLead?: (leadId: string) => void;
   onCreateAppointment?: (leadId: string) => void;
@@ -31,6 +32,7 @@ export function KanbanColumn({
   entries,
   wipExceeded,
   isDragAndDrop = false,
+  getCloserCardClass,
   onAddLead,
   onViewLead,
   onCreateAppointment,
@@ -169,6 +171,7 @@ export function KanbanColumn({
               entry={entry}
               lead={entry.lead}
               stage={stage}
+              closerCardClass={getCloserCardClass?.(entry.lead?.closer)}
               onViewLead={() => onViewLead?.(entry.lead.id)}
               onCreateAppointment={() => onCreateAppointment?.(entry.lead.id)}
               onAdvanceStage={() => onAdvanceStage?.(entry.id)}

@@ -36,6 +36,7 @@ interface KanbanCardProps {
   stage: PipelineStage;
   nextAppointment?: AppointmentInfo | null;
   isDragging?: boolean;
+  closerCardClass?: string;
   onViewLead?: () => void;
   onCreateAppointment?: () => void;
   onAdvanceStage?: () => void;
@@ -52,6 +53,7 @@ const KanbanCardComponent = ({
   stage,
   nextAppointment,
   isDragging = false,
+  closerCardClass,
   onViewLead,
   onCreateAppointment,
   onAdvanceStage,
@@ -98,7 +100,10 @@ const KanbanCardComponent = ({
 
   return (
     <Card 
-      className="kanban-card transition-[box-shadow] duration-200 hover:shadow-md"
+      className={cn(
+        "kanban-card transition-[box-shadow] duration-200 hover:shadow-md",
+        closerCardClass
+      )}
       onClick={() => onViewLead?.()}
     >
       <CardContent className="p-4">

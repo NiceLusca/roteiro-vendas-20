@@ -113,9 +113,23 @@ export function LeadQuickEditDialog({
                 <SelectValue placeholder="Selecionar closer" />
               </SelectTrigger>
               <SelectContent>
-                {closers.filter(Boolean).map((closer, index) => (
-                  <SelectItem key={`closer-${index}`} value={closer as string}>
-                    {closer as string}
+                {[
+                  { name: 'Uilma', color: '#ec4899' },
+                  { name: 'Gabriel', color: '#fbbf24' },
+                  { name: 'Vagner', color: '#60a5fa' },
+                  { name: 'Lucas', color: '#c084fc' }
+                ].map((closer) => (
+                  <SelectItem key={closer.name} value={closer.name}>
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="h-4 w-4 rounded-full border-2" 
+                        style={{ 
+                          backgroundColor: closer.color,
+                          borderColor: closer.color 
+                        }}
+                      />
+                      <span>{closer.name}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
