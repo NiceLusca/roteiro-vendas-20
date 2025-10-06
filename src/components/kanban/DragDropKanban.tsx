@@ -51,7 +51,9 @@ export function DragDropKanban({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 12, // Aumentado para evitar drags acidentais
+        delay: 100, // Delay para diferenciar de scroll/click
+        tolerance: 5,
       },
     })
   );
@@ -131,7 +133,10 @@ export function DragDropKanban({
 
       <DragOverlay>
         {activeEntry && activeEntry.lead && (
-          <div className="transform rotate-6 scale-110 shadow-2xl">
+          <div 
+            className="opacity-90 shadow-lg" 
+            style={{ transform: 'translate3d(0, 0, 0)' }}
+          >
             <KanbanCard
               entry={activeEntry}
               lead={activeEntry.lead}

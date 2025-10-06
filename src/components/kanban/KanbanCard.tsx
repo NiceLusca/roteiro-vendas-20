@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,8 @@ import {
   ArrowLeft,
   GitBranch,
   CalendarCheck,
-  CalendarX
+  CalendarX,
+  GripVertical
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSortable } from '@dnd-kit/sortable';
@@ -45,7 +47,7 @@ interface KanbanCardProps {
   onTransferPipeline?: () => void;
 }
 
-export function KanbanCard({
+const KanbanCardComponent = ({
   entry,
   lead,
   stage,
@@ -58,7 +60,7 @@ export function KanbanCard({
   onOpenChecklist,
   onRegressStage,
   onTransferPipeline
-}: KanbanCardProps) {
+}: KanbanCardProps) => {
   // Early return if lead is not loaded yet
   if (!lead) {
     return (
@@ -84,6 +86,8 @@ export function KanbanCard({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+    contain: 'layout style paint' as const,
+    willChange: dragActive ? 'transform' : 'auto',
   };
   const getScoreBadgeClass = (classification: string) => {
     switch (classification) {
@@ -112,24 +116,30 @@ export function KanbanCard({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
       className={cn(
-        "kanban-card group cursor-grab active:cursor-grabbing transition-all duration-300 hover:shadow-md hover:-translate-y-1",
-        (dragActive || isDragging) && "opacity-60 rotate-2 scale-105 shadow-2xl z-50 ring-2 ring-primary/50"
+        "kanban-card group",
+        !dragActive && !isDragging && "transition-[box-shadow,transform] duration-200 hover:shadow-md hover:-translate-y-1",
+        (dragActive || isDragging) && "opacity-50 shadow-lg z-50 ring-2 ring-primary/50"
       )}
     >
       <CardContent className="p-4">
-        {/* Header do Card */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-sm text-foreground truncate">
-              {lead.nome}
-            </h4>
-            <p className="text-xs text-muted-foreground">
-              {lead.segmento} • {lead.origem}
-            </p>
+        {/* Header do Card - Drag Handle */}
+        <div 
+          className="flex items-start justify-between mb-3 cursor-grab active:cursor-grabbing -mx-1 px-1 py-1 rounded hover:bg-accent/50 transition-colors"
+          {...listeners}
+        >
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <h4 className="font-semibold text-sm text-foreground truncate">
+                {lead.nome}
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                {lead.segmento} • {lead.origem}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-1 ml-2">
+          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
             <Badge className={getScoreBadgeClass(lead.lead_score_classification)}>
               {lead.lead_score}
             </Badge>
@@ -252,11 +262,11 @@ export function KanbanCard({
         )}
 
         {/* Ações Rápidas */}
-        <div className="flex flex-wrap items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className="flex flex-wrap items-center gap-1 invisible group-hover:visible transition-[visibility] duration-150">
           <Button
             size="sm"
             variant="ghost"
-            className="text-xs h-6 px-2 hover:bg-primary/10 hover:text-primary transition-all duration-200"
+            className="text-xs h-6 px-2 hover:bg-primary/10 hover:text-primary transition-colors duration-150"
             onClick={(e) => {
               e.stopPropagation();
               onViewLead?.();
@@ -268,7 +278,7 @@ export function KanbanCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0 hover:bg-accent/80 hover:scale-110 transition-all duration-200"
+            className="h-6 w-6 p-0 hover:bg-accent/80 transition-colors duration-150"
             onClick={(e) => {
               e.stopPropagation();
               onOpenChecklist?.();
@@ -281,7 +291,7 @@ export function KanbanCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0 hover:bg-orange-100 hover:text-orange-600 hover:scale-110 transition-all duration-200"
+            className="h-6 w-6 p-0 hover:bg-orange-100 hover:text-orange-600 transition-colors duration-150"
             onClick={(e) => {
               e.stopPropagation();
               onRegressStage?.();
@@ -294,7 +304,7 @@ export function KanbanCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0 hover:bg-success/20 hover:text-success hover:scale-110 transition-all duration-200"
+            className="h-6 w-6 p-0 hover:bg-success/20 hover:text-success transition-colors duration-150"
             onClick={(e) => {
               e.stopPropagation();
               onAdvanceStage?.();
@@ -307,7 +317,7 @@ export function KanbanCard({
           <Button
             size="sm"
             variant="ghost"
-            className="h-6 w-6 p-0 hover:bg-blue-100 hover:text-blue-600 hover:scale-110 transition-all duration-200"
+            className="h-6 w-6 p-0 hover:bg-blue-100 hover:text-blue-600 transition-colors duration-150"
             onClick={(e) => {
               e.stopPropagation();
               onTransferPipeline?.();
@@ -322,7 +332,7 @@ export function KanbanCard({
               size="sm"
               variant="ghost"
               className={cn(
-                "h-6 w-6 p-0 hover:scale-110 transition-all duration-200",
+                "h-6 w-6 p-0 transition-colors duration-150",
                 nextAppointment 
                   ? "hover:bg-success/20 hover:text-success" 
                   : "text-orange-600 hover:bg-orange-100 hover:text-orange-700"
@@ -345,7 +355,7 @@ export function KanbanCard({
             <Button
               size="sm"
               variant="ghost"
-              className="h-6 w-6 p-0 hover:bg-blue-100 hover:text-blue-600 hover:scale-110 transition-all duration-200"
+              className="h-6 w-6 p-0 hover:bg-blue-100 hover:text-blue-600 transition-colors duration-150"
               onClick={(e) => {
                 e.stopPropagation();
                 onRegisterInteraction?.();
@@ -359,4 +369,22 @@ export function KanbanCard({
       </CardContent>
     </Card>
   );
-}
+};
+
+// Memoização com comparação customizada para evitar re-renders desnecessários
+export const KanbanCard = memo(KanbanCardComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.entry.id === nextProps.entry.id &&
+    prevProps.entry.saude_etapa === nextProps.entry.saude_etapa &&
+    prevProps.entry.dias_em_atraso === nextProps.entry.dias_em_atraso &&
+    prevProps.entry.tempo_em_etapa_dias === nextProps.entry.tempo_em_etapa_dias &&
+    prevProps.entry.nota_etapa === nextProps.entry.nota_etapa &&
+    prevProps.lead?.id === nextProps.lead?.id &&
+    prevProps.lead?.nome === nextProps.lead?.nome &&
+    prevProps.lead?.lead_score === nextProps.lead?.lead_score &&
+    prevProps.stage.id === nextProps.stage.id &&
+    prevProps.nextAppointment?.id === nextProps.nextAppointment?.id &&
+    prevProps.nextAppointment?.start_at === nextProps.nextAppointment?.start_at &&
+    prevProps.isDragging === nextProps.isDragging
+  );
+});
