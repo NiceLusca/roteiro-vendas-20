@@ -119,6 +119,7 @@ export function DragDropKanban({
               onAddLead={onAddLead}
               onViewLead={onViewLead}
               onCreateAppointment={onCreateAppointment}
+              onAdvanceStage={onAdvanceStage}
               onRegisterInteraction={onRegisterInteraction}
               onOpenChecklist={onOpenChecklist}
               onRegressStage={onRegressStage}

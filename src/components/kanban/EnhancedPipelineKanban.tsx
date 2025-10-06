@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { 
+  Breadcrumb, 
+  BreadcrumbItem, 
+  BreadcrumbLink, 
+  BreadcrumbList, 
+  BreadcrumbPage, 
+  BreadcrumbSeparator 
+} from '@/components/ui/breadcrumb';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -51,19 +60,24 @@ import {
   Users,
   TrendingUp,
   History,
-  Plus
+  Plus,
+  GitBranch
 } from 'lucide-react';
 
-export function EnhancedPipelineKanban() {
+interface EnhancedPipelineKanbanProps {
+  pipelineId?: string;
+}
+
+export function EnhancedPipelineKanban({ pipelineId: urlPipelineId }: EnhancedPipelineKanbanProps) {
   const navigate = useNavigate();
   const { pipelines, loading: pipelinesLoading, savePipeline, saveComplexPipeline } = useSupabasePipelines();
   const { leads } = useSupabaseLeads();
   
   if (process.env.NODE_ENV === 'development') {
-    console.log('EnhancedPipelineKanban render:', { pipelines, pipelinesLoading });
+    console.log('EnhancedPipelineKanban render:', { pipelines, pipelinesLoading, urlPipelineId });
   }
   
-  const [selectedPipelineId, setSelectedPipelineId] = useState('');
+  const [selectedPipelineId, setSelectedPipelineId] = useState(urlPipelineId || '');
   const [isNewPipelineDialogOpen, setIsNewPipelineDialogOpen] = useState(false);
   const [isPipelineWizardDialogOpen, setIsPipelineWizardDialogOpen] = useState(false);
   const [successAnimation, setSuccessAnimation] = useState({
@@ -71,16 +85,16 @@ export function EnhancedPipelineKanban() {
     message: ''
   });
 
-  // Update selectedPipelineId when pipelines are loaded
+  // Update selectedPipelineId when pipelines are loaded or URL changes
   useEffect(() => {
-    if (pipelines.length > 0 && !selectedPipelineId) {
-      const primaryPipeline = pipelines.find(p => p.primary_pipeline && p.ativo);
-      const defaultPipeline = primaryPipeline || pipelines.find(p => p.ativo) || pipelines[0];
-      if (defaultPipeline) {
-        setSelectedPipelineId(defaultPipeline.id);
-      }
+    if (urlPipelineId) {
+      // Se há ID na URL, usa ele
+      setSelectedPipelineId(urlPipelineId);
+    } else if (pipelines.length > 0 && !selectedPipelineId) {
+      // Se não há ID na URL, redireciona para página de seleção
+      navigate('/pipelines');
     }
-  }, [pipelines, selectedPipelineId]);
+  }, [pipelines, selectedPipelineId, urlPipelineId, navigate]);
 
   // Use real Supabase hooks
   const { entries: leadPipelineEntries, updateEntry, refetch } = useSupabaseLeadPipelineEntries(selectedPipelineId);
@@ -540,6 +554,37 @@ export function EnhancedPipelineKanban() {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/pipelines">Pipelines</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{selectedPipeline?.nome || 'Carregando...'}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      {/* Pipeline Info Banner */}
+      {selectedPipeline && (
+        <Alert className="bg-primary/5 border-primary/20">
+          <GitBranch className="h-4 w-4" />
+          <AlertTitle className="flex items-center gap-2">
+            Pipeline Ativo: {selectedPipeline.nome}
+            {selectedPipeline.primary_pipeline && (
+              <Badge variant="default" className="text-xs">Primário</Badge>
+            )}
+          </AlertTitle>
+          {selectedPipeline.descricao && (
+            <AlertDescription>{selectedPipeline.descricao}</AlertDescription>
+          )}
+        </Alert>
+      )}
+
       {/* Header com Seletor de Pipeline */}
       <div className="flex items-center gap-4">
         <div className="flex-1">
