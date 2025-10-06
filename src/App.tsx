@@ -81,6 +81,8 @@ function App() {
               <Sonner />
               <BrowserRouter>
                 <GlobalKeyboardShortcuts />
+                <EnhancedInstallPrompt />
+                <InstallBanner />
                 <Routes>
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/" element={
@@ -151,8 +153,6 @@ function App() {
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                   </BrowserRouter>
-                  <EnhancedInstallPrompt />
-                  <InstallBanner />
                 </TooltipProvider>
           </AuthProvider>
         </QueryClientProvider>
