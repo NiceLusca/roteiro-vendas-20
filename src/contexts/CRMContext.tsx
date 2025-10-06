@@ -62,7 +62,7 @@ export function CRMProvider({ children }: CRMProviderProps) {
     archiveEntry,
     transferToPipeline,
     refetch: refetchEntries 
-  } = useSupabaseLeadPipelineEntries();
+  } = useSupabaseLeadPipelineEntries(undefined);
 
   // CRM Operations
   const createLead = async (leadData: Partial<Lead>): Promise<Lead | null> => {
