@@ -194,27 +194,46 @@ function LeadsContent() {
   }, [pipelines.length, loadingPipelines]);
 
   const handleInscriptionConfirm = async (pipelineId: string, stageId: string) => {
-    if (!selectedLeadForInscription) return;
+    console.log('🔵 handleInscriptionConfirm called', { pipelineId, stageId, lead: selectedLeadForInscription });
+    
+    if (!selectedLeadForInscription) {
+      console.log('🔴 No lead selected');
+      return;
+    }
     
     try {
+      console.log('🔵 Importing supabase client...');
       const { supabase } = await import('@/integrations/supabase/client');
+      console.log('✅ Supabase client imported');
+      
+      const insertData = {
+        lead_id: selectedLeadForInscription.id,
+        pipeline_id: pipelineId,
+        etapa_atual_id: stageId,
+        status_inscricao: 'Ativo',
+        data_entrada_etapa: new Date().toISOString(),
+        tempo_em_etapa_dias: 0,
+        dias_em_atraso: 0,
+        saude_etapa: 'Verde' as const,
+        checklist_state: {},
+      };
+      
+      console.log('🔵 Attempting insert with data:', insertData);
       
       // Create pipeline entry
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('lead_pipeline_entries')
-        .insert({
-          lead_id: selectedLeadForInscription.id,
-          pipeline_id: pipelineId,
-          etapa_atual_id: stageId,
-          status_inscricao: 'Ativo',
-          data_entrada_etapa: new Date().toISOString(),
-          tempo_em_etapa_dias: 0,
-          dias_em_atraso: 0,
-          saude_etapa: 'Verde',
-          checklist_state: {},
-        });
+        .insert([insertData])
+        .select();
       
-      if (error) throw error;
+      console.log('🔵 Insert response:', { data, error });
+      
+      if (error) {
+        console.error('🔴 Insert error:', error);
+        throw error;
+      }
+      
+      console.log('✅ Insert successful');
       
       toast({
         title: 'Lead inscrito no pipeline',
@@ -223,11 +242,14 @@ function LeadsContent() {
       
       setShowInscriptionDialog(false);
       setSelectedLeadForInscription(null);
+      
+      // Refetch to update the list
+      await refetch();
     } catch (error) {
-      console.error('Error in handleInscriptionConfirm:', error);
+      console.error('🔴 Error in handleInscriptionConfirm:', error);
       toast({
         title: 'Erro ao inscrever lead',
-        description: 'Ocorreu um erro ao inscrever o lead no pipeline',
+        description: error instanceof Error ? error.message : 'Ocorreu um erro ao inscrever o lead no pipeline',
         variant: 'destructive'
       });
     }
