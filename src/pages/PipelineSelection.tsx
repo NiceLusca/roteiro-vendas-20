@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
@@ -23,6 +23,7 @@ import {
 export default function PipelineSelection() {
   const navigate = useNavigate();
   const { pipelines, loading, savePipeline, saveComplexPipeline } = useSupabasePipelines();
+  const { entries: allEntries } = useSupabaseLeadPipelineEntries();
   const [searchTerm, setSearchTerm] = useState('');
   const [isNewPipelineDialogOpen, setIsNewPipelineDialogOpen] = useState(false);
   const [isPipelineWizardDialogOpen, setIsPipelineWizardDialogOpen] = useState(false);
@@ -36,14 +37,24 @@ export default function PipelineSelection() {
       p.descricao?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-  // Função auxiliar para contar leads por pipeline
-  const useLeadCount = (pipelineId: string) => {
-    const { entries } = useSupabaseLeadPipelineEntries(pipelineId);
-    return entries.filter(e => e.status_inscricao === 'Ativo').length;
-  };
+  // Calcular contagens de leads por pipeline
+  const leadCountsByPipeline = useMemo(() => {
+    const counts: Record<string, number> = {};
+    allEntries
+      .filter(e => e.status_inscricao === 'Ativo')
+      .forEach(entry => {
+        counts[entry.pipeline_id] = (counts[entry.pipeline_id] || 0) + 1;
+      });
+    return counts;
+  }, [allEntries]);
 
-  const PipelineCard = ({ pipeline }: { pipeline: typeof pipelines[0] }) => {
-    const leadCount = useLeadCount(pipeline.id);
+  const PipelineCard = ({ 
+    pipeline, 
+    leadCount 
+  }: { 
+    pipeline: typeof pipelines[0];
+    leadCount: number;
+  }) => {
 
     return (
       <Card 
@@ -203,7 +214,11 @@ export default function PipelineSelection() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredPipelines.map(pipeline => (
-            <PipelineCard key={pipeline.id} pipeline={pipeline} />
+            <PipelineCard 
+              key={pipeline.id} 
+              pipeline={pipeline} 
+              leadCount={leadCountsByPipeline[pipeline.id] || 0}
+            />
           ))}
         </div>
       )}
