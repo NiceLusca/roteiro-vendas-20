@@ -17,7 +17,11 @@ export function useFileProcessor() {
     
     try {
       const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'array' });
+      const workbook = XLSX.read(data, { 
+        type: 'array',
+        raw: false,
+        codepage: 65001
+      });
       
       // Pegar a primeira planilha
       const firstSheetName = workbook.SheetNames[0];
