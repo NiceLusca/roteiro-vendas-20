@@ -61,7 +61,7 @@ export function PipelineManager() {
   const [pipelineToDelete, setPipelineToDelete] = useState<Pipeline | null>(null);
   
   const { pipelines, loading, savePipeline, saveComplexPipeline, duplicatePipeline, deletePipeline } = useSupabasePipelines();
-  const { stages, saveStage, deleteStage, refetch: refetchStages } = useSupabasePipelineStages();
+  const { stages, saveStage, deleteStage, batchUpdateStages, refetch: refetchStages } = useSupabasePipelineStages();
   const { checklistItems, refetch: refetchChecklistItems } = useSupabaseChecklistItems();
   const { toast } = useToast();
 
@@ -140,6 +140,9 @@ export function PipelineManager() {
     if (!over || active.id === over.id) return;
 
     const pipelineStages = getPipelineStages(pipelineId);
+    
+    console.log('🎯 Drag ended. Pipeline stages before:', pipelineStages.map(s => ({ id: s.id, nome: s.nome, ordem: s.ordem })));
+
     const oldIndex = pipelineStages.findIndex((s) => s.id === active.id);
     const newIndex = pipelineStages.findIndex((s) => s.id === over.id);
 
@@ -150,21 +153,26 @@ export function PipelineManager() {
     const [movedStage] = reorderedStages.splice(oldIndex, 1);
     reorderedStages.splice(newIndex, 0, movedStage);
 
-    // Atualizar ordem de todas as etapas
-    const updates = reorderedStages.map((stage, index) => ({
-      ...stage,
-      ordem: index + 1,
-    }));
+    console.log('📦 Reordered stages:', reorderedStages.map(s => s.nome));
 
-    // Salvar todas as etapas com nova ordem
+    // Salvar todas as etapas com nova ordem usando batch update
     try {
-      await Promise.all(updates.map(stage => saveStage(stage)));
-      await refetchStages();
-      toast({
-        title: "Ordem atualizada",
-        description: "A ordem das etapas foi atualizada com sucesso.",
-      });
+      const stagesToUpdate = reorderedStages.map((stage, index) => ({
+        id: stage.id!,
+        ordem: index + 1,
+      }));
+
+      console.log('💾 Saving new order:', stagesToUpdate);
+
+      const success = await batchUpdateStages(stagesToUpdate);
+      
+      if (success) {
+        // Single refetch after all updates
+        await refetchStages();
+        console.log('✅ Refetch complete');
+      }
     } catch (error) {
+      console.error('❌ Error reordering stages:', error);
       toast({
         title: "Erro ao reordenar",
         description: "Não foi possível atualizar a ordem das etapas.",

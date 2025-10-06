@@ -118,8 +118,6 @@ export function useSupabasePipelineStages(pipelineId?: string) {
         title: `Etapa ${isUpdate ? 'atualizada' : 'criada'} com sucesso`,
         description: `Etapa ${result.data.nome} foi ${isUpdate ? 'atualizada' : 'criada'}`
       });
-
-      fetchStages();
       
       return result.data;
     } catch (error) {
@@ -171,6 +169,53 @@ export function useSupabasePipelineStages(pipelineId?: string) {
     return stages.filter(stage => stage.pipeline_id === targetPipelineId);
   };
 
+  // Batch update stages (for drag & drop reordering)
+  const batchUpdateStages = async (stagesToUpdate: Array<{ id: string; ordem: number }>) => {
+    if (!user) return false;
+
+    try {
+      console.log('🔄 Batch updating stages:', stagesToUpdate);
+
+      // Update all stages in parallel
+      const updates = stagesToUpdate.map(({ id, ordem }) =>
+        supabase
+          .from('pipeline_stages')
+          .update({ ordem, updated_at: new Date().toISOString() })
+          .eq('id', id)
+      );
+
+      const results = await Promise.all(updates);
+      
+      const hasError = results.some(result => result.error);
+      if (hasError) {
+        const errors = results.filter(r => r.error).map(r => r.error);
+        console.error('❌ Errors updating stages:', errors);
+        toast({
+          title: "Erro ao reordenar etapas",
+          description: "Algumas etapas não foram atualizadas",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      console.log('✅ All stages updated successfully');
+      toast({
+        title: "Ordem atualizada com sucesso",
+        description: "As etapas foram reordenadas"
+      });
+
+      return true;
+    } catch (error) {
+      console.error('❌ Error in batch update:', error);
+      toast({
+        title: "Erro ao reordenar etapas",
+        description: "Ocorreu um erro inesperado",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchStages();
@@ -184,6 +229,7 @@ export function useSupabasePipelineStages(pipelineId?: string) {
     deleteStage,
     getStageById,
     getStagesByPipeline,
+    batchUpdateStages,
     refetch: fetchStages
   };
 }
