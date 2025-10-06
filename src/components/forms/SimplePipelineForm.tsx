@@ -17,10 +17,6 @@ const pipelineSchema = z.object({
   objetivo: z.string().max(500, 'Objetivo muito longo').optional(),
   primary_pipeline: z.boolean().default(false),
   ativo: z.boolean().default(true),
-  // Campos avançados - transformados para arrays quando necessário
-  segmento_alvo: z.string().max(200, 'Segmento muito longo').optional(),
-  responsaveis: z.array(z.string()).optional(),
-  tags: z.array(z.string()).optional(),
 });
 
 type PipelineFormData = z.infer<typeof pipelineSchema>;
@@ -32,9 +28,6 @@ interface Pipeline {
   objetivo?: string;
   primary_pipeline: boolean;
   ativo: boolean;
-  segmento_alvo?: string;
-  responsaveis?: string[];
-  tags?: string[];
   user_id?: string;
   created_at?: string;
   updated_at?: string;
@@ -61,9 +54,6 @@ export function SimplePipelineForm({ pipeline, onSave, onCancel }: SimplePipelin
       objetivo: pipeline?.objetivo || '',
       primary_pipeline: pipeline?.primary_pipeline || false,
       ativo: pipeline?.ativo ?? true,
-      segmento_alvo: pipeline?.segmento_alvo || '',
-      responsaveis: pipeline?.responsaveis || [],
-      tags: pipeline?.tags || [],
     },
   });
 
@@ -199,95 +189,6 @@ export function SimplePipelineForm({ pipeline, onSave, onCancel }: SimplePipelin
           />
         </div>
 
-        {/* Configurações Avançadas (Colapsável) */}
-        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="border-t pt-4">
-          <CollapsibleTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              className="flex items-center justify-between w-full p-0 hover:bg-transparent"
-            >
-              <span className="text-sm font-semibold">Configurações Avançadas</span>
-              <ChevronDown className={`h-4 w-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
-            </Button>
-          </CollapsibleTrigger>
-          
-          <CollapsibleContent className="space-y-4 pt-4">
-            {/* Segmento Alvo */}
-            <FormField
-              control={form.control}
-              name="segmento_alvo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Segmento Alvo</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Ex: Pequenas empresas de tecnologia, Infoprodutores..."
-                      {...field}
-                      disabled={isSaving}
-                    />
-                  </FormControl>
-                  <FormDescription className="text-xs">
-                    Defina o público-alvo deste pipeline
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Responsáveis */}
-            <FormField
-              control={form.control}
-              name="responsaveis"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Responsáveis</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Ex: João Silva, Maria Santos..."
-                      value={arrayToString(field.value)}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        field.onChange(value ? value.split(',').map(s => s.trim()).filter(Boolean) : []);
-                      }}
-                      disabled={isSaving}
-                    />
-                  </FormControl>
-                  <FormDescription className="text-xs">
-                    Liste os responsáveis por este pipeline (separados por vírgula)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Tags */}
-            <FormField
-              control={form.control}
-              name="tags"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tags</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Ex: vendas, consultoria, onboarding..."
-                      value={arrayToString(field.value)}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        field.onChange(value ? value.split(',').map(s => s.trim()).filter(Boolean) : []);
-                      }}
-                      disabled={isSaving}
-                    />
-                  </FormControl>
-                  <FormDescription className="text-xs">
-                    Tags para organizar e filtrar pipelines (separadas por vírgula)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </CollapsibleContent>
-        </Collapsible>
 
         {/* Botões de ação */}
         <div className="flex items-center justify-end gap-3 border-t pt-6">

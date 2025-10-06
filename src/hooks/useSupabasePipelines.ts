@@ -13,9 +13,6 @@ interface Pipeline {
   user_id: string;
   created_at: string;
   updated_at: string;
-  segmento_alvo?: string;
-  responsaveis?: string[];
-  tags?: string[];
 }
 
 interface PipelineStage {
@@ -46,9 +43,6 @@ interface ComplexPipelineData {
   objetivo?: string;
   ativo?: boolean;
   primary_pipeline?: boolean;
-  segmento_alvo?: string;
-  responsaveis?: string[];
-  tags?: string[];
   stages?: PipelineStage[];
 }
 
@@ -400,9 +394,6 @@ export function useSupabasePipelines() {
         objetivo: originalPipeline.objetivo,
         ativo: true,
         primary_pipeline: false,
-        segmento_alvo: (originalPipeline as any).segmento_alvo,
-        responsaveis: (originalPipeline as any).responsaveis || [],
-        tags: (originalPipeline as any).tags || [],
         
         stages: originalStages?.map(stage => ({
           nome: stage.nome,
