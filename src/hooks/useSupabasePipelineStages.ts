@@ -176,20 +176,38 @@ export function useSupabasePipelineStages(pipelineId?: string) {
     try {
       console.log('🔄 Batch updating stages:', stagesToUpdate);
 
-      // Update all stages in parallel
-      const updates = stagesToUpdate.map(({ id, ordem }) =>
+      // Phase 1: Set temporary high order values to avoid UNIQUE constraint conflicts
+      // Use ordem + 10000 as temporary value
+      console.log('Phase 1: Setting temporary orders...');
+      const tempUpdates = stagesToUpdate.map(({ id }, index) =>
+        supabase
+          .from('pipeline_stages')
+          .update({ ordem: 10000 + index, updated_at: new Date().toISOString() })
+          .eq('id', id)
+      );
+
+      const tempResults = await Promise.all(tempUpdates);
+      
+      if (tempResults.some(result => result.error)) {
+        const errors = tempResults.filter(r => r.error).map(r => r.error);
+        console.error('❌ Errors in phase 1:', errors);
+        throw new Error('Failed to set temporary orders');
+      }
+
+      // Phase 2: Set final order values
+      console.log('Phase 2: Setting final orders...');
+      const finalUpdates = stagesToUpdate.map(({ id, ordem }) =>
         supabase
           .from('pipeline_stages')
           .update({ ordem, updated_at: new Date().toISOString() })
           .eq('id', id)
       );
 
-      const results = await Promise.all(updates);
+      const finalResults = await Promise.all(finalUpdates);
       
-      const hasError = results.some(result => result.error);
-      if (hasError) {
-        const errors = results.filter(r => r.error).map(r => r.error);
-        console.error('❌ Errors updating stages:', errors);
+      if (finalResults.some(result => result.error)) {
+        const errors = finalResults.filter(r => r.error).map(r => r.error);
+        console.error('❌ Errors in phase 2:', errors);
         toast({
           title: "Erro ao reordenar etapas",
           description: "Algumas etapas não foram atualizadas",
