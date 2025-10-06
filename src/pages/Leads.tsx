@@ -19,6 +19,7 @@ import { useLeadTags } from '@/hooks/useLeadTags';
 import { useBulkLeadActions } from '@/hooks/useBulkLeadActions';
 import { useToast } from '@/hooks/use-toast';
 import { CRMProviderWrapper } from '@/contexts/CRMProviderWrapper';
+import { useCRM } from '@/contexts/CRMContext';
 import { Lead } from '@/types/crm';
 import { formatWhatsApp, formatDateTime } from '@/utils/formatters';
 import { 
@@ -38,6 +39,7 @@ import {
 
 function LeadsContent() {
   const { toast } = useToast();
+  const { inscribeLeadToPipeline } = useCRM();
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
@@ -205,28 +207,16 @@ function LeadsContent() {
   const handleInscriptionConfirm = async (pipelineId: string, stageId: string) => {
     if (!selectedLeadForInscription) return;
     
-    try {
-      const { useCRM } = await import('@/contexts/CRMContext');
-      const { inscribeLeadToPipeline } = useCRM();
-      
-      const success = await inscribeLeadToPipeline(
-        selectedLeadForInscription.id,
-        pipelineId,
-        stageId
-      );
-      
-      if (success) {
-        setShowInscriptionDialog(false);
-        setSelectedLeadForInscription(null);
-        await refetch();
-      }
-    } catch (error) {
-      console.error('Error in handleInscriptionConfirm:', error);
-      toast({
-        title: 'Erro ao inscrever lead',
-        description: 'Ocorreu um erro ao inscrever o lead no pipeline',
-        variant: 'destructive'
-      });
+    const success = await inscribeLeadToPipeline(
+      selectedLeadForInscription.id,
+      pipelineId,
+      stageId
+    );
+    
+    if (success) {
+      setShowInscriptionDialog(false);
+      setSelectedLeadForInscription(null);
+      await refetch();
     }
   };
 
