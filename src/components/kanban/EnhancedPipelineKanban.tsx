@@ -400,19 +400,22 @@ export function EnhancedPipelineKanban() {
     if (!addLeadDialog.stageId) return;
 
     try {
-      // Primeiro salvar o lead
-      await saveLead(leadData);
+      // Salvar o lead e obter o ID retornado
+      const createdLead = await saveLead(leadData);
       
-      // Obter o ID do lead criado via refetch 
-      // Como saveLead não retorna o lead, vamos usar uma abordagem diferente
-      // Primeiro, vamos inscrever usando o nome do lead para encontrá-lo
-      setTimeout(async () => {
-        // Buscar o lead recém-criado pelo nome (assumindo que é único)
-        const newLead = leads.find(l => l.nome === leadData.nome);
-        if (newLead) {
-          await inscribePipeline(newLead.id, selectedPipelineId, addLeadDialog.stageId);
-        }
-      }, 1000);
+      if (!createdLead) {
+        throw new Error('Falha ao criar o lead');
+      }
+
+      console.log('✅ Lead criado:', createdLead);
+      
+      // Inscrever o lead no pipeline com a etapa selecionada
+      await inscribePipeline(createdLead.id, selectedPipelineId, addLeadDialog.stageId);
+      
+      console.log('✅ Lead inscrito no pipeline na etapa:', addLeadDialog.stageName);
+      
+      // Refetch para atualizar a visualização
+      await refetch();
       
       toast({
         title: '✅ Lead criado com sucesso',
@@ -423,16 +426,16 @@ export function EnhancedPipelineKanban() {
         show: true,
         message: `Novo lead criado em "${addLeadDialog.stageName}"`
       });
+      
+      setAddLeadDialog({ open: false, stageId: '', stageName: '' });
     } catch (error) {
-      console.error('Erro ao criar lead:', error);
+      console.error('❌ Erro ao criar lead:', error);
       toast({
         title: 'Erro',
         description: 'Não foi possível criar o lead. Tente novamente.',
         variant: 'destructive'
       });
     }
-
-    setAddLeadDialog({ open: false, stageId: '', stageName: '' });
   };
 
   const handleOpenChecklist = (entryId: string) => {

@@ -35,6 +35,7 @@ export function useLeadData() {
         });
       }
     }
+    return result; // Return the created/updated lead
   }, [saveLeadToSupabase, logChange]);
 
   const saveAppointment = useCallback(async (appointmentData: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>) => {
