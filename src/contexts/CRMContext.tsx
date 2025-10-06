@@ -54,15 +54,6 @@ export function CRMProvider({ children }: CRMProviderProps) {
   const { leads, loading: leadsLoading, saveLead, refetch: refetchLeads } = useSupabaseLeads();
   const { pipelines, loading: pipelinesLoading, refetch: refetchPipelines } = useSupabasePipelines();
   const { stages, loading: stagesLoading, refetch: refetchStages } = useSupabasePipelineStages();
-  const { 
-    entries, 
-    loading: entriesLoading, 
-    createEntry, 
-    updateEntry: updateEntryHook,
-    archiveEntry,
-    transferToPipeline,
-    refetch: refetchEntries 
-  } = useSupabaseLeadPipelineEntries(undefined);
 
   // CRM Operations
   const createLead = async (leadData: Partial<Lead>): Promise<Lead | null> => {
@@ -107,12 +98,18 @@ export function CRMProvider({ children }: CRMProviderProps) {
 
   const inscribeLeadToPipeline = async (leadId: string, pipelineId: string, stageId: string): Promise<boolean> => {
     try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
       // Check if already inscribed
-      const existingEntry = entries.find(
-        (e) => e.lead_id === leadId && e.pipeline_id === pipelineId && e.status_inscricao === 'Ativo'
-      );
+      const { data: existing } = await supabase
+        .from('lead_pipeline_entries')
+        .select('id')
+        .eq('lead_id', leadId)
+        .eq('pipeline_id', pipelineId)
+        .eq('status_inscricao', 'Ativo')
+        .maybeSingle();
 
-      if (existingEntry) {
+      if (existing) {
         toast({
           title: 'Já inscrito',
           description: 'Lead já está inscrito neste pipeline',
@@ -121,22 +118,28 @@ export function CRMProvider({ children }: CRMProviderProps) {
         return false;
       }
 
-      const newEntry = await createEntry({
-        lead_id: leadId,
-        pipeline_id: pipelineId,
-        etapa_atual_id: stageId
-      });
+      // Insert new entry
+      const { error } = await supabase
+        .from('lead_pipeline_entries')
+        .insert([{
+          lead_id: leadId,
+          pipeline_id: pipelineId,
+          etapa_atual_id: stageId,
+          status_inscricao: 'Ativo',
+          data_entrada_etapa: new Date().toISOString(),
+          tempo_em_etapa_dias: 0,
+          dias_em_atraso: 0,
+          saude_etapa: 'Verde',
+          checklist_state: {}
+        }]);
 
-      if (newEntry) {
-        // Refetch to ensure consistency
-        await refetchEntries();
-        toast({
-          title: 'Sucesso',
-          description: 'Lead inscrito no pipeline com sucesso!'
-        });
-        return true;
-      }
-      return false;
+      if (error) throw error;
+
+      toast({
+        title: 'Sucesso',
+        description: 'Lead inscrito no pipeline com sucesso!'
+      });
+      return true;
     } catch (error) {
       console.error('Error inscribing lead:', error);
       toast({
@@ -150,17 +153,47 @@ export function CRMProvider({ children }: CRMProviderProps) {
 
   const transferLeadBetweenPipelines = async (entryId: string, newPipelineId: string, newStageId: string, reason: string): Promise<boolean> => {
     try {
-      const success = await transferToPipeline(entryId, newPipelineId, newStageId, reason);
-      if (success) {
-        // Refetch to get updated state
-        await refetchEntries();
-        toast({
-          title: 'Transferência realizada',
-          description: 'Lead transferido para o novo pipeline com sucesso!'
-        });
-        return true;
-      }
-      return false;
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Archive old entry
+      const { error: archiveError } = await supabase
+        .from('lead_pipeline_entries')
+        .update({ status_inscricao: 'Arquivado' })
+        .eq('id', entryId);
+
+      if (archiveError) throw archiveError;
+
+      // Get lead_id from the entry
+      const { data: entry } = await supabase
+        .from('lead_pipeline_entries')
+        .select('lead_id')
+        .eq('id', entryId)
+        .single();
+
+      if (!entry) throw new Error('Entry not found');
+
+      // Create new entry in new pipeline
+      const { error: createError } = await supabase
+        .from('lead_pipeline_entries')
+        .insert([{
+          lead_id: entry.lead_id,
+          pipeline_id: newPipelineId,
+          etapa_atual_id: newStageId,
+          status_inscricao: 'Ativo',
+          data_entrada_etapa: new Date().toISOString(),
+          tempo_em_etapa_dias: 0,
+          dias_em_atraso: 0,
+          saude_etapa: 'Verde',
+          checklist_state: {}
+        }]);
+
+      if (createError) throw createError;
+
+      toast({
+        title: 'Transferência realizada',
+        description: 'Lead transferido para o novo pipeline com sucesso!'
+      });
+      return true;
     } catch (error) {
       console.error('Error transferring lead:', error);
       toast({
@@ -174,21 +207,23 @@ export function CRMProvider({ children }: CRMProviderProps) {
 
   const advanceLeadStage = async (entryId: string, newStageId: string): Promise<boolean> => {
     try {
-      const success = await updateEntryHook(entryId, {
-        etapa_atual_id: newStageId,
-        data_entrada_etapa: new Date().toISOString()
-      });
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { error } = await supabase
+        .from('lead_pipeline_entries')
+        .update({
+          etapa_atual_id: newStageId,
+          data_entrada_etapa: new Date().toISOString()
+        })
+        .eq('id', entryId);
 
-      if (success) {
-        // Refetch to ensure consistency
-        await refetchEntries();
-        toast({
-          title: 'Etapa avançada',
-          description: 'Lead movido para a próxima etapa com sucesso!'
-        });
-        return true;
-      }
-      return false;
+      if (error) throw error;
+
+      toast({
+        title: 'Etapa avançada',
+        description: 'Lead movido para a próxima etapa com sucesso!'
+      });
+      return true;
     } catch (error) {
       console.error('Error advancing stage:', error);
       toast({
@@ -202,17 +237,20 @@ export function CRMProvider({ children }: CRMProviderProps) {
 
   const archiveLeadEntry = async (entryId: string, reason = 'Arquivado manualmente'): Promise<boolean> => {
     try {
-      const success = await archiveEntry(entryId, reason);
-      if (success) {
-        // Refetch to ensure consistency
-        await refetchEntries();
-        toast({
-          title: 'Entry arquivado',
-          description: 'Lead removido do pipeline com sucesso!'
-        });
-        return true;
-      }
-      return false;
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const { error } = await supabase
+        .from('lead_pipeline_entries')
+        .update({ status_inscricao: 'Arquivado' })
+        .eq('id', entryId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Entry arquivado',
+        description: 'Lead removido do pipeline com sucesso!'
+      });
+      return true;
     } catch (error) {
       console.error('Error archiving entry:', error);
       toast({
@@ -226,24 +264,21 @@ export function CRMProvider({ children }: CRMProviderProps) {
 
   // Helper functions
   const getLeadsByPipeline = (pipelineId: string): Lead[] => {
-    const activeEntries = entries.filter(
-      entry => entry.pipeline_id === pipelineId && entry.status_inscricao === 'Ativo'
-    );
-    return activeEntries
-      .map(entry => leads.find(lead => lead.id === entry.lead_id))
-      .filter(Boolean) as Lead[];
+    // This now returns empty array - components should fetch entries directly
+    console.warn('getLeadsByPipeline is deprecated - fetch entries directly in components');
+    return [];
   };
 
   const getEntriesByPipeline = (pipelineId: string): LeadPipelineEntry[] => {
-    return entries.filter(
-      entry => entry.pipeline_id === pipelineId && entry.status_inscricao === 'Ativo'
-    ) as unknown as LeadPipelineEntry[];
+    // This now returns empty array - components should fetch entries directly
+    console.warn('getEntriesByPipeline is deprecated - fetch entries directly in components');
+    return [];
   };
 
   const getEntriesByLead = (leadId: string): LeadPipelineEntry[] => {
-    return entries.filter(
-      entry => entry.lead_id === leadId && entry.status_inscricao === 'Ativo'
-    ) as unknown as LeadPipelineEntry[];
+    // This now returns empty array - components should fetch entries directly
+    console.warn('getEntriesByLead is deprecated - fetch entries directly in components');
+    return [];
   };
 
   const getStagesByPipeline = (pipelineId: string): PipelineStage[] => {
@@ -254,8 +289,7 @@ export function CRMProvider({ children }: CRMProviderProps) {
     await Promise.all([
       refetchLeads(),
       refetchPipelines(),
-      refetchStages(),
-      refetchEntries()
+      refetchStages()
     ]);
   };
 
@@ -263,12 +297,12 @@ export function CRMProvider({ children }: CRMProviderProps) {
     leads,
     pipelines,
     stages,
-    entries: entries as unknown as LeadPipelineEntry[],
+    entries: [], // No longer fetched globally
     loading: {
       leads: leadsLoading,
       pipelines: pipelinesLoading,
       stages: stagesLoading,
-      entries: entriesLoading,
+      entries: false,
     },
     createLead,
     updateLead,
