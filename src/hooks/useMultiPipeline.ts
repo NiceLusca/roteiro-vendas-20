@@ -49,9 +49,58 @@ export function useMultiPipeline() {
   const inscribePipeline = useCallback(async (leadId: string, pipelineId: string, stageId: string) => {
     console.log('🟢 inscribePipeline CHAMADO:', { leadId, pipelineId, stageId });
     
+    // Validações iniciais
+    if (!leadId || !pipelineId || !stageId) {
+      const error = `Parâmetros inválidos: leadId=${leadId}, pipelineId=${pipelineId}, stageId=${stageId}`;
+      console.error('❌', error);
+      throw new Error(error);
+    }
+    
     try {
-      // Check in database if already inscribed (more reliable than local state for bulk imports)
       const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Verificar se o lead existe
+      const { data: leadExists, error: leadError } = await supabase
+        .from('leads')
+        .select('id')
+        .eq('id', leadId)
+        .maybeSingle();
+      
+      if (leadError || !leadExists) {
+        throw new Error(`Lead não encontrado: ${leadId}`);
+      }
+      
+      // Verificar se o pipeline existe e está ativo
+      const { data: pipelineExists, error: pipelineError } = await supabase
+        .from('pipelines')
+        .select('id, nome, ativo')
+        .eq('id', pipelineId)
+        .maybeSingle();
+      
+      if (pipelineError || !pipelineExists) {
+        throw new Error(`Pipeline não encontrado: ${pipelineId}`);
+      }
+      
+      if (!pipelineExists.ativo) {
+        throw new Error(`Pipeline "${pipelineExists.nome}" está inativo`);
+      }
+      
+      // Verificar se a stage existe e pertence ao pipeline
+      const { data: stageExists, error: stageError } = await supabase
+        .from('pipeline_stages')
+        .select('id, nome, pipeline_id')
+        .eq('id', stageId)
+        .maybeSingle();
+      
+      if (stageError || !stageExists) {
+        throw new Error(`Stage não encontrada: ${stageId}`);
+      }
+      
+      if (stageExists.pipeline_id !== pipelineId) {
+        throw new Error(`Stage "${stageExists.nome}" não pertence ao pipeline "${pipelineExists.nome}"`);
+      }
+      
+      // Verificar se já existe entrada ativa
       const { data: existingEntries, error: checkError } = await supabase
         .from('lead_pipeline_entries')
         .select('id')
@@ -69,7 +118,7 @@ export function useMultiPipeline() {
 
       console.log('🟢 Chamando createEntry...');
       
-      // Create new entry
+      // Criar nova entrada
       const newEntry = await createEntry({
         lead_id: leadId,
         pipeline_id: pipelineId,

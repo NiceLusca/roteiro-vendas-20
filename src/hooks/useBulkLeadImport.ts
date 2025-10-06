@@ -221,11 +221,19 @@ export function useBulkLeadImport() {
             }
 
             // Inscrever em pipelines
-            for (const pipeline of selectedPipelines) {
-              try {
-                await inscribePipeline(leadId, pipeline.pipelineId, pipeline.stageId);
-              } catch (pipelineError: any) {
-                // Continue even if pipeline inscription fails
+            if (selectedPipelines.length > 0) {
+              for (const pipeline of selectedPipelines) {
+                try {
+                  console.log(`🟢 Inscrevendo lead ${leadId} no pipeline ${pipeline.pipelineId}, stage ${pipeline.stageId}`);
+                  await inscribePipeline(leadId, pipeline.pipelineId, pipeline.stageId);
+                  console.log(`✅ Lead ${leadId} inscrito com sucesso`);
+                } catch (pipelineError: any) {
+                  console.error(`❌ Erro ao inscrever lead ${leadId} no pipeline:`, pipelineError);
+                  errors.push({
+                    row: parsed.rowIndex,
+                    message: `Erro ao inscrever no pipeline: ${pipelineError.message || 'Erro desconhecido'}`,
+                  });
+                }
               }
             }
 
