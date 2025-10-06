@@ -30,7 +30,7 @@ export const Dashboard = memo(function Dashboard() {
   const { pipelines, loading: pipelinesLoading } = useSupabasePipelines();
   const { deals, loading: dealsLoading } = useSupabaseDeals();
   const { orders, loading: ordersLoading } = useSupabaseOrders();
-  const { entries, loading: entriesLoading } = useSupabaseLeadPipelineEntries();
+  const { entries, loading: entriesLoading } = useSupabaseLeadPipelineEntries(undefined);
 
   const isLoading = leadsLoading || appointmentsLoading || pipelinesLoading || dealsLoading || ordersLoading || entriesLoading;
 

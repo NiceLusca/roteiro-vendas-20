@@ -40,7 +40,7 @@ export default function LeadDetail() {
   const { leads } = useSupabaseLeads();
   
   // Real Supabase data hooks
-  const { entries: leadPipelineEntries } = useSupabaseLeadPipelineEntries();
+  const { entries: leadPipelineEntries } = useSupabaseLeadPipelineEntries(undefined);
   const { stages: pipelineStages } = useSupabasePipelineStages();
   const { pipelines } = useSupabasePipelines();
   const { checklistItems } = useSupabaseChecklistItems();

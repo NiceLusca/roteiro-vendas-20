@@ -363,7 +363,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         },
         () => {
           // Refetch entries when any change occurs
-          fetchEntries();
+          fetchEntries(pipelineId);
         }
       )
       .subscribe();
@@ -371,7 +371,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, pipelineId]);
+  }, [user, pipelineId, fetchEntries]);
 
   return {
     entries,
