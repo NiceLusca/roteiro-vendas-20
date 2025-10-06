@@ -363,6 +363,8 @@ export const KanbanCard = memo(KanbanCardComponent, (prevProps, nextProps) => {
     prevProps.lead?.id === nextProps.lead?.id &&
     prevProps.lead?.nome === nextProps.lead?.nome &&
     prevProps.lead?.lead_score === nextProps.lead?.lead_score &&
+    prevProps.lead?.closer === nextProps.lead?.closer &&
+    prevProps.closerCardClass === nextProps.closerCardClass &&
     prevProps.stage.id === nextProps.stage.id &&
     prevProps.nextAppointment?.id === nextProps.nextAppointment?.id &&
     prevProps.nextAppointment?.start_at === nextProps.nextAppointment?.start_at &&
