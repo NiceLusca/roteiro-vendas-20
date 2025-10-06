@@ -39,10 +39,12 @@ export function useMultiPipeline() {
   }, [transferToPipeline, logChange]);
 
   const inscribePipeline = useCallback(async (leadId: string, pipelineId: string, stageId: string) => {
+    console.log('🟢 inscribePipeline CHAMADO:', { leadId, pipelineId, stageId });
+    
     try {
       // Check in database if already inscribed (more reliable than local state for bulk imports)
       const { supabase } = await import('@/integrations/supabase/client');
-      const { data: existingEntries } = await supabase
+      const { data: existingEntries, error: checkError } = await supabase
         .from('lead_pipeline_entries')
         .select('id')
         .eq('lead_id', leadId)
@@ -50,11 +52,15 @@ export function useMultiPipeline() {
         .eq('status_inscricao', 'Ativo')
         .maybeSingle();
 
+      console.log('🔍 Verificação de entrada existente:', { existingEntries, checkError });
+
       if (existingEntries) {
-        // Silently skip if already inscribed during bulk import
+        console.log('⚠️ Lead já inscrito - pulando');
         return;
       }
 
+      console.log('🟢 Chamando createEntry...');
+      
       // Create new entry
       const newEntry = await createEntry({
         lead_id: leadId,
@@ -62,7 +68,10 @@ export function useMultiPipeline() {
         etapa_atual_id: stageId
       });
 
+      console.log('🟢 Resultado do createEntry:', newEntry);
+
       if (newEntry) {
+        console.log('✅ Entry criado, logando mudança...');
         logChange({
           entidade: 'LeadPipelineEntry',
           entidade_id: newEntry.id,
@@ -74,9 +83,12 @@ export function useMultiPipeline() {
           ],
           ator: 'Sistema (Inscrição)'
         });
+      } else {
+        console.error('❌ createEntry retornou null');
+        throw new Error('Falha ao criar entrada no pipeline');
       }
     } catch (error) {
-      console.error('Error in inscribePipeline:', error);
+      console.error('❌ ERRO em inscribePipeline:', error);
       throw error; // Re-throw to be handled by caller
     }
   }, [createEntry, logChange]);

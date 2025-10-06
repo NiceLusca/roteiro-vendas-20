@@ -82,7 +82,18 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
 
   // Create new pipeline entry
   const createEntry = async (entryData: Partial<LeadPipelineEntry>) => {
-    if (!user) return null;
+    console.log('🔵 createEntry CHAMADO com:', entryData);
+    console.log('🔵 User atual:', user?.id);
+
+    if (!user) {
+      console.error('❌ SEM USUÁRIO AUTENTICADO');
+      toast({
+        title: "Erro de autenticação",
+        description: "Você precisa estar autenticado para criar entradas no pipeline",
+        variant: "destructive"
+      });
+      return null;
+    }
 
     // Validar campos obrigatórios
     if (!entryData.lead_id || !entryData.pipeline_id || !entryData.etapa_atual_id) {
@@ -116,7 +127,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         ...(entryData.nota_etapa && { nota_etapa: entryData.nota_etapa })
       };
 
-      console.log('📝 Criando entry no pipeline:', insertData);
+      console.log('📝 EXECUTANDO INSERT com dados:', JSON.stringify(insertData, null, 2));
 
       const { data, error } = await supabase
         .from('lead_pipeline_entries')
@@ -124,11 +135,18 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         .select()
         .maybeSingle();
 
+      console.log('🔵 Resultado do INSERT:', { data, error });
+
       if (error) {
-        console.error('❌ Erro ao criar entry:', error);
+        console.error('❌ ERRO SUPABASE ao criar entry:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
         toast({
           title: "Erro ao inscrever lead",
-          description: error.message,
+          description: `${error.message} (código: ${error.code})`,
           variant: "destructive"
         });
         return null;
@@ -136,20 +154,30 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
 
       if (!data) {
         console.error('❌ Entry não foi criado - sem dados retornados');
+        toast({
+          title: "Erro",
+          description: "Entrada não foi criada, mas sem erro retornado",
+          variant: "destructive"
+        });
         return null;
       }
 
-      console.log('✅ Entry criado com sucesso:', data.id);
+      console.log('✅✅✅ Entry criado COM SUCESSO:', data);
 
       toast({
-        title: "Lead inscrito no pipeline",
+        title: "✅ Lead inscrito no pipeline",
         description: "Lead foi inscrito com sucesso"
       });
 
-      fetchEntries();
+      await fetchEntries();
       return data;
     } catch (error) {
-      console.error('❌ Exceção ao criar entry:', error);
+      console.error('❌ EXCEÇÃO JAVASCRIPT ao criar entry:', error);
+      toast({
+        title: "Erro inesperado",
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: "destructive"
+      });
       return null;
     }
   };
