@@ -13,18 +13,18 @@ export function SecurityHeaders({
   
   // Content Security Policy
   const csp = environment === 'development'
-    ? `default-src 'self' 'unsafe-inline' 'unsafe-eval' https://vowcctjqbwndmdxfuqjd.supabase.co wss://vowcctjqbwndmdxfuqjd.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com data: blob:; 
-       script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vowcctjqbwndmdxfuqjd.supabase.co; 
+    ? `default-src 'self' 'unsafe-inline' 'unsafe-eval' https://szuqdfakikbotidnxxvw.supabase.co wss://szuqdfakikbotidnxxvw.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com data: blob:; 
+       script-src 'self' 'unsafe-inline' 'unsafe-eval' https://szuqdfakikbotidnxxvw.supabase.co; 
        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
        font-src 'self' https://fonts.gstatic.com data:; 
        img-src 'self' data: blob: https:; 
-       connect-src 'self' https://vowcctjqbwndmdxfuqjd.supabase.co wss://vowcctjqbwndmdxfuqjd.supabase.co;`
+       connect-src 'self' https://szuqdfakikbotidnxxvw.supabase.co wss://szuqdfakikbotidnxxvw.supabase.co;`
     : `default-src 'self'; 
        script-src 'self' ${nonce ? `'nonce-${nonce}'` : "'strict-dynamic'"}; 
        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
        font-src 'self' https://fonts.gstatic.com data:; 
        img-src 'self' data: blob: https:; 
-       connect-src 'self' https://vowcctjqbwndmdxfuqjd.supabase.co wss://vowcctjqbwndmdxfuqjd.supabase.co; 
+       connect-src 'self' https://szuqdfakikbotidnxxvw.supabase.co wss://szuqdfakikbotidnxxvw.supabase.co; 
        frame-ancestors 'none'; 
        base-uri 'self'; 
        form-action 'self';`;
