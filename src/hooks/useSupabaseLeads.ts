@@ -47,7 +47,7 @@ export function useSupabaseLeads() {
       if (id) {
         const { data, error } = await supabase
           .from('leads')
-          .update(dataToSave)
+          .update(dataToSave as any)
           .eq('id', id)
           .select()
           .single();
@@ -72,7 +72,7 @@ export function useSupabaseLeads() {
       } else {
         const { data, error } = await supabase
           .from('leads')
-          .insert(dataToSave)
+          .insert(dataToSave as any)
           .select()
           .single();
 

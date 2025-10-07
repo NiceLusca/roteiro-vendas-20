@@ -2,13 +2,13 @@
 
 // Enums - matching actual database schema (lowercase Portuguese)
 export type StatusGeral = 'lead' | 'qualificado' | 'reuniao_marcada' | 'em_negociacao' | 'cliente' | 'perdido';
-export type OrigemLead = 'instagram' | 'facebook' | 'tiktok' | 'google' | 'indicacao' | 'site' | 'whatsapp' | 'youtube' | 'outro';
-export type ObjecaoPrincipal = 'preco' | 'tempo' | 'nao_confia' | 'ja_tentou' | 'precisa_pensar' | 'outro';
+export type OrigemLead = 'indicacao' | 'trafego_pago' | 'organico' | 'evento' | 'outro';
+export type ObjecaoPrincipal = 'preco' | 'tempo' | 'confianca' | 'necessidade' | 'outro';
 export type StatusAppointment = 'agendado' | 'confirmado' | 'realizado' | 'cancelado' | 'remarcado';
 export type ResultadoSessao = 'positivo' | 'neutro' | 'negativo';
 export type CanalInteracao = 'whatsapp' | 'email' | 'telefone' | 'presencial' | 'outro';
 export type StatusDeal = 'aberto' | 'ganho' | 'perdido';
-export type StatusPedido = 'pendente' | 'pago' | 'cancelado' | 'reembolsado';
+export type StatusPedido = 'pendente' | 'pago' | 'cancelado';
 export type SaudeEtapa = 'saudavel' | 'atencao' | 'critico';
 export type ProximoPassoTipo = 'manual' | 'automatico';
 export type LeadScore = 'alto' | 'medio' | 'baixo';

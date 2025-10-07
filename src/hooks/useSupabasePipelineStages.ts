@@ -54,7 +54,7 @@ export function useSupabasePipelineStages(pipelineId?: string) {
       if (id) {
         const { data, error } = await supabase
           .from('pipeline_stages')
-          .update(dataToSave)
+          .update(dataToSave as any)
           .eq('id', id)
           .select()
           .single();
@@ -78,7 +78,7 @@ export function useSupabasePipelineStages(pipelineId?: string) {
       } else {
         const { data, error } = await supabase
           .from('pipeline_stages')
-          .insert(dataToSave)
+          .insert(dataToSave as any)
           .select()
           .single();
 

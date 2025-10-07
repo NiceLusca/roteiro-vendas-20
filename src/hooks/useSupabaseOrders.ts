@@ -47,7 +47,7 @@ export function useSupabaseOrders() {
       if (id) {
         const { data, error } = await supabase
           .from('orders')
-          .update(dataToSave)
+          .update(dataToSave as any)
           .eq('id', id)
           .select()
           .single();
@@ -72,7 +72,7 @@ export function useSupabaseOrders() {
       } else {
         const { data, error } = await supabase
           .from('orders')
-          .insert(dataToSave)
+          .insert(dataToSave as any)
           .select()
           .single();
 

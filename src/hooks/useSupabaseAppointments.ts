@@ -71,10 +71,7 @@ export function useSupabaseAppointments() {
       } else {
         const { data, error } = await supabase
           .from('appointments')
-          .insert({
-            ...dataToSave,
-            status: dataToSave.status || 'agendado'
-          })
+          .insert(dataToSave as any)
           .select()
           .single();
 

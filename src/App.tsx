@@ -30,7 +30,6 @@ const LeadDetail = lazy(() => import('./pages/LeadDetail'));
 const Intelligence = lazy(() => import('./pages/Intelligence'));
 const Help = lazy(() => import('./pages/Help'));
 const Security = lazy(() => import('./pages/Security'));
-const Production = lazy(() => import('./pages/Production'));
 const PipelineSelection = lazy(() => import('./pages/PipelineSelection'));
 
 const queryClient = new QueryClient({
@@ -137,11 +136,6 @@ function App() {
                           <Route path="security" element={
                             <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <Security />
-                            </Suspense>
-                          } />
-                          <Route path="production" element={
-                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-                              <Production />
                             </Suspense>
                           } />
                           <Route path="leads/:id" element={

@@ -49,7 +49,7 @@ export function useSupabaseChecklistItems(etapaId?: string) {
       if (id) {
         const { data, error } = await supabase
           .from('stage_checklist_items')
-          .update(dataToSave)
+          .update(dataToSave as any)
           .eq('id', id)
           .select()
           .single();
@@ -71,9 +71,9 @@ export function useSupabaseChecklistItems(etapaId?: string) {
         fetchItems();
         return data;
       } else {
-        const { data, error } = await supabase
+        const { data, error} = await supabase
           .from('stage_checklist_items')
-          .insert(dataToSave)
+          .insert(dataToSave as any)
           .select()
           .single();
 

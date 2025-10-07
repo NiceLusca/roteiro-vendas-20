@@ -48,7 +48,7 @@ export function useSupabaseProducts() {
       if (id) {
         const { data, error } = await supabase
           .from('products')
-          .update(dataToSave)
+          .update(dataToSave as any)
           .eq('id', id)
           .select()
           .single();
@@ -72,7 +72,7 @@ export function useSupabaseProducts() {
       } else {
         const { data, error } = await supabase
           .from('products')
-          .insert(dataToSave)
+          .insert(dataToSave as any)
           .select()
           .single();
 
