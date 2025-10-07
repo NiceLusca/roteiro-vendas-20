@@ -10,16 +10,14 @@ import { Users, Shield, Settings, Trash2 } from 'lucide-react';
 interface UserRole {
   id: string;
   user_id: string;
-  role: 'admin' | 'moderator' | 'user';
+  role: 'admin' | 'manager' | 'closer' | 'user';
   created_at: string;
 }
 
 interface Profile {
   id: string;
-  user_id: string;
   email: string;
   full_name: string;
-  nome: string;
 }
 
 interface UserWithRoles {
@@ -30,7 +28,7 @@ interface UserWithRoles {
 export function RoleManager() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRole, setSelectedRole] = useState<'admin' | 'moderator' | 'user'>('user');
+  const [selectedRole, setSelectedRole] = useState<'admin' | 'manager' | 'closer' | 'user'>('user');
   const { toast } = useToast();
 
   const fetchUsersAndRoles = async () => {
@@ -54,7 +52,7 @@ export function RoleManager() {
       // Combinar dados
       const usersWithRoles: UserWithRoles[] = (profiles || []).map(profile => ({
         profile,
-        roles: (roles || []).filter(role => role.user_id === profile.user_id)
+        roles: (roles || []).filter(role => role.user_id === profile.id)
       }));
 
       setUsers(usersWithRoles);
@@ -70,11 +68,11 @@ export function RoleManager() {
     }
   };
 
-  const assignRole = async (userId: string, role: 'admin' | 'moderator' | 'user') => {
+  const assignRole = async (userId: string, role: 'admin' | 'manager' | 'closer' | 'user') => {
     try {
       // Verificar se o usuário já tem esse role
       const existingRole = users
-        .find(u => u.profile.user_id === userId)
+        .find(u => u.profile.id === userId)
         ?.roles.find(r => r.role === role);
 
       if (existingRole) {
@@ -152,7 +150,8 @@ export function RoleManager() {
   const getRoleLabel = (role: string) => {
     const labels = {
       admin: 'Administrador',
-      moderator: 'Moderador',
+      manager: 'Gerente',
+      closer: 'Closer',
       user: 'Usuário'
     };
     return labels[role as keyof typeof labels] || role;
@@ -161,7 +160,8 @@ export function RoleManager() {
   const getRoleDescription = (role: string) => {
     const descriptions = {
       admin: 'Acesso total ao sistema, incluindo configurações de segurança',
-      moderator: 'Acesso a relatórios e gestão de equipe',
+      manager: 'Acesso a relatórios e gestão de equipe',
+      closer: 'Acesso a funcionalidades de vendas e agendamentos',
       user: 'Acesso básico às funcionalidades do sistema'
     };
     return descriptions[role as keyof typeof descriptions] || '';
@@ -210,12 +210,12 @@ export function RoleManager() {
           <CardHeader className="pb-3">
             <div className="flex items-center space-x-2">
               <Settings className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Moderador</CardTitle>
+              <CardTitle className="text-lg">Gerente</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              {getRoleDescription('moderator')}
+              {getRoleDescription('manager')}
             </p>
           </CardContent>
         </Card>
@@ -285,12 +285,13 @@ export function RoleManager() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="user">Usuário</SelectItem>
-                        <SelectItem value="moderator">Moderador</SelectItem>
+                        <SelectItem value="closer">Closer</SelectItem>
+                        <SelectItem value="manager">Gerente</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
                     <Button
-                      onClick={() => assignRole(user.profile.user_id, selectedRole)}
+                      onClick={() => assignRole(user.profile.id, selectedRole)}
                       size="sm"
                     >
                       Atribuir

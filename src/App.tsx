@@ -30,7 +30,7 @@ const LeadDetail = lazy(() => import('./pages/LeadDetail'));
 const Intelligence = lazy(() => import('./pages/Intelligence'));
 const Help = lazy(() => import('./pages/Help'));
 const Security = lazy(() => import('./pages/Security'));
-const PipelineSelection = lazy(() => import('./pages/PipelineSelection'));
+const Production = lazy(() => import('./pages/Production'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -91,12 +91,7 @@ function App() {
                     </ProtectedRoute>
                   }>
                     <Route index element={<Index />} />
-                    <Route path="pipelines" element={
-                      <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-                        <PipelineSelection />
-                      </Suspense>
-                    } />
-                    <Route path="pipelines/:pipelineId" element={<Pipelines />} />
+                    <Route path="pipelines" element={<Pipelines />} />
                     <Route path="leads" element={<Leads />} />
                           <Route path="agenda" element={
                             <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
@@ -136,6 +131,11 @@ function App() {
                           <Route path="security" element={
                             <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
                               <Security />
+                            </Suspense>
+                          } />
+                          <Route path="production" element={
+                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+                              <Production />
                             </Suspense>
                           } />
                           <Route path="leads/:id" element={

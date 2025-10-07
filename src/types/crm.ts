@@ -1,36 +1,48 @@
-// Tipos do CRM - Sistema de Vendas e Pipelines (matching actual database schema)
+// Tipos do CRM - Sistema de Vendas e Pipelines
 
-// Enums - matching actual database schema (lowercase Portuguese)
-export type StatusGeral = 'lead' | 'qualificado' | 'reuniao_marcada' | 'em_negociacao' | 'cliente' | 'perdido';
-export type OrigemLead = 'indicacao' | 'trafego_pago' | 'organico' | 'evento' | 'outro';
-export type ObjecaoPrincipal = 'preco' | 'tempo' | 'confianca' | 'necessidade' | 'outro';
-export type StatusAppointment = 'agendado' | 'confirmado' | 'realizado' | 'cancelado' | 'remarcado';
-export type ResultadoSessao = 'positivo' | 'neutro' | 'negativo';
-export type CanalInteracao = 'whatsapp' | 'email' | 'telefone' | 'presencial' | 'outro';
-export type StatusDeal = 'aberto' | 'ganho' | 'perdido';
-export type StatusPedido = 'pendente' | 'pago' | 'cancelado';
-export type SaudeEtapa = 'saudavel' | 'atencao' | 'critico';
-export type ProximoPassoTipo = 'manual' | 'automatico';
-export type LeadScore = 'alto' | 'medio' | 'baixo';
+export type StatusGeral = 'Ativo' | 'Cliente' | 'Perdido' | 'Inativo';
+export type OrigemLead = 'Facebook' | 'Instagram' | 'Google' | 'Indicação' | 'Orgânico' | 'WhatsApp' | 'LinkedIn' | 'Evento' | 'Outro';
+export type ObjecaoPrincipal = 'Preço' | 'Tempo' | 'Prioridade' | 'Confiança' | 'Sem Fit' | 'Orçamento' | 'Decisor' | 'Concorrente' | 'Outro';
+export type StatusAppointment = 'Agendado' | 'Realizado' | 'Cancelado' | 'Remarcado' | 'No-Show';
+export type ResultadoSessao = 'Avançar' | 'Não Avançar' | 'Recuperação' | 'Cliente' | 'Outro';
+export type CanalInteracao = 'WhatsApp' | 'Ligação' | 'Email' | 'Presencial' | 'Notas' | 'Sessão';
+export type StatusDeal = 'Aberta' | 'Ganha' | 'Perdida';
+export type StatusPedido = 'Pago' | 'Pendente' | 'Reembolsado' | 'Estornado';
+export type SaudeEtapa = 'Verde' | 'Amarelo' | 'Vermelho';
+export type ProximoPassoTipo = 'Humano' | 'Agendamento' | 'Mensagem' | 'Outro';
+export type LeadScore = 'Alto' | 'Médio' | 'Baixo';
 
-// Lead interface - matching actual database schema
 export interface Lead {
   id: string;
   nome: string;
-  whatsapp?: string | null;
-  email?: string | null;
-  origem?: OrigemLead | null;
-  status_geral?: StatusGeral;
-  ja_vendeu_no_digital?: boolean | null;
-  seguidores?: number | null;
-  faturamento_medio?: number | null;
-  meta_faturamento?: number | null;
-  objecao_principal?: ObjecaoPrincipal | null;
-  lead_score?: number;
-  observacoes?: string | null;
-  tags?: string[] | null;
-  created_at?: string;
-  updated_at?: string;
+  email?: string;
+  whatsapp: string; // Normalizado +55DDDNÚMERO
+  origem: OrigemLead;
+  segmento?: string;
+  status_geral: StatusGeral;
+  closer?: string;
+  desejo_na_sessao?: string;
+  objecao_principal?: ObjecaoPrincipal;
+  objecao_obs?: string;
+  observacoes?: string;
+  
+  // Perfil/Scoring
+  ja_vendeu_no_digital: boolean;
+  seguidores: number;
+  faturamento_medio: number; // Em BRL
+  meta_faturamento: number; // Em BRL
+  lead_score: number; // Calculado automaticamente
+  lead_score_classification: LeadScore; // Alto (≥60), Médio (30-59), Baixo (<30)
+  
+  // Resultado última sessão
+  resultado_sessao_ultimo?: ResultadoSessao;
+  resultado_obs_ultima_sessao?: string;
+  
+  // Valor do lead
+  valor_lead?: number; // 0-110
+  
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface LeadFormSubmission {
@@ -38,187 +50,198 @@ export interface LeadFormSubmission {
   lead_id: string;
   payload: Record<string, any>;
   origem_form: string;
-  timestamp: string;
+  timestamp: Date;
 }
 
 export interface Pipeline {
   id: string;
   nome: string;
-  descricao?: string | null;
-  ativo?: boolean;
-  created_at?: string;
-  updated_at?: string;
+  descricao?: string;
+  ativo: boolean;
+  objetivo?: string;
+  primary_pipeline: boolean; // Pipeline principal quando lead for inscrito
 }
 
-// Pipeline Stage interface - matching actual database schema
 export interface PipelineStage {
   id: string;
   pipeline_id: string;
   nome: string;
   ordem: number;
-  sla_horas?: number | null;
-  proximo_passo_tipo?: string | null;
-  proximo_passo_template?: string | null;
-  criterios_avanco?: any; // JSON field
-  ativo?: boolean;
-  created_at?: string;
-  updated_at?: string;
+  prazo_em_dias: number; // SLA
+  
+  // Próximo passo
+  proximo_passo_label?: string;
+  proximo_passo_tipo: ProximoPassoTipo;
+  
+  // Ações automáticas
+  gerar_agendamento_auto: boolean;
+  duracao_minutos?: number;
+  
+  // Configurações de agendamento
+  tipo_agendamento?: 'Descoberta' | 'Apresentacao' | 'Fechamento' | 'Follow-up';
+  closer_padrao?: string;
+  horarios_preferenciais?: {
+    dias_semana?: number[];
+    horarios?: string[];
+  };
+  template_agendamento?: {
+    titulo?: string;
+    descricao?: string;
+  };
+  
+  // Critérios
+  entrada_criteria?: string;
+  saida_criteria?: string;
+  
+  // WIP limit
+  wip_limit?: number;
 }
 
-// Stage Checklist Item interface - matching actual database schema
 export interface StageChecklistItem {
   id: string;
-  etapa_id: string;
+  stage_id: string;
   titulo: string;
-  descricao?: string | null;
-  ordem?: number | null;
-  obrigatorio?: boolean;
-  ativo?: boolean;
-  created_at?: string;
-  updated_at?: string;
+  obrigatorio: boolean;
+  ordem: number;
 }
 
-// Lead Pipeline Entry interface - matching actual database schema
 export interface LeadPipelineEntry {
   id: string;
   lead_id: string;
   pipeline_id: string;
-  etapa_atual_id?: string | null;
-  data_inscricao?: string;
-  data_entrada_etapa?: string;
-  data_conclusao?: string | null;
-  status_inscricao?: string;
-  saude_etapa?: string | null;
-  created_at?: string;
-  updated_at?: string;
-  // Relacionamentos
-  lead?: Lead;
-  stage?: PipelineStage;
+  etapa_atual_id: string;
+  status_inscricao: 'Ativo' | 'Arquivado';
+  
+  // Datas e SLA
+  data_entrada_etapa: Date;
+  data_prevista_proxima_etapa: Date;
+  
+  // Métricas calculadas
+  tempo_em_etapa_dias: number;
+  dias_em_atraso: number;
+  saude_etapa: SaudeEtapa;
+  
+  // Checklist e observações
+  checklist_state: Record<string, boolean>; // item_id -> concluído
+  nota_etapa?: string;
 }
 
 export interface PipelineEvent {
   id: string;
   lead_pipeline_entry_id: string;
-  tipo: 'criado' | 'avancado' | 'regressado' | 'transferido' | 'arquivado';
-  de_etapa_id?: string | null;
-  para_etapa_id?: string | null;
-  ator: string;
-  timestamp: string;
+  tipo: 'Criado' | 'Avancado' | 'Regressado' | 'Transferido' | 'Arquivado';
+  de_etapa_id?: string;
+  para_etapa_id?: string;
+  ator: string; // usuário ou "sistema"
+  timestamp: Date;
   detalhes?: Record<string, any>;
 }
 
-// Appointment interface - matching actual database schema
 export interface Appointment {
   id: string;
   lead_id: string;
-  titulo: string;
-  data_hora: string;
-  duracao_minutos?: number;
-  status?: StatusAppointment;
-  resultado_sessao?: ResultadoSessao | null;
-  notas?: string | null;
-  created_at?: string;
-  updated_at?: string;
+  start_at: Date;
+  end_at: Date;
+  status: StatusAppointment;
+  origem: 'Plataforma' | 'Importado' | 'Outro';
+  resultado_sessao?: ResultadoSessao;
+  resultado_obs?: string;
+  observacao?: string;
+  criado_por?: string;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface AppointmentEvent {
   id: string;
   appointment_id: string;
-  tipo: 'criado' | 'reagendado' | 'cancelado' | 'realizado' | 'status_alterado';
+  tipo: 'Criado' | 'Reagendado' | 'Cancelado' | 'Realizado' | 'StatusAlterado';
   antes?: Record<string, any>;
   depois?: Record<string, any>;
   ator: string;
-  timestamp: string;
+  timestamp: Date;
 }
 
-// Interaction interface - matching actual database schema
 export interface Interaction {
   id: string;
   lead_id: string;
   canal: CanalInteracao;
-  descricao: string;
-  data_hora: string;
-  created_at?: string;
+  conteudo: string;
+  autor: string;
+  timestamp: Date;
 }
 
 export interface Product {
   id: string;
   nome: string;
-  descricao?: string | null;
-  preco: number;
-  ativo?: boolean;
-  created_at?: string;
-  updated_at?: string;
+  tipo: 'Mentoria' | 'Curso' | 'Plano' | 'Consultoria' | 'Outro';
+  recorrencia: 'Nenhuma' | 'Mensal' | 'Trimestral' | 'Anual';
+  preco_padrao: number; // Em BRL
+  ativo: boolean;
 }
 
-// Deal interface - matching actual database schema
 export interface Deal {
   id: string;
   lead_id: string;
-  produto_id?: string | null;
-  valor_proposto: number;
-  status?: StatusDeal;
-  data_fechamento?: string | null;
-  motivo_perda?: string | null;
-  created_at?: string;
-  updated_at?: string;
+  product_id: string;
+  closer?: string;
+  valor_proposto: number; // Em BRL
+  status: StatusDeal;
+  fase_negociacao?: string;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface DealLostReason {
   id: string;
   deal_id: string;
-  motivo: string;
+  motivo: ObjecaoPrincipal;
   detalhes?: string;
-  timestamp: string;
+  timestamp: Date;
 }
 
-// Order interface - matching actual database schema
 export interface Order {
   id: string;
-  deal_id: string;
-  lead_id?: string | null;
-  valor_total: number;
-  status_pagamento?: StatusPedido;
-  data_pedido?: string;
-  closer?: string | null;
-  created_at?: string;
-  updated_at?: string;
+  lead_id: string;
+  closer?: string;
+  total: number; // Em BRL
+  forma_pagamento?: string;
+  data_venda: Date;
+  status: StatusPedido;
+  observacao?: string;
 }
 
-// Order Item interface - matching actual database schema
 export interface OrderItem {
   id: string;
-  pedido_id: string;
-  produto_id?: string | null;
+  order_id: string;
+  product_id: string;
+  valor: number; // Em BRL
   quantidade: number;
-  preco_unitario: number;
-  recorrencia?: string | null;
-  created_at?: string;
 }
 
 export interface Refund {
   id: string;
   order_id: string;
-  valor: number;
+  valor: number; // Em BRL
   motivo: string;
-  data: string;
-  parcial: boolean;
+  data: Date;
+  parcial: boolean; // Se é reembolso parcial ou total
 }
 
 export interface AuditLog {
   id: string;
-  entidade: string;
+  entidade: string; // 'Lead', 'Deal', 'Order', etc.
   entidade_id: string;
   alteracao: {
     campo: string;
     de: any;
     para: any;
   }[];
-  ator?: string | null;
-  timestamp: string;
+  ator: string;
+  timestamp: Date;
 }
 
-// Additional types for multi-pipeline functionality
+// Adicionais tipos para múltiplos pipelines e funcionalidades avançadas
 export interface PipelineTransfer {
   id: string;
   lead_id: string;
@@ -228,17 +251,43 @@ export interface PipelineTransfer {
   para_etapa_id: string;
   motivo: string;
   ator: string;
-  timestamp: string;
+  timestamp: Date;
 }
 
-// Drag and drop types
+export interface DealLostReason {
+  id: string;
+  deal_id: string;
+  motivo: ObjecaoPrincipal;
+  detalhes?: string;
+  timestamp: Date;
+}
+
+export interface Interaction {
+  id: string;
+  lead_id: string;
+  canal: CanalInteracao;
+  conteudo: string;
+  autor: string;
+  timestamp: Date;
+}
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: string;
+  valor: number; // Em BRL
+  quantidade: number;
+  recorrencia?: 'Nenhuma' | 'Mensal' | 'Trimestral' | 'Anual'; // Herdada do produto, mas editável
+}
+
+// Tipos para drag and drop
 export interface DragDropResult {
   fromStage: string;
   toStage: string;
   entryId: string;
 }
 
-// Dashboard metrics types
+// Tipos para métricas do Dashboard
 export interface DashboardMetrics {
   leads_por_status: Record<StatusGeral, number>;
   sessoes_hoje: number;
@@ -250,7 +299,7 @@ export interface DashboardMetrics {
   top_objecoes: Array<{ objecao: ObjecaoPrincipal; count: number }>;
 }
 
-// Kanban types
+// Tipos para o Kanban
 export interface KanbanColumn {
   stage: PipelineStage;
   entries: Array<LeadPipelineEntry & { lead: Lead }>;
@@ -265,22 +314,22 @@ export interface ProximoPasso {
   proximo_passo_label: string;
   proximo_passo_tipo: ProximoPassoTipo;
   dias_em_atraso: number;
-  saude_etapa: string;
+  saude_etapa: SaudeEtapa;
 }
 
-// Unified timeline types
+// Tipos para timeline unificada
 export interface TimelineEvent {
   id: string;
   type: 'interaction' | 'appointment' | 'pipeline' | 'deal' | 'order' | 'audit';
   title: string;
   description: string;
-  timestamp: string;
-  icon: any;
+  timestamp: Date;
+  icon: any; // LucideIcon
   entityId?: string;
   details?: Record<string, any>;
 }
 
-// Pipeline transfer request type
+// Tipos para transferência de pipeline
 export interface PipelineTransferRequest {
   leadId: string;
   fromPipelineId: string;

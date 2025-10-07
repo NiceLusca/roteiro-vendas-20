@@ -1,16 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EnhancedPipelineKanban } from '@/components/kanban/EnhancedPipelineKanban';
+import { CRMProviderWrapper } from '@/contexts/CRMProviderWrapper';
 
 export default function Pipelines() {
   return (
-    <div className="container mx-auto p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Pipelines</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">Funcionalidade em desenvolvimento</p>
-        </CardContent>
-      </Card>
-    </div>
+    <CRMProviderWrapper>
+      <EnhancedPipelineKanban />
+    </CRMProviderWrapper>
   );
 }

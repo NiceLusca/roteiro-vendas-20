@@ -74,11 +74,8 @@ export function AuditProvider({ children }: { children: ReactNode }) {
       }
 
       return data?.map(log => ({
-        ator: log.ator || undefined,
-        entidade: log.entidade,
-        entidade_id: log.entidade_id,
-        id: log.id,
-        timestamp: log.timestamp,
+        ...log,
+        timestamp: new Date(log.timestamp),
         alteracao: log.alteracao as Array<{ campo: string; de: any; para: any }>
       })) || [];
     } catch (error) {

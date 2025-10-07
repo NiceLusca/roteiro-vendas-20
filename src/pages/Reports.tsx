@@ -1,16 +1,13 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PipelineAnalyticsDashboard } from '@/components/reports/PipelineAnalyticsDashboard';
+import { RealtimeMetrics } from '@/components/reports/RealtimeMetrics';
+import { DataExport } from '@/components/reports/DataExport';
 
 export default function Reports() {
   return (
-    <div className="container mx-auto p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Reports</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">Funcionalidade em desenvolvimento</p>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      <RealtimeMetrics />
+      <PipelineAnalyticsDashboard />
+      <DataExport />
     </div>
   );
 }

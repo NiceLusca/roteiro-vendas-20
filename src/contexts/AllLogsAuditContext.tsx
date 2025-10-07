@@ -31,7 +31,7 @@ export function AllLogsAuditProvider({ children }: { children: ReactNode }) {
         entidade_id: log.entidade_id,
         ator: log.ator,
         alteracao: (log.alteracao as any) || [],
-        timestamp: log.timestamp
+        timestamp: new Date(log.timestamp)
       })) || [];
     } catch (error) {
       console.error('Erro ao buscar logs:', error);

@@ -5,8 +5,10 @@ import { useAuth } from '@/contexts/AuthContextSecure';
 interface AppointmentInfo {
   id: string;
   lead_id: string;
-  data_hora: string;
+  start_at: string;
   status: string;
+  tipo_sessao?: string;
+  closer_responsavel?: string;
 }
 
 export function useKanbanAppointments() {
@@ -23,11 +25,11 @@ export function useKanbanAppointments() {
       // Buscar próximos agendamentos para os leads
       const { data } = await supabase
         .from('appointments')
-        .select('id, lead_id, data_hora, status')
+        .select('id, lead_id, start_at, status, tipo_sessao, closer_responsavel')
         .in('lead_id', leadIds)
-        .eq('status', 'agendado')
-        .gte('data_hora', new Date().toISOString())
-        .order('data_hora', { ascending: true });
+        .eq('status', 'Agendado')
+        .gte('start_at', new Date().toISOString())
+        .order('start_at', { ascending: true });
 
       if (data) {
         // Criar mapa com o próximo agendamento de cada lead

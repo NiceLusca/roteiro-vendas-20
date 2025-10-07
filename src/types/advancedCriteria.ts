@@ -1,11 +1,12 @@
 export interface StageAdvancementCriteria {
   id: string;
-  etapa_id: string;
-  tipo: string;
-  campo?: string | null;
-  operador?: string | null;
-  valor_esperado?: string | null;
+  stage_id: string;
+  tipo_criterio: string;
+  nome: string;
+  descricao?: string | null;
+  regra_condicional?: any;
   obrigatorio: boolean;
+  ordem: number;
   ativo: boolean;
   created_at: string;
   updated_at: string;
@@ -14,11 +15,13 @@ export interface StageAdvancementCriteria {
 export interface LeadCriteriaState {
   id: string;
   lead_id: string;
+  stage_id: string;
   criterio_id: string;
   status: string;
-  valor_validacao?: string | null;
+  valor_validacao?: any;
   validado_em?: string | null;
   validado_por?: string | null;
+  observacoes?: string | null;
   created_at: string;
   updated_at: string;
 }

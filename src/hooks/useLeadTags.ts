@@ -16,7 +16,7 @@ export function useLeadTags() {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('tags')
+        .from('lead_tags')
         .select('*')
         .order('nome');
 
@@ -39,8 +39,9 @@ export function useLeadTags() {
 
     try {
       const { data, error } = await supabase
-        .from('tags')
+        .from('lead_tags')
         .insert({
+          user_id: user.id,
           nome,
           cor,
         })
@@ -132,11 +133,11 @@ export function useLeadTags() {
     try {
       const { data, error } = await supabase
         .from('lead_tag_assignments')
-        .select('tag_id, tags(*)')
+        .select('tag_id, lead_tags(*)')
         .eq('lead_id', leadId);
 
       if (error) throw error;
-      return data?.map(item => item.tags).filter(Boolean) as any[];
+      return data?.map(item => item.lead_tags).filter(Boolean) as LeadTag[];
     } catch (error) {
       console.error('Error fetching lead tags:', error);
       return [];
