@@ -42,12 +42,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTimeout(async () => {
       try {
         await supabase.rpc('log_security_event', {
-          _user_id: userId,
-          _event_type: eventType,
-          _ip_address: null,
-          _user_agent: typeof window !== 'undefined' ? navigator.userAgent : null,
-          _success: success,
-          _details: details || null
+          p_user_id: userId,
+          p_event_type: eventType,
+          p_ip_address: null,
+          p_user_agent: typeof window !== 'undefined' ? navigator.userAgent : null,
+          p_success: success,
+          p_details: details || null,
+          p_severity: 'info'
         });
       } catch (error) {
         console.error('Erro ao registrar evento de segurança:', error);
@@ -146,39 +147,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         error: error.message 
       });
 
-      // Check for suspicious activity (async)
-      setTimeout(async () => {
-        try {
-          const { data: isSuspicious } = await supabase.rpc('detect_suspicious_activity', {
-            _ip_address: '127.0.0.1'
-          });
-
-          if (isSuspicious) {
-            logSecurityEventAsync('suspicious_activity', null, false, {
-              reason: 'Multiple failed login attempts',
-              email
-            });
-            
-            toast({
-              title: "Atividade Suspeita",
-              description: "Múltiplas tentativas de login falharam. Aguarde antes de tentar novamente.",
-              variant: "destructive"
-            });
-          } else {
-            toast({
-              title: "Erro no login",
-              description: error.message,
-              variant: "destructive"
-            });
-          }
-        } catch {
-          toast({
-            title: "Erro no login",
-            description: error.message,
-            variant: "destructive"
-          });
-        }
-      }, 0);
+      // Show error toast
+      toast({
+        title: "Erro no login",
+        description: error.message,
+        variant: "destructive"
+      });
     }
 
     return { error };

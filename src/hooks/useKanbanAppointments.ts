@@ -7,8 +7,6 @@ interface AppointmentInfo {
   lead_id: string;
   start_at: string;
   status: string;
-  tipo_sessao?: string;
-  closer_responsavel?: string;
 }
 
 export function useKanbanAppointments() {
@@ -25,9 +23,9 @@ export function useKanbanAppointments() {
       // Buscar próximos agendamentos para os leads
       const { data } = await supabase
         .from('appointments')
-        .select('id, lead_id, start_at, status, tipo_sessao, closer_responsavel')
+        .select('id, lead_id, start_at, status')
         .in('lead_id', leadIds)
-        .eq('status', 'Agendado')
+        .eq('status', 'agendado')
         .gte('start_at', new Date().toISOString())
         .order('start_at', { ascending: true });
 

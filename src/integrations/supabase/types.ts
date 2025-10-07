@@ -100,6 +100,39 @@ export type Database = {
         }
         Relationships: []
       }
+      bulk_import_logs: {
+        Row: {
+          created_at: string | null
+          error_count: number | null
+          errors: Json | null
+          id: string
+          status: string
+          success_count: number | null
+          total_records: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_count?: number | null
+          errors?: Json | null
+          id?: string
+          status: string
+          success_count?: number | null
+          total_records?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_count?: number | null
+          errors?: Json | null
+          id?: string
+          status?: string
+          success_count?: number | null
+          total_records?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       deals: {
         Row: {
           created_at: string | null
@@ -337,14 +370,52 @@ export type Database = {
           },
         ]
       }
+      lead_tags: {
+        Row: {
+          created_at: string | null
+          id: string
+          lead_id: string
+          tag_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          lead_id: string
+          tag_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          lead_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_tags_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
+          closer: string | null
           created_at: string | null
           email: string | null
           faturamento_medio: number | null
           id: string
           ja_vendeu_no_digital: boolean | null
           lead_score: number | null
+          lead_score_classification: string | null
           meta_faturamento: number | null
           nome: string
           objecao_principal:
@@ -360,12 +431,14 @@ export type Database = {
           whatsapp: string | null
         }
         Insert: {
+          closer?: string | null
           created_at?: string | null
           email?: string | null
           faturamento_medio?: number | null
           id?: string
           ja_vendeu_no_digital?: boolean | null
           lead_score?: number | null
+          lead_score_classification?: string | null
           meta_faturamento?: number | null
           nome: string
           objecao_principal?:
@@ -381,12 +454,14 @@ export type Database = {
           whatsapp?: string | null
         }
         Update: {
+          closer?: string | null
           created_at?: string | null
           email?: string | null
           faturamento_medio?: number | null
           id?: string
           ja_vendeu_no_digital?: boolean | null
           lead_score?: number | null
+          lead_score_classification?: string | null
           meta_faturamento?: number | null
           nome?: string
           objecao_principal?:

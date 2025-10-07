@@ -82,51 +82,19 @@ export function SecurityDashboard() {
   };
 
   const runSecurityScan = async () => {
-    try {
-      const { error } = await supabase.rpc('detect_suspicious_activity', {
-        _ip_address: '0.0.0.0', // IP fictício para teste
-        _time_window: '15 minutes',
-        _max_attempts: 5
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Scan de Segurança",
-        description: "Verificação de atividades suspeitas concluída"
-      });
-
-      fetchSecurityData();
-    } catch (error) {
-      console.error('Erro no scan de segurança:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao executar scan de segurança",
-        variant: "destructive"
-      });
-    }
+    toast({
+      title: "Funcionalidade não disponível",
+      description: "RPC function not implemented",
+      variant: "destructive"
+    });
   };
 
   const cleanupOldLogs = async () => {
-    try {
-      const { data, error } = await supabase.rpc('cleanup_old_security_events');
-
-      if (error) throw error;
-
-      toast({
-        title: "Limpeza Concluída",
-        description: `${data || 0} eventos antigos foram removidos`
-      });
-
-      fetchSecurityData();
-    } catch (error) {
-      console.error('Erro na limpeza:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao limpar logs antigos",
-        variant: "destructive"
-      });
-    }
+    toast({
+      title: "Funcionalidade não disponível",
+      description: "RPC function not implemented",
+      variant: "destructive"
+    });
   };
 
   useEffect(() => {

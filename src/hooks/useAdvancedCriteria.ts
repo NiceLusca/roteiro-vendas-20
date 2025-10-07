@@ -16,9 +16,8 @@ export function useAdvancedCriteria(stageId?: string) {
       const { data, error } = await supabase
         .from('stage_advancement_criteria')
         .select('*')
-        .eq('stage_id', stageId)
-        .eq('ativo', true)
-        .order('ordem');
+        .eq('etapa_id', stageId)
+        .eq('ativo', true);
 
       if (error) throw error;
       setCriteria((data || []) as StageAdvancementCriteria[]);
@@ -34,7 +33,7 @@ export function useAdvancedCriteria(stageId?: string) {
     }
   }, [stageId, toast]);
 
-  const createCriteria = useCallback(async (criteriaData: Partial<StageAdvancementCriteria> & { stage_id: string; nome: string; tipo_criterio: string }) => {
+  const createCriteria = useCallback(async (criteriaData: Partial<StageAdvancementCriteria> & { etapa_id: string; tipo: string }) => {
     try {
       const { data, error } = await supabase
         .from('stage_advancement_criteria')
@@ -44,7 +43,7 @@ export function useAdvancedCriteria(stageId?: string) {
 
       if (error) throw error;
       
-      setCriteria(prev => [...prev, data as StageAdvancementCriteria].sort((a, b) => a.ordem - b.ordem));
+      setCriteria(prev => [...prev, data as StageAdvancementCriteria]);
       toast({
         title: "Critério criado",
         description: "Critério adicionado com sucesso.",
@@ -143,8 +142,7 @@ export function useLeadCriteriaState(leadId?: string, stageId?: string) {
       const { data, error } = await supabase
         .from('lead_criteria_state')
         .select('*')
-        .eq('lead_id', leadId)
-        .eq('stage_id', stageId);
+        .eq('lead_id', leadId);
 
       if (error) throw error;
       setCriteriaStates((data || []) as LeadCriteriaState[]);
@@ -168,15 +166,11 @@ export function useLeadCriteriaState(leadId?: string, stageId?: string) {
         .from('lead_criteria_state')
         .upsert({
           lead_id: leadId,
-          stage_id: stageId,
           criterio_id: criterioId,
           status,
-          valor_validacao: valorValidacao,
+          valor_validacao: valorValidacao ? String(valorValidacao) : null,
           validado_em: status === 'atendido' ? new Date().toISOString() : null,
-          validado_por: status === 'atendido' ? 'Sistema' : null,
-          observacoes
-        }, {
-          onConflict: 'lead_id,stage_id,criterio_id'
+          validado_por: status === 'atendido' ? 'Sistema' : null
         })
         .select()
         .single();
