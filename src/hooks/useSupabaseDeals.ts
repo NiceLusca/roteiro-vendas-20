@@ -6,11 +6,9 @@ import { useAuth } from '@/contexts/AuthContextSecure';
 interface Deal {
   id: string;
   lead_id: string;
-  product_id?: string;
+  produto_id?: string;
   valor_proposto: number;
-  status: 'Aberta' | 'Ganha' | 'Perdida' | 'Pausada';
-  closer?: string;
-  fase_negociacao?: string;
+  status: 'aberto' | 'ganho' | 'perdido';
   created_at: string;
   updated_at: string;
 }

@@ -1,13 +1,16 @@
-import { useParams } from 'react-router-dom';
-import { EnhancedPipelineKanban } from '@/components/kanban/EnhancedPipelineKanban';
-import { CRMProviderWrapper } from '@/contexts/CRMProviderWrapper';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function Pipelines() {
-  const { pipelineId } = useParams<{ pipelineId: string }>();
-
   return (
-    <CRMProviderWrapper>
-      <EnhancedPipelineKanban pipelineId={pipelineId} />
-    </CRMProviderWrapper>
+    <div className="container mx-auto p-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Pipelines</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">Funcionalidade em desenvolvimento</p>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

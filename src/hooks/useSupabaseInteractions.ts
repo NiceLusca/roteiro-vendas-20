@@ -6,10 +6,11 @@ import { useAuth } from '@/contexts/AuthContextSecure';
 interface Interaction {
   id: string;
   lead_id: string;
-  canal: 'WhatsApp' | 'Ligação' | 'Email' | 'Presencial' | 'Notas' | 'Sessão';
-  conteudo: string;
-  autor: string;
-  timestamp: string;
+  canal: 'whatsapp' | 'telefone' | 'email' | 'presencial' | 'outro';
+  descricao: string;
+  data_hora: string;
+  created_at: string;
+  timestamp?: string;
 }
 
 export function useSupabaseInteractions() {
@@ -26,7 +27,7 @@ export function useSupabaseInteractions() {
       const { data, error } = await supabase
         .from('interactions')
         .select('*')
-        .order('timestamp', { ascending: false });
+        .order('data_hora', { ascending: false });
 
       if (error) {
         console.error('Erro ao buscar interações:', error);
@@ -40,7 +41,7 @@ export function useSupabaseInteractions() {
 
       setInteractions(data?.map(interaction => ({
         ...interaction,
-        timestamp: new Date(interaction.timestamp).toISOString()
+        timestamp: interaction.data_hora
       })) || []);
     } catch (error) {
       console.error('Erro ao buscar interações:', error);
@@ -49,18 +50,18 @@ export function useSupabaseInteractions() {
     }
   };
 
-  const saveInteraction = async (interactionData: Omit<Interaction, 'id' | 'timestamp'>) => {
+  const saveInteraction = async (interactionData: Partial<Interaction>) => {
     if (!user) return null;
 
     try {
-      const payload = {
-        ...interactionData,
-        timestamp: new Date().toISOString()
-      };
-
       const { data, error } = await supabase
         .from('interactions')
-        .insert(payload)
+        .insert({
+          lead_id: interactionData.lead_id,
+          canal: interactionData.canal,
+          descricao: interactionData.descricao,
+          data_hora: interactionData.data_hora || new Date().toISOString()
+        })
         .select()
         .single();
 
@@ -103,7 +104,7 @@ export function useSupabaseInteractions() {
   const getRecentInteractions = (hours: number = 24): Interaction[] => {
     const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
     return interactions.filter(interaction => 
-      new Date(interaction.timestamp) >= cutoff
+      new Date(interaction.data_hora) >= cutoff
     );
   };
 
