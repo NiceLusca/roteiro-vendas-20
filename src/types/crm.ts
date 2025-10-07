@@ -1,10 +1,10 @@
 // Tipos do CRM - Sistema de Vendas e Pipelines
 
 export type StatusGeral = 'Ativo' | 'Cliente' | 'Perdido' | 'Inativo';
-export type OrigemLead = 'Facebook' | 'Instagram' | 'Google' | 'Indicação' | 'Orgânico' | 'WhatsApp' | 'LinkedIn' | 'Evento' | 'Outro';
-export type ObjecaoPrincipal = 'Preço' | 'Tempo' | 'Prioridade' | 'Confiança' | 'Sem Fit' | 'Orçamento' | 'Decisor' | 'Concorrente' | 'Outro';
+export type OrigemLead = 'evento' | 'indicacao' | 'organico' | 'outro' | 'trafego_pago';
+export type ObjecaoPrincipal = 'confianca' | 'orcamento' | 'prioridade' | 'tempo';
 export type StatusAppointment = 'agendado' | 'realizado' | 'cancelado' | 'remarcado' | 'confirmado';
-export type ResultadoSessao = 'Avançar' | 'Não Avançar' | 'Recuperação' | 'Cliente' | 'Outro';
+export type ResultadoSessao = 'positivo' | 'neutro' | 'negativo';
 export type CanalInteracao = 'whatsapp' | 'telefone' | 'email' | 'presencial' | 'outro';
 export type StatusDeal = 'aberto' | 'ganho' | 'perdido';
 export type StatusPedido = 'pago' | 'pendente' | 'cancelado';
@@ -16,10 +16,10 @@ export interface Lead {
   id: string;
   nome: string;
   email?: string;
-  whatsapp: string; // Normalizado +55DDDNÚMERO
-  origem: OrigemLead;
+  whatsapp: string;
+  origem?: OrigemLead;
   segmento?: string;
-  status_geral: StatusGeral;
+  status_geral?: StatusGeral;
   closer?: string;
   desejo_na_sessao?: string;
   objecao_principal?: ObjecaoPrincipal;
@@ -28,12 +28,12 @@ export interface Lead {
   user_id?: string;
   
   // Perfil/Scoring
-  ja_vendeu_no_digital: boolean;
-  seguidores: number;
-  faturamento_medio: number; // Em BRL
-  meta_faturamento: number; // Em BRL
-  lead_score: number; // Calculado automaticamente
-  lead_score_classification: LeadScore; // Alto (≥60), Médio (30-59), Baixo (<30)
+  ja_vendeu_no_digital?: boolean;
+  seguidores?: number;
+  faturamento_medio?: number;
+  meta_faturamento?: number;
+  lead_score?: number;
+  lead_score_classification?: string;
   
   // Resultado última sessão
   resultado_sessao_ultimo?: string;
@@ -110,21 +110,14 @@ export interface LeadPipelineEntry {
   id: string;
   lead_id: string;
   pipeline_id: string;
-  etapa_atual_id: string;
-  status_inscricao: 'Ativo' | 'Arquivado';
-  
-  // Datas e SLA
-  data_entrada_etapa: Date;
-  data_prevista_proxima_etapa: Date;
-  
-  // Métricas calculadas
-  tempo_em_etapa_dias: number;
-  dias_em_atraso: number;
-  saude_etapa: SaudeEtapa;
-  
-  // Checklist e observações
-  checklist_state: Record<string, boolean>; // item_id -> concluído
-  nota_etapa?: string;
+  etapa_atual_id?: string;
+  status_inscricao?: string;
+  data_inscricao?: Date;
+  data_entrada_etapa?: Date;
+  data_conclusao?: Date;
+  saude_etapa?: string;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export interface PipelineEvent {
@@ -141,16 +134,16 @@ export interface PipelineEvent {
 export interface Appointment {
   id: string;
   lead_id: string;
-  start_at: Date;
-  end_at: Date;
+  data_hora: Date;
+  start_at?: Date;
+  end_at?: Date;
   status: StatusAppointment;
-  origem: 'Plataforma' | 'Importado' | 'Outro';
+  titulo?: string;
+  duracao_minutos?: number;
+  notas?: string;
   resultado_sessao?: ResultadoSessao;
-  resultado_obs?: string;
-  observacao?: string;
-  criado_por?: string;
-  created_at: Date;
-  updated_at: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export interface AppointmentEvent {
@@ -167,9 +160,9 @@ export interface Interaction {
   id: string;
   lead_id: string;
   canal: CanalInteracao;
-  conteudo: string;
-  autor: string;
-  timestamp: Date;
+  descricao: string;
+  data_hora?: Date;
+  created_at?: Date;
 }
 
 export interface Product {
@@ -184,13 +177,14 @@ export interface Product {
 export interface Deal {
   id: string;
   lead_id: string;
-  product_id: string;
+  produto_id?: string;
   closer?: string;
-  valor_proposto: number; // Em BRL
-  status: StatusDeal;
-  fase_negociacao?: string;
-  created_at: Date;
-  updated_at: Date;
+  valor_proposto: number;
+  status?: StatusDeal;
+  motivo_perda?: string;
+  data_fechamento?: Date;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export interface DealLostReason {

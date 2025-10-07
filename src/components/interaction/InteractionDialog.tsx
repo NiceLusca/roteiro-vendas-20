@@ -22,11 +22,10 @@ interface InteractionDialogProps {
 
 const canaisInteracao: { value: CanalInteracao; label: string }[] = [
   { value: 'whatsapp', label: 'WhatsApp' },
-  { value: 'ligacao', label: 'Ligação' },
+  { value: 'telefone', label: 'Telefone' },
   { value: 'email', label: 'Email' },
   { value: 'presencial', label: 'Presencial' },
-  { value: 'notas', label: 'Notas Internas' },
-  { value: 'sessao', label: 'Sessão' }
+  { value: 'outro', label: 'Outro' }
 ];
 
 export function InteractionDialog({
