@@ -45,17 +45,33 @@ export function Auth() {
     }
 
     setIsSubmitting(true);
-    const { error } = await signIn(email, password);
-    setIsSubmitting(false);
+    try {
+      const { error } = await signIn(email, password);
+      setIsSubmitting(false);
 
-    if (error) {
-      const errorMessage = error.message === 'Invalid login credentials'
-        ? 'Email ou senha incorretos'
-        : error.message || 'Erro ao fazer login';
+      if (error) {
+        let errorMessage = 'Erro ao fazer login';
+        
+        if (error.message === 'Invalid login credentials') {
+          errorMessage = 'Email ou senha incorretos';
+        } else if (error.message?.includes('fetch')) {
+          errorMessage = 'Erro de conexão. Verifique se as URLs estão configuradas no Supabase (Authentication > URL Configuration)';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        setError(errorMessage);
+        toast.error(errorMessage);
+        console.error('Login error:', error);
+      } else {
+        toast.success('Login realizado com sucesso!');
+      }
+    } catch (err: any) {
+      setIsSubmitting(false);
+      const errorMessage = 'Erro de rede. Verifique sua conexão e as configurações do Supabase.';
       setError(errorMessage);
       toast.error(errorMessage);
-    } else {
-      toast.success('Login realizado com sucesso!');
+      console.error('Network error:', err);
     }
   };
 
@@ -74,20 +90,36 @@ export function Auth() {
     }
 
     setIsSubmitting(true);
-    const { error } = await signUp(email, password);
-    setIsSubmitting(false);
+    try {
+      const { error } = await signUp(email, password);
+      setIsSubmitting(false);
 
-    if (error) {
-      const errorMessage = error.message === 'User already registered'
-        ? 'Este email já está cadastrado. Faça login.'
-        : error.message || 'Erro ao cadastrar';
+      if (error) {
+        let errorMessage = 'Erro ao cadastrar';
+        
+        if (error.message === 'User already registered') {
+          errorMessage = 'Este email já está cadastrado. Faça login.';
+        } else if (error.message?.includes('fetch')) {
+          errorMessage = 'Erro de conexão. Verifique se as URLs estão configuradas no Supabase (Authentication > URL Configuration)';
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        setError(errorMessage);
+        toast.error(errorMessage);
+        console.error('Signup error:', error);
+      } else {
+        setSuccess('Cadastro realizado! Verifique seu email para confirmar.');
+        toast.success('Cadastro realizado com sucesso!');
+        setEmail('');
+        setPassword('');
+      }
+    } catch (err: any) {
+      setIsSubmitting(false);
+      const errorMessage = 'Erro de rede. Verifique sua conexão e as configurações do Supabase.';
       setError(errorMessage);
       toast.error(errorMessage);
-    } else {
-      setSuccess('Cadastro realizado! Verifique seu email para confirmar.');
-      toast.success('Cadastro realizado com sucesso!');
-      setEmail('');
-      setPassword('');
+      console.error('Network error:', err);
     }
   };
 
