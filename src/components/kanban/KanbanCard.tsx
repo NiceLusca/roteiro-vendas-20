@@ -166,9 +166,9 @@ export function KanbanCard({
             <Badge variant="outline" className="text-xs">
               {stage.proximo_passo_tipo}
             </Badge>
-            {entry.dias_em_atraso > 0 && (
-              <Badge variant="destructive" className="text-xs">
-                {entry.dias_em_atraso}d atraso
+            {entry.data_entrada_etapa && (
+              <Badge variant="outline" className="text-xs">
+                {Math.floor((Date.now() - new Date(entry.data_entrada_etapa).getTime()) / (1000 * 60 * 60 * 24))}d
               </Badge>
             )}
           </div>
@@ -177,17 +177,17 @@ export function KanbanCard({
         {/* SLA e Saúde */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Badge className={getHealthBadgeClass(entry.saude_etapa)}>
-              {entry.saude_etapa}
-            </Badge>
-            <span className="text-xs text-muted-foreground">
-              {entry.tempo_em_etapa_dias}d na etapa
-            </span>
+            {entry.saude_etapa && (
+              <Badge className={getHealthBadgeClass(entry.saude_etapa)}>
+                {entry.saude_etapa}
+              </Badge>
+            )}
+            {entry.data_entrada_etapa && (
+              <span className="text-xs text-muted-foreground">
+                {Math.floor((Date.now() - new Date(entry.data_entrada_etapa).getTime()) / (1000 * 60 * 60 * 24))}d na etapa
+              </span>
+            )}
           </div>
-          
-          {entry.dias_em_atraso > 0 && (
-            <AlertCircle className="h-4 w-4 text-danger" />
-          )}
         </div>
 
         {/* Informações de Agendamento */}
@@ -227,29 +227,6 @@ export function KanbanCard({
           </div>
         )}
 
-        {/* Etapas com agendamento mas sem agendamento ativo */}
-        {(stage.gerar_agendamento_auto || stage.tipo_agendamento) && !nextAppointment && (
-          <div className="mb-3 p-2 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-md">
-            <div className="flex items-center gap-2 mb-1">
-              <CalendarX className="h-3 w-3 text-orange-600" />
-              <span className="text-xs font-medium text-orange-600">
-                Agendamento Necessário
-              </span>
-            </div>
-            <p className="text-xs text-orange-600">
-              {stage.tipo_agendamento && `Tipo: ${stage.tipo_agendamento}`}
-            </p>
-          </div>
-        )}
-
-        {/* Observações */}
-        {entry.nota_etapa && (
-          <div className="mb-3 p-2 bg-accent/50 rounded-md">
-            <p className="text-xs text-foreground line-clamp-2">
-              {entry.nota_etapa}
-            </p>
-          </div>
-        )}
 
         {/* Ações Rápidas */}
         <div className="flex flex-wrap items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -317,8 +294,7 @@ export function KanbanCard({
             <GitBranch className="h-3 w-3" />
           </Button>
           
-          {(stage.gerar_agendamento_auto || stage.tipo_agendamento) && (
-            <Button
+          <Button
               size="sm"
               variant="ghost"
               className={cn(
@@ -339,7 +315,6 @@ export function KanbanCard({
                 <Calendar className="h-3 w-3" />
               )}
             </Button>
-          )}
           
           {stage.proximo_passo_tipo === 'Mensagem' && (
             <Button

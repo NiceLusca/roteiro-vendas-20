@@ -48,17 +48,9 @@ export function KanbanColumn({
     return acc;
   }, {} as Record<string, number>);
 
-  const atrasados = entries.filter(e => e.dias_em_atraso > 0).length;
-
-  // Ordenar por prioridade: atrasados primeiro, depois por score
+  // Ordenar por lead score
   const sortedEntries = [...entries].sort((a, b) => {
-    // Primeiro critério: dias em atraso (descendente)
-    if (a.dias_em_atraso !== b.dias_em_atraso) {
-      return b.dias_em_atraso - a.dias_em_atraso;
-    }
-    
-    // Segundo critério: lead score (descendente)
-    return b.lead.lead_score - a.lead.lead_score;
+    return (b.lead.lead_score || 0) - (a.lead.lead_score || 0);
   });
 
   return (
@@ -93,12 +85,6 @@ export function KanbanColumn({
               {entries.length} leads
             </Badge>
             
-            {atrasados > 0 && (
-              <Badge variant="destructive">
-                {atrasados} atrasados
-              </Badge>
-            )}
-            
             {stage.wip_limit && wipExceeded && (
               <Badge variant="outline" className="border-warning text-warning">
                 <AlertTriangle className="h-3 w-3 mr-1" />
@@ -107,13 +93,12 @@ export function KanbanColumn({
             )}
           </div>
 
-          {/* SLA da Etapa */}
-          <div className="text-xs text-muted-foreground">
-            SLA: {stage.prazo_em_dias} dias
-            {stage.wip_limit && (
-              <span className="ml-2">• WIP: {stage.wip_limit}</span>
-            )}
-          </div>
+          {/* WIP Limit */}
+          {stage.wip_limit && (
+            <div className="text-xs text-muted-foreground">
+              WIP Limit: {stage.wip_limit}
+            </div>
+          )}
 
           {/* Indicadores de Saúde */}
           {entries.length > 0 && (

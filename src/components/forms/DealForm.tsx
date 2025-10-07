@@ -82,9 +82,9 @@ export function DealForm({ initialData, onSave, onCancel }: DealFormProps) {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="product_id"
+          <FormField
+            control={form.control}
+            name="produto_id"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Produto *</FormLabel>

@@ -19,16 +19,11 @@ interface DealLossDialogProps {
   onConfirm: (reason: Omit<DealLostReason, 'id' | 'timestamp'>) => void;
 }
 
-const motivosPerda: ObjecaoPrincipal[] = [
-  'Preço',
-  'Tempo', 
-  'Prioridade',
-  'Confiança',
-  'Sem Fit',
-  'Orçamento',
-  'Decisor',
-  'Concorrente',
-  'Outro'
+const motivosPerda: { value: ObjecaoPrincipal; label: string }[] = [
+  { value: 'confianca', label: 'Confiança' },
+  { value: 'orcamento', label: 'Orçamento' },
+  { value: 'prioridade', label: 'Prioridade' },
+  { value: 'tempo', label: 'Tempo' }
 ];
 
 export function DealLossDialog({
@@ -79,9 +74,9 @@ export function DealLossDialog({
                 <SelectValue placeholder="Selecione o motivo principal" />
               </SelectTrigger>
               <SelectContent>
-                {motivosPerda.map(m => (
-                  <SelectItem key={m} value={m}>
-                    {m}
+                {motivosPerda.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>

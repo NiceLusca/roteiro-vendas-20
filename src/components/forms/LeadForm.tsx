@@ -23,12 +23,19 @@ interface LeadFormProps {
   loading?: boolean;
 }
 
-const origemOptions: OrigemLead[] = [
-  'Facebook', 'Instagram', 'Google', 'Indicação', 'Orgânico', 'WhatsApp', 'LinkedIn', 'Evento', 'Outro'
+const origemOptions: { value: OrigemLead; label: string }[] = [
+  { value: 'evento', label: 'Evento' },
+  { value: 'indicacao', label: 'Indicação' },
+  { value: 'organico', label: 'Orgânico' },
+  { value: 'outro', label: 'Outro' },
+  { value: 'trafego_pago', label: 'Tráfego Pago' }
 ];
 
-const objecaoOptions: ObjecaoPrincipal[] = [
-  'Preço', 'Tempo', 'Prioridade', 'Confiança', 'Sem Fit', 'Orçamento', 'Decisor', 'Concorrente', 'Outro'
+const objecaoOptions: { value: ObjecaoPrincipal; label: string }[] = [
+  { value: 'confianca', label: 'Confiança' },
+  { value: 'orcamento', label: 'Orçamento' },
+  { value: 'prioridade', label: 'Prioridade' },
+  { value: 'tempo', label: 'Tempo' }
 ];
 
 const statusOptions: StatusGeral[] = ['Ativo', 'Cliente', 'Perdido', 'Inativo'];
@@ -43,7 +50,7 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
     nome: '',
     email: '',
     whatsapp: '',
-    origem: 'Outro',
+    origem: 'outro',
     segmento: '',
     status_geral: 'Ativo',
     closer: '',
@@ -96,7 +103,7 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
         nome: lead.nome || '',
         email: lead.email,
         whatsapp: lead.whatsapp || '',
-        origem: lead.origem || 'Outro',
+        origem: lead.origem || 'outro',
         segmento: lead.segmento,
         status_geral: lead.status_geral || 'Ativo',
         closer: lead.closer,
@@ -303,9 +310,9 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {origemOptions.map(origem => (
-                      <SelectItem key={origem} value={origem}>
-                        {origem}
+                    {origemOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -456,13 +463,13 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma objeção" />
                 </SelectTrigger>
-                <SelectContent>
-                  {objecaoOptions.map(objecao => (
-                    <SelectItem key={objecao} value={objecao}>
-                      {objecao}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                  <SelectContent>
+                    {objecaoOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
               </Select>
             </div>
 

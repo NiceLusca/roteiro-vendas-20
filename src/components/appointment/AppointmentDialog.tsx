@@ -38,7 +38,6 @@ export function AppointmentDialog({
   const [startTime, setStartTime] = useState('');
   const [duration, setDuration] = useState('60');
   const [observacoes, setObservacoes] = useState('');
-  const [origem, setOrigem] = useState<string>('Plataforma');
 
   const handleSave = () => {
     if (!date || !startTime) return;
@@ -52,12 +51,13 @@ export function AppointmentDialog({
 
     onSave({
       lead_id: leadId,
+      data_hora: startAt,
       start_at: startAt,
       end_at: endAt,
       status: 'agendado',
-      origem: origem as Appointment['origem'],
-      observacao: observacoes.trim() || undefined,
-      criado_por: 'Usuário Atual' // TODO: Get from auth context
+      titulo: `Sessão com ${leadName}`,
+      duracao_minutos: parseInt(duration),
+      notas: observacoes.trim() || undefined
     });
 
     // Reset form
@@ -140,21 +140,6 @@ export function AppointmentDialog({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Origem</Label>
-            <Select value={origem} onValueChange={setOrigem}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Plataforma">Plataforma</SelectItem>
-                <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-                <SelectItem value="Email">Email</SelectItem>
-                <SelectItem value="Telefone">Telefone</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2">

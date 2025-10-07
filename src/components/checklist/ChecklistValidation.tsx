@@ -35,12 +35,12 @@ export class ChecklistValidation {
   }
 
   static validateStageAdvancement(
-    entry: LeadPipelineEntry,
+    checklistState: Record<string, boolean>,
     checklistItems: StageChecklistItem[]
   ): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
     
-    const validation = this.canAdvanceStage(checklistItems, entry.checklist_state);
+    const validation = this.canAdvanceStage(checklistItems, checklistState);
     
     if (!validation.canAdvance) {
       errors.push(`${validation.missingRequired.length} item(s) obrigatório(s) pendente(s)`);
