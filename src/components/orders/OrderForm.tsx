@@ -84,7 +84,7 @@ export function OrderForm({ leadId, leadName, products, onSave, onCancel }: Orde
       closer,
       total: calculateTotal(),
       forma_pagamento: formaPagamento,
-      status: 'Pendente',
+      status: 'pendente',
       observacao: observacao || undefined
     };
 

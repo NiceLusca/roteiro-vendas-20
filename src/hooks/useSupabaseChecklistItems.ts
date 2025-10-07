@@ -2,18 +2,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContextSecure';
-
-interface ChecklistItem {
-  id: string;
-  stage_id: string;
-  titulo: string;
-  ordem: number;
-  obrigatorio: boolean;
-  created_at: string;
-}
+import { StageChecklistItem } from '@/types/crm';
 
 export function useSupabaseChecklistItems(stageId?: string) {
-  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
+  const [checklistItems, setChecklistItems] = useState<StageChecklistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -52,7 +44,7 @@ export function useSupabaseChecklistItems(stageId?: string) {
   };
 
   // Save checklist item (create or update)
-  const saveChecklistItem = async (itemData: Partial<ChecklistItem> & { id?: string }) => {
+  const saveChecklistItem = async (itemData: Partial<StageChecklistItem> & { id?: string }) => {
     if (!user) return null;
 
     try {
@@ -148,17 +140,17 @@ export function useSupabaseChecklistItems(stageId?: string) {
   };
 
   // Get checklist item by ID
-  const getChecklistItemById = (id: string): ChecklistItem | undefined => {
+  const getChecklistItemById = (id: string): StageChecklistItem | undefined => {
     return checklistItems.find(item => item.id === id);
   };
 
   // Get checklist items by stage ID
-  const getChecklistItemsByStage = (targetStageId: string): ChecklistItem[] => {
-    return checklistItems.filter(item => item.stage_id === targetStageId);
+  const getChecklistItemsByStage = (targetStageId: string): StageChecklistItem[] => {
+    return checklistItems.filter(item => item.etapa_id === targetStageId);
   };
 
   // Reorder checklist items
-  const reorderChecklistItems = async (reorderedItems: ChecklistItem[]) => {
+  const reorderChecklistItems = async (reorderedItems: StageChecklistItem[]) => {
     if (!user) return false;
 
     try {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus, Edit, Trash2, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,45 +24,42 @@ export function AdvancedCriteriaManager({ stageId, stageName }: AdvancedCriteria
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState({
-    nome: '',
-    descricao: '',
-    tipo_criterio: 'automatico',
-    obrigatorio: true,
-    ordem: criteria.length + 1
+    tipo: 'checklist',
+    campo: '',
+    operador: 'igual',
+    valor_esperado: '',
+    obrigatorio: true
   });
 
   const handleCreate = async () => {
-    if (!formData.nome.trim()) {
+    if (!formData.campo.trim()) {
       toast({
-        title: "Nome obrigatório",
-        description: "O nome do critério é obrigatório.",
+        title: "Campo obrigatório",
+        description: "O campo é obrigatório para o critério.",
         variant: "destructive",
       });
       return;
     }
 
     const success = await createCriteria({
+      etapa_id: stageId,
       ...formData,
-      stage_id: stageId,
       ativo: true
     });
 
     if (success) {
       setIsCreating(false);
       setFormData({
-        nome: '',
-        descricao: '',
-        tipo_criterio: 'automatico',
-        obrigatorio: true,
-        ordem: criteria.length + 1
+        tipo: 'checklist',
+        campo: '',
+        operador: 'igual',
+        valor_esperado: '',
+        obrigatorio: true
       });
     }
   };
 
   const handleUpdate = async (id: string) => {
-    const criterio = criteria.find(c => c.id === id);
-    if (!criterio) return;
-
     const success = await updateCriteria(id, formData);
     if (success) {
       setEditingId(null);
@@ -71,11 +68,11 @@ export function AdvancedCriteriaManager({ stageId, stageName }: AdvancedCriteria
 
   const handleEdit = (criterio: StageAdvancementCriteria) => {
     setFormData({
-      nome: criterio.nome,
-      descricao: criterio.descricao || '',
-      tipo_criterio: criterio.tipo_criterio,
-      obrigatorio: criterio.obrigatorio,
-      ordem: criterio.ordem
+      tipo: criterio.tipo,
+      campo: criterio.campo || '',
+      operador: criterio.operador || 'igual',
+      valor_esperado: criterio.valor_esperado || '',
+      obrigatorio: criterio.obrigatorio
     });
     setEditingId(criterio.id);
   };
@@ -137,9 +134,9 @@ export function AdvancedCriteriaManager({ stageId, stageName }: AdvancedCriteria
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="text-base">{criterio.nome}</CardTitle>
-                    <Badge className={`text-white ${getTipoBadgeColor(criterio.tipo_criterio)}`}>
-                      {getTipoLabel(criterio.tipo_criterio)}
+                    <CardTitle className="text-base">{criterio.campo || 'Sem nome'}</CardTitle>
+                    <Badge className={`text-white ${getTipoBadgeColor(criterio.tipo)}`}>
+                      {getTipoLabel(criterio.tipo)}
                     </Badge>
                     {criterio.obrigatorio && (
                       <Badge variant="destructive">Obrigatório</Badge>
@@ -163,9 +160,11 @@ export function AdvancedCriteriaManager({ stageId, stageName }: AdvancedCriteria
                   </div>
                 </div>
               </CardHeader>
-              {criterio.descricao && (
+              {criterio.valor_esperado && (
                 <CardContent className="pt-0">
-                  <CardDescription>{criterio.descricao}</CardDescription>
+                  <CardDescription>
+                    {criterio.operador} {criterio.valor_esperado}
+                  </CardDescription>
                 </CardContent>
               )}
             </Card>
@@ -202,20 +201,10 @@ export function AdvancedCriteriaManager({ stageId, stageName }: AdvancedCriteria
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="nome">Nome *</Label>
-              <Input
-                id="nome"
-                value={formData.nome}
-                onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
-                placeholder="Ex: Lead Score >= 75"
-              />
-            </div>
-
-            <div>
               <Label htmlFor="tipo">Tipo de Critério</Label>
               <Select
-                value={formData.tipo_criterio}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, tipo_criterio: value }))}
+                value={formData.tipo}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, tipo: value }))}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -230,13 +219,41 @@ export function AdvancedCriteriaManager({ stageId, stageName }: AdvancedCriteria
             </div>
 
             <div>
-              <Label htmlFor="descricao">Descrição</Label>
-              <Textarea
-                id="descricao"
-                value={formData.descricao}
-                onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
-                placeholder="Descreva quando este critério deve ser atendido..."
-                rows={3}
+              <Label htmlFor="campo">Campo *</Label>
+              <Input
+                id="campo"
+                value={formData.campo}
+                onChange={(e) => setFormData(prev => ({ ...prev, campo: e.target.value }))}
+                placeholder="Ex: lead_score"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="operador">Operador</Label>
+              <Select
+                value={formData.operador}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, operador: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="igual">Igual</SelectItem>
+                  <SelectItem value="diferente">Diferente</SelectItem>
+                  <SelectItem value="maior">Maior que</SelectItem>
+                  <SelectItem value="menor">Menor que</SelectItem>
+                  <SelectItem value="contem">Contém</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="valor_esperado">Valor Esperado</Label>
+              <Input
+                id="valor_esperado"
+                value={formData.valor_esperado}
+                onChange={(e) => setFormData(prev => ({ ...prev, valor_esperado: e.target.value }))}
+                placeholder="Ex: 75"
               />
             </div>
 

@@ -80,7 +80,7 @@ export function useLeadData() {
         entidade: 'Deal',
         entidade_id: result.id,
         alteracao: [
-          { campo: 'status', de: 'anterior', para: dealData.status || 'Aberta' }
+          { campo: 'status', de: 'anterior', para: dealData.status || 'aberto' }
         ]
       });
     }
@@ -99,7 +99,7 @@ export function useLeadData() {
         entidade: 'Order',
         entidade_id: result.id,
         alteracao: [
-          { campo: 'status', de: 'anterior', para: orderData.status || 'Pendente' }
+          { campo: 'status', de: 'anterior', para: orderData.status || 'pendente' }
         ]
       });
     }

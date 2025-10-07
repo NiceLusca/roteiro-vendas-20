@@ -100,7 +100,7 @@ export interface PipelineStage {
 
 export interface StageChecklistItem {
   id: string;
-  stage_id: string;
+  etapa_id: string;
   titulo: string;
   obrigatorio: boolean;
   ordem: number;

@@ -54,7 +54,7 @@ export function AppointmentDialog({
       lead_id: leadId,
       start_at: startAt,
       end_at: endAt,
-      status: 'Agendado',
+      status: 'agendado',
       origem: origem as Appointment['origem'],
       observacao: observacoes.trim() || undefined,
       criado_por: 'Usuário Atual' // TODO: Get from auth context

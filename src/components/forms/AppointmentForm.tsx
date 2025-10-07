@@ -13,7 +13,7 @@ import { Appointment, StatusAppointment, ResultadoSessao } from '@/types/crm';
 const appointmentSchema = z.object({
   lead_id: z.string().min(1, 'Lead é obrigatório'),
   start_at: z.string().min(1, 'Data e hora são obrigatórias'),
-  status: z.enum(['Agendado', 'Realizado', 'Cancelado', 'Remarcado', 'No-Show'] as const),
+  status: z.enum(['agendado', 'realizado', 'cancelado', 'remarcado', 'confirmado'] as const),
   resultado_sessao: z.enum(['Avançar', 'Não Avançar', 'Recuperação', 'Cliente', 'Outro'] as const).optional(),
   resultado_obs: z.string().optional(),
   observacao: z.string().optional(),
@@ -35,7 +35,7 @@ export function AppointmentForm({ initialData, onSave, onCancel }: AppointmentFo
     defaultValues: {
       lead_id: initialData?.lead_id || '',
       start_at: initialData?.start_at ? new Date(initialData.start_at).toISOString().slice(0, 16) : '',
-      status: initialData?.status || 'Agendado',
+      status: initialData?.status || 'agendado',
       resultado_sessao: initialData?.resultado_sessao || undefined,
       resultado_obs: initialData?.resultado_obs || '',
       observacao: initialData?.observacao || '',
@@ -47,11 +47,11 @@ export function AppointmentForm({ initialData, onSave, onCancel }: AppointmentFo
   };
 
   const statusOptions: { value: StatusAppointment; label: string }[] = [
-    { value: 'Agendado', label: 'Agendado' },
-    { value: 'Realizado', label: 'Realizado' },
-    { value: 'Cancelado', label: 'Cancelado' },
-    { value: 'Remarcado', label: 'Remarcado' },
-    { value: 'No-Show', label: 'No-Show' },
+    { value: 'agendado', label: 'Agendado' },
+    { value: 'realizado', label: 'Realizado' },
+    { value: 'cancelado', label: 'Cancelado' },
+    { value: 'remarcado', label: 'Remarcado' },
+    { value: 'confirmado', label: 'Confirmado' },
   ];
 
   const resultadoOptions: { value: ResultadoSessao; label: string }[] = [
@@ -131,7 +131,7 @@ export function AppointmentForm({ initialData, onSave, onCancel }: AppointmentFo
           )}
         />
 
-        {watchedStatus === 'Realizado' && (
+        {watchedStatus === 'realizado' && (
           <FormField
             control={form.control}
             name="resultado_sessao"

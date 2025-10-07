@@ -16,7 +16,7 @@ const dealSchema = z.object({
   product_id: z.string().min(1, 'Produto é obrigatório'),
   closer: z.string().min(1, 'Closer é obrigatório'),
   valor_proposto: z.number().min(0, 'Valor deve ser positivo'),
-  status: z.enum(['Aberta', 'Ganha', 'Perdida'] as const),
+  status: z.enum(['aberto', 'ganho', 'perdido'] as const),
   fase_negociacao: z.string().optional(),
 });
 
@@ -39,7 +39,7 @@ export function DealForm({ initialData, onSave, onCancel }: DealFormProps) {
       product_id: initialData?.product_id || '',
       closer: initialData?.closer || '',
       valor_proposto: initialData?.valor_proposto || 0,
-      status: initialData?.status || 'Aberta',
+      status: initialData?.status || 'aberto',
       fase_negociacao: initialData?.fase_negociacao || '',
     },
   });
@@ -49,9 +49,9 @@ export function DealForm({ initialData, onSave, onCancel }: DealFormProps) {
   };
 
   const statusOptions: { value: StatusDeal; label: string }[] = [
-    { value: 'Aberta', label: 'Aberta' },
-    { value: 'Ganha', label: 'Ganha' },
-    { value: 'Perdida', label: 'Perdida' },
+    { value: 'aberto', label: 'Aberta' },
+    { value: 'ganho', label: 'Ganha' },
+    { value: 'perdido', label: 'Perdida' },
   ];
 
   return (

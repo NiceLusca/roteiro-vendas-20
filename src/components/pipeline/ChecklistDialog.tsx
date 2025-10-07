@@ -49,7 +49,7 @@ export function ChecklistDialog({
   const [criteriaCompleted, setCriteriaCompleted] = useState(false);
 
   const sortedItems = [...checklistItems]
-    .filter(item => item.stage_id === stage.id)
+    .filter(item => item.etapa_id === stage.id)
     .sort((a, b) => a.ordem - b.ordem);
 
   const completedItems = sortedItems.filter(item => checklistState[item.id]);

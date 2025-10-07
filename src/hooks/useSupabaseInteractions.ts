@@ -2,15 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContextSecure';
-
-interface Interaction {
-  id: string;
-  lead_id: string;
-  canal: 'WhatsApp' | 'Ligação' | 'Email' | 'Presencial' | 'Notas' | 'Sessão';
-  conteudo: string;
-  autor: string;
-  timestamp: string;
-}
+import { Interaction } from '@/types/crm';
 
 export function useSupabaseInteractions() {
   const [interactions, setInteractions] = useState<Interaction[]>([]);
@@ -26,7 +18,7 @@ export function useSupabaseInteractions() {
       const { data, error } = await supabase
         .from('interactions')
         .select('*')
-        .order('timestamp', { ascending: false });
+        .order('data_hora', { ascending: false });
 
       if (error) {
         console.error('Erro ao buscar interações:', error);
@@ -39,8 +31,12 @@ export function useSupabaseInteractions() {
       }
 
       setInteractions(data?.map(interaction => ({
-        ...interaction,
-        timestamp: new Date(interaction.timestamp).toISOString()
+        id: interaction.id,
+        lead_id: interaction.lead_id,
+        canal: interaction.canal,
+        conteudo: interaction.descricao,
+        autor: 'Sistema', // TODO: get from user
+        timestamp: new Date(interaction.data_hora)
       })) || []);
     } catch (error) {
       console.error('Erro ao buscar interações:', error);
@@ -54,13 +50,15 @@ export function useSupabaseInteractions() {
 
     try {
       const payload = {
-        ...interactionData,
-        timestamp: new Date().toISOString()
+        lead_id: interactionData.lead_id,
+        canal: interactionData.canal,
+        descricao: interactionData.conteudo,
+        data_hora: new Date().toISOString()
       };
 
       const { data, error } = await supabase
         .from('interactions')
-        .insert(payload)
+        .insert([payload])
         .select()
         .single();
 
@@ -81,7 +79,14 @@ export function useSupabaseInteractions() {
 
       fetchInteractions();
       
-      return data;
+      return {
+        id: data.id,
+        lead_id: data.lead_id,
+        canal: data.canal,
+        conteudo: data.descricao,
+        autor: interactionData.autor,
+        timestamp: new Date(data.data_hora)
+      };
     } catch (error) {
       console.error('Erro ao salvar interação:', error);
       return null;
