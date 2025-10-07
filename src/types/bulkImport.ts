@@ -2,11 +2,9 @@ import { Lead } from './crm';
 
 export interface LeadTag {
   id: string;
-  user_id?: string;
   nome: string;
   cor: string;
   created_at?: string;
-  updated_at?: string;
 }
 
 export interface ColumnMapping {
@@ -40,12 +38,12 @@ export interface ImportResult {
 
 export interface BulkImportLog {
   id: string;
-  user_id: string;
-  nome_arquivo: string;
-  total_linhas: number;
-  linhas_sucesso: number;
-  linhas_erro: number;
-  erros?: any;
+  user_id?: string;
+  status: string;
+  total_records: number;
+  success_count: number;
+  error_count: number;
+  errors?: any;
   created_at: string;
 }
 

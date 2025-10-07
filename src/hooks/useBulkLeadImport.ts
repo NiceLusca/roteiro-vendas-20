@@ -253,14 +253,14 @@ export function useBulkLeadImport() {
       // Salvar log de importação
       const { data: logData } = await supabase
         .from('bulk_import_logs')
-        .insert({
+        .insert([{
           user_id: user.id,
-          nome_arquivo: 'bulk_import',
-          total_linhas: parsedLeads.length,
-          linhas_sucesso: successCount,
-          linhas_erro: errors.length,
-          erros: errors,
-        })
+          status: 'completed',
+          total_records: parsedLeads.length,
+          success_count: successCount,
+          error_count: errors.length,
+          errors: errors,
+        }])
         .select()
         .single();
 

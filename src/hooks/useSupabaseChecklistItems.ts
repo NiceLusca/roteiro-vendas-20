@@ -30,7 +30,7 @@ export function useSupabaseChecklistItems(stageId?: string) {
       const { data, error } = await supabase
         .from('stage_checklist_items')
         .select('*')
-        .eq('stage_id', queryStageId)
+        .eq('etapa_id', queryStageId)
         .order('ordem', { ascending: true });
 
       if (error) {

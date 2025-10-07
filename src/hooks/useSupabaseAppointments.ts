@@ -135,7 +135,7 @@ export function useSupabaseAppointments() {
       const { data, error } = await supabase
         .from('appointments')
         .update({ 
-          status: 'Cancelado',
+          status: 'cancelado',
           updated_at: new Date().toISOString()
         })
         .eq('id', appointmentId)

@@ -121,14 +121,20 @@ export function useAutomationEngine() {
 
           case 'create_appointment':
             // Create new appointment
+            const startTime = new Date(action.parameters.dateTime);
+            const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
             await supabase
               .from('appointments')
-              .insert({
+              .insert([{
                 lead_id: leadId,
-                start_at: action.parameters.dateTime,
-                end_at: new Date(new Date(action.parameters.dateTime).getTime() + 60 * 60 * 1000).toISOString(),
-                observacao: `Agendamento automático via regra: ${rule.name}`
-              });
+                data_hora: startTime.toISOString(),
+                start_at: startTime.toISOString(),
+                end_at: endTime.toISOString(),
+                titulo: `Agendamento automático - ${rule.name}`,
+                duracao_minutos: 60,
+                status: 'agendado',
+                notas: `Agendamento automático via regra: ${rule.name}`
+              }]);
             break;
 
           case 'update_field':

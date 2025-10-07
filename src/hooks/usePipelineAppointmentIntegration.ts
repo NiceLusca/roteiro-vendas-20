@@ -3,17 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContextSecure';
 
-interface AppointmentData {
-  id?: string;
-  lead_id: string;
-  start_at: string;
-  end_at: string;
-  etapa_origem_id?: string;
-  tipo_sessao?: string;
-  closer_responsavel?: string;
-  observacao?: string;
-  status?: 'Agendado' | 'Realizado' | 'Cancelado' | 'Remarcado' | 'No-Show';
-}
+    interface AppointmentData {
+      id?: string;
+      lead_id: string;
+      data_hora: string;
+      start_at: string;
+      end_at: string;
+      titulo: string;
+      duracao_minutos: number;
+      status?: 'agendado' | 'realizado' | 'cancelado' | 'remarcado' | 'confirmado';
+      notas?: string;
+    }
 
 interface PipelineStageAppointmentConfig {
   tipo_agendamento?: 'Descoberta' | 'Apresentacao' | 'Fechamento' | 'Follow-up';
@@ -62,9 +62,6 @@ export function usePipelineAppointmentIntegration() {
 
       // Calcular horário sugerido baseado nas preferências da etapa
       const suggestedTime = calculateSuggestedTime(stageConfig.horarios_preferenciais);
-      
-      // Determinar closer responsável
-      const closerResponsavel = stageConfig.closer_padrao || lead.closer || 'Não definido';
 
       // Criar título contextual
       const titulo = stageConfig.template_agendamento?.titulo || 
@@ -72,19 +69,19 @@ export function usePipelineAppointmentIntegration() {
 
       const appointmentData: AppointmentData = {
         lead_id: leadId,
+        data_hora: suggestedTime.start,
         start_at: suggestedTime.start,
         end_at: suggestedTime.end,
-        etapa_origem_id: stageId,
-        tipo_sessao: stageConfig.tipo_agendamento,
-        closer_responsavel: closerResponsavel,
-        observacao: stageConfig.template_agendamento?.descricao || 
-          `Agendamento automático para etapa de ${stageConfig.tipo_agendamento}`,
-        status: 'Agendado'
+        titulo: titulo,
+        duracao_minutos: 60,
+        status: 'agendado',
+        notas: stageConfig.template_agendamento?.descricao || 
+          `Agendamento automático para etapa de ${stageConfig.tipo_agendamento}`
       };
 
       const { data, error } = await supabase
         .from('appointments')
-        .insert(appointmentData)
+        .insert([appointmentData])
         .select()
         .single();
 
@@ -119,7 +116,7 @@ export function usePipelineAppointmentIntegration() {
         .from('appointments')
         .select('*')
         .eq('lead_id', leadId)
-        .eq('status', 'Agendado')
+        .eq('status', 'agendado')
         .gte('start_at', new Date().toISOString())
         .order('start_at', { ascending: true })
         .limit(1);
@@ -140,7 +137,6 @@ export function usePipelineAppointmentIntegration() {
           *,
           leads (nome, whatsapp)
         `)
-        .eq('etapa_origem_id', stageId)
         .order('start_at', { ascending: true });
 
       return data || [];

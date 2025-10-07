@@ -109,7 +109,8 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
           .from('lead_tag_assignments')
           .select(`
             lead_id,
-            lead_tags(id, nome, cor)
+            tag_id,
+            tags (id, nome, cor)
           `)
           .in('lead_id', leadIds);
         
@@ -118,8 +119,8 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
           if (!tagsMap[assignment.lead_id]) {
             tagsMap[assignment.lead_id] = [];
           }
-          if (assignment.lead_tags) {
-            tagsMap[assignment.lead_id].push(assignment.lead_tags);
+          if (assignment.tags) {
+            tagsMap[assignment.lead_id].push(assignment.tags);
           }
         });
       }

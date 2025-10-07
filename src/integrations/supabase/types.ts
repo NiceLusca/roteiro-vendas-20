@@ -370,46 +370,11 @@ export type Database = {
           },
         ]
       }
-      lead_tags: {
-        Row: {
-          created_at: string | null
-          id: string
-          lead_id: string
-          tag_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          lead_id: string
-          tag_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          lead_id?: string
-          tag_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lead_tags_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lead_tags_tag_id_fkey"
-            columns: ["tag_id"]
-            isOneToOne: false
-            referencedRelation: "tags"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       leads: {
         Row: {
           closer: string | null
           created_at: string | null
+          desejo_na_sessao: string | null
           email: string | null
           faturamento_medio: number | null
           id: string
@@ -418,21 +383,27 @@ export type Database = {
           lead_score_classification: string | null
           meta_faturamento: number | null
           nome: string
+          objecao_obs: string | null
           objecao_principal:
             | Database["public"]["Enums"]["objecao_principal"]
             | null
           observacoes: string | null
           origem: Database["public"]["Enums"]["origem_lead"] | null
+          resultado_obs_ultima_sessao: string | null
+          resultado_sessao_ultimo: string | null
           segmento: string | null
           seguidores: number | null
           status_geral: Database["public"]["Enums"]["status_geral"] | null
           tags: string[] | null
           updated_at: string | null
+          user_id: string | null
+          valor_lead: number | null
           whatsapp: string | null
         }
         Insert: {
           closer?: string | null
           created_at?: string | null
+          desejo_na_sessao?: string | null
           email?: string | null
           faturamento_medio?: number | null
           id?: string
@@ -441,21 +412,27 @@ export type Database = {
           lead_score_classification?: string | null
           meta_faturamento?: number | null
           nome: string
+          objecao_obs?: string | null
           objecao_principal?:
             | Database["public"]["Enums"]["objecao_principal"]
             | null
           observacoes?: string | null
           origem?: Database["public"]["Enums"]["origem_lead"] | null
+          resultado_obs_ultima_sessao?: string | null
+          resultado_sessao_ultimo?: string | null
           segmento?: string | null
           seguidores?: number | null
           status_geral?: Database["public"]["Enums"]["status_geral"] | null
           tags?: string[] | null
           updated_at?: string | null
+          user_id?: string | null
+          valor_lead?: number | null
           whatsapp?: string | null
         }
         Update: {
           closer?: string | null
           created_at?: string | null
+          desejo_na_sessao?: string | null
           email?: string | null
           faturamento_medio?: number | null
           id?: string
@@ -464,16 +441,21 @@ export type Database = {
           lead_score_classification?: string | null
           meta_faturamento?: number | null
           nome?: string
+          objecao_obs?: string | null
           objecao_principal?:
             | Database["public"]["Enums"]["objecao_principal"]
             | null
           observacoes?: string | null
           origem?: Database["public"]["Enums"]["origem_lead"] | null
+          resultado_obs_ultima_sessao?: string | null
+          resultado_sessao_ultimo?: string | null
           segmento?: string | null
           seguidores?: number | null
           status_geral?: Database["public"]["Enums"]["status_geral"] | null
           tags?: string[] | null
           updated_at?: string | null
+          user_id?: string | null
+          valor_lead?: number | null
           whatsapp?: string | null
         }
         Relationships: []

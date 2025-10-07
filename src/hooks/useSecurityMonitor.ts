@@ -32,12 +32,13 @@ export function useSecurityMonitor() {
       const clientInfo = getClientInfo();
       
       const { error } = await supabase.rpc('log_security_event', {
-        _user_id: user?.id || null,
-        _event_type: eventData.event_type,
-        _ip_address: eventData.ip_address || clientInfo.ip_address,
-        _user_agent: eventData.user_agent || clientInfo.user_agent,
-        _success: eventData.success,
-        _details: eventData.details || null
+        p_user_id: user?.id || null,
+        p_event_type: eventData.event_type,
+        p_severity: 'info',
+        p_ip_address: eventData.ip_address || clientInfo.ip_address,
+        p_user_agent: eventData.user_agent || clientInfo.user_agent,
+        p_success: eventData.success,
+        p_details: eventData.details || null
       });
 
       if (error) {
@@ -61,23 +62,19 @@ export function useSecurityMonitor() {
       try {
         const clientInfo = getClientInfo();
         if (clientInfo.ip_address) {
-          const { data: isSuspicious } = await supabase.rpc('detect_suspicious_activity', {
-            _ip_address: clientInfo.ip_address
+          // Note: detect_suspicious_activity RPC not implemented yet
+          // Placeholder for future implementation
+          await logSecurityEvent({
+            event_type: 'suspicious_activity',
+            success: false,
+            details: { reason: 'Multiple failed login attempts', ...details }
           });
 
-          if (isSuspicious) {
-            await logSecurityEvent({
-              event_type: 'suspicious_activity',
-              success: false,
-              details: { reason: 'Multiple failed login attempts', ...details }
-            });
-
-            toast({
-              title: "Atividade Suspeita Detectada",
-              description: "Múltiplas tentativas de login falharam. Por favor, aguarde antes de tentar novamente.",
-              variant: "destructive"
-            });
-          }
+          toast({
+            title: "Atividade Suspeita Detectada",
+            description: "Múltiplas tentativas de login falharam. Por favor, aguarde antes de tentar novamente.",
+            variant: "destructive"
+          });
         }
       } catch (error) {
         console.error('Erro ao verificar atividade suspeita:', error);

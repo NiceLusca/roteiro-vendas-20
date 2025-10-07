@@ -75,8 +75,8 @@ export function useAdvancedAnalytics(dateRange?: { start: Date; end: Date }) {
 
       // Calculate metrics
       const totalLeads = leads?.length || 0;
-      const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.total || 0), 0) || 0;
-      const wonDeals = deals?.filter(deal => deal.status === 'Ganha') || [];
+      const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.valor_total || 0), 0) || 0;
+      const wonDeals = deals?.filter(deal => deal.status === 'ganho') || [];
       const conversionRate = totalLeads > 0 ? (wonDeals.length / totalLeads) * 100 : 0;
       const avgDealSize = wonDeals.length > 0 ? totalRevenue / wonDeals.length : 0;
 
@@ -100,7 +100,8 @@ export function useAdvancedAnalytics(dateRange?: { start: Date; end: Date }) {
           acc[stageName] = { total: 0, avgTime: 0, conversions: 0 };
         }
         acc[stageName].total += 1;
-        acc[stageName].avgTime += entry.tempo_em_etapa_dias || 0;
+        const timeInStage = Math.floor((new Date().getTime() - new Date(entry.data_entrada_etapa).getTime()) / (1000 * 60 * 60 * 24));
+        acc[stageName].avgTime += timeInStage;
         return acc;
       }, {}) || {};
 
@@ -120,7 +121,7 @@ export function useAdvancedAnalytics(dateRange?: { start: Date; end: Date }) {
           acc[closer] = { deals: 0, revenue: 0 };
         }
         acc[closer].deals += 1;
-        acc[closer].revenue += Number(order.total || 0);
+        acc[closer].revenue += Number(order.valor_total || 0);
         return acc;
       }, {}) || {};
 
@@ -187,7 +188,7 @@ function generateWeeklyRevenue(orders: any[]): Array<{ period: string; revenue: 
     weekStart.setDate(date.getDate() - date.getDay());
     const weekKey = weekStart.toISOString().split('T')[0];
     
-    weeklyData[weekKey] = (weeklyData[weekKey] || 0) + Number(order.total || 0);
+    weeklyData[weekKey] = (weeklyData[weekKey] || 0) + Number(order.valor_total || 0);
   });
 
   return Object.entries(weeklyData)
@@ -209,11 +210,11 @@ function calculateMonthlyGrowth(orders: any[]): number {
 
   const lastMonthRevenue = orders
     .filter(order => new Date(order.created_at) >= lastMonth && new Date(order.created_at) < thisMonth)
-    .reduce((sum, order) => sum + Number(order.total || 0), 0);
+    .reduce((sum, order) => sum + Number(order.valor_total || 0), 0);
 
   const thisMonthRevenue = orders
     .filter(order => new Date(order.created_at) >= thisMonth)
-    .reduce((sum, order) => sum + Number(order.total || 0), 0);
+    .reduce((sum, order) => sum + Number(order.valor_total || 0), 0);
 
   if (lastMonthRevenue === 0) return 0;
   return ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
@@ -221,7 +222,7 @@ function calculateMonthlyGrowth(orders: any[]): number {
 
 function generateForecast(orders: any[], leads: any[]): ForecastData {
   const recentOrders = orders.slice(-30); // Last 30 orders
-  const avgOrderValue = recentOrders.reduce((sum, order) => sum + Number(order.total || 0), 0) / recentOrders.length;
+  const avgOrderValue = recentOrders.reduce((sum, order) => sum + Number(order.valor_total || 0), 0) / recentOrders.length;
   const recentLeads = leads.slice(-30); // Last 30 leads
   
   const trend = recentOrders.length > orders.length / 2 ? 'up' : 

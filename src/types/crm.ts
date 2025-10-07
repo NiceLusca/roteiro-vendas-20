@@ -3,11 +3,11 @@
 export type StatusGeral = 'Ativo' | 'Cliente' | 'Perdido' | 'Inativo';
 export type OrigemLead = 'Facebook' | 'Instagram' | 'Google' | 'Indicação' | 'Orgânico' | 'WhatsApp' | 'LinkedIn' | 'Evento' | 'Outro';
 export type ObjecaoPrincipal = 'Preço' | 'Tempo' | 'Prioridade' | 'Confiança' | 'Sem Fit' | 'Orçamento' | 'Decisor' | 'Concorrente' | 'Outro';
-export type StatusAppointment = 'Agendado' | 'Realizado' | 'Cancelado' | 'Remarcado' | 'No-Show';
+export type StatusAppointment = 'agendado' | 'realizado' | 'cancelado' | 'remarcado' | 'confirmado';
 export type ResultadoSessao = 'Avançar' | 'Não Avançar' | 'Recuperação' | 'Cliente' | 'Outro';
-export type CanalInteracao = 'WhatsApp' | 'Ligação' | 'Email' | 'Presencial' | 'Notas' | 'Sessão';
-export type StatusDeal = 'Aberta' | 'Ganha' | 'Perdida';
-export type StatusPedido = 'Pago' | 'Pendente' | 'Reembolsado' | 'Estornado';
+export type CanalInteracao = 'whatsapp' | 'telefone' | 'email' | 'presencial' | 'outro';
+export type StatusDeal = 'aberto' | 'ganho' | 'perdido';
+export type StatusPedido = 'pago' | 'pendente' | 'cancelado';
 export type SaudeEtapa = 'Verde' | 'Amarelo' | 'Vermelho';
 export type ProximoPassoTipo = 'Humano' | 'Agendamento' | 'Mensagem' | 'Outro';
 export type LeadScore = 'Alto' | 'Médio' | 'Baixo';
@@ -25,6 +25,7 @@ export interface Lead {
   objecao_principal?: ObjecaoPrincipal;
   objecao_obs?: string;
   observacoes?: string;
+  user_id?: string;
   
   // Perfil/Scoring
   ja_vendeu_no_digital: boolean;
@@ -35,7 +36,7 @@ export interface Lead {
   lead_score_classification: LeadScore; // Alto (≥60), Médio (30-59), Baixo (<30)
   
   // Resultado última sessão
-  resultado_sessao_ultimo?: ResultadoSessao;
+  resultado_sessao_ultimo?: string;
   resultado_obs_ultima_sessao?: string;
   
   // Valor do lead
