@@ -72,7 +72,7 @@ export function ConversionFunnelAnalytics({ className, pipelineId }: ConversionF
   const [viewMode, setViewMode] = useState<'absolute' | 'percentage'>('absolute');
 
   const { leads, loading: leadsLoading } = useSupabaseLeads();
-  const { entries: pipelineEntries, loading: entriesLoading } = useSupabaseLeadPipelineEntries(pipelineId);
+  const { entries: pipelineEntries, loading: entriesLoading } = useSupabaseLeadPipelineEntries();
   const { stages, loading: stagesLoading } = useSupabasePipelineStages();
   const { deals, loading: dealsLoading } = useSupabaseDeals();
 

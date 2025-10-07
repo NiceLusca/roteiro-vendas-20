@@ -236,16 +236,9 @@ export function useSupabasePipelineAnalytics(pipelineId?: string, dateRange?: { 
     try {
       // Get overall counts
       const [pipelinesResult, stagesResult, entriesResult] = await Promise.all([
-        supabase.from('pipelines').select('id', { count: 'exact' }).eq('user_id', user.id),
+        supabase.from('pipelines').select('id', { count: 'exact' }),
         supabase.from('pipeline_stages').select('id', { count: 'exact' }),
-        supabase
-          .from('lead_pipeline_entries')
-          .select(`
-            dias_em_atraso,
-            status_inscricao,
-            leads!inner(user_id)
-          `)
-          .eq('leads.user_id', user.id)
+        supabase.from('lead_pipeline_entries').select('*')
       ]);
 
       const totalPipelines = pipelinesResult.count || 0;

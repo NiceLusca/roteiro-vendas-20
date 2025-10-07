@@ -16,7 +16,7 @@ interface MobileKanbanProps {
 
 export function MobileKanban({ pipelineId }: MobileKanbanProps) {
   const { stages } = useSupabasePipelineStages();
-  const { entries } = useSupabaseLeadPipelineEntries(pipelineId);
+  const { entries } = useSupabaseLeadPipelineEntries();
   const [selectedStage, setSelectedStage] = useState<string | null>(null);
 
   const pipelineStages = stages
