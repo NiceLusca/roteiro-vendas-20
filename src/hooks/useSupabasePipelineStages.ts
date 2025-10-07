@@ -2,60 +2,66 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContextSecure';
-import { Order } from '@/types/crm';
+import { PipelineStage } from '@/types/crm';
 
-export function useSupabaseOrders() {
-  const [orders, setOrders] = useState<Order[]>([]);
+export function useSupabasePipelineStages(pipelineId?: string) {
+  const [stages, setStages] = useState<PipelineStage[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const fetchOrders = async () => {
+  const fetchStages = async () => {
     if (!user) return;
     
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('orders')
+      let query = supabase
+        .from('pipeline_stages')
         .select('*')
-        .order('data_pedido', { ascending: false });
+        .eq('ativo', true)
+        .order('ordem');
+
+      if (pipelineId) {
+        query = query.eq('pipeline_id', pipelineId);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
-        console.error('Erro ao buscar pedidos:', error);
+        console.error('Erro ao buscar etapas:', error);
         toast({
-          title: "Erro ao carregar pedidos",
+          title: "Erro ao carregar etapas",
           description: error.message,
           variant: "destructive"
         });
         return;
       }
 
-      setOrders(data || []);
+      setStages(data || []);
     } catch (error) {
-      console.error('Erro ao buscar pedidos:', error);
+      console.error('Erro ao buscar etapas:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const saveOrder = async (orderData: Partial<Order> & { id?: string }) => {
+  const saveStage = async (stageData: Partial<PipelineStage> & { id?: string }) => {
     if (!user) return null;
 
     try {
-      const { id, ...dataToSave } = orderData;
+      const { id, created_at, updated_at, ...dataToSave } = stageData;
       
       if (id) {
         const { data, error } = await supabase
-          .from('orders')
+          .from('pipeline_stages')
           .update(dataToSave)
           .eq('id', id)
           .select()
           .single();
 
         if (error) {
-          console.error('Erro ao atualizar pedido:', error);
           toast({
-            title: "Erro ao atualizar pedido",
+            title: "Erro ao atualizar etapa",
             description: error.message,
             variant: "destructive"
           });
@@ -63,23 +69,22 @@ export function useSupabaseOrders() {
         }
 
         toast({
-          title: "Pedido atualizado",
-          description: "Pedido foi atualizado com sucesso"
+          title: "Etapa atualizada",
+          description: `${data.nome} foi atualizada`
         });
 
-        fetchOrders();
+        fetchStages();
         return data;
       } else {
         const { data, error } = await supabase
-          .from('orders')
+          .from('pipeline_stages')
           .insert(dataToSave)
           .select()
           .single();
 
         if (error) {
-          console.error('Erro ao criar pedido:', error);
           toast({
-            title: "Erro ao criar pedido",
+            title: "Erro ao criar etapa",
             description: error.message,
             variant: "destructive"
           });
@@ -87,29 +92,29 @@ export function useSupabaseOrders() {
         }
 
         toast({
-          title: "Pedido criado",
-          description: "Pedido foi criado com sucesso"
+          title: "Etapa criada",
+          description: `${data.nome} foi criada`
         });
 
-        fetchOrders();
+        fetchStages();
         return data;
       }
     } catch (error) {
-      console.error('Erro ao salvar pedido:', error);
+      console.error('Erro ao salvar etapa:', error);
       return null;
     }
   };
 
   useEffect(() => {
     if (user) {
-      fetchOrders();
+      fetchStages();
     }
-  }, [user]);
+  }, [user, pipelineId]);
 
   return {
-    orders,
+    stages,
     loading,
-    saveOrder,
-    refetch: fetchOrders
+    saveStage,
+    refetch: fetchStages
   };
 }

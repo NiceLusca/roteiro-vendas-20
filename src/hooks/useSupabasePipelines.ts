@@ -2,60 +2,60 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContextSecure';
-import { Order } from '@/types/crm';
+import { Pipeline } from '@/types/crm';
 
-export function useSupabaseOrders() {
-  const [orders, setOrders] = useState<Order[]>([]);
+export function useSupabasePipelines() {
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const fetchOrders = async () => {
+  const fetchPipelines = async () => {
     if (!user) return;
     
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('orders')
+        .from('pipelines')
         .select('*')
-        .order('data_pedido', { ascending: false });
+        .eq('ativo', true)
+        .order('nome');
 
       if (error) {
-        console.error('Erro ao buscar pedidos:', error);
+        console.error('Erro ao buscar pipelines:', error);
         toast({
-          title: "Erro ao carregar pedidos",
+          title: "Erro ao carregar pipelines",
           description: error.message,
           variant: "destructive"
         });
         return;
       }
 
-      setOrders(data || []);
+      setPipelines(data || []);
     } catch (error) {
-      console.error('Erro ao buscar pedidos:', error);
+      console.error('Erro ao buscar pipelines:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const saveOrder = async (orderData: Partial<Order> & { id?: string }) => {
+  const savePipeline = async (pipelineData: Partial<Pipeline> & { id?: string }) => {
     if (!user) return null;
 
     try {
-      const { id, ...dataToSave } = orderData;
+      const { id, created_at, updated_at, ...dataToSave } = pipelineData;
       
       if (id) {
         const { data, error } = await supabase
-          .from('orders')
+          .from('pipelines')
           .update(dataToSave)
           .eq('id', id)
           .select()
           .single();
 
         if (error) {
-          console.error('Erro ao atualizar pedido:', error);
           toast({
-            title: "Erro ao atualizar pedido",
+            title: "Erro ao atualizar pipeline",
             description: error.message,
             variant: "destructive"
           });
@@ -63,23 +63,22 @@ export function useSupabaseOrders() {
         }
 
         toast({
-          title: "Pedido atualizado",
-          description: "Pedido foi atualizado com sucesso"
+          title: "Pipeline atualizado",
+          description: `${data.nome} foi atualizado`
         });
 
-        fetchOrders();
+        fetchPipelines();
         return data;
       } else {
         const { data, error } = await supabase
-          .from('orders')
+          .from('pipelines')
           .insert(dataToSave)
           .select()
           .single();
 
         if (error) {
-          console.error('Erro ao criar pedido:', error);
           toast({
-            title: "Erro ao criar pedido",
+            title: "Erro ao criar pipeline",
             description: error.message,
             variant: "destructive"
           });
@@ -87,29 +86,29 @@ export function useSupabaseOrders() {
         }
 
         toast({
-          title: "Pedido criado",
-          description: "Pedido foi criado com sucesso"
+          title: "Pipeline criado",
+          description: `${data.nome} foi criado`
         });
 
-        fetchOrders();
+        fetchPipelines();
         return data;
       }
     } catch (error) {
-      console.error('Erro ao salvar pedido:', error);
+      console.error('Erro ao salvar pipeline:', error);
       return null;
     }
   };
 
   useEffect(() => {
     if (user) {
-      fetchOrders();
+      fetchPipelines();
     }
   }, [user]);
 
   return {
-    orders,
+    pipelines,
     loading,
-    saveOrder,
-    refetch: fetchOrders
+    savePipeline,
+    refetch: fetchPipelines
   };
 }

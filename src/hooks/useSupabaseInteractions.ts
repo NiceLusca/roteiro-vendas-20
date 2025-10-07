@@ -39,10 +39,7 @@ export function useSupabaseInteractions() {
         return;
       }
 
-      setInteractions(data?.map(interaction => ({
-        ...interaction,
-        timestamp: interaction.data_hora
-      })) || []);
+      setInteractions(data || []);
     } catch (error) {
       console.error('Erro ao buscar interações:', error);
     } finally {
