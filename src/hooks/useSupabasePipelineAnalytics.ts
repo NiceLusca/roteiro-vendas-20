@@ -69,7 +69,7 @@ export function useSupabasePipelineAnalytics(pipelineId?: string, dateRange?: { 
         .from('lead_pipeline_entries')
         .select(`
           *,
-          leads!lead_id(user_id, nome)
+          leads!fk_lead_pipeline_entries_lead(user_id, nome)
         `)
         .eq('leads.user_id', user.id);
 

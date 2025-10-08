@@ -39,8 +39,8 @@ export function usePipelineAutomation(pipelineId: string) {
         .from('lead_pipeline_entries')
         .select(`
           *,
-          leads!lead_id(*),
-          pipeline_stages!etapa_atual_id(*)
+          leads!fk_lead_pipeline_entries_lead(*),
+          pipeline_stages!fk_lead_pipeline_entries_stage(*)
         `)
         .eq('pipeline_id', pipelineId)
         .eq('status_inscricao', 'Ativo');
@@ -157,7 +157,7 @@ export function usePipelineAutomation(pipelineId: string) {
         .from('lead_pipeline_entries')
         .select(`
           *,
-          leads!lead_id(*)
+          leads!fk_lead_pipeline_entries_lead(*)
         `)
         .eq('pipeline_id', pipelineId)
         .eq('status_inscricao', 'Ativo')

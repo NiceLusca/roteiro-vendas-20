@@ -35,7 +35,7 @@ export function useSupabaseLeadStageManagement() {
         .from('lead_pipeline_entries')
         .select(`
           *,
-          pipeline_stages!etapa_atual_id(nome, ordem, sla_horas)
+          pipeline_stages!fk_lead_pipeline_entries_stage(nome, ordem, sla_horas)
         `)
         .eq('id', entryId)
         .single();
