@@ -39,8 +39,8 @@ export function usePipelineAutomation(pipelineId: string) {
         .from('lead_pipeline_entries')
         .select(`
           *,
-          leads!fk_lead_pipeline_entries_lead(*),
-          pipeline_stages!fk_lead_pipeline_entries_stage(*)
+          leads!lead_id(*),
+          pipeline_stages!etapa_atual_id(*)
         `)
         .eq('pipeline_id', pipelineId)
         .eq('status_inscricao', 'Ativo');
@@ -157,7 +157,7 @@ export function usePipelineAutomation(pipelineId: string) {
         .from('lead_pipeline_entries')
         .select(`
           *,
-          leads!fk_lead_pipeline_entries_lead(*)
+          leads!lead_id(*)
         `)
         .eq('pipeline_id', pipelineId)
         .eq('status_inscricao', 'Ativo')
@@ -183,6 +183,11 @@ export function usePipelineAutomation(pipelineId: string) {
 
   // Set up periodic monitoring
   useEffect(() => {
+    // TEMPORARIAMENTE DESABILITADO - estava causando interferência com queries principais
+    // TODO: Reimplementar em worker separado ou via Edge Function
+    console.log('⚠️ Monitoramento automático desabilitado temporariamente');
+    return;
+    
     const interval = setInterval(() => {
       monitorStageTimeouts();
       monitorInactivity();
