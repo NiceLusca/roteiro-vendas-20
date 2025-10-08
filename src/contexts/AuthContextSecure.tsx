@@ -1,7 +1,6 @@
 import React from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 
 const { createContext, useContext, useEffect, useState } = React;
 
@@ -29,7 +28,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
 
   // Helper para log de eventos de segurança (ASSÍNCRONO)
   const logSecurityEventAsync = (
@@ -146,13 +144,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email, 
         error: error.message 
       });
-
-      // Show error toast
-      toast({
-        title: "Erro no login",
-        description: error.message,
-        variant: "destructive"
-      });
     }
 
     return { error };
@@ -172,19 +163,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Log async (non-blocking)
     logSecurityEventAsync('signup_attempt', null, !error, { email });
 
-    if (error) {
-      toast({
-        title: "Erro no cadastro",
-        description: error.message,
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "Cadastro realizado",
-        description: "Verifique seu email para confirmar a conta",
-      });
-    }
-
     return { error };
   };
 
@@ -197,11 +175,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Log async (non-blocking)
     logSecurityEventAsync('logout', userId || null, true);
-    
-    toast({
-      title: "Logout realizado",
-      description: "Você foi desconectado com sucesso"
-    });
   };
 
   return (

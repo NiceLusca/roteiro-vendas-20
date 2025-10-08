@@ -62,6 +62,8 @@ export interface Pipeline {
   ativo: boolean;
   created_at?: Date | string;
   updated_at?: Date | string;
+  primary_pipeline?: boolean;
+  objetivo?: string;
 }
 
 export interface PipelineStage {
@@ -76,6 +78,16 @@ export interface PipelineStage {
   ativo?: boolean;
   created_at?: Date | string;
   updated_at?: Date | string;
+  prazo_em_dias?: number;
+  proximo_passo_label?: string;
+  saida_criteria?: any;
+  wip_limit?: number;
+  gerar_agendamento_auto?: boolean;
+  tipo_agendamento?: string;
+  closer_padrao?: string;
+  horarios_preferenciais?: any;
+  template_agendamento?: string;
+  duracao_minutos?: number;
 }
 
 export interface StageChecklistItem {
@@ -195,6 +207,7 @@ export interface Order {
   created_at?: Date | string;
   updated_at?: Date | string;
   deal_id: string;
+  data_venda?: Date | string;
   // Convenience getters for compatibility
   total?: number;
   status?: StatusPedido;

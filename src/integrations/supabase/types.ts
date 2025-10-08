@@ -510,6 +510,7 @@ export type Database = {
           closer: string | null
           created_at: string | null
           data_pedido: string | null
+          data_venda: string | null
           deal_id: string
           id: string
           lead_id: string | null
@@ -521,6 +522,7 @@ export type Database = {
           closer?: string | null
           created_at?: string | null
           data_pedido?: string | null
+          data_venda?: string | null
           deal_id: string
           id?: string
           lead_id?: string | null
@@ -532,6 +534,7 @@ export type Database = {
           closer?: string | null
           created_at?: string | null
           data_pedido?: string | null
+          data_venda?: string | null
           deal_id?: string
           id?: string
           lead_id?: string | null
@@ -559,42 +562,72 @@ export type Database = {
       pipeline_stages: {
         Row: {
           ativo: boolean | null
+          closer_padrao: string | null
           created_at: string | null
           criterios_avanco: Json | null
+          duracao_minutos: number | null
+          gerar_agendamento_auto: boolean | null
+          horarios_preferenciais: Json | null
           id: string
           nome: string
           ordem: number
           pipeline_id: string
+          prazo_em_dias: number | null
+          proximo_passo_label: string | null
           proximo_passo_template: string | null
           proximo_passo_tipo: string | null
+          saida_criteria: Json | null
           sla_horas: number | null
+          template_agendamento: string | null
+          tipo_agendamento: string | null
           updated_at: string | null
+          wip_limit: number | null
         }
         Insert: {
           ativo?: boolean | null
+          closer_padrao?: string | null
           created_at?: string | null
           criterios_avanco?: Json | null
+          duracao_minutos?: number | null
+          gerar_agendamento_auto?: boolean | null
+          horarios_preferenciais?: Json | null
           id?: string
           nome: string
           ordem: number
           pipeline_id: string
+          prazo_em_dias?: number | null
+          proximo_passo_label?: string | null
           proximo_passo_template?: string | null
           proximo_passo_tipo?: string | null
+          saida_criteria?: Json | null
           sla_horas?: number | null
+          template_agendamento?: string | null
+          tipo_agendamento?: string | null
           updated_at?: string | null
+          wip_limit?: number | null
         }
         Update: {
           ativo?: boolean | null
+          closer_padrao?: string | null
           created_at?: string | null
           criterios_avanco?: Json | null
+          duracao_minutos?: number | null
+          gerar_agendamento_auto?: boolean | null
+          horarios_preferenciais?: Json | null
           id?: string
           nome?: string
           ordem?: number
           pipeline_id?: string
+          prazo_em_dias?: number | null
+          proximo_passo_label?: string | null
           proximo_passo_template?: string | null
           proximo_passo_tipo?: string | null
+          saida_criteria?: Json | null
           sla_horas?: number | null
+          template_agendamento?: string | null
+          tipo_agendamento?: string | null
           updated_at?: string | null
+          wip_limit?: number | null
         }
         Relationships: [
           {
@@ -613,6 +646,8 @@ export type Database = {
           descricao: string | null
           id: string
           nome: string
+          objetivo: string | null
+          primary_pipeline: boolean | null
           updated_at: string | null
         }
         Insert: {
@@ -621,6 +656,8 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome: string
+          objetivo?: string | null
+          primary_pipeline?: boolean | null
           updated_at?: string | null
         }
         Update: {
@@ -629,6 +666,8 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome?: string
+          objetivo?: string | null
+          primary_pipeline?: boolean | null
           updated_at?: string | null
         }
         Relationships: []
