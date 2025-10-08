@@ -55,8 +55,19 @@ export function ColumnMappingStep({ headers, sampleRows, onComplete, onBack }: C
         targetField = 'objecao_principal';
       } else if (normalized.includes('obs') || normalized.includes('notes')) {
         targetField = 'observacoes';
-      } else if (normalized === 'score' || normalized.includes('pontuação') || 
-                 (normalized.includes('valor') && (normalized.includes('lead') || normalized.includes('potencial')))) {
+      } else if (
+        normalized === 'score' || 
+        normalized.includes('pontuação') || 
+        normalized.includes('pontuacao') ||
+        normalized === 'valor' ||
+        normalized.includes('valor lead') ||
+        normalized.includes('valor_lead') ||
+        normalized.includes('valorlead') ||
+        normalized.includes('valor do lead') ||
+        normalized.includes('potencial') ||
+        normalized.includes('qualificação') ||
+        normalized.includes('qualificacao')
+      ) {
         targetField = 'valor_lead';
       }
 
