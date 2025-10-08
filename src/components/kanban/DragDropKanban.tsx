@@ -79,17 +79,42 @@ export function DragDropKanban({
     if (!over) return;
 
     const activeEntryId = active.id as string;
-    const overStageId = over.id as string;
+    const overId = over.id as string;
 
-    // Encontrar a entrada e estágio atual
+    console.log('🎯 DragDropKanban handleDragEnd:', { activeEntryId, overId });
+
+    // Encontrar a entrada atual
     const currentStageEntry = stageEntries.find(s => 
       s.entries.some(e => e.id === activeEntryId)
     );
 
-    if (!currentStageEntry) return;
+    if (!currentStageEntry) {
+      console.error('❌ Entry atual não encontrada');
+      return;
+    }
 
     const fromStageId = currentStageEntry.stage.id;
-    const toStageId = overStageId;
+    
+    // overId pode ser tanto o ID de um estágio (quando solto na área vazia)
+    // quanto o ID de outra entry (quando solto sobre outro card)
+    // Precisamos descobrir qual é o estágio de destino
+    let toStageId = overId;
+    
+    // Verificar se overId é um entry ID
+    const overEntry = stageEntries.find(s => 
+      s.entries.some(e => e.id === overId)
+    );
+    
+    if (overEntry) {
+      // Se solto sobre outro card, pegar o estágio desse card
+      toStageId = overEntry.stage.id;
+      console.log('📍 Solto sobre outro card, estágio de destino:', toStageId);
+    } else {
+      // Se solto na área vazia, overId já é o stageId
+      console.log('📍 Solto na área vazia da coluna:', toStageId);
+    }
+
+    console.log('📍 Movendo de:', fromStageId, 'para:', toStageId);
 
     // Se moveu para um estágio diferente
     if (fromStageId !== toStageId) {
@@ -98,6 +123,8 @@ export function DragDropKanban({
         toStage: toStageId,
         entryId: activeEntryId
       });
+    } else {
+      console.log('⚠️ Mesmo estágio, ignorando movimento');
     }
   };
 
