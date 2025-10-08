@@ -39,6 +39,7 @@ interface KanbanCardProps {
   nextAppointment?: AppointmentInfo | null;
   isDragging?: boolean;
   onViewLead?: () => void;
+  onEditLead?: () => void;
   onCreateAppointment?: () => void;
   onAdvanceStage?: () => void;
   onRegisterInteraction?: () => void;
@@ -56,6 +57,7 @@ export function KanbanCard({
   nextAppointment,
   isDragging = false,
   onViewLead,
+  onEditLead,
   onCreateAppointment,
   onAdvanceStage,
   onRegisterInteraction,
@@ -145,7 +147,13 @@ export function KanbanCard({
         (dragActive || isDragging) && "opacity-60 rotate-2 scale-105 shadow-2xl z-50 ring-2 ring-primary/50"
       )}
     >
-      <CardContent className="p-4">
+      <CardContent className="p-4" onClick={(e) => {
+        // Não abrir o dialog se clicar em um botão
+        if ((e.target as HTMLElement).closest('button')) {
+          return;
+        }
+        onEditLead?.();
+      }}>
         {/* Header do Card */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">

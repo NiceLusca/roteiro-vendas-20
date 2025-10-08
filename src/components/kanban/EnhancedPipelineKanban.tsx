@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
 import { DragDropKanban } from './DragDropKanban';
+import { LeadEditDialog } from './LeadEditDialog';
 import { ChecklistDialog } from '@/components/pipeline/ChecklistDialog';
 import { DealLossDialog } from '@/components/deals/DealLossDialog';
 import { AuditLogsDialog } from '@/components/audit/AuditLogsDialog';
@@ -142,6 +143,11 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
     leadId?: string;
     leadName?: string;
     currentPipelineId?: string;
+  }>({ open: false });
+
+  const [editLeadDialog, setEditLeadDialog] = useState<{
+    open: boolean;
+    lead?: Lead;
   }>({ open: false });
 
   const { logChange } = useAudit();
@@ -304,6 +310,16 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
 
   const handleViewLead = (leadId: string) => {
     window.open(`/leads/${leadId}`, '_blank');
+  };
+
+  const handleEditLead = (leadId: string) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (lead) {
+      setEditLeadDialog({
+        open: true,
+        lead
+      });
+    }
   };
 
   const handleCreateAppointment = (leadId: string) => {
@@ -698,6 +714,7 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
         onDragEnd={handleDragEnd}
         onAddLead={handleAddLead}
         onViewLead={handleViewLead}
+        onEditLead={handleEditLead}
         onCreateAppointment={handleCreateAppointment}
             onAdvanceStage={handleAdvanceStage}
             onRegisterInteraction={handleRegisterInteraction}
@@ -855,6 +872,18 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
           </DialogContent>
         </Dialog>
         )}
+
+      {/* Dialog de Edição de Lead */}
+      {editLeadDialog.lead && (
+        <LeadEditDialog
+          open={editLeadDialog.open}
+          onOpenChange={(open) => setEditLeadDialog({ open, lead: undefined })}
+          lead={editLeadDialog.lead}
+          onUpdate={() => {
+            refetch();
+          }}
+        />
+      )}
       
       {/* Success Animation */}
       <SuccessAnimation

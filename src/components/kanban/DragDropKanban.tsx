@@ -28,6 +28,7 @@ interface DragDropKanbanProps {
   onDragEnd: (result: DragDropResult) => void;
   onAddLead?: (stageId: string) => void;
   onViewLead?: (leadId: string) => void;
+  onEditLead?: (leadId: string) => void;
   onCreateAppointment?: (leadId: string) => void;
   onAdvanceStage?: (entryId: string) => void;
   onRegisterInteraction?: (leadId: string) => void;
@@ -42,6 +43,7 @@ export function DragDropKanban({
   onDragEnd,
   onAddLead,
   onViewLead,
+  onEditLead,
   onCreateAppointment,
   onAdvanceStage,
   onRegisterInteraction,
@@ -123,6 +125,7 @@ export function DragDropKanban({
               checklistItems={checklistItems}
               onAddLead={onAddLead}
               onViewLead={onViewLead}
+              onEditLead={onEditLead}
               onCreateAppointment={onCreateAppointment}
               onRegisterInteraction={onRegisterInteraction}
               onOpenChecklist={onOpenChecklist}

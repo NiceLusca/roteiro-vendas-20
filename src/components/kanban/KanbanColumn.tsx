@@ -19,6 +19,7 @@ interface KanbanColumnProps {
   checklistItems?: Array<{ id: string; etapa_id: string; obrigatorio: boolean }>;
   onAddLead?: (stageId: string) => void;
   onViewLead?: (leadId: string) => void;
+  onEditLead?: (leadId: string) => void;
   onCreateAppointment?: (leadId: string) => void;
   onAdvanceStage?: (entryId: string) => void;
   onRegisterInteraction?: (leadId: string) => void;
@@ -36,6 +37,7 @@ export function KanbanColumn({
   checklistItems = [],
   onAddLead,
   onViewLead,
+  onEditLead,
   onCreateAppointment,
   onAdvanceStage,
   onRegisterInteraction,
@@ -176,6 +178,7 @@ export function KanbanColumn({
                 nextStage={nextStage}
                 checklistComplete={checklistComplete}
                 onViewLead={() => onViewLead?.(entry.lead.id)}
+                onEditLead={() => onEditLead?.(entry.lead.id)}
                 onCreateAppointment={() => onCreateAppointment?.(entry.lead.id)}
                 onAdvanceStage={() => onAdvanceStage?.(entry.id)}
                 onRegisterInteraction={() => onRegisterInteraction?.(entry.lead.id)}
