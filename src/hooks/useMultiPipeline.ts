@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 export function useMultiPipeline() {
   const { logChange } = useAudit();
   const { toast } = useToast();
-  const { createEntry, archiveEntry, transferToPipeline, updateEntry } = useSupabaseLeadPipelineEntries(undefined);
+  const { createEntry, archiveEntry, transferToPipeline } = useSupabaseLeadPipelineEntries(undefined);
 
   const getLeadPipelineEntries = useCallback(async (leadId: string): Promise<any[]> => {
     const { supabase } = await import('@/integrations/supabase/client');
@@ -125,12 +125,17 @@ export function useMultiPipeline() {
     
     const oldStageId = entry?.etapa_atual_id;
 
-    const success = await updateEntry(entryId, {
-      etapa_atual_id: newStageId,
-      data_entrada_etapa: new Date().toISOString()
-    });
+    const { error } = await supabase
+      .from('lead_pipeline_entries')
+      .update({
+        etapa_atual_id: newStageId,
+        data_entrada_etapa: new Date().toISOString(),
+        saude_etapa: 'Verde',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', entryId);
 
-    if (success) {
+    if (!error) {
       logChange({
         entidade: 'LeadPipelineEntry',
         entidade_id: entryId,
@@ -141,7 +146,7 @@ export function useMultiPipeline() {
         ator: 'Sistema (Avanço de Etapa)'
       });
     }
-  }, [updateEntry, logChange]);
+  }, [logChange]);
 
   return {
     getLeadPipelineEntries,

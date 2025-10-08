@@ -203,69 +203,6 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
   };
 
   // Update pipeline entry
-  const updateEntry = async (entryId: string, updates: Partial<LeadPipelineEntry>) => {
-    if (!user) return null;
-
-    console.log('🔄 updateEntry chamado:', { entryId, updates });
-
-    try {
-      const updateData: any = {
-        ...updates,
-        updated_at: new Date().toISOString()
-      };
-
-      // Convert Date objects to ISO strings for Supabase
-      if (updateData.data_entrada_etapa instanceof Date) {
-        updateData.data_entrada_etapa = updateData.data_entrada_etapa.toISOString();
-      }
-      if (updateData.data_prevista_proxima_etapa instanceof Date) {
-        updateData.data_prevista_proxima_etapa = updateData.data_prevista_proxima_etapa.toISOString();
-      }
-
-      console.log('📝 Dados para update no Supabase:', updateData);
-
-      const { data, error } = await supabase
-        .from('lead_pipeline_entries')
-        .update(updateData)
-        .eq('id', entryId)
-        .select('*')
-        .maybeSingle();
-
-      if (error) {
-        console.error('❌ Erro Supabase ao atualizar entry:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-          entryId,
-          updateData
-        });
-        toast({
-          title: "Erro ao atualizar",
-          description: error.message,
-          variant: "destructive",
-          duration: 5000
-        });
-        return null;
-      }
-
-      if (!data) {
-        console.error('❌ Update não retornou dados:', {
-          entryId,
-          updateData,
-          queryInfo: 'UPDATE lead_pipeline_entries executado mas sem retorno'
-        });
-        return null;
-      }
-
-      console.log('✅ Update confirmado pelo banco:', data);
-      // NÃO fazer refetch aqui - deixar o componente chamador controlar
-      return data;
-    } catch (error) {
-      console.error('❌ Exceção ao atualizar entry:', error);
-      return null;
-    }
-  };
 
   // Archive pipeline entry
   const archiveEntry = async (entryId: string, motivo?: string) => {
@@ -372,8 +309,17 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
   };
 
   // Update health status based on SLA
-  const updateHealthStatus = (entryId: string, health: 'Verde' | 'Amarelo' | 'Vermelho') => {
-    return updateEntry(entryId, { saude_etapa: health });
+  const updateHealthStatus = async (entryId: string, health: 'Verde' | 'Amarelo' | 'Vermelho') => {
+    const { error } = await supabase
+      .from('lead_pipeline_entries')
+      .update({ saude_etapa: health })
+      .eq('id', entryId);
+    
+    if (!error) {
+      await fetchEntries();
+    }
+    
+    return !error;
   };
 
   useEffect(() => {
@@ -420,7 +366,6 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     entries,
     loading,
     createEntry,
-    updateEntry,
     archiveEntry,
     transferToPipeline,
     getEntriesByLead,

@@ -59,7 +59,7 @@ export function useSupabaseLeadStageManagement() {
       const updateData: any = {
         etapa_atual_id: newStageId,
         data_entrada_etapa: new Date().toISOString(),
-        saude_etapa: 'verde',
+        saude_etapa: 'Verde',
         updated_at: new Date().toISOString()
       };
 

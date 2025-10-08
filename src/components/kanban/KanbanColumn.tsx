@@ -15,7 +15,7 @@ interface KanbanColumnProps {
   nextStage?: PipelineStage | null;
   entries: Array<LeadPipelineEntry & { lead: Lead }>;
   wipExceeded: boolean;
-  isDragAndDrop?: boolean;
+  
   checklistItems?: Array<{ id: string; etapa_id: string; obrigatorio: boolean }>;
   onAddLead?: (stageId: string) => void;
   onViewLead?: (leadId: string) => void;
@@ -33,7 +33,7 @@ export function KanbanColumn({
   nextStage,
   entries,
   wipExceeded,
-  isDragAndDrop = false,
+  
   checklistItems = [],
   onAddLead,
   onViewLead,
@@ -64,7 +64,7 @@ export function KanbanColumn({
       ref={setNodeRef}
       className={cn(
         "flex flex-col h-full min-w-80 transition-all duration-300",
-        isDragAndDrop && isOver && "ring-2 ring-primary/50 bg-primary/5 scale-[1.02]"
+        isOver && "ring-2 ring-primary/50 bg-primary/5 scale-[1.02]"
       )}
     >
       {/* Header da Coluna */}

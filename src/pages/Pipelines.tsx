@@ -1,7 +1,11 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { EnhancedPipelineKanban } from '@/components/kanban/EnhancedPipelineKanban';
+import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { CRMProviderWrapper } from '@/contexts/CRMProviderWrapper';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
+import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
+import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
+import { useKanbanAppointments } from '@/hooks/useKanbanAppointments';
 import { EnhancedLoading } from '@/components/ui/enhanced-loading';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -11,12 +15,15 @@ export default function Pipelines() {
   const { pipelineId } = useParams<{ pipelineId: string }>();
   const navigate = useNavigate();
   const { pipelines, loading } = useSupabasePipelines();
+  const { leads } = useSupabaseLeads();
+  const { entries: leadPipelineEntries } = useSupabaseLeadPipelineEntries(pipelineId);
+  const { stages } = useSupabasePipelineStages(pipelineId);
+  const { fetchNextAppointments, getNextAppointmentForLead } = useKanbanAppointments();
 
   const activePipelines = pipelines.filter(p => p.ativo);
 
   useEffect(() => {
     if (!loading && !pipelineId && activePipelines.length > 0) {
-      // Se não houver pipelineId na URL, redirecionar para seleção
       navigate('/pipelines/select', { replace: true });
     }
   }, [loading, pipelineId, activePipelines, navigate]);
@@ -44,6 +51,46 @@ export default function Pipelines() {
     );
   }
 
+  // Processar entries
+  const pipelineStages = stages
+    .filter(stage => stage.pipeline_id === pipelineId)
+    .sort((a, b) => a.ordem - b.ordem);
+
+  const allEntries = leadPipelineEntries
+    .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId)
+    .map(entry => {
+      const lead = leads.find(l => l.id === entry.lead_id);
+      return lead ? { ...entry, lead } : null;
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+
+  // Buscar agendamentos
+  useEffect(() => {
+    if (allEntries.length > 0) {
+      const leadIds = allEntries.map(entry => entry.lead_id);
+      fetchNextAppointments(leadIds);
+    }
+  }, [allEntries.length]);
+
+  // Agrupar por stage
+  const stageEntries = pipelineStages.map((stage, index) => {
+    const entries = allEntries.filter(entry => entry.etapa_atual_id === stage.id);
+    const wipExceeded = stage.wip_limit ? entries.length > stage.wip_limit : false;
+    const nextStage = index < pipelineStages.length - 1 ? pipelineStages[index + 1] : null;
+
+    const entriesWithAppointments = entries.map(entry => ({
+      ...entry,
+      nextAppointment: getNextAppointmentForLead(entry.lead_id)
+    }));
+
+    return {
+      stage,
+      nextStage,
+      entries: entriesWithAppointments,
+      wipExceeded
+    };
+  });
+
   return (
     <CRMProviderWrapper>
       <div className="space-y-4">
@@ -60,7 +107,12 @@ export default function Pipelines() {
             </Button>
           </div>
         )}
-        <EnhancedPipelineKanban selectedPipelineId={pipelineId} />
+        
+        <KanbanBoard
+          selectedPipelineId={pipelineId}
+          stageEntries={stageEntries}
+          onViewLead={(leadId) => window.open(`/leads/${leadId}`, '_blank')}
+        />
       </div>
     </CRMProviderWrapper>
   );
