@@ -76,15 +76,14 @@ export function useBulkLeadImport() {
               const isValidOrigem = VALID_ORIGENS.includes(trimmedValue as any);
               (leadData as any)[map.targetField] = isValidOrigem ? trimmedValue : 'Outro';
             } 
-            else if (map.targetField === 'valor_lead') {
-              // Validar e limitar valor_lead entre 0 e 110
+            else if (map.targetField === 'valor_lead' || map.targetField === 'lead_score') {
+              // Validar e limitar score entre 0 e 110
               const numValue = parseInt(trimmedValue);
-              if (!isNaN(numValue)) {
-                (leadData as any)[map.targetField] = Math.min(110, Math.max(0, numValue));
-              } else {
-                (leadData as any)[map.targetField] = 0;
-              }
-            } 
+              const scoreValue = !isNaN(numValue) ? Math.min(110, Math.max(0, numValue)) : 0;
+              // Copiar para ambos os campos
+              (leadData as any)['valor_lead'] = scoreValue;
+              (leadData as any)['lead_score'] = scoreValue;
+            }
             else {
               (leadData as any)[map.targetField] = trimmedValue;
             }
@@ -115,15 +114,14 @@ export function useBulkLeadImport() {
             const candidate = typeof dv === 'string' ? dv.trim() : String(dv ?? '');
             (leadData as any)[key] = VALID_ORIGENS.includes(candidate as any) ? candidate : 'Outro';
           } 
-          else if (key === 'valor_lead') {
-            // Validar e limitar valor_lead entre 0 e 110
+          else if (key === 'valor_lead' || key === 'lead_score') {
+            // Validar e limitar score entre 0 e 110
             const numValue = parseInt(String(dv));
-            if (!isNaN(numValue)) {
-              (leadData as any)[key] = Math.min(110, Math.max(0, numValue));
-            } else {
-              (leadData as any)[key] = 0;
-            }
-          } 
+            const scoreValue = !isNaN(numValue) ? Math.min(110, Math.max(0, numValue)) : 0;
+            // Copiar para ambos os campos
+            (leadData as any)['valor_lead'] = scoreValue;
+            (leadData as any)['lead_score'] = scoreValue;
+          }
           else if (typeof dv === 'string') {
             (leadData as any)[key] = dv.trim();
           } else {
