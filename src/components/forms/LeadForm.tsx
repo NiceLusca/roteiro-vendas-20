@@ -32,13 +32,21 @@ const origemOptions: { value: OrigemLead; label: string }[] = [
 ];
 
 const objecaoOptions: { value: ObjecaoPrincipal; label: string }[] = [
+  { value: 'preco', label: 'Preço' },
+  { value: 'tempo', label: 'Tempo' },
   { value: 'confianca', label: 'Confiança' },
-  { value: 'orcamento', label: 'Orçamento' },
-  { value: 'prioridade', label: 'Prioridade' },
-  { value: 'tempo', label: 'Tempo' }
+  { value: 'necessidade', label: 'Necessidade' },
+  { value: 'outro', label: 'Outro' }
 ];
 
-const statusOptions: StatusGeral[] = ['Ativo', 'Cliente', 'Perdido', 'Inativo'];
+const statusOptions: { value: StatusGeral; label: string }[] = [
+  { value: 'lead', label: 'Lead' },
+  { value: 'qualificado', label: 'Qualificado' },
+  { value: 'reuniao_marcada', label: 'Reunião Marcada' },
+  { value: 'em_negociacao', label: 'Em Negociação' },
+  { value: 'cliente', label: 'Cliente' },
+  { value: 'perdido', label: 'Perdido' }
+];
 
 export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadFormProps) {
   const { tags, loading: loadingTags, getLeadTags, createTag } = useLeadTags();
@@ -52,7 +60,7 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
     whatsapp: '',
     origem: 'outro',
     segmento: '',
-    status_geral: 'Ativo',
+    status_geral: 'lead',
     closer: '',
     desejo_na_sessao: '',
     objecao_principal: undefined,
@@ -105,7 +113,7 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
         whatsapp: lead.whatsapp || '',
         origem: lead.origem || 'outro',
         segmento: lead.segmento,
-        status_geral: lead.status_geral || 'Ativo',
+        status_geral: lead.status_geral || 'lead',
         closer: lead.closer,
         desejo_na_sessao: lead.desejo_na_sessao,
         objecao_principal: lead.objecao_principal,
@@ -329,9 +337,9 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {statusOptions.map(status => (
-                      <SelectItem key={status} value={status}>
-                        {status}
+                    {statusOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

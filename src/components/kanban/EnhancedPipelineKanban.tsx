@@ -240,7 +240,8 @@ export function EnhancedPipelineKanban() {
       if (!fromStage || !toStage) return;
 
       // Validate checklist before allowing drag
-      const stageChecklistItems = checklistItems.filter(item => item.stage_id === fromStage.id);
+      const stageChecklistItems = checklistItems.filter(item => item.etapa_id === fromStage.id);
+      const checklistState: Record<string, boolean> = {};
       const validation = ChecklistValidation.validateStageAdvancement(currentEntry as any, stageChecklistItems);
       
       if (!validation.valid) {
@@ -353,7 +354,8 @@ export function EnhancedPipelineKanban() {
     
     if (entry && stage) {
       // Check checklist validation
-      const stageChecklistItems = checklistItems.filter(item => item.stage_id === stage.id);
+      const stageChecklistItems = checklistItems.filter(item => item.etapa_id === stage.id);
+      const checklistState: Record<string, boolean> = {};
       const validation = ChecklistValidation.validateStageAdvancement(entry as any, stageChecklistItems);
       
       if (!validation.valid) {
@@ -486,7 +488,7 @@ export function EnhancedPipelineKanban() {
       alteracao: [
         { 
           campo: 'checklist_state', 
-          de: JSON.stringify(checklistDialog.entry.checklist_state), 
+          de: 'updated', 
           para: JSON.stringify(checklistState) 
         }
       ]
@@ -496,13 +498,14 @@ export function EnhancedPipelineKanban() {
   const handleUpdateNote = (note: string) => {
     if (!checklistDialog.entry) return;
 
+    // Log note change
     logChange({
       entidade: 'LeadPipelineEntry',
       entidade_id: checklistDialog.entry.id,
       alteracao: [
         { 
           campo: 'nota_etapa', 
-          de: checklistDialog.entry.nota_etapa || '', 
+          de: '', 
           para: note 
         }
       ]
@@ -722,7 +725,7 @@ export function EnhancedPipelineKanban() {
               const result = await attemptStageAdvancement(
                 checklistDialog.entry,
                 checklistDialog.stage,
-                checklistItems.filter(item => item.stage_id === checklistDialog.stage!.id)
+                checklistItems.filter(item => item.etapa_id === checklistDialog.stage!.id)
               );
               
               if (result.success) {

@@ -40,9 +40,9 @@ export const Dashboard = memo(function Dashboard() {
   
   const metrics = {
     leads_por_status: {
-      Ativo: leads.filter(l => l.status_geral === 'Ativo').length,
-      Cliente: leads.filter(l => l.status_geral === 'Cliente').length,
-      Perdido: leads.filter(l => l.status_geral === 'Perdido').length
+      lead: leads.filter(l => l.status_geral === 'lead').length,
+      cliente: leads.filter(l => l.status_geral === 'cliente').length,
+      perdido: leads.filter(l => l.status_geral === 'perdido').length
     },
     sessoes_hoje: appointments.filter(a => {
       const today = new Date();
@@ -94,7 +94,7 @@ export const Dashboard = memo(function Dashboard() {
     });
 
   const totalLeads = Object.values(metrics.leads_por_status).reduce((a, b) => a + b, 0);
-  const taxaConversao = totalLeads > 0 ? ((metrics.leads_por_status.Cliente / totalLeads) * 100).toFixed(1) : '0';
+  const taxaConversao = totalLeads > 0 ? ((metrics.leads_por_status.cliente / totalLeads) * 100).toFixed(1) : '0';
 
   return (
     <div className="space-y-6">
@@ -112,7 +112,7 @@ export const Dashboard = memo(function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Leads Ativos"
-          value={metrics.leads_por_status.Ativo}
+          value={metrics.leads_por_status.lead}
           icon={Users}
           trend={{ value: 8, positive: true, label: "+8%" }}
         />
@@ -237,18 +237,19 @@ export const Dashboard = memo(function Dashboard() {
             <CardTitle>Status dos Leads</CardTitle>
           </CardHeader>
           <CardContent>
-            {leads.filter(l => l.status_geral === 'Ativo').length > 0 ? (
+            {leads.filter(l => l.status_geral === 'lead').length > 0 ? (
               <div className="space-y-4">
-                {['Ativo', 'Cliente', 'Perdido'].map((status) => {
+                {['lead', 'cliente', 'perdido'].map((status) => {
                   const count = leads.filter(l => l.status_geral === status).length;
-                  const color = status === 'Cliente' ? 'bg-green-500' : 
-                               status === 'Ativo' ? 'bg-blue-500' : 'bg-red-500';
+                  const label = status === 'lead' ? 'Leads' : status === 'cliente' ? 'Clientes' : 'Perdidos';
+                  const color = status === 'cliente' ? 'bg-green-500' : 
+                               status === 'lead' ? 'bg-blue-500' : 'bg-red-500';
                   
                   return (
                     <div key={status} className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
                         <div className={`w-3 h-3 rounded-full ${color}`}></div>
-                        <span>{status}</span>
+                        <span>{label}</span>
                       </div>
                       <Badge variant="secondary">{count}</Badge>
                     </div>

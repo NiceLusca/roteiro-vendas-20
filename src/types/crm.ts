@@ -1,17 +1,17 @@
 // Tipos do CRM - Sistema de Vendas e Pipelines
 // IMPORTANT: These types must match exactly the database enum values
 
-export type StatusGeral = 'Ativo' | 'Cliente' | 'Perdido' | 'Inativo' | 'Lead';
-export type OrigemLead = 'Evento' | 'Indicacao' | 'Organico' | 'Outro' | 'Trafego Pago';
-export type ObjecaoPrincipal = 'Confianca' | 'Orcamento' | 'Prioridade' | 'Tempo';
-export type StatusAppointment = 'Agendado' | 'Realizado' | 'Cancelado' | 'Remarcado' | 'Confirmado' | 'No-Show';
-export type ResultadoSessao = 'Positivo' | 'Neutro' | 'Negativo';
-export type CanalInteracao = 'WhatsApp' | 'Telefone' | 'Email' | 'Presencial' | 'Outro';
-export type StatusDeal = 'Aberta' | 'Ganha' | 'Perdida' | 'Pausada';
-export type StatusPedido = 'Pago' | 'Pendente' | 'Cancelado';
-export type SaudeEtapa = 'Verde' | 'Amarelo' | 'Vermelho';
+export type StatusGeral = 'lead' | 'qualificado' | 'reuniao_marcada' | 'em_negociacao' | 'cliente' | 'perdido';
+export type OrigemLead = 'evento' | 'indicacao' | 'organico' | 'outro' | 'trafego_pago';
+export type ObjecaoPrincipal = 'preco' | 'tempo' | 'confianca' | 'necessidade' | 'outro';
+export type StatusAppointment = 'agendado' | 'confirmado' | 'realizado' | 'cancelado' | 'remarcado';
+export type ResultadoSessao = 'positivo' | 'neutro' | 'negativo';
+export type CanalInteracao = 'whatsapp' | 'telefone' | 'email' | 'presencial' | 'outro';
+export type StatusDeal = 'aberto' | 'ganho' | 'perdido';
+export type StatusPedido = 'pendente' | 'pago' | 'cancelado';
+export type SaudeEtapa = 'verde' | 'amarelo' | 'vermelho';
 export type ProximoPassoTipo = 'Humano' | 'Agendamento' | 'Mensagem' | 'Outro';
-export type LeadScore = 'Alto' | 'Médio' | 'Baixo';
+export type LeadScore = 'alto' | 'medio' | 'baixo';
 
 export interface Lead {
   id: string;
@@ -69,7 +69,7 @@ export interface PipelineStage {
   pipeline_id: string;
   nome: string;
   ordem: number;
-  prazo_em_dias: number; // SLA
+  sla_horas?: number; // SLA em horas (note: database usa sla_horas, não prazo_em_dias)
   
   // Próximo passo
   proximo_passo_label?: string;
@@ -97,6 +97,9 @@ export interface PipelineStage {
   
   // WIP limit
   wip_limit?: number;
+  
+  // Campos opcionais para compatibilidade
+  prazo_em_dias?: number; // Deprecated, usar sla_horas
 }
 
 export interface StageChecklistItem {
@@ -161,8 +164,7 @@ export interface Interaction {
   id: string;
   lead_id: string;
   canal: CanalInteracao;
-  descricao: string;
-  conteudo: string;
+  descricao: string; // Note: database usa descricao
   autor: string;
   data_hora?: Date;
   created_at?: Date;
@@ -203,10 +205,10 @@ export interface Order {
   id: string;
   lead_id: string;
   closer?: string;
-  total: number; // Em BRL
+  valor_total: number; // Em BRL (note: database usa valor_total, não total)
   forma_pagamento?: string;
   data_venda: Date;
-  status: StatusPedido;
+  status_pagamento: StatusPedido; // note: database usa status_pagamento, não status
   observacao?: string;
 }
 
@@ -261,14 +263,7 @@ export interface DealLostReason {
   timestamp: Date;
 }
 
-export interface Interaction {
-  id: string;
-  lead_id: string;
-  canal: CanalInteracao;
-  conteudo: string;
-  autor: string;
-  timestamp: Date;
-}
+// Removed duplicate Interaction interface
 
 export interface OrderItem {
   id: string;

@@ -123,7 +123,7 @@ export function PipelineManager() {
   };
 
   const getStageChecklistCount = (stageId: string) => {
-    return checklistItems.filter(item => item.stage_id === stageId).length;
+    return checklistItems.filter(item => item.etapa_id === stageId).length;
   };
 
   const sensors = useSensors(

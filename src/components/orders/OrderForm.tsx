@@ -82,9 +82,9 @@ export function OrderForm({ leadId, leadName, products, onSave, onCancel }: Orde
     const order: Omit<Order, 'id' | 'data_venda'> = {
       lead_id: leadId,
       closer,
-      total: calculateTotal(),
+      valor_total: calculateTotal(),
       forma_pagamento: formaPagamento,
-      status: 'pendente',
+      status_pagamento: 'pendente',
       observacao: observacao || undefined
     };
 
