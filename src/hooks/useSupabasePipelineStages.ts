@@ -38,6 +38,14 @@ export function useSupabasePipelineStages(pipelineId?: string) {
       
       const queryPipelineId = targetPipelineId || pipelineId;
       
+      // Validação: Não fazer query se pipeline ID for vazio
+      if (queryPipelineId && queryPipelineId.trim() === '') {
+        console.warn('⚠️ Pipeline ID vazio, pulando fetch de stages');
+        setLoading(false);
+        setStages([]);
+        return;
+      }
+      
       // If a specific pipeline is provided, filter by it
       if (queryPipelineId) {
         query = query.eq('pipeline_id', queryPipelineId);

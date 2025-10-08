@@ -76,14 +76,19 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
     message: ''
   });
 
-  const selectedPipelineId = propPipelineId || internalSelectedPipelineId;
+  // Validação extra: garantir que não seja string vazia
+  const selectedPipelineId = (propPipelineId && propPipelineId.trim() !== '') 
+    ? propPipelineId 
+    : (internalSelectedPipelineId && internalSelectedPipelineId.trim() !== '')
+      ? internalSelectedPipelineId
+      : undefined;
 
   // Update selectedPipelineId when pipelines are loaded
   useEffect(() => {
     if (!propPipelineId && pipelines.length > 0 && !internalSelectedPipelineId) {
       const primaryPipeline = pipelines.find(p => p.primary_pipeline && p.ativo);
       const defaultPipeline = primaryPipeline || pipelines.find(p => p.ativo) || pipelines[0];
-      if (defaultPipeline) {
+      if (defaultPipeline && defaultPipeline.id) {
         setInternalSelectedPipelineId(defaultPipeline.id);
       }
     }
@@ -244,6 +249,17 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
 
   // Event Handlers - com update otimista e tratamento robusto de erros
   const handleDragEnd = async (result: DragDropResult) => {
+    // Guard: Verificar se pipeline está selecionado
+    if (!selectedPipelineId || selectedPipelineId.trim() === '') {
+      console.error('❌ Pipeline não selecionado');
+      toast({
+        title: 'Erro de configuração',
+        description: 'Nenhum pipeline selecionado',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (!currentPipeline) {
       console.warn('⚠️ Sem pipeline selecionado');
       return;
@@ -254,10 +270,11 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
       return;
     }
 
-    console.log('🎯 Drag iniciado:', { 
-      entryId: result.entryId, 
-      from: result.fromStage, 
-      to: result.toStage 
+    console.log('🎯 handleDragEnd:', {
+      selectedPipelineId,
+      selectedPipelineIdType: typeof selectedPipelineId,
+      selectedPipelineIdLength: selectedPipelineId?.length,
+      result
     });
 
     try {
@@ -306,6 +323,17 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
 
       // ✅ UPDATE NO BANCO DE DADOS
       console.log('💾 Salvando no banco...');
+      console.log('💾 updateEntry:', {
+        entryId: result.entryId,
+        updates: {
+          etapa_atual_id: result.toStage,
+          data_entrada_etapa: new Date().toISOString(),
+          tempo_em_etapa_dias: 0,
+          dias_em_atraso: 0
+        },
+        currentPipelineId: selectedPipelineId
+      });
+      
       const updateResult = await updateEntry(result.entryId, {
         etapa_atual_id: result.toStage,
         data_entrada_etapa: new Date().toISOString(),

@@ -56,6 +56,12 @@ export function useSupabasePipelineAnalytics(pipelineId?: string, dateRange?: { 
   // Fetch pipeline metrics
   const fetchPipelineMetrics = async () => {
     if (!user) return;
+    
+    // Validação: Não fazer query se pipeline ID for vazio
+    if (pipelineId && pipelineId.trim() === '') {
+      console.warn('⚠️ Pipeline ID vazio, pulando fetch de métricas');
+      return;
+    }
 
     try {
       // Base query for lead pipeline entries

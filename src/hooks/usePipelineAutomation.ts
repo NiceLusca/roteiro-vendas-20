@@ -28,6 +28,11 @@ export function usePipelineAutomation(pipelineId: string) {
 
   const monitorStageTimeouts = useCallback(async () => {
     if (!config.slaEnforcement) return;
+    
+    if (!pipelineId || pipelineId.trim() === '') {
+      console.warn('⚠️ Pipeline ID vazio, pulando monitoramento SLA');
+      return;
+    }
 
     try {
       const { data: entries } = await supabase
@@ -138,6 +143,11 @@ export function usePipelineAutomation(pipelineId: string) {
 
   const monitorInactivity = useCallback(async () => {
     if (!config.inactivityAlerts) return;
+    
+    if (!pipelineId || pipelineId.trim() === '') {
+      console.warn('⚠️ Pipeline ID vazio, pulando monitoramento inatividade');
+      return;
+    }
 
     try {
       const inactivityThreshold = new Date();

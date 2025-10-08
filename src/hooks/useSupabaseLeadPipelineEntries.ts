@@ -31,9 +31,10 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     
     // ✅ Guard: Não fazer query se não houver pipeline selecionado
     const effectivePipelineId = targetPipelineId || pipelineId;
-    if (!effectivePipelineId) {
-      console.log('⚠️ Sem pipeline selecionado, pulando fetch');
+    if (!effectivePipelineId || effectivePipelineId.trim() === '') {
+      console.log('⚠️ Sem pipeline selecionado ou ID vazio, pulando fetch');
       setLoading(false);
+      setEntries([]);
       return;
     }
     
