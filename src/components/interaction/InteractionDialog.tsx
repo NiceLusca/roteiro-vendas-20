@@ -35,7 +35,7 @@ export function InteractionDialog({
   leadName,
   onSave
 }: InteractionDialogProps) {
-  const [canal, setCanal] = useState<CanalInteracao>('whatsapp');
+  const [canal, setCanal] = useState<CanalInteracao>('WhatsApp');
   const [conteudo, setConteudo] = useState('');
   const [autor, setAutor] = useState('Sistema');
 
@@ -51,14 +51,14 @@ export function InteractionDialog({
     });
 
     // Reset form
-    setCanal('whatsapp');
+    setCanal('WhatsApp');
     setConteudo('');
     setAutor('Sistema');
     onOpenChange(false);
   };
 
   const handleCancel = () => {
-    setCanal('whatsapp');
+    setCanal('WhatsApp');
     setConteudo('');
     setAutor('Sistema');
     onOpenChange(false);

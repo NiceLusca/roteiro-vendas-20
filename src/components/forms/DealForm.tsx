@@ -38,7 +38,7 @@ export function DealForm({ initialData, onSave, onCancel }: DealFormProps) {
       produto_id: initialData?.produto_id || '',
       closer: initialData?.closer || '',
       valor_proposto: initialData?.valor_proposto || 0,
-      status: initialData?.status || 'aberto',
+      status: initialData?.status || 'Aberta',
     },
   });
 
