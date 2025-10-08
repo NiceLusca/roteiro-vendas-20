@@ -356,9 +356,9 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
         ]
       });
 
-      // 🔄 REFETCH IMEDIATO para sincronizar UI
-      console.log('🔄 Sincronizando dados...');
-      await refetch();
+      // 🔄 REFETCH IMEDIATO para sincronizar UI com pipeline ID explícito
+      console.log('🔄 Sincronizando dados com pipelineId:', selectedPipelineId);
+      await refetch(selectedPipelineId);
       console.log('✅ Dados sincronizados');
 
       // Feedback de sucesso
@@ -396,8 +396,9 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
         duration: 5000
       });
 
-      // Forçar refetch para garantir consistência
-      await refetch();
+      // Forçar refetch para garantir consistência com pipeline ID explícito
+      console.log('🔄 Refetch de recuperação com pipelineId:', selectedPipelineId);
+      await refetch(selectedPipelineId);
     }
   };
 

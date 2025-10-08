@@ -32,11 +32,13 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     // ✅ Guard: Não fazer query se não houver pipeline selecionado
     const effectivePipelineId = targetPipelineId || pipelineId;
     if (!effectivePipelineId || effectivePipelineId.trim() === '') {
-      console.log('⚠️ Sem pipeline selecionado ou ID vazio, pulando fetch');
+      console.log('⚠️ useSupabaseLeadPipelineEntries: Sem pipeline selecionado, pulando fetch');
       setLoading(false);
-      setEntries([]);
+      // NÃO limpar entries aqui - manter estado anterior
       return;
     }
+    
+    console.log('🔍 fetchEntries chamado com pipelineId:', effectivePipelineId);
     
     try {
       setLoading(true);
@@ -402,6 +404,14 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     getEntriesByStage, 
     getOverdueEntries,
     updateHealthStatus,
-    refetch: fetchEntries
+    refetch: (explicitPipelineId?: string) => {
+      const targetId = explicitPipelineId || pipelineId;
+      console.log('🔄 refetch() chamado:', { 
+        explicitPipelineId, 
+        hookPipelineId: pipelineId, 
+        targetId 
+      });
+      return fetchEntries(targetId);
+    }
   };
 }
