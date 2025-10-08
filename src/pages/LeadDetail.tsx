@@ -283,15 +283,10 @@ export default function LeadDetail() {
                           <p className="text-sm font-medium mb-2">Checklist da Etapa:</p>
                           <div className="space-y-2">
                             {stageChecklistItems.map((item) => {
-                              const isCompleted = entry.checklist_state[item.id] || false;
                               return (
                                 <div key={item.id} className="flex items-center space-x-2">
-                                  {isCompleted ? (
-                                    <CheckCircle2 className="w-4 h-4 text-success" />
-                                  ) : (
-                                    <div className="w-4 h-4 rounded border border-border" />
-                                  )}
-                                  <span className={`text-sm ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>
+                                  <div className="w-4 h-4 rounded border border-border" />
+                                  <span className="text-sm">
                                     {item.titulo}
                                     {item.obrigatorio && <span className="text-destructive ml-1">*</span>}
                                   </span>

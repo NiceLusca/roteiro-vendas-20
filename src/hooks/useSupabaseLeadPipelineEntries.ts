@@ -15,7 +15,6 @@ interface LeadPipelineEntry {
   tempo_em_etapa_dias: number;
   dias_em_atraso: number;
   saude_etapa: 'Verde' | 'Amarelo' | 'Vermelho';
-  checklist_state: Record<string, boolean>;
   created_at: string;
   updated_at: string;
 }
@@ -80,8 +79,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
       setEntries((data || []).map((entry: any) => ({
         ...entry,
         tempo_em_etapa_dias: 0,
-        dias_em_atraso: 0,
-        checklist_state: {}
+        dias_em_atraso: 0
       })) as any);
     } catch (error) {
       console.error('Erro ao buscar entries do pipeline:', error);
@@ -130,10 +128,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         etapa_atual_id: entryData.etapa_atual_id,
         status_inscricao: 'Ativo',
         data_entrada_etapa: isoTimestamp,
-        tempo_em_etapa_dias: 0,
-        dias_em_atraso: 0,
         saude_etapa: 'Verde' as const,
-        checklist_state: {},
         ...(entryData.nota_etapa && { nota_etapa: entryData.nota_etapa })
       };
 
