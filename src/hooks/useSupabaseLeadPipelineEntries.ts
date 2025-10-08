@@ -191,6 +191,8 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
   const updateEntry = async (entryId: string, updates: Partial<LeadPipelineEntry>) => {
     if (!user) return null;
 
+    console.log('🔄 updateEntry chamado:', { entryId, updates });
+
     try {
       const updateData: any = {
         ...updates,
@@ -205,6 +207,8 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         updateData.data_prevista_proxima_etapa = updateData.data_prevista_proxima_etapa.toISOString();
       }
 
+      console.log('📝 Dados para update:', updateData);
+
       const { data, error } = await supabase
         .from('lead_pipeline_entries')
         .update(updateData)
@@ -212,20 +216,24 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         .select()
         .maybeSingle();
 
+      console.log('✅ Resultado do update:', { data, error });
+
       if (error) {
-        console.error('Erro ao atualizar entry:', error);
+        console.error('❌ Erro ao atualizar entry:', error);
         toast({
           title: "Erro ao atualizar",
           description: error.message,
-          variant: "destructive"
+          variant: "destructive",
+          duration: 5000
         });
         return null;
       }
 
-      fetchEntries();
+      await fetchEntries();
+      console.log('🔄 Entries atualizadas após update');
       return data;
     } catch (error) {
-      console.error('Erro ao atualizar entry:', error);
+      console.error('❌ Exceção ao atualizar entry:', error);
       return null;
     }
   };
