@@ -102,7 +102,7 @@ function LeadsContent() {
     const loadTags = async () => {
       const { supabase } = await import('@/integrations/supabase/client');
       const { data } = await supabase
-        .from('lead_tags')
+        .from('tags')
         .select('id, nome, cor')
         .order('nome');
       setAvailableTags(data || []);

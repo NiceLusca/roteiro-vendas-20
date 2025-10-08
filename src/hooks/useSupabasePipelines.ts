@@ -80,7 +80,7 @@ export function useSupabasePipelines() {
         return;
       }
 
-      setPipelines(data || []);
+      setPipelines((data as Pipeline[]) || []);
     } catch (error) {
       console.error('Erro ao buscar pipelines:', error);
     } finally {
@@ -321,9 +321,9 @@ export function useSupabasePipelines() {
               .filter(item => item.titulo && item.titulo.trim() !== '')
               .map((item, itemIndex) => ({
                 titulo: item.titulo!,
-                ordem: itemIndex + 1, // Force sequential order
+                ordem: itemIndex + 1,
                 obrigatorio: item.obrigatorio || false,
-                stage_id: savedStage.id,
+                etapa_id: savedStage.id,
                 created_at: new Date().toISOString(),
               }));
             
@@ -411,8 +411,8 @@ export function useSupabasePipelines() {
           prazo_em_dias: stage.prazo_em_dias,
           proximo_passo_tipo: stage.proximo_passo_tipo as any,
           proximo_passo_label: stage.proximo_passo_label,
-          entrada_criteria: stage.entrada_criteria,
-          saida_criteria: stage.saida_criteria,
+          criterios_avanco: stage.criterios_avanco,
+          saida_criteria: typeof stage.saida_criteria === 'string' ? stage.saida_criteria : JSON.stringify(stage.saida_criteria || null),
           wip_limit: stage.wip_limit,
           gerar_agendamento_auto: stage.gerar_agendamento_auto,
           duracao_minutos: stage.duracao_minutos,
@@ -477,19 +477,20 @@ export function useSupabasePipelines() {
       }
 
       // Delete checklist items first
-      const { error: checklistError } = await supabase
-        .from('stage_checklist_items')
-        .delete()
-        .in('stage_id', 
-          (await supabase
-            .from('pipeline_stages')
-            .select('id')
-            .eq('pipeline_id', pipelineId)
-          ).data?.map(s => s.id) || []
-        );
-
-      if (checklistError) {
-        console.warn('Warning deleting checklist items:', checklistError.message);
+      // Delete checklist items (simplified query)
+      const stageIds = (await supabase
+        .from('pipeline_stages')
+        .select('id')
+        .eq('pipeline_id', pipelineId)
+      ).data?.map(s => s.id) || [];
+      
+      if (stageIds.length > 0) {
+        const { error: checklistError } = await supabase
+          .from('stage_checklist_items')
+          .delete()
+          .in('etapa_id', stageIds);
+        
+        if (checklistError) console.error('Error deleting checklist items:', checklistError);
       }
 
       // Delete stages

@@ -72,7 +72,7 @@ export interface PipelineStage {
   nome: string;
   ordem: number;
   sla_horas?: number;
-  proximo_passo_tipo?: ProximoPassoTipo | string;
+  proximo_passo_tipo?: string;
   proximo_passo_template?: string;
   criterios_avanco?: any;
   ativo?: boolean;
@@ -95,7 +95,7 @@ export interface StageChecklistItem {
   etapa_id: string;
   titulo: string;
   obrigatorio: boolean;
-  ordem?: number;
+  ordem: number;
   descricao?: string;
   ativo?: boolean;
   created_at?: Date | string;
@@ -117,6 +117,7 @@ export interface LeadPipelineEntry {
   tempo_em_etapa_dias?: number; // Computed field
   dias_em_atraso?: number; // Computed field
   checklist_state?: Record<string, boolean>; // Computed field
+  [key: string]: any; // Index signature for checklist state
 }
 
 export interface PipelineEvent {

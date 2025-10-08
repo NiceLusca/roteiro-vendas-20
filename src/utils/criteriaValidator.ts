@@ -171,7 +171,7 @@ export class CriteriaValidator {
       const existingState = criteriaStates.find(cs => cs.criterio_id === criterio.id);
       let validationResult: CriteriaValidationResult;
 
-      switch (criterio.tipo_criterio) {
+      switch (criterio.tipo) {
         case 'checklist':
           // Already handled by existing checklist system
           validationResult = this.validateChecklistCriteria(criterio, entry, existingState);
@@ -225,7 +225,7 @@ export class CriteriaValidator {
       criteriaId: criterio.id,
       valid: !criterio.obrigatorio || isCompleted,
       status: isCompleted ? 'atendido' : 'pendente',
-      message: isCompleted ? 'Checklist completo' : `Checklist pendente: ${criterio.nome}`
+      message: isCompleted ? 'Checklist completo' : `Checklist pendente: ${criterio.id}`
     };
   }
 

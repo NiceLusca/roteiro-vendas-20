@@ -55,7 +55,7 @@ export function useSupabasePipelineStages(pipelineId?: string) {
         return;
       }
 
-      setStages(data || []);
+      setStages((data as PipelineStage[]) || []);
     } catch (error) {
       console.error('Erro ao buscar etapas:', error);
     } finally {

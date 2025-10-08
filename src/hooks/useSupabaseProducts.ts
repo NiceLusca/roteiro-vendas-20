@@ -3,17 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContextSecure';
 
-interface Product {
-  id: string;
-  nome: string;
-  tipo: 'Curso' | 'Consultoria' | 'Outro' | 'Mentoria' | 'Plano';
-  preco_padrao: number;
-  recorrencia: 'Nenhuma' | 'Mensal' | 'Anual' | 'Trimestral';
-  ativo: boolean;
-  user_id: string;
-  created_at: string;
-  updated_at: string;
-}
+import { Product } from '@/types/crm';
 
 export function useSupabaseProducts() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -42,7 +32,7 @@ export function useSupabaseProducts() {
         return;
       }
 
-      setProducts(data || []);
+      setProducts((data as Product[]) || []);
     } catch (error) {
       console.error('Erro ao buscar produtos:', error);
     } finally {

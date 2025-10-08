@@ -17,7 +17,7 @@ interface InteractionDialogProps {
   onOpenChange: (open: boolean) => void;
   leadId: string;
   leadName: string;
-  onSave: (interaction: Omit<Interaction, 'id' | 'timestamp'>) => void;
+  onSave: (interaction: Omit<Interaction, 'id' | 'timestamp' | 'created_at'>) => void;
 }
 
 const canaisInteracao: { value: CanalInteracao; label: string }[] = [

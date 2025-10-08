@@ -115,12 +115,6 @@ export function ProductManager() {
                   <Package className="w-8 h-8 text-primary mr-3" />
                   <div>
                     <h3 className="font-semibold text-lg">{product.nome}</h3>
-                    <Badge 
-                      variant="outline" 
-                      className={getProductTypeColor(product.tipo)}
-                    >
-                      {product.tipo}
-                    </Badge>
                   </div>
                 </div>
                 <Badge variant={product.ativo ? 'default' : 'secondary'}>
@@ -130,21 +124,11 @@ export function ProductManager() {
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Recorrência:</span>
-                  <Badge 
-                    variant="outline"
-                    className={getRecurrenceColor(product.recorrencia)}
-                  >
-                    {product.recorrencia}
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Preço Padrão:</span>
+                  <span className="text-sm text-muted-foreground">Preço:</span>
                   <div className="flex items-center">
                     <DollarSign className="w-4 h-4 text-success mr-1" />
                     <span className="font-semibold text-success">
-                      {formatCurrency(product.preco_padrao)}
+                      {formatCurrency(product.preco)}
                     </span>
                   </div>
                 </div>
@@ -193,23 +177,10 @@ export function ProductManager() {
                 <TableRow key={product.id}>
                   <TableCell className="font-medium">{product.nome}</TableCell>
                   <TableCell>
-                    <Badge 
-                      variant="outline"
-                      className={getProductTypeColor(product.tipo)}
-                    >
-                      {product.tipo}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant="outline"
-                      className={getRecurrenceColor(product.recorrencia)}
-                    >
-                      {product.recorrencia}
-                    </Badge>
+                    {product.nome}
                   </TableCell>
                   <TableCell className="font-semibold text-success">
-                    {formatCurrency(product.preco_padrao)}
+                    {formatCurrency(product.preco)}
                   </TableCell>
                   <TableCell>
                     <Badge variant={product.ativo ? 'default' : 'secondary'}>

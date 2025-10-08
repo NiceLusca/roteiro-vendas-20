@@ -29,7 +29,7 @@ export function useValidatedAdvancement() {
   ): Promise<{ success: boolean; message: string }> => {
     
     // Validate checklist completion
-    const validation = ChecklistValidation.validateStageAdvancement(entry, checklistItems);
+    const validation = ChecklistValidation.validateStageAdvancement(entry.checklist_state || {}, checklistItems);
     
     if (!validation.valid) {
       return {
@@ -53,8 +53,7 @@ export function useValidatedAdvancement() {
       const result = await advanceStage(
         entry.id,
         nextStageId,
-        entry.checklist_state,
-        entry.nota_etapa
+        entry.checklist_state
       );
 
       return {
@@ -74,7 +73,7 @@ export function useValidatedAdvancement() {
     checklistItems: StageChecklistItem[]
   ): { canAdvance: boolean; blockers: string[] } => {
     
-    const validation = ChecklistValidation.validateStageAdvancement(entry, checklistItems);
+    const validation = ChecklistValidation.validateStageAdvancement(entry.checklist_state || {}, checklistItems);
     const nextStage = getNextStage(entry.etapa_atual_id, entry.pipeline_id);
     
     const blockers: string[] = [];

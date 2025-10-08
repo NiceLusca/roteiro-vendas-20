@@ -260,7 +260,7 @@ export default function Deals() {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Produto</p>
                   <p className="text-sm">
-                    {products.find(p => p.id === selectedDeal.product_id)?.nome || 'Produto não encontrado'}
+                    {products.find(p => p.id === selectedDeal.produto_id)?.nome || 'Produto não encontrado'}
                   </p>
                 </div>
                 <div>
@@ -284,13 +284,6 @@ export default function Deals() {
                   <p className="text-sm">{formatDate(selectedDeal.created_at)}</p>
                 </div>
               </div>
-              
-              {selectedDeal.fase_negociacao && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Fase da Negociação</p>
-                  <p className="text-sm">{selectedDeal.fase_negociacao}</p>
-                </div>
-              )}
 
               <div className="flex space-x-2">
                 <Button size="sm">Editar</Button>

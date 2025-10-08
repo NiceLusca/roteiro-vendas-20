@@ -8,6 +8,8 @@ export interface StageAdvancementCriteria {
   obrigatorio: boolean;
   ativo: boolean;
   created_at: string;
+  nome?: string;
+  regra_condicional?: any;
   updated_at: string;
 }
 

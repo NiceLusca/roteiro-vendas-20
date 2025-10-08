@@ -158,7 +158,10 @@ export function usePipelineAppointmentIntegration() {
           tipo_agendamento: config.tipo_agendamento,
           closer_padrao: config.closer_padrao,
           horarios_preferenciais: config.horarios_preferenciais,
-          template_agendamento: config.template_agendamento,
+          template_agendamento: JSON.stringify({ 
+            titulo: config.template_agendamento?.titulo || '', 
+            descricao: config.template_agendamento?.descricao || '' 
+          }),
           updated_at: new Date().toISOString()
         })
         .eq('id', stageId);

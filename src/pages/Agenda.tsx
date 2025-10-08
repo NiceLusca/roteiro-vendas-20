@@ -150,9 +150,8 @@ export default function Agenda() {
                   
                   await saveAppointment({
                     ...appointmentData,
-                    start_at: startAt,
-                    end_at: endAt,
-                    origem: 'Plataforma'
+                    start_at: new Date(startAt),
+                    end_at: new Date(endAt)
                   });
                   
                   await refetchAppointments();
@@ -364,22 +363,17 @@ export default function Agenda() {
                 lead_id: selectedEvent.resource.lead_id,
                 start_at: selectedEvent.resource.start_at,
                 status: selectedEvent.resource.status,
-                resultado_sessao: selectedEvent.resource.resultado_sessao,
-                observacao: selectedEvent.resource.observacao,
-                resultado_obs: selectedEvent.resource.resultado_obs
+                resultado_sessao: selectedEvent.resource.resultado_sessao
               }}
               onSave={async (appointmentData) => {
                 try {
-                  const endAt = new Date(new Date(appointmentData.start_at).getTime() + 60 * 60 * 1000).toISOString();
+                  const endAt = new Date(new Date(appointmentData.start_at).getTime() + 60 * 60 * 1000);
                   
                   await saveAppointment({
                     ...appointmentData,
                     id: selectedEvent.resource.id,
-                    start_at: new Date(appointmentData.start_at).toISOString(),
-                    end_at: endAt,
-                    tipo_sessao: selectedEvent.resource.tipo_sessao,
-                    closer_responsavel: selectedEvent.resource.closer_responsavel,
-                    origem: selectedEvent.resource.origem
+                    start_at: new Date(appointmentData.start_at),
+                    end_at: endAt
                   });
                   
                   await refetchAppointments();

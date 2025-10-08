@@ -129,7 +129,7 @@ export default function LeadDetail() {
         id: apt.id,
         type: 'appointment',
         title: `Sessão ${apt.status}`,
-        description: apt.resultado_obs || 'Sessão agendada',
+        description: apt.notas || 'Sessão agendada',
         timestamp: apt.start_at,
         icon: Calendar,
         status: apt.status
@@ -242,7 +242,7 @@ export default function LeadDetail() {
           leadEntries.map((entry) => {
             const pipeline = pipelines.find(p => p.id === entry.pipeline_id);
             const stage = pipelineStages.find(s => s.id === entry.etapa_atual_id);
-            const stageChecklistItems = checklistItems.filter(item => item.stage_id === entry.etapa_atual_id);
+            const stageChecklistItems = checklistItems.filter(item => item.etapa_id === entry.etapa_atual_id);
             
             return (
               <Card key={entry.id}>
@@ -522,7 +522,7 @@ export default function LeadDetail() {
                 entidade_id: `interaction-${Date.now()}`,
                 alteracao: [
                   { campo: 'canal', de: '', para: interaction.canal },
-                  { campo: 'conteudo', de: '', para: interaction.conteudo }
+                  { campo: 'descricao', de: '', para: interaction.descricao }
                 ]
               });
               toast({ title: 'Interação registrada' });
@@ -559,9 +559,6 @@ export default function LeadDetail() {
                             })}
                           </p>
                         </div>
-                        {apt.tipo_sessao && (
-                          <Badge variant="secondary">{apt.tipo_sessao}</Badge>
-                        )}
                       </div>
                       <Badge className={
                         apt.status === 'Agendado' ? 'bg-blue-100 text-blue-800' :
@@ -573,19 +570,9 @@ export default function LeadDetail() {
                         {apt.status}
                       </Badge>
                     </div>
-                    {apt.closer_responsavel && (
-                      <p className="text-sm text-muted-foreground mb-2">
-                        <strong>Responsável:</strong> {apt.closer_responsavel}
-                      </p>
-                    )}
-                    {apt.observacao && (
-                      <p className="text-sm text-muted-foreground mb-2">
-                        <strong>Observações:</strong> {apt.observacao}
-                      </p>
-                    )}
-                    {apt.resultado_obs && (
+                    {apt.notas && (
                       <p className="text-sm text-muted-foreground">
-                        <strong>Resultado:</strong> {apt.resultado_obs}
+                        <strong>Notas:</strong> {apt.notas}
                       </p>
                     )}
                   </div>
@@ -678,7 +665,7 @@ export default function LeadDetail() {
             <OrderForm
               leadId={id!}
               leadName={lead?.nome || ''}
-              products={products}
+              products={products as any}
               onSave={handleCreateOrder}
               onCancel={() => setShowOrderForm(false)}
             />

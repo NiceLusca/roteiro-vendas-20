@@ -45,21 +45,20 @@ function OrdersContent() {
 
   const uniqueClosers = [...new Set(orders.map(o => o.closer).filter(Boolean))];
 
-  const getStatusBadgeClass = (status: StatusOrder) => {
+  const getStatusBadgeClass = (status: StatusPedido) => {
     switch (status) {
-      case 'Pago': return 'bg-success text-success-foreground';
-      case 'Pendente': return 'bg-warning text-warning-foreground';
-      case 'Reembolsado': return 'bg-destructive text-destructive-foreground';
-      case 'Estornado': return 'bg-muted text-muted-foreground';
+      case 'pago': return 'bg-success text-success-foreground';
+      case 'pendente': return 'bg-warning text-warning-foreground';
+      case 'cancelado': return 'bg-destructive text-destructive-foreground';
       default: return 'bg-muted text-muted-foreground';
     }
   };
 
   const calculateMetrics = () => {
     const total = orders.length;
-    const valorTotal = orders.reduce((sum, o) => sum + o.total, 0);
+    const valorTotal = orders.reduce((sum, o) => sum + o.valor_total, 0);
     const ticketMedio = total > 0 ? valorTotal / total : 0;
-    const pagos = orders.filter(o => o.status === 'Pago').length;
+    const pagos = orders.filter(o => o.status_pagamento === 'pago').length;
 
     return { total, valorTotal, ticketMedio, pagos };
   };
@@ -241,7 +240,7 @@ function OrdersContent() {
                           >
                             Ver Detalhes
                           </Button>
-                          {order.status === 'Pago' && (
+                          {order.status_pagamento === 'pago' && (
                             <Button
                               size="sm"
                               variant="destructive"
@@ -296,39 +295,28 @@ function OrdersContent() {
                   <p className="text-sm font-medium text-muted-foreground">Data da Venda</p>
                   <p className="text-sm">{formatDate(new Date(selectedOrder.data_venda))}</p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Forma de Pagamento</p>
-                  <p className="text-sm">{selectedOrder.forma_pagamento || 'Não informado'}</p>
-                </div>
               </div>
-              
-              {selectedOrder.observacao && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Observações</p>
-                  <p className="text-sm">{selectedOrder.observacao}</p>
-                </div>
-              )}
 
               <div className="border-t pt-4">
                 <h4 className="font-medium mb-2">Itens do Pedido</h4>
-                {orderItems.filter(item => item.order_id === selectedOrder.id).map((item) => {
-                  const product = products.find(p => p.id === item.product_id);
+                {orderItems.filter(item => item.pedido_id === selectedOrder.id).map((item) => {
+                  const product = products.find(p => p.id === item.produto_id);
                   return (
                     <div key={item.id} className="flex justify-between items-center py-2 border-b">
                       <div>
                         <p className="text-sm font-medium">{product?.nome || 'Produto não encontrado'}</p>
                         <p className="text-xs text-muted-foreground">
-                          Qtd: {item.quantidade} × {formatCurrency(item.valor)}
-                          {item.recorrencia !== 'Nenhuma' && ` (${item.recorrencia})`}
+                          Qtd: {item.quantidade} × {formatCurrency(item.preco_unitario)}
+                          {item.recorrencia && item.recorrencia !== 'Nenhuma' && ` (${item.recorrencia})`}
                         </p>
                       </div>
                       <p className="text-sm font-medium">
-                        {formatCurrency(item.valor * item.quantidade)}
+                        {formatCurrency(item.preco_unitario * item.quantidade)}
                       </p>
                     </div>
                   );
                 })}
-                {orderItems.filter(item => item.order_id === selectedOrder.id).length === 0 && (
+                {orderItems.filter(item => item.pedido_id === selectedOrder.id).length === 0 && (
                   <p className="text-sm text-muted-foreground">Nenhum item encontrado</p>
                 )}
               </div>
