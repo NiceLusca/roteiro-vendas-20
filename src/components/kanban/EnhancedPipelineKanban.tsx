@@ -62,7 +62,7 @@ interface EnhancedPipelineKanbanProps {
 export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: EnhancedPipelineKanbanProps = {}) {
   const navigate = useNavigate();
   const { pipelines, loading: pipelinesLoading, savePipeline, saveComplexPipeline } = useSupabasePipelines();
-  const { leads } = useSupabaseLeads();
+  const { leads, refetch: refetchLeads } = useSupabaseLeads();
   
   if (process.env.NODE_ENV === 'development') {
     console.log('EnhancedPipelineKanban render:', { pipelines, pipelinesLoading });
@@ -899,8 +899,12 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
           open={editLeadDialog.open}
           onOpenChange={(open) => setEditLeadDialog({ open, lead: undefined })}
           lead={editLeadDialog.lead}
-          onUpdate={() => {
-            refetch();
+          onUpdate={async () => {
+            // Refetch both leads and entries to update the UI immediately
+            await Promise.all([
+              refetchLeads(),
+              refetch()
+            ]);
           }}
         />
       )}

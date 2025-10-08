@@ -61,13 +61,17 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
   const handleSave = async () => {
     try {
       setSaving(true);
-      await saveLead({
+      const updatedLead = await saveLead({
         id: lead.id,
         ...formData
       });
-      toast.success('Lead atualizado com sucesso');
-      onUpdate?.();
-      onOpenChange(false);
+      
+      if (updatedLead) {
+        toast.success('Lead atualizado com sucesso');
+        // Atualizar o lead no formData para refletir mudanças imediatas
+        onUpdate?.();
+        onOpenChange(false);
+      }
     } catch (error) {
       console.error('Erro ao salvar lead:', error);
       toast.error('Erro ao atualizar lead');
