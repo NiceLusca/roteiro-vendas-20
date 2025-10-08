@@ -33,8 +33,13 @@ export function useSupabaseAppointments() {
 
       setAppointments((data || []).map(apt => ({
         ...apt,
+        data_hora: new Date(apt.data_hora),
+        start_at: apt.start_at ? new Date(apt.start_at) : undefined,
+        end_at: apt.end_at ? new Date(apt.end_at) : undefined,
+        created_at: apt.created_at ? new Date(apt.created_at) : undefined,
+        updated_at: apt.updated_at ? new Date(apt.updated_at) : undefined,
         status: (apt.status.charAt(0).toUpperCase() + apt.status.slice(1)) as StatusAppointment,
-        resultado_sessao: apt.resultado_sessao as any
+        resultado_sessao: apt.resultado_sessao ? (apt.resultado_sessao.charAt(0).toUpperCase() + apt.resultado_sessao.slice(1)) as any : undefined
       })));
     } catch (error) {
       console.error('Erro ao buscar agendamentos:', error);

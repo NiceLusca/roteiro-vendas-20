@@ -47,7 +47,13 @@ export function useSupabaseOrders() {
         return;
       }
 
-      setOrders(ordersData || []);
+      // Map orders with convenience properties
+      const mappedOrders = (ordersData || []).map(order => ({
+        ...order,
+        total: order.valor_total,
+        status: order.status_pagamento
+      }));
+      setOrders(mappedOrders);
       setOrderItems(itemsData || []);
     } catch (error) {
       console.error('Erro ao buscar pedidos:', error);

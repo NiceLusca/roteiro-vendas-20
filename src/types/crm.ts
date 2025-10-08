@@ -9,7 +9,7 @@ export type ResultadoSessao = 'positivo' | 'neutro' | 'negativo';
 export type CanalInteracao = 'whatsapp' | 'telefone' | 'email' | 'presencial' | 'outro';
 export type StatusDeal = 'Aberta' | 'Ganha' | 'Perdida' | 'Pausada';
 export type StatusPedido = 'pago' | 'pendente' | 'cancelado';
-export type SaudeEtapa = 'verde' | 'amarelo' | 'vermelho';
+export type SaudeEtapa = 'Verde' | 'Amarelo' | 'Vermelho';
 export type ProximoPassoTipo = 'Humano' | 'Agendamento' | 'Mensagem' | 'Outro';
 export type LeadScore = 'alto' | 'medio' | 'baixo';
 
@@ -194,6 +194,10 @@ export interface Order {
   status_pagamento: StatusPedido;
   created_at?: Date | string;
   updated_at?: Date | string;
+  deal_id: string;
+  // Convenience getters for compatibility
+  total?: number;
+  status?: StatusPedido;
 }
 
 export interface Refund {

@@ -55,9 +55,9 @@ export const Dashboard = memo(function Dashboard() {
         const orderDate = new Date(o.created_at);
         return orderDate.getMonth() === currentMonth && 
                orderDate.getFullYear() === currentYear &&
-               o.status === 'Pago';
+               o.status_pagamento === 'pago';
       })
-      .reduce((total, order) => total + (order.total || 0), 0)
+      .reduce((total, order) => total + order.valor_total, 0)
   };
 
   // Próximos agendamentos (próximas 48h)

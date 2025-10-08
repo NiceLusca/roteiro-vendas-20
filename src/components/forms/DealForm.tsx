@@ -96,7 +96,7 @@ export function DealForm({ initialData, onSave, onCancel }: DealFormProps) {
                 <SelectContent>
                   {products.filter(p => p.ativo).map((product) => (
                     <SelectItem key={product.id} value={product.id}>
-                      {product.nome} - R$ {(product.preco || 0).toFixed(2)}
+                      {product.nome}{product.preco ? ` - R$ ${product.preco.toFixed(2)}` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
