@@ -207,7 +207,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         updateData.data_prevista_proxima_etapa = updateData.data_prevista_proxima_etapa.toISOString();
       }
 
-      console.log('📝 Dados para update:', updateData);
+      console.log('📝 Dados para update no Supabase:', updateData);
 
       const { data, error } = await supabase
         .from('lead_pipeline_entries')
@@ -216,10 +216,8 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         .select()
         .maybeSingle();
 
-      console.log('✅ Resultado do update:', { data, error });
-
       if (error) {
-        console.error('❌ Erro ao atualizar entry:', error);
+        console.error('❌ Erro Supabase ao atualizar entry:', error);
         toast({
           title: "Erro ao atualizar",
           description: error.message,
@@ -229,8 +227,13 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         return null;
       }
 
-      await fetchEntries();
-      console.log('🔄 Entries atualizadas após update');
+      if (!data) {
+        console.error('❌ Update não retornou dados');
+        return null;
+      }
+
+      console.log('✅ Update confirmado pelo banco:', data);
+      // NÃO fazer refetch aqui - deixar o componente chamador controlar
       return data;
     } catch (error) {
       console.error('❌ Exceção ao atualizar entry:', error);

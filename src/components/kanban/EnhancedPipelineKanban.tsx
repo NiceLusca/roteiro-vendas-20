@@ -255,7 +255,11 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
         return;
       }
 
-      console.log('📌 Entry atual:', currentEntry);
+      console.log('📌 Entry atual antes do update:', {
+        id: currentEntry.id,
+        lead_nome: (currentEntry as any).leads?.nome,
+        etapa_atual_id: currentEntry.etapa_atual_id
+      });
 
       const fromStage = pipelineStages.find(s => s.id === result.fromStage);
       const toStage = pipelineStages.find(s => s.id === result.toStage);
@@ -292,7 +296,18 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
         dias_em_atraso: 0
       });
 
-      console.log('✅ Update resultado:', updateResult);
+      if (!updateResult) {
+        console.error('❌ Update falhou - sem resultado');
+        toast({
+          title: 'Erro ao mover lead',
+          description: 'O banco não confirmou a atualização.',
+          variant: 'destructive',
+          duration: 5000
+        });
+        return;
+      }
+
+      console.log('✅ Update confirmado pelo banco:', updateResult);
 
       // Log the movement
       logChange({
@@ -301,6 +316,23 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
         alteracao: [
           { campo: 'etapa', de: fromStage.nome, para: toStage.nome }
         ]
+      });
+
+      // Aguardar 150ms para garantir propagação no banco
+      console.log('⏳ Aguardando 150ms antes do refetch...');
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      console.log('🔄 Refetch iniciado');
+      await refetch();
+      console.log('✅ Refetch completo');
+
+      // Verificar se o update persistiu
+      const updatedEntry = leadPipelineEntries.find(e => e.id === result.entryId);
+      console.log('🔍 Entry após refetch:', {
+        id: updatedEntry?.id,
+        etapa_atual_id: updatedEntry?.etapa_atual_id,
+        esperado: result.toStage,
+        match: updatedEntry?.etapa_atual_id === result.toStage
       });
 
       setSuccessAnimation({
@@ -313,10 +345,6 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
         description: `Lead foi movido de "${fromStage.nome}" para "${toStage.nome}"`,
         duration: 3000
       });
-
-      console.log('🔄 Refetch iniciado');
-      await refetch();
-      console.log('✅ Refetch completo');
     } catch (error) {
       console.error('❌ Erro ao mover lead:', error);
       toast({
