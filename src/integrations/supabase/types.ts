@@ -388,7 +388,7 @@ export type Database = {
             | Database["public"]["Enums"]["objecao_principal"]
             | null
           observacoes: string | null
-          origem: Database["public"]["Enums"]["origem_lead"] | null
+          origem: string | null
           resultado_obs_ultima_sessao: string | null
           resultado_sessao_ultimo: string | null
           segmento: string | null
@@ -417,7 +417,7 @@ export type Database = {
             | Database["public"]["Enums"]["objecao_principal"]
             | null
           observacoes?: string | null
-          origem?: Database["public"]["Enums"]["origem_lead"] | null
+          origem?: string | null
           resultado_obs_ultima_sessao?: string | null
           resultado_sessao_ultimo?: string | null
           segmento?: string | null
@@ -446,7 +446,7 @@ export type Database = {
             | Database["public"]["Enums"]["objecao_principal"]
             | null
           observacoes?: string | null
-          origem?: Database["public"]["Enums"]["origem_lead"] | null
+          origem?: string | null
           resultado_obs_ultima_sessao?: string | null
           resultado_sessao_ultimo?: string | null
           segmento?: string | null
@@ -940,12 +940,6 @@ export type Database = {
         | "confianca"
         | "necessidade"
         | "outro"
-      origem_lead:
-        | "indicacao"
-        | "trafego_pago"
-        | "organico"
-        | "evento"
-        | "outro"
       resultado_sessao: "positivo" | "neutro" | "negativo"
       status_appointment:
         | "agendado"
@@ -1098,7 +1092,6 @@ export const Constants = {
         "necessidade",
         "outro",
       ],
-      origem_lead: ["indicacao", "trafego_pago", "organico", "evento", "outro"],
       resultado_sessao: ["positivo", "neutro", "negativo"],
       status_appointment: [
         "agendado",

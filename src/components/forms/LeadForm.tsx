@@ -310,21 +310,12 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="origem">Origem</Label>
-                <Select
-                  value={formData.origem}
-                  onValueChange={(value: OrigemLead) => handleInputChange('origem', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {origemOptions.map(opt => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  id="origem"
+                  placeholder="Digite a origem do lead (ex: Instagram, Facebook, Indicação...)"
+                  value={formData.origem || ''}
+                  onChange={(e) => handleInputChange('origem', e.target.value)}
+                />
               </div>
 
               <div>

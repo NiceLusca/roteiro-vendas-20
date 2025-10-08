@@ -2,7 +2,7 @@
 // IMPORTANT: These types must match exactly the database enum values
 
 export type StatusGeral = 'lead' | 'qualificado' | 'reuniao_marcada' | 'em_negociacao' | 'cliente' | 'perdido';
-export type OrigemLead = 'evento' | 'indicacao' | 'organico' | 'outro' | 'trafego_pago';
+export type OrigemLead = string; // Free-form text for lead origin
 export type ObjecaoPrincipal = 'confianca' | 'preco' | 'tempo' | 'necessidade' | 'outro';
 export type StatusAppointment = 'Agendado' | 'Realizado' | 'Cancelado' | 'Remarcado' | 'No-Show';
 export type ResultadoSessao = 'positivo' | 'neutro' | 'negativo';
