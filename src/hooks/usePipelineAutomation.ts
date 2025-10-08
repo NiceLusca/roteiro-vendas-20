@@ -34,8 +34,8 @@ export function usePipelineAutomation(pipelineId: string) {
         .from('lead_pipeline_entries')
         .select(`
           *,
-          leads (*),
-          pipeline_stages (*)
+          leads!fk_lead_pipeline_entries_lead(*),
+          pipeline_stages!fk_lead_pipeline_entries_stage(*)
         `)
         .eq('pipeline_id', pipelineId)
         .eq('status_inscricao', 'Ativo');
@@ -147,10 +147,7 @@ export function usePipelineAutomation(pipelineId: string) {
         .from('lead_pipeline_entries')
         .select(`
           *,
-          leads (*),
-          interactions (
-            timestamp
-          )
+          leads!fk_lead_pipeline_entries_lead(*)
         `)
         .eq('pipeline_id', pipelineId)
         .eq('status_inscricao', 'Ativo')
@@ -159,14 +156,11 @@ export function usePipelineAutomation(pipelineId: string) {
       if (!inactiveLeads) return;
 
       for (const entry of inactiveLeads) {
-        const lastInteraction = entry.interactions?.[0];
-        const daysSinceLastInteraction = lastInteraction 
-          ? Math.floor((Date.now() - new Date(lastInteraction).getTime()) / (1000 * 60 * 60 * 24))
-          : 999;
+        const daysSinceLastUpdate = Math.floor((Date.now() - new Date(entry.updated_at).getTime()) / (1000 * 60 * 60 * 24));
 
-        if (daysSinceLastInteraction >= 3) {
+        if (daysSinceLastUpdate >= 3) {
           await checkTriggers(entry.lead_id, 'inactivity', {
-            daysSinceLastInteraction,
+            daysSinceLastInteraction: daysSinceLastUpdate,
             stageId: entry.etapa_atual_id,
             leadId: entry.lead_id
           });
