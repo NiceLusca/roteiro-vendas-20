@@ -69,8 +69,16 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
+      console.log('🔍 fetchEntries resultado:', {
+        totalEntries: data?.length || 0,
+        pipelineId: effectivePipelineId,
+        statusFiltrado: 'Ativo',
+        primeiroEntry: data?.[0] || null,
+        error: error || null
+      });
+
       if (error) {
-        console.error('Erro ao buscar entries do pipeline:', error);
+        console.error('❌ Erro ao buscar entries do pipeline:', error);
         toast({
           title: "Erro ao carregar dados",
           description: error.message,
@@ -79,11 +87,15 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         return;
       }
       
-      setEntries((data || []).map((entry: any) => ({
+      const processedEntries = (data || []).map((entry: any) => ({
         ...entry,
+        saude_etapa: entry.saude_etapa || 'Verde', // Default para Verde se NULL
         tempo_em_etapa_dias: 0,
         dias_em_atraso: 0
-      })) as any);
+      }));
+
+      console.log('✅ Leads carregados:', processedEntries.length);
+      setEntries(processedEntries as any);
     } catch (error) {
       console.error('Erro ao buscar entries do pipeline:', error);
     } finally {
