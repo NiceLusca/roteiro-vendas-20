@@ -10,7 +10,6 @@ interface Pipeline {
   objetivo?: string;
   ativo: boolean;
   primary_pipeline: boolean;
-  user_id: string;
   created_at: string;
   updated_at: string;
   segmento_alvo?: string;
@@ -103,7 +102,6 @@ export function useSupabasePipelines() {
         }
       });
       
-      payload.user_id = user.id;
       payload.updated_at = new Date().toISOString();
       
       if (!isUpdate) {
@@ -220,7 +218,6 @@ export function useSupabasePipelines() {
       // Build pipeline payload with only valid fields  
       const pipelinePayload: any = {
         nome: pipelineData.nome?.trim(),
-        user_id: user.id,
         updated_at: new Date().toISOString()
       };
 

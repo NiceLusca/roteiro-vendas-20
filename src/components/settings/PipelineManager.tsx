@@ -27,7 +27,6 @@ interface Pipeline {
   ativo: boolean;
   objetivo?: string;
   primary_pipeline: boolean;
-  user_id?: string;
   created_at?: string;
   updated_at?: string;
 }

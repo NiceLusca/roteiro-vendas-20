@@ -37,7 +37,6 @@ interface Pipeline {
   responsaveis?: string[];
   tags?: string[];
   default_para_novos_leads?: boolean;
-  user_id?: string;
   created_at?: string;
   updated_at?: string;
 }
