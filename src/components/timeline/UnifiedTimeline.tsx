@@ -54,13 +54,12 @@ export function UnifiedTimeline({
         id: `apt-${apt.id}`,
         type: 'appointment',
         title: `Sessão ${apt.status}`,
-        description: apt.resultado_obs || `Sessão ${apt.status.toLowerCase()}`,
-        timestamp: apt.start_at,
+        description: apt.notas || `Sessão ${apt.status.toLowerCase()}`,
+        timestamp: apt.start_at || apt.data_hora,
         icon: Calendar,
         entityId: apt.id,
         details: {
           status: apt.status,
-          origem: apt.origem,
           resultado_sessao: apt.resultado_sessao
         }
       });
@@ -78,8 +77,7 @@ export function UnifiedTimeline({
         entityId: deal.id,
         details: {
           status: deal.status,
-          valor_proposto: deal.valor_proposto,
-          fase_negociacao: deal.fase_negociacao
+          valor_proposto: deal.valor_proposto
         }
       });
     });

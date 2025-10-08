@@ -36,13 +36,10 @@ export const MemoizedKanbanCard = memo(
     return (
       prevProps.entry.id === nextProps.entry.id &&
       prevProps.entry.saude_etapa === nextProps.entry.saude_etapa &&
-      prevProps.entry.tempo_em_etapa_dias === nextProps.entry.tempo_em_etapa_dias &&
-      prevProps.entry.dias_em_atraso === nextProps.entry.dias_em_atraso &&
-      prevProps.entry.nota_etapa === nextProps.entry.nota_etapa &&
+      prevProps.entry.data_entrada_etapa === nextProps.entry.data_entrada_etapa &&
       prevProps.lead?.id === nextProps.lead?.id &&
       prevProps.lead?.nome === nextProps.lead?.nome &&
       prevProps.lead?.lead_score === nextProps.lead?.lead_score &&
-      prevProps.lead?.lead_score_classification === nextProps.lead?.lead_score_classification &&
       prevProps.lead?.whatsapp === nextProps.lead?.whatsapp &&
       prevProps.lead?.closer === nextProps.lead?.closer &&
       prevProps.stage.id === nextProps.stage.id &&

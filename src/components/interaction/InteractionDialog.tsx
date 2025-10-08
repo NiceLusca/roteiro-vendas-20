@@ -45,6 +45,7 @@ export function InteractionDialog({
     onSave({
       lead_id: leadId,
       canal,
+      descricao: conteudo.trim(),
       conteudo: conteudo.trim(),
       autor
     });

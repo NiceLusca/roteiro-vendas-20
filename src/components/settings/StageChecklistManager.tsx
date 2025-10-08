@@ -14,7 +14,7 @@ import { CSS } from '@dnd-kit/utilities';
 
 interface ChecklistItem {
   id?: string;
-  stage_id: string;
+  etapa_id: string;
   titulo: string;
   ordem: number;
   obrigatorio: boolean;
@@ -54,7 +54,7 @@ export function StageChecklistManager({ stageId, stageName }: StageChecklistMana
     const nextOrder = checklistItems.length > 0 ? Math.max(...checklistItems.map(i => i.ordem)) + 1 : 1;
     
     setSelectedItem({ 
-      stage_id: stageId,
+      etapa_id: stageId,
       ordem: nextOrder,
       titulo: '',
       obrigatorio: false
@@ -205,7 +205,7 @@ export function StageChecklistManager({ stageId, stageName }: StageChecklistMana
                 onSave={async (data) => {
                   const result = await saveChecklistItem({ 
                     ...data, 
-                    stage_id: stageId,
+                    etapa_id: stageId,
                     id: selectedItem?.id 
                   });
                   if (result) {

@@ -13,11 +13,10 @@ import { Deal, StatusDeal } from '@/types/crm';
 
 const dealSchema = z.object({
   lead_id: z.string().min(1, 'Lead é obrigatório'),
-  product_id: z.string().min(1, 'Produto é obrigatório'),
-  closer: z.string().min(1, 'Closer é obrigatório'),
+  produto_id: z.string().min(1, 'Produto é obrigatório'),
+  closer: z.string().optional(),
   valor_proposto: z.number().min(0, 'Valor deve ser positivo'),
   status: z.enum(['aberto', 'ganho', 'perdido'] as const),
-  fase_negociacao: z.string().optional(),
 });
 
 type DealFormData = z.infer<typeof dealSchema>;
@@ -36,11 +35,10 @@ export function DealForm({ initialData, onSave, onCancel }: DealFormProps) {
     resolver: zodResolver(dealSchema),
     defaultValues: {
       lead_id: initialData?.lead_id || '',
-      product_id: initialData?.product_id || '',
+      produto_id: initialData?.produto_id || '',
       closer: initialData?.closer || '',
       valor_proposto: initialData?.valor_proposto || 0,
       status: initialData?.status || 'aberto',
-      fase_negociacao: initialData?.fase_negociacao || '',
     },
   });
 
@@ -162,23 +160,6 @@ export function DealForm({ initialData, onSave, onCancel }: DealFormProps) {
                   ))}
                 </SelectContent>
               </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="fase_negociacao"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Fase da Negociação</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Descreva a fase atual da negociação..."
-                  {...field}
-                />
-              </FormControl>
               <FormMessage />
             </FormItem>
           )}

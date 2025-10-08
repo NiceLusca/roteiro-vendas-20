@@ -23,7 +23,7 @@ export function useEnhancedValidatedAdvancement() {
       const { data: mandatoryItems, error } = await supabase
         .from('stage_checklist_items')
         .select('id, titulo')
-        .eq('stage_id', stageId)
+        .eq('etapa_id', stageId)
         .eq('obrigatorio', true);
 
       if (error) {
@@ -57,10 +57,11 @@ export function useEnhancedValidatedAdvancement() {
   const validateStageAdvancement = useCallback(async (
     entry: LeadPipelineEntry,
     lead: Lead,
+    checklistState: Record<string, boolean>,
     targetStageId?: string
   ): Promise<AdvancementValidationResult> => {
     
-    const stageId = targetStageId || getNextStage(entry.etapa_atual_id, entry.pipeline_id)?.id;
+    const stageId = targetStageId || getNextStage(entry.etapa_atual_id || '', entry.pipeline_id)?.id;
     
     if (!stageId) {
       return {
@@ -81,8 +82,7 @@ export function useEnhancedValidatedAdvancement() {
     const criteriaStates: any[] = [];
 
     // Validate mandatory checklist items first
-    const checklistState = entry.checklist_state as Record<string, boolean> || {};
-    const { canAdvance, missingItems } = await validateMandatoryChecklist(entry.etapa_atual_id, checklistState);
+    const { canAdvance, missingItems } = await validateMandatoryChecklist(entry.etapa_atual_id || '', checklistState);
     
     if (!canAdvance) {
       return {
@@ -114,10 +114,12 @@ export function useEnhancedValidatedAdvancement() {
   const attemptStageAdvancement = useCallback(async (
     entry: LeadPipelineEntry,
     lead: Lead,
+    checklistState: Record<string, boolean>,
+    note: string,
     targetStageId?: string
   ): Promise<{ success: boolean; message: string; details?: AdvancementValidationResult }> => {
     
-    const validationResult = await validateStageAdvancement(entry, lead, targetStageId);
+    const validationResult = await validateStageAdvancement(entry, lead, checklistState, targetStageId);
     
     if (!validationResult.canAdvance) {
       const blockerMessages = validationResult.blockers.map(b => b.message).join('\n');
@@ -129,7 +131,7 @@ export function useEnhancedValidatedAdvancement() {
     }
 
     // If validation passes, proceed with stage advancement
-    const nextStageId = targetStageId || getNextStage(entry.etapa_atual_id, entry.pipeline_id)?.id;
+    const nextStageId = targetStageId || getNextStage(entry.etapa_atual_id || '', entry.pipeline_id)?.id;
     
     if (!nextStageId) {
       return {
@@ -142,8 +144,8 @@ export function useEnhancedValidatedAdvancement() {
       const result = await advanceStage(
         entry.id,
         nextStageId,
-        entry.checklist_state,
-        entry.nota_etapa
+        checklistState,
+        note
       );
 
       if (result.success) {
@@ -181,10 +183,11 @@ export function useEnhancedValidatedAdvancement() {
 
   const canAdvanceFromCurrentStage = useCallback(async (
     entry: LeadPipelineEntry,
-    lead: Lead
+    lead: Lead,
+    checklistState: Record<string, boolean>
   ): Promise<{ canAdvance: boolean; details: AdvancementValidationResult }> => {
     
-    const validationResult = await validateStageAdvancement(entry, lead);
+    const validationResult = await validateStageAdvancement(entry, lead, checklistState);
     
     return {
       canAdvance: validationResult.canAdvance,

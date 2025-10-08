@@ -14,9 +14,8 @@ const appointmentSchema = z.object({
   lead_id: z.string().min(1, 'Lead é obrigatório'),
   start_at: z.string().min(1, 'Data e hora são obrigatórias'),
   status: z.enum(['agendado', 'realizado', 'cancelado', 'remarcado', 'confirmado'] as const),
-  resultado_sessao: z.enum(['Avançar', 'Não Avançar', 'Recuperação', 'Cliente', 'Outro'] as const).optional(),
-  resultado_obs: z.string().optional(),
-  observacao: z.string().optional(),
+  resultado_sessao: z.enum(['positivo', 'neutro', 'negativo'] as const).optional(),
+  notas: z.string().optional(),
 });
 
 type AppointmentFormData = z.infer<typeof appointmentSchema>;
@@ -37,8 +36,7 @@ export function AppointmentForm({ initialData, onSave, onCancel }: AppointmentFo
       start_at: initialData?.start_at ? new Date(initialData.start_at).toISOString().slice(0, 16) : '',
       status: initialData?.status || 'agendado',
       resultado_sessao: initialData?.resultado_sessao || undefined,
-      resultado_obs: initialData?.resultado_obs || '',
-      observacao: initialData?.observacao || '',
+      notas: initialData?.notas || '',
     },
   });
 
@@ -55,11 +53,9 @@ export function AppointmentForm({ initialData, onSave, onCancel }: AppointmentFo
   ];
 
   const resultadoOptions: { value: ResultadoSessao; label: string }[] = [
-    { value: 'Avançar', label: 'Avançar' },
-    { value: 'Não Avançar', label: 'Não Avançar' },
-    { value: 'Recuperação', label: 'Recuperação' },
-    { value: 'Cliente', label: 'Cliente' },
-    { value: 'Outro', label: 'Outro' },
+    { value: 'positivo', label: 'Positivo' },
+    { value: 'neutro', label: 'Neutro' },
+    { value: 'negativo', label: 'Negativo' },
   ];
 
   const watchedStatus = form.watch('status');
@@ -160,30 +156,13 @@ export function AppointmentForm({ initialData, onSave, onCancel }: AppointmentFo
 
         <FormField
           control={form.control}
-          name="resultado_obs"
+          name="notas"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Observações do Resultado</FormLabel>
+              <FormLabel>Notas e Observações</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Descreva o resultado da sessão..."
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="observacao"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Observações Gerais</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Observações sobre o agendamento..."
+                  placeholder="Notas sobre o agendamento e resultado da sessão..."
                   {...field}
                 />
               </FormControl>

@@ -29,6 +29,8 @@ interface ChecklistDialogProps {
   entry: LeadPipelineEntry;
   stage: PipelineStage;
   checklistItems: StageChecklistItem[];
+  checklistState?: Record<string, boolean>;
+  note?: string;
   onUpdateChecklist: (checklistState: Record<string, boolean>) => void;
   onUpdateNote: (note: string) => void;
   onAdvanceStage?: () => void;
@@ -40,12 +42,14 @@ export function ChecklistDialog({
   entry,
   stage,
   checklistItems,
+  checklistState: initialChecklistState,
+  note: initialNote,
   onUpdateChecklist,
   onUpdateNote,
   onAdvanceStage
 }: ChecklistDialogProps) {
-  const [checklistState, setChecklistState] = useState(entry.checklist_state || {});
-  const [note, setNote] = useState(entry.nota_etapa || '');
+  const [checklistState, setChecklistState] = useState(initialChecklistState || {});
+  const [note, setNote] = useState(initialNote || '');
   const [criteriaCompleted, setCriteriaCompleted] = useState(false);
 
   const sortedItems = [...checklistItems]
