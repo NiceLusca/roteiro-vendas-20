@@ -54,7 +54,7 @@ export function AppointmentDialog({
       data_hora: startAt,
       start_at: startAt,
       end_at: endAt,
-      status: 'agendado',
+      status: 'Agendado',
       titulo: `Sessão com ${leadName}`,
       duracao_minutos: parseInt(duration),
       notas: observacoes.trim() || undefined

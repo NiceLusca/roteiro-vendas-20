@@ -4,10 +4,10 @@
 export type StatusGeral = 'lead' | 'qualificado' | 'reuniao_marcada' | 'em_negociacao' | 'cliente' | 'perdido';
 export type OrigemLead = 'evento' | 'indicacao' | 'organico' | 'outro' | 'trafego_pago';
 export type ObjecaoPrincipal = 'confianca' | 'preco' | 'tempo' | 'necessidade' | 'outro';
-export type StatusAppointment = 'agendado' | 'realizado' | 'cancelado' | 'remarcado' | 'confirmado';
+export type StatusAppointment = 'Agendado' | 'Realizado' | 'Cancelado' | 'Remarcado' | 'No-Show';
 export type ResultadoSessao = 'positivo' | 'neutro' | 'negativo';
 export type CanalInteracao = 'whatsapp' | 'telefone' | 'email' | 'presencial' | 'outro';
-export type StatusDeal = 'aberto' | 'ganho' | 'perdido';
+export type StatusDeal = 'Aberta' | 'Ganha' | 'Perdida' | 'Pausada';
 export type StatusPedido = 'pago' | 'pendente' | 'cancelado';
 export type SaudeEtapa = 'verde' | 'amarelo' | 'vermelho';
 export type ProximoPassoTipo = 'Humano' | 'Agendamento' | 'Mensagem' | 'Outro';
@@ -60,8 +60,8 @@ export interface Pipeline {
   nome: string;
   descricao?: string;
   ativo: boolean;
-  objetivo?: string;
-  primary_pipeline: boolean; // Pipeline principal quando lead for inscrito
+  created_at?: Date | string;
+  updated_at?: Date | string;
 }
 
 export interface PipelineStage {
@@ -69,37 +69,13 @@ export interface PipelineStage {
   pipeline_id: string;
   nome: string;
   ordem: number;
-  sla_horas?: number; // SLA em horas (note: database usa sla_horas, não prazo_em_dias)
-  
-  // Próximo passo
-  proximo_passo_label?: string;
-  proximo_passo_tipo: ProximoPassoTipo;
-  
-  // Ações automáticas
-  gerar_agendamento_auto: boolean;
-  duracao_minutos?: number;
-  
-  // Configurações de agendamento
-  tipo_agendamento?: 'Descoberta' | 'Apresentacao' | 'Fechamento' | 'Follow-up';
-  closer_padrao?: string;
-  horarios_preferenciais?: {
-    dias_semana?: number[];
-    horarios?: string[];
-  };
-  template_agendamento?: {
-    titulo?: string;
-    descricao?: string;
-  };
-  
-  // Critérios
-  entrada_criteria?: string;
-  saida_criteria?: string;
-  
-  // WIP limit
-  wip_limit?: number;
-  
-  // Campos opcionais para compatibilidade
-  prazo_em_dias?: number; // Deprecated, usar sla_horas
+  sla_horas?: number;
+  proximo_passo_tipo?: ProximoPassoTipo | string;
+  proximo_passo_template?: string;
+  criterios_avanco?: any;
+  ativo?: boolean;
+  created_at?: Date | string;
+  updated_at?: Date | string;
 }
 
 export interface StageChecklistItem {
@@ -107,7 +83,11 @@ export interface StageChecklistItem {
   etapa_id: string;
   titulo: string;
   obrigatorio: boolean;
-  ordem: number;
+  ordem?: number;
+  descricao?: string;
+  ativo?: boolean;
+  created_at?: Date | string;
+  updated_at?: Date | string;
 }
 
 export interface LeadPipelineEntry {
@@ -122,6 +102,9 @@ export interface LeadPipelineEntry {
   saude_etapa?: string;
   created_at?: Date | string;
   updated_at?: Date | string;
+  tempo_em_etapa_dias?: number; // Computed field
+  dias_em_atraso?: number; // Computed field
+  checklist_state?: Record<string, boolean>; // Computed field
 }
 
 export interface PipelineEvent {
@@ -145,7 +128,7 @@ export interface Appointment {
   titulo?: string;
   duracao_minutos?: number;
   notas?: string;
-  resultado_sessao?: ResultadoSessao;
+  resultado_sessao?: 'Avançar' | 'Não Avançar' | 'Recuperação' | 'Cliente' | 'Outro';
   created_at?: Date;
   updated_at?: Date;
 }
@@ -174,10 +157,11 @@ export interface Interaction {
 export interface Product {
   id: string;
   nome: string;
-  tipo: 'Mentoria' | 'Curso' | 'Plano' | 'Consultoria' | 'Outro';
-  recorrencia: 'Nenhuma' | 'Mensal' | 'Trimestral' | 'Anual';
-  preco_padrao: number; // Em BRL
+  descricao?: string;
+  preco: number;
   ativo: boolean;
+  created_at?: Date | string;
+  updated_at?: Date | string;
 }
 
 export interface Deal {
@@ -205,33 +189,25 @@ export interface Order {
   id: string;
   lead_id: string;
   closer?: string;
-  valor_total: number; // Em BRL
-  forma_pagamento?: string;
-  data_venda: Date;
+  valor_total: number;
+  data_pedido?: Date | string;
   status_pagamento: StatusPedido;
-  observacao?: string;
-}
-
-export interface OrderItem {
-  id: string;
-  order_id: string;
-  product_id: string;
-  valor: number; // Em BRL
-  quantidade: number;
+  created_at?: Date | string;
+  updated_at?: Date | string;
 }
 
 export interface Refund {
   id: string;
   order_id: string;
-  valor: number; // Em BRL
+  valor: number;
   motivo: string;
   data: Date;
-  parcial: boolean; // Se é reembolso parcial ou total
+  parcial: boolean;
 }
 
 export interface AuditLog {
   id: string;
-  entidade: string; // 'Lead', 'Deal', 'Order', etc.
+  entidade: string;
   entidade_id: string;
   alteracao: {
     campo: string;
@@ -242,36 +218,14 @@ export interface AuditLog {
   timestamp: Date;
 }
 
-// Adicionais tipos para múltiplos pipelines e funcionalidades avançadas
-export interface PipelineTransfer {
-  id: string;
-  lead_id: string;
-  de_pipeline_id: string;
-  para_pipeline_id: string;
-  de_etapa_id: string;
-  para_etapa_id: string;
-  motivo: string;
-  ator: string;
-  timestamp: Date;
-}
-
-export interface DealLostReason {
-  id: string;
-  deal_id: string;
-  motivo: ObjecaoPrincipal;
-  detalhes?: string;
-  timestamp: Date;
-}
-
-// Removed duplicate Interaction interface
-
 export interface OrderItem {
   id: string;
-  order_id: string;
-  product_id: string;
-  valor: number; // Em BRL
+  pedido_id: string;
+  produto_id?: string;
+  preco_unitario: number;
   quantidade: number;
-  recorrencia?: 'Nenhuma' | 'Mensal' | 'Trimestral' | 'Anual'; // Herdada do produto, mas editável
+  recorrencia?: string;
+  created_at?: Date | string;
 }
 
 // Tipos para drag and drop

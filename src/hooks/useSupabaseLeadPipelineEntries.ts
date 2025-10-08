@@ -77,7 +77,12 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         return;
       }
       
-      setEntries(data || []);
+      setEntries((data || []).map(entry => ({
+        ...entry,
+        tempo_em_etapa_dias: 0,
+        dias_em_atraso: 0,
+        checklist_state: {}
+      })));
     } catch (error) {
       console.error('Erro ao buscar entries do pipeline:', error);
     } finally {

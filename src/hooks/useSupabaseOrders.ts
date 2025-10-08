@@ -2,29 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContextSecure';
-
-interface Order {
-  id: string;
-  lead_id: string;
-  total: number;
-  status: 'Pendente' | 'Pago' | 'Reembolsado' | 'Estornado';
-  data_venda: string;
-  forma_pagamento?: string;
-  observacao?: string;
-  closer?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface OrderItem {
-  id: string;
-  order_id: string;
-  product_id: string;
-  quantidade: number;
-  valor: number;
-  recorrencia?: 'Nenhuma' | 'Mensal' | 'Trimestral' | 'Anual';
-  created_at: string;
-}
+import { Order, OrderItem } from '@/types/crm';
 
 export function useSupabaseOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -39,7 +17,6 @@ export function useSupabaseOrders() {
     try {
       setLoading(true);
       
-      // Fetch orders
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('*')
@@ -55,7 +32,6 @@ export function useSupabaseOrders() {
         return;
       }
 
-      // Fetch order items
       const { data: itemsData, error: itemsError } = await supabase
         .from('order_items')
         .select('*')
@@ -71,17 +47,8 @@ export function useSupabaseOrders() {
         return;
       }
 
-      setOrders(ordersData?.map(order => ({
-        ...order,
-        data_venda: new Date(order.data_venda).toISOString(),
-        created_at: new Date(order.created_at).toISOString(),
-        updated_at: new Date(order.updated_at).toISOString()
-      })) || []);
-
-      setOrderItems(itemsData?.map(item => ({
-        ...item,
-        created_at: new Date(item.created_at).toISOString()
-      })) || []);
+      setOrders(ordersData || []);
+      setOrderItems(itemsData || []);
     } catch (error) {
       console.error('Erro ao buscar pedidos:', error);
     } finally {
@@ -107,7 +74,7 @@ export function useSupabaseOrders() {
       
       if (!isUpdate) {
         orderPayload.created_at = new Date().toISOString();
-        orderPayload.data_venda = new Date().toISOString();
+        orderPayload.data_pedido = new Date().toISOString();
       }
 
       let orderResult;
@@ -140,16 +107,15 @@ export function useSupabaseOrders() {
         return null;
       }
 
-      // Handle order items if provided
       if (items.length > 0 && orderResult.data) {
         const itemsPayload = items
-          .filter(item => item.product_id) // Only include items with product_id
+          .filter(item => item.produto_id)
           .map(item => ({
-            order_id: orderResult.data!.id,
-            product_id: item.product_id!,
+            pedido_id: orderResult.data!.id,
+            produto_id: item.produto_id!,
             quantidade: item.quantidade || 1,
-            valor: item.valor || 0,
-            recorrencia: item.recorrencia || 'Nenhuma',
+            preco_unitario: item.preco_unitario || 0,
+            recorrencia: item.recorrencia,
             created_at: new Date().toISOString()
           }));
 
@@ -187,8 +153,8 @@ export function useSupabaseOrders() {
     return orders.find(order => order.id === id);
   };
 
-  const getOrdersByStatus = (status: Order['status']): Order[] => {
-    return orders.filter(order => order.status === status);
+  const getOrdersByStatus = (status: Order['status_pagamento']): Order[] => {
+    return orders.filter(order => order.status_pagamento === status);
   };
 
   const getOrdersByLeadId = (leadId: string): Order[] => {
@@ -196,7 +162,7 @@ export function useSupabaseOrders() {
   };
 
   const getOrderItems = (orderId: string): OrderItem[] => {
-    return orderItems.filter(item => item.order_id === orderId);
+    return orderItems.filter(item => item.pedido_id === orderId);
   };
 
   useEffect(() => {

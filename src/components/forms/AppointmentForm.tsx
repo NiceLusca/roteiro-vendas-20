@@ -8,13 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
-import { Appointment, StatusAppointment, ResultadoSessao } from '@/types/crm';
+import { Appointment, StatusAppointment } from '@/types/crm';
 
 const appointmentSchema = z.object({
   lead_id: z.string().min(1, 'Lead é obrigatório'),
   start_at: z.string().min(1, 'Data e hora são obrigatórias'),
-  status: z.enum(['agendado', 'realizado', 'cancelado', 'remarcado', 'confirmado'] as const),
-  resultado_sessao: z.enum(['positivo', 'neutro', 'negativo'] as const).optional(),
+  status: z.enum(['Agendado', 'Realizado', 'Cancelado', 'Remarcado', 'No-Show'] as const),
+  resultado_sessao: z.enum(['Avançar', 'Não Avançar', 'Recuperação', 'Cliente', 'Outro'] as const).optional(),
   notas: z.string().optional(),
 });
 
@@ -34,8 +34,8 @@ export function AppointmentForm({ initialData, onSave, onCancel }: AppointmentFo
     defaultValues: {
       lead_id: initialData?.lead_id || '',
       start_at: initialData?.start_at ? new Date(initialData.start_at).toISOString().slice(0, 16) : '',
-      status: initialData?.status || 'agendado',
-      resultado_sessao: initialData?.resultado_sessao,
+      status: initialData?.status || 'Agendado',
+      resultado_sessao: initialData?.resultado_sessao || 'Avançar',
       notas: initialData?.notas || '',
     },
   });
@@ -45,17 +45,19 @@ export function AppointmentForm({ initialData, onSave, onCancel }: AppointmentFo
   };
 
   const statusOptions: { value: StatusAppointment; label: string }[] = [
-    { value: 'agendado', label: 'Agendado' },
-    { value: 'realizado', label: 'Realizado' },
-    { value: 'cancelado', label: 'Cancelado' },
-    { value: 'remarcado', label: 'Remarcado' },
-    { value: 'confirmado', label: 'Confirmado' },
+    { value: 'Agendado', label: 'Agendado' },
+    { value: 'Realizado', label: 'Realizado' },
+    { value: 'Cancelado', label: 'Cancelado' },
+    { value: 'Remarcado', label: 'Remarcado' },
+    { value: 'No-Show', label: 'No-Show' },
   ];
 
-  const resultadoOptions: { value: ResultadoSessao; label: string }[] = [
-    { value: 'positivo', label: 'Positivo' },
-    { value: 'neutro', label: 'Neutro' },
-    { value: 'negativo', label: 'Negativo' },
+  const resultadoOptions = [
+    { value: 'Avançar', label: 'Avançar' },
+    { value: 'Não Avançar', label: 'Não Avançar' },
+    { value: 'Recuperação', label: 'Recuperação' },
+    { value: 'Cliente', label: 'Cliente' },
+    { value: 'Outro', label: 'Outro' },
   ];
 
   const watchedStatus = form.watch('status');
@@ -127,7 +129,7 @@ export function AppointmentForm({ initialData, onSave, onCancel }: AppointmentFo
           )}
         />
 
-        {watchedStatus === 'realizado' && (
+        {watchedStatus === 'Realizado' && (
           <FormField
             control={form.control}
             name="resultado_sessao"

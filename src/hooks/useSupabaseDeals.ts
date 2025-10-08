@@ -41,7 +41,13 @@ export function useSupabaseDeals() {
         return;
       }
 
-      setDeals(data || []);
+      const mappedDeals = (data || []).map(deal => ({
+        ...deal,
+        status: deal.status === 'aberto' ? 'Aberta' : 
+                deal.status === 'ganho' ? 'Ganha' : 
+                deal.status === 'perdido' ? 'Perdida' : 'Pausada'
+      })) as Deal[];
+      setDeals(mappedDeals);
     } catch (error) {
       console.error('Erro ao buscar deals:', error);
     } finally {

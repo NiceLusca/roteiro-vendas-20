@@ -3,22 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContextSecure';
 
-interface Appointment {
-  id: string;
-  lead_id: string;
-  start_at: string;
-  end_at: string;
-  status: 'Agendado' | 'Realizado' | 'Cancelado' | 'Remarcado' | 'No-Show';
-  resultado_sessao?: 'Avançar' | 'Não Avançar' | 'Recuperação' | 'Cliente' | 'Outro';
-  observacao?: string;
-  resultado_obs?: string;
-  criado_por?: string;
-  origem?: string;
-  tipo_sessao?: string;
-  closer_responsavel?: string;
-  created_at: string;
-  updated_at: string;
-}
+import { Appointment, StatusAppointment } from '@/types/crm';
 
 export function useSupabaseAppointments() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -46,7 +31,11 @@ export function useSupabaseAppointments() {
         return;
       }
 
-      setAppointments(data || []);
+      setAppointments((data || []).map(apt => ({
+        ...apt,
+        status: (apt.status.charAt(0).toUpperCase() + apt.status.slice(1)) as StatusAppointment,
+        resultado_sessao: apt.resultado_sessao as any
+      })));
     } catch (error) {
       console.error('Erro ao buscar agendamentos:', error);
     } finally {

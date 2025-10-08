@@ -16,7 +16,7 @@ const dealSchema = z.object({
   produto_id: z.string().min(1, 'Produto é obrigatório'),
   closer: z.string().optional(),
   valor_proposto: z.number().min(0, 'Valor deve ser positivo'),
-  status: z.enum(['aberto', 'ganho', 'perdido'] as const),
+  status: z.enum(['Aberta', 'Ganha', 'Perdida', 'Pausada'] as const),
 });
 
 type DealFormData = z.infer<typeof dealSchema>;
@@ -38,7 +38,7 @@ export function DealForm({ initialData, onSave, onCancel }: DealFormProps) {
       produto_id: initialData?.produto_id || '',
       closer: initialData?.closer || '',
       valor_proposto: initialData?.valor_proposto || 0,
-      status: initialData?.status || 'aberto',
+      status: initialData?.status || 'Aberta',
     },
   });
 
@@ -47,9 +47,10 @@ export function DealForm({ initialData, onSave, onCancel }: DealFormProps) {
   };
 
   const statusOptions: { value: StatusDeal; label: string }[] = [
-    { value: 'aberto', label: 'Aberta' },
-    { value: 'ganho', label: 'Ganha' },
-    { value: 'perdido', label: 'Perdida' },
+    { value: 'Aberta', label: 'Aberta' },
+    { value: 'Ganha', label: 'Ganha' },
+    { value: 'Perdida', label: 'Perdida' },
+    { value: 'Pausada', label: 'Pausada' },
   ];
 
   return (
@@ -95,7 +96,7 @@ export function DealForm({ initialData, onSave, onCancel }: DealFormProps) {
                 <SelectContent>
                   {products.filter(p => p.ativo).map((product) => (
                     <SelectItem key={product.id} value={product.id}>
-                      {product.nome} - R$ {product.preco_padrao.toFixed(2)}
+                      {product.nome} - R$ {(product.preco || 0).toFixed(2)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -143,7 +144,7 @@ export function DealForm({ initialData, onSave, onCancel }: DealFormProps) {
         <FormField
           control={form.control}
           name="status"
-          render={({ field }) => (
+          render={({ field}) => (
             <FormItem>
               <FormLabel>Status</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
