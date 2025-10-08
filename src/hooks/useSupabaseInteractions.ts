@@ -34,7 +34,7 @@ export function useSupabaseInteractions() {
         id: interaction.id,
         lead_id: interaction.lead_id,
         canal: interaction.canal,
-        conteudo: interaction.descricao,
+        descricao: interaction.descricao,
         autor: 'Sistema', // TODO: get from user
         timestamp: new Date(interaction.data_hora)
       })) || []);
@@ -52,7 +52,7 @@ export function useSupabaseInteractions() {
       const payload = {
         lead_id: interactionData.lead_id,
         canal: interactionData.canal,
-        descricao: interactionData.conteudo,
+        descricao: interactionData.descricao,
         data_hora: new Date().toISOString()
       };
 
@@ -83,7 +83,7 @@ export function useSupabaseInteractions() {
         id: data.id,
         lead_id: data.lead_id,
         canal: data.canal,
-        conteudo: data.descricao,
+        descricao: data.descricao,
         autor: interactionData.autor,
         timestamp: new Date(data.data_hora)
       };

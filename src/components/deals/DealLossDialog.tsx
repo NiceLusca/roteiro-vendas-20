@@ -20,10 +20,11 @@ interface DealLossDialogProps {
 }
 
 const motivosPerda: { value: ObjecaoPrincipal; label: string }[] = [
-  { value: 'Confianca', label: 'Confiança' },
-  { value: 'Orcamento', label: 'Orçamento' },
-  { value: 'Prioridade', label: 'Prioridade' },
-  { value: 'Tempo', label: 'Tempo' }
+  { value: 'confianca', label: 'Falta de Confiança' },
+  { value: 'preco', label: 'Orçamento/Preço' },
+  { value: 'necessidade', label: 'Não é Prioridade' },
+  { value: 'tempo', label: 'Falta de Tempo' },
+  { value: 'outro', label: 'Outro' },
 ];
 
 export function DealLossDialog({

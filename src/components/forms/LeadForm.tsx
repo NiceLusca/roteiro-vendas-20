@@ -32,10 +32,11 @@ const origemOptions: { value: OrigemLead; label: string }[] = [
 ];
 
 const objecaoOptions: { value: ObjecaoPrincipal; label: string }[] = [
-  { value: 'Confianca', label: 'Confiança' },
-  { value: 'Orcamento', label: 'Orçamento' },
-  { value: 'Prioridade', label: 'Prioridade' },
-  { value: 'Tempo', label: 'Tempo' }
+  { value: 'confianca', label: 'Confiança' },
+  { value: 'preco', label: 'Orçamento/Preço' },
+  { value: 'necessidade', label: 'Necessidade' },
+  { value: 'tempo', label: 'Tempo' },
+  { value: 'outro', label: 'Outro' },
 ];
 
 const statusOptions: { value: StatusGeral; label: string }[] = [

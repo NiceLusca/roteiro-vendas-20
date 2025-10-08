@@ -88,7 +88,7 @@ export function UnifiedTimeline({
         id: `interaction-${interaction.id}`,
         type: 'interaction',
         title: `Interação via ${interaction.canal}`,
-        description: interaction.conteudo,
+        description: interaction.descricao,
         timestamp: interaction.timestamp,
         icon: MessageSquare,
         entityId: interaction.id,

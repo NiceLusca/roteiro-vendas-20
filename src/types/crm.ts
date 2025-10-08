@@ -3,15 +3,15 @@
 
 export type StatusGeral = 'lead' | 'qualificado' | 'reuniao_marcada' | 'em_negociacao' | 'cliente' | 'perdido';
 export type OrigemLead = 'evento' | 'indicacao' | 'organico' | 'outro' | 'trafego_pago';
-export type ObjecaoPrincipal = 'Confianca' | 'Orcamento' | 'Prioridade' | 'Tempo';
-export type StatusAppointment = 'Agendado' | 'Realizado' | 'Cancelado' | 'Remarcado' | 'Confirmado';
-export type ResultadoSessao = 'Positivo' | 'Neutro' | 'Negativo';
-export type CanalInteracao = 'WhatsApp' | 'Telefone' | 'Email' | 'Presencial' | 'Outro';
-export type StatusDeal = 'Aberta' | 'Ganha' | 'Perdida';
-export type StatusPedido = 'Pago' | 'Pendente' | 'Cancelado';
-export type SaudeEtapa = 'Verde' | 'Amarelo' | 'Vermelho';
+export type ObjecaoPrincipal = 'confianca' | 'preco' | 'tempo' | 'necessidade' | 'outro';
+export type StatusAppointment = 'agendado' | 'realizado' | 'cancelado' | 'remarcado' | 'confirmado';
+export type ResultadoSessao = 'positivo' | 'neutro' | 'negativo';
+export type CanalInteracao = 'whatsapp' | 'telefone' | 'email' | 'presencial' | 'outro';
+export type StatusDeal = 'aberto' | 'ganho' | 'perdido';
+export type StatusPedido = 'pago' | 'pendente' | 'cancelado';
+export type SaudeEtapa = 'verde' | 'amarelo' | 'vermelho';
 export type ProximoPassoTipo = 'Humano' | 'Agendamento' | 'Mensagem' | 'Outro';
-export type LeadScore = 'Alto' | 'Médio' | 'Baixo';
+export type LeadScore = 'alto' | 'medio' | 'baixo';
 
 export interface Lead {
   id: string;
@@ -122,11 +122,6 @@ export interface LeadPipelineEntry {
   saude_etapa?: string;
   created_at?: Date | string;
   updated_at?: Date | string;
-  // Computed fields (not in database)
-  tempo_em_etapa_dias?: number;
-  dias_em_atraso?: number;
-  checklist_state?: Record<string, boolean>;
-  nota_etapa?: string;
 }
 
 export interface PipelineEvent {
@@ -170,7 +165,6 @@ export interface Interaction {
   lead_id: string;
   canal: CanalInteracao;
   descricao: string;
-  conteudo: string; // Alias for descricao for backwards compatibility
   autor: string;
   data_hora?: Date;
   created_at?: Date;
@@ -211,12 +205,10 @@ export interface Order {
   id: string;
   lead_id: string;
   closer?: string;
-  total: number; // Em BRL
-  valor_total: number; // Alias for total
+  valor_total: number; // Em BRL
   forma_pagamento?: string;
   data_venda: Date;
-  status: StatusPedido;
-  status_pagamento: StatusPedido; // Alias for status
+  status_pagamento: StatusPedido;
   observacao?: string;
 }
 

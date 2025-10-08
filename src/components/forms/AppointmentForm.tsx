@@ -35,7 +35,7 @@ export function AppointmentForm({ initialData, onSave, onCancel }: AppointmentFo
       lead_id: initialData?.lead_id || '',
       start_at: initialData?.start_at ? new Date(initialData.start_at).toISOString().slice(0, 16) : '',
       status: initialData?.status || 'agendado',
-      resultado_sessao: initialData?.resultado_sessao || undefined,
+      resultado_sessao: initialData?.resultado_sessao,
       notas: initialData?.notas || '',
     },
   });

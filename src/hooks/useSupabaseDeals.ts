@@ -41,11 +41,7 @@ export function useSupabaseDeals() {
         return;
       }
 
-      setDeals(data?.map(deal => ({
-        ...deal,
-        created_at: new Date(deal.created_at).toISOString(),
-        updated_at: new Date(deal.updated_at).toISOString()
-      })) || []);
+      setDeals(data || []);
     } catch (error) {
       console.error('Erro ao buscar deals:', error);
     } finally {

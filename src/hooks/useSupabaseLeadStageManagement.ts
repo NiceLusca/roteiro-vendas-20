@@ -35,7 +35,7 @@ export function useSupabaseLeadStageManagement() {
         .from('lead_pipeline_entries')
         .select(`
           *,
-          pipeline_stages!inner(nome, ordem, prazo_em_dias, gerar_agendamento_auto)
+          pipeline_stages!inner(nome, ordem, sla_horas)
         `)
         .eq('id', entryId)
         .single();
@@ -47,7 +47,7 @@ export function useSupabaseLeadStageManagement() {
       // Get target stage info
       const { data: targetStage, error: stageError } = await supabase
         .from('pipeline_stages')
-        .select('nome, ordem, prazo_em_dias, gerar_agendamento_auto')
+        .select('nome, ordem, sla_horas')
         .eq('id', newStageId)
         .single();
 
@@ -55,28 +55,13 @@ export function useSupabaseLeadStageManagement() {
         return { success: false, message: 'Etapa de destino não encontrada' };
       }
 
-      // Calculate new SLA date
-      const newSLADate = new Date();
-      newSLADate.setDate(newSLADate.getDate() + targetStage.prazo_em_dias);
-
       // Update entry
       const updateData: any = {
         etapa_atual_id: newStageId,
         data_entrada_etapa: new Date().toISOString(),
-        data_prevista_proxima_etapa: newSLADate.toISOString(),
-        tempo_em_etapa_dias: 0,
-        dias_em_atraso: 0,
-        saude_etapa: 'Verde',
+        saude_etapa: 'verde',
         updated_at: new Date().toISOString()
       };
-
-      if (checklistState) {
-        updateData.checklist_state = checklistState;
-      }
-
-      if (note) {
-        updateData.nota_etapa = note;
-      }
 
       const { data: updatedEntry, error: updateError } = await supabase
         .from('lead_pipeline_entries')
@@ -108,61 +93,7 @@ export function useSupabaseLeadStageManagement() {
         ator: 'Sistema (Avanço de Etapa)'
       });
 
-      const automaticActions: string[] = [];
-
-      // Handle automatic appointment creation
-      if (targetStage.gerar_agendamento_auto) {
-        try {
-          // Get lead info for appointment
-          const { data: lead } = await supabase
-            .from('leads')
-            .select('nome, whatsapp')
-            .eq('id', currentEntry.lead_id)
-            .single();
-
-          if (lead) {
-            // Create automatic appointment
-            const appointmentDate = new Date();
-            appointmentDate.setDate(appointmentDate.getDate() + 1); // Next day
-            appointmentDate.setHours(10, 0, 0, 0); // 10 AM
-
-            const { error: appointmentError } = await supabase
-              .from('appointments')
-              .insert([{
-                lead_id: currentEntry.lead_id,
-                start_at: appointmentDate.toISOString(),
-                end_at: new Date(appointmentDate.getTime() + 60 * 60 * 1000).toISOString(), // 1 hour
-                observacao: `Agendamento automático criado ao avançar para ${targetStage.nome}`,
-                origem: 'Sistema',
-                status: 'Agendado'
-              }]);
-
-            if (!appointmentError) {
-              automaticActions.push('Agendamento automático criado');
-            }
-          }
-        } catch (error) {
-          console.error('Erro ao criar agendamento automático:', error);
-        }
-      }
-
-      // Log to pipeline events
-      await supabase
-        .from('pipeline_events')
-        .insert([{
-          lead_pipeline_entry_id: entryId,
-          tipo: 'stage_advancement',
-          de_etapa_id: currentEntry.etapa_atual_id,
-          para_etapa_id: newStageId,
-          ator: user.email || 'Sistema',
-          detalhes: {
-            checklistCompleted: !!checklistState,
-            automaticActions,
-            note: note || null
-          }
-        }]);
-
-      const message = `Lead avançado para ${targetStage.nome}${automaticActions.length > 0 ? ` (${automaticActions.join(', ')})` : ''}`;
+      const message = `Lead avançado para ${targetStage.nome}`;
 
       toast({
         title: "Etapa avançada",
@@ -171,8 +102,7 @@ export function useSupabaseLeadStageManagement() {
 
       return { 
         success: true, 
-        message,
-        automaticActions
+        message
       };
 
     } catch (error) {
@@ -199,20 +129,6 @@ export function useSupabaseLeadStageManagement() {
       const result = await advanceStage(entryId, previousStageId, undefined, `Revertido: ${reason}`);
       
       if (result.success) {
-        // Log the reversion
-        await supabase
-          .from('pipeline_events')
-          .insert([{
-            lead_pipeline_entry_id: entryId,
-            tipo: 'stage_reversion',
-            para_etapa_id: previousStageId,
-            ator: user.email || 'Sistema',
-            detalhes: {
-              reason,
-              revertedAt: new Date().toISOString()
-            }
-          }]);
-
         return { success: true, message: `Lead revertido para etapa anterior. Motivo: ${reason}` };
       }
 
@@ -225,89 +141,10 @@ export function useSupabaseLeadStageManagement() {
     }
   }, [user, advanceStage]);
 
-  // Update checklist state only
-  const updateChecklistState = useCallback(async (
-    entryId: string,
-    checklistState: Record<string, boolean>
-  ): Promise<boolean> => {
-    if (!user) return false;
-
-    try {
-      const { error } = await supabase
-        .from('lead_pipeline_entries')
-        .update({
-          checklist_state: checklistState,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', entryId);
-
-      if (error) {
-        toast({
-          title: "Erro ao atualizar checklist",
-          description: error.message,
-          variant: "destructive"
-        });
-        return false;
-      }
-
-      // Log checklist update
-      logChange({
-        entidade: 'LeadPipelineEntry',
-        entidade_id: entryId,
-        alteracao: [
-          { 
-            campo: 'checklist_state', 
-            de: 'Estado anterior', 
-            para: JSON.stringify(checklistState) 
-          }
-        ],
-        ator: 'Usuário'
-      });
-
-      return true;
-    } catch (error) {
-      console.error('Erro ao atualizar checklist:', error);
-      return false;
-    }
-  }, [user, toast, logChange]);
-
-  // Update stage note
-  const updateStageNote = useCallback(async (
-    entryId: string,
-    note: string
-  ): Promise<boolean> => {
-    if (!user) return false;
-
-    try {
-      const { error } = await supabase
-        .from('lead_pipeline_entries')
-        .update({
-          nota_etapa: note,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', entryId);
-
-      if (error) {
-        toast({
-          title: "Erro ao atualizar nota",
-          description: error.message,
-          variant: "destructive"
-        });
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Erro ao atualizar nota:', error);
-      return false;
-    }
-  }, [user, toast]);
 
   return {
     loading,
     advanceStage,
-    revertStage,
-    updateChecklistState,
-    updateStageNote
+    revertStage
   };
 }

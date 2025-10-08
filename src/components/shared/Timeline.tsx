@@ -56,7 +56,7 @@ export function Timeline({ events, className = '' }: TimelineProps) {
       case 'audit':
         return event.alteracao.map(alt => `${alt.campo}: ${alt.de} → ${alt.para}`).join(', ');
       case 'interaction':
-        return event.conteudo;
+        return event.descricao;
       case 'pipeline':
         return event.detalhes ? JSON.stringify(event.detalhes) : `De ${event.de_etapa_id || 'início'} para ${event.para_etapa_id || 'fim'}`;
       case 'appointment':

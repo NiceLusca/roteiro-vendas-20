@@ -46,13 +46,7 @@ export function useSupabaseAppointments() {
         return;
       }
 
-      setAppointments(data?.map(appointment => ({
-        ...appointment,
-        start_at: new Date(appointment.start_at).toISOString(),
-        end_at: new Date(appointment.end_at).toISOString(),
-        created_at: new Date(appointment.created_at).toISOString(),
-        updated_at: new Date(appointment.updated_at).toISOString()
-      })) || []);
+      setAppointments(data || []);
     } catch (error) {
       console.error('Erro ao buscar agendamentos:', error);
     } finally {

@@ -28,7 +28,7 @@ export function RefundDialog({
   onConfirm
 }: RefundDialogProps) {
   const [isParcial, setIsParcial] = useState(false);
-  const [valor, setValor] = useState(order.total);
+  const [valor, setValor] = useState(order.valor_total);
   const [motivo, setMotivo] = useState('');
 
   const handleConfirm = () => {
@@ -36,21 +36,21 @@ export function RefundDialog({
 
     onConfirm({
       order_id: order.id,
-      valor: isParcial ? valor : order.total,
+      valor: isParcial ? valor : order.valor_total,
       motivo: motivo.trim(),
       parcial: isParcial
     });
 
     // Reset form
     setIsParcial(false);
-    setValor(order.total);
+    setValor(order.valor_total);
     setMotivo('');
     onOpenChange(false);
   };
 
   const handleCancel = () => {
     setIsParcial(false);
-    setValor(order.total);
+    setValor(order.valor_total);
     setMotivo('');
     onOpenChange(false);
   };
@@ -58,7 +58,7 @@ export function RefundDialog({
   const handleParcialChange = (checked: boolean) => {
     setIsParcial(checked);
     if (!checked) {
-      setValor(order.total);
+      setValor(order.valor_total);
     }
   };
 
@@ -73,8 +73,8 @@ export function RefundDialog({
           <div className="bg-muted/50 rounded p-3">
             <div className="text-sm space-y-1">
               <p><span className="font-medium">Pedido:</span> #{order.id}</p>
-              <p><span className="font-medium">Valor Total:</span> {formatCurrency(order.total)}</p>
-              <p><span className="font-medium">Status:</span> {order.status}</p>
+              <p><span className="font-medium">Valor Total:</span> {formatCurrency(order.valor_total)}</p>
+              <p><span className="font-medium">Status:</span> {order.status_pagamento}</p>
             </div>
           </div>
 
@@ -96,11 +96,11 @@ export function RefundDialog({
                 value={valor}
                 onChange={(e) => setValor(parseFloat(e.target.value) || 0)}
                 min="0"
-                max={order.total}
+                max={order.valor_total}
                 step="0.01"
               />
               <p className="text-xs text-muted-foreground">
-                Máximo: {formatCurrency(order.total)}
+                Máximo: {formatCurrency(order.valor_total)}
               </p>
             </div>
           )}
@@ -121,7 +121,7 @@ export function RefundDialog({
                 Resumo do Reembolso
               </p>
               <p className="text-blue-700 dark:text-blue-300 mt-1">
-                Valor: {formatCurrency(isParcial ? valor : order.total)}
+                Valor: {formatCurrency(isParcial ? valor : order.valor_total)}
               </p>
               <p className="text-blue-700 dark:text-blue-300">
                 Tipo: {isParcial ? 'Parcial' : 'Total'}
@@ -136,7 +136,7 @@ export function RefundDialog({
           </Button>
           <Button 
             onClick={handleConfirm}
-            disabled={!motivo.trim() || valor <= 0 || (isParcial && valor > order.total)}
+            disabled={!motivo.trim() || valor <= 0 || (isParcial && valor > order.valor_total)}
             variant="destructive"
           >
             Processar Reembolso

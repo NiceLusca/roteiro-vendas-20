@@ -99,7 +99,7 @@ export function useLeadData() {
         entidade: 'Order',
         entidade_id: result.id,
         alteracao: [
-          { campo: 'status', de: 'anterior', para: orderData.status || 'pendente' }
+          { campo: 'status_pagamento', de: 'anterior', para: orderData.status_pagamento || 'pendente' }
         ]
       });
     }
