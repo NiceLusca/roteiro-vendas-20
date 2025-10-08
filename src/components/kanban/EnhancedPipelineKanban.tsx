@@ -201,9 +201,12 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
   }, [allEntries, fetchNextAppointments]);
 
   // Agrupar entries por stage
-  const stageEntries = pipelineStages.map(stage => {
+  const stageEntries = pipelineStages.map((stage, index) => {
     const entries = allEntries.filter(entry => entry?.etapa_atual_id === stage.id);
     const wipExceeded = stage.wip_limit ? entries.length > stage.wip_limit : false;
+    
+    // Determinar o próximo estágio
+    const nextStage = index < pipelineStages.length - 1 ? pipelineStages[index + 1] : null;
     
     // Adicionar informações de agendamento para cada entry
     const entriesWithAppointments = entries.map(entry => {
@@ -217,6 +220,7 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
     
     return {
       stage,
+      nextStage,
       entries: entriesWithAppointments as Array<typeof allEntries[0] & { lead: typeof leads[0] }>,
       wipExceeded
     };
@@ -690,6 +694,7 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
       {/* Kanban com Drag & Drop */}
       <DragDropKanban
         stageEntries={stageEntries as any}
+        checklistItems={checklistItems as any}
         onDragEnd={handleDragEnd}
         onAddLead={handleAddLead}
         onViewLead={handleViewLead}

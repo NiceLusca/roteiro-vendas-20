@@ -20,9 +20,11 @@ import { DragDropResult, PipelineStage, LeadPipelineEntry, Lead } from '@/types/
 interface DragDropKanbanProps {
   stageEntries: Array<{
     stage: PipelineStage;
+    nextStage?: PipelineStage | null;
     entries: Array<LeadPipelineEntry & { lead: Lead }>;
     wipExceeded: boolean;
   }>;
+  checklistItems?: Array<{ id: string; etapa_id: string; obrigatorio: boolean }>;
   onDragEnd: (result: DragDropResult) => void;
   onAddLead?: (stageId: string) => void;
   onViewLead?: (leadId: string) => void;
@@ -36,6 +38,7 @@ interface DragDropKanbanProps {
 
 export function DragDropKanban({
   stageEntries,
+  checklistItems = [],
   onDragEnd,
   onAddLead,
   onViewLead,
@@ -104,7 +107,7 @@ export function DragDropKanban({
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-6 overflow-x-auto pb-6">
-        {stageEntries.map(({ stage, entries, wipExceeded }) => (
+        {stageEntries.map(({ stage, nextStage, entries, wipExceeded }) => (
           <SortableContext
             key={stage.id}
             id={stage.id}
@@ -113,9 +116,11 @@ export function DragDropKanban({
           >
             <KanbanColumn
               stage={stage}
+              nextStage={nextStage}
               entries={entries}
               wipExceeded={wipExceeded}
               isDragAndDrop={true}
+              checklistItems={checklistItems}
               onAddLead={onAddLead}
               onViewLead={onViewLead}
               onCreateAppointment={onCreateAppointment}

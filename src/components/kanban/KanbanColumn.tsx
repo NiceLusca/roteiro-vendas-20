@@ -12,9 +12,11 @@ import { useDroppable } from '@dnd-kit/core';
 
 interface KanbanColumnProps {
   stage: PipelineStage;
+  nextStage?: PipelineStage | null;
   entries: Array<LeadPipelineEntry & { lead: Lead }>;
   wipExceeded: boolean;
   isDragAndDrop?: boolean;
+  checklistItems?: Array<{ id: string; etapa_id: string; obrigatorio: boolean }>;
   onAddLead?: (stageId: string) => void;
   onViewLead?: (leadId: string) => void;
   onCreateAppointment?: (leadId: string) => void;
@@ -27,9 +29,11 @@ interface KanbanColumnProps {
 
 export function KanbanColumn({
   stage,
+  nextStage,
   entries,
   wipExceeded,
   isDragAndDrop = false,
+  checklistItems = [],
   onAddLead,
   onViewLead,
   onCreateAppointment,
@@ -155,21 +159,32 @@ export function KanbanColumn({
             </p>
           </div>
         ) : (
-           sortedEntries.map((entry) => (
-            <KanbanCard
-              key={entry.id}
-              entry={entry}
-              lead={entry.lead}
-              stage={stage}
-              onViewLead={() => onViewLead?.(entry.lead.id)}
-              onCreateAppointment={() => onCreateAppointment?.(entry.lead.id)}
-              onAdvanceStage={() => onAdvanceStage?.(entry.id)}
-              onRegisterInteraction={() => onRegisterInteraction?.(entry.lead.id)}
-              onOpenChecklist={() => onOpenChecklist?.(entry.id)}
-              onRegressStage={() => onRegressStage?.(entry.id)}
-              onTransferPipeline={() => onTransferPipeline?.(entry.lead.id)}
-            />
-          ))
+           sortedEntries.map((entry) => {
+            // Verificar se o checklist está completo
+            const stageChecklistItems = checklistItems.filter(
+              item => item.etapa_id === stage.id
+            );
+            const requiredItems = stageChecklistItems.filter(item => item.obrigatorio);
+            const checklistComplete = requiredItems.length === 0; // Por enquanto, assumimos completo
+            
+            return (
+              <KanbanCard
+                key={entry.id}
+                entry={entry}
+                lead={entry.lead}
+                stage={stage}
+                nextStage={nextStage}
+                checklistComplete={checklistComplete}
+                onViewLead={() => onViewLead?.(entry.lead.id)}
+                onCreateAppointment={() => onCreateAppointment?.(entry.lead.id)}
+                onAdvanceStage={() => onAdvanceStage?.(entry.id)}
+                onRegisterInteraction={() => onRegisterInteraction?.(entry.lead.id)}
+                onOpenChecklist={() => onOpenChecklist?.(entry.id)}
+                onRegressStage={() => onRegressStage?.(entry.id)}
+                onTransferPipeline={() => onTransferPipeline?.(entry.lead.id)}
+              />
+            );
+          })
         )}
       </div>
     </div>

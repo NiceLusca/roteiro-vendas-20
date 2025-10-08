@@ -34,6 +34,8 @@ interface KanbanCardProps {
   entry: LeadPipelineEntry;
   lead: Lead | null | undefined;
   stage: PipelineStage;
+  nextStage?: PipelineStage | null;
+  checklistComplete?: boolean;
   nextAppointment?: AppointmentInfo | null;
   isDragging?: boolean;
   onViewLead?: () => void;
@@ -49,6 +51,8 @@ export function KanbanCard({
   entry,
   lead,
   stage,
+  nextStage,
+  checklistComplete = true,
   nextAppointment,
   isDragging = false,
   onViewLead,
@@ -107,6 +111,27 @@ export function KanbanCard({
     }
   };
 
+  // Função para determinar as cores do cartão baseado no closer
+  const getCloserCardColors = (closer?: string) => {
+    if (!closer) return { bg: 'bg-card', border: 'border-border' };
+    
+    switch (closer) {
+      case 'Gabriel':
+        return { bg: 'bg-yellow-50 dark:bg-yellow-950/20', border: 'border-yellow-300 dark:border-yellow-700' };
+      case 'Uilma':
+        return { bg: 'bg-pink-50 dark:bg-pink-950/20', border: 'border-pink-300 dark:border-pink-700' };
+      case 'Lucas':
+        return { bg: 'bg-purple-50 dark:bg-purple-950/20', border: 'border-purple-300 dark:border-purple-700' };
+      case 'Vagner':
+        return { bg: 'bg-blue-50 dark:bg-blue-950/20', border: 'border-blue-300 dark:border-blue-700' };
+      default:
+        return { bg: 'bg-card', border: 'border-border' };
+    }
+  };
+
+  const closerColors = getCloserCardColors(lead?.closer);
+
+
   return (
     <Card 
       ref={setNodeRef}
@@ -114,7 +139,9 @@ export function KanbanCard({
       {...attributes}
       {...listeners}
       className={cn(
-        "kanban-card group cursor-grab active:cursor-grabbing transition-all duration-300 hover:shadow-md hover:-translate-y-1",
+        "kanban-card group cursor-grab active:cursor-grabbing transition-all duration-300 hover:shadow-md hover:-translate-y-1 border-2",
+        closerColors.bg,
+        closerColors.border,
         (dragActive || isDragging) && "opacity-60 rotate-2 scale-105 shadow-2xl z-50 ring-2 ring-primary/50"
       )}
     >
@@ -227,6 +254,39 @@ export function KanbanCard({
           </div>
         )}
 
+        {/* Botão Grande de Avançar Etapa */}
+        {nextStage && (
+          <div className="mb-3">
+            <Button
+              size="lg"
+              className={cn(
+                "w-full h-12 text-sm font-semibold transition-all duration-200 gap-2",
+                checklistComplete
+                  ? "bg-success hover:bg-success/90 text-white shadow-md hover:shadow-lg"
+                  : "bg-muted text-muted-foreground cursor-not-allowed"
+              )}
+              disabled={!checklistComplete}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (checklistComplete) {
+                  onAdvanceStage?.();
+                }
+              }}
+            >
+              {checklistComplete ? (
+                <>
+                  Avançar para {nextStage.nome}
+                  <ArrowRight className="h-5 w-5" />
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-5 w-5" />
+                  Complete o checklist para avançar
+                </>
+              )}
+            </Button>
+          </div>
+        )}
 
         {/* Ações Rápidas */}
         <div className="flex flex-wrap items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
