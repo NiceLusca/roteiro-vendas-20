@@ -22,6 +22,30 @@ export default function Pipelines() {
 
   const activePipelines = pipelines.filter(p => p.ativo);
 
+  // Processar dados apenas se tiver pipelineId
+  const pipelineStages = pipelineId 
+    ? stages.filter(stage => stage.pipeline_id === pipelineId).sort((a, b) => a.ordem - b.ordem)
+    : [];
+
+  const allEntries = pipelineId
+    ? leadPipelineEntries
+        .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId)
+        .map(entry => {
+          const lead = leads.find(l => l.id === entry.lead_id);
+          return lead ? { ...entry, lead } : null;
+        })
+        .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+    : [];
+
+  // Buscar agendamentos - ANTES de qualquer return condicional
+  useEffect(() => {
+    if (!pipelineId || allEntries.length === 0) return;
+    
+    const leadIds = allEntries.map(entry => entry.lead_id);
+    fetchNextAppointments(leadIds);
+  }, [pipelineId, allEntries.length, fetchNextAppointments]);
+
+  // Redirecionar para seleção se necessário
   useEffect(() => {
     if (!loading && !pipelineId && activePipelines.length > 0) {
       navigate('/pipelines/select', { replace: true });
@@ -50,27 +74,6 @@ export default function Pipelines() {
       </div>
     );
   }
-
-  // Processar entries
-  const pipelineStages = stages
-    .filter(stage => stage.pipeline_id === pipelineId)
-    .sort((a, b) => a.ordem - b.ordem);
-
-  const allEntries = leadPipelineEntries
-    .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId)
-    .map(entry => {
-      const lead = leads.find(l => l.id === entry.lead_id);
-      return lead ? { ...entry, lead } : null;
-    })
-    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
-
-  // Buscar agendamentos
-  useEffect(() => {
-    if (allEntries.length > 0) {
-      const leadIds = allEntries.map(entry => entry.lead_id);
-      fetchNextAppointments(leadIds);
-    }
-  }, [allEntries.length]);
 
   // Agrupar por stage
   const stageEntries = pipelineStages.map((stage, index) => {
