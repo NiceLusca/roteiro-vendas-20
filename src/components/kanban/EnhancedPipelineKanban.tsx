@@ -54,7 +54,11 @@ import {
   Plus
 } from 'lucide-react';
 
-export function EnhancedPipelineKanban() {
+interface EnhancedPipelineKanbanProps {
+  selectedPipelineId?: string;
+}
+
+export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: EnhancedPipelineKanbanProps = {}) {
   const navigate = useNavigate();
   const { pipelines, loading: pipelinesLoading, savePipeline, saveComplexPipeline } = useSupabasePipelines();
   const { leads } = useSupabaseLeads();
@@ -63,7 +67,7 @@ export function EnhancedPipelineKanban() {
     console.log('EnhancedPipelineKanban render:', { pipelines, pipelinesLoading });
   }
   
-  const [selectedPipelineId, setSelectedPipelineId] = useState('');
+  const [internalSelectedPipelineId, setInternalSelectedPipelineId] = useState('');
   const [isNewPipelineDialogOpen, setIsNewPipelineDialogOpen] = useState(false);
   const [isPipelineWizardDialogOpen, setIsPipelineWizardDialogOpen] = useState(false);
   const [successAnimation, setSuccessAnimation] = useState({
@@ -71,16 +75,18 @@ export function EnhancedPipelineKanban() {
     message: ''
   });
 
+  const selectedPipelineId = propPipelineId || internalSelectedPipelineId;
+
   // Update selectedPipelineId when pipelines are loaded
   useEffect(() => {
-    if (pipelines.length > 0 && !selectedPipelineId) {
+    if (!propPipelineId && pipelines.length > 0 && !internalSelectedPipelineId) {
       const primaryPipeline = pipelines.find(p => p.primary_pipeline && p.ativo);
       const defaultPipeline = primaryPipeline || pipelines.find(p => p.ativo) || pipelines[0];
       if (defaultPipeline) {
-        setSelectedPipelineId(defaultPipeline.id);
+        setInternalSelectedPipelineId(defaultPipeline.id);
       }
     }
-  }, [pipelines, selectedPipelineId]);
+  }, [pipelines, internalSelectedPipelineId, propPipelineId]);
 
   // Use real Supabase hooks
   const { entries: leadPipelineEntries, updateEntry, refetch } = useSupabaseLeadPipelineEntries(selectedPipelineId);
@@ -549,7 +555,7 @@ export function EnhancedPipelineKanban() {
           <PipelineSelector
             pipelines={pipelines as any}
             selectedPipelineId={selectedPipelineId}
-            onPipelineChange={setSelectedPipelineId}
+            onPipelineChange={propPipelineId ? undefined : setInternalSelectedPipelineId}
             onConfigurePipeline={handleConfigurePipeline}
           />
         </div>

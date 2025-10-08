@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContextSecure";
 import { GlobalKeyboardShortcuts } from "@/components/help/GlobalKeyboardShortcuts";
 import Index from "./pages/Index";
 import Pipelines from "./pages/Pipelines";
+import PipelineSelector from "./pages/PipelineSelector";
 import Leads from "./pages/Leads";
 import NotFound from "./pages/NotFound";
 import { Auth } from "./pages/Auth";
@@ -91,7 +92,9 @@ function App() {
                     </ProtectedRoute>
                   }>
                     <Route index element={<Index />} />
-                    <Route path="pipelines" element={<Pipelines />} />
+                    <Route path="pipelines/select" element={<PipelineSelector />} />
+                    <Route path="pipelines/:pipelineId" element={<Pipelines />} />
+                    <Route path="pipelines" element={<Navigate to="/pipelines/select" replace />} />
                     <Route path="leads" element={<Leads />} />
                           <Route path="agenda" element={
                             <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
