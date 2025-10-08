@@ -286,8 +286,9 @@ function LeadsContent() {
 
   const handleBulkDelete = useCallback(async () => {
     await deleteLeads(filteredLeadIds);
-    await refetch();
-  }, [filteredLeadIds, deleteLeads, refetch]);
+    // Force page reload after deletion to clear all caches
+    window.location.reload();
+  }, [filteredLeadIds, deleteLeads]);
 
   const handleOpenBulkPipelineDialog = useCallback(async () => {
     try {
