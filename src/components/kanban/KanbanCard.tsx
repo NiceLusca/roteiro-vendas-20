@@ -138,25 +138,27 @@ export function KanbanCard({
     <Card 
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      {...listeners}
       className={cn(
-        "kanban-card group cursor-grab active:cursor-grabbing transition-all duration-300 hover:shadow-md hover:-translate-y-1 border-2",
+        "kanban-card group transition-all duration-300 hover:shadow-md hover:-translate-y-1 border-2",
         closerColors.bg,
         closerColors.border,
         (dragActive || isDragging) && "opacity-60 rotate-2 scale-105 shadow-2xl z-50 ring-2 ring-primary/50"
       )}
     >
-      <CardContent className="p-4" onClick={(e) => {
-        // Não abrir o dialog se clicar em um botão
-        if ((e.target as HTMLElement).closest('button')) {
-          return;
-        }
-        onEditLead?.();
-      }}>
-        {/* Header do Card */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1 min-w-0">
+      <CardContent className="p-4">
+        {/* Header do Card - Área de Drag */}
+        <div 
+          {...attributes}
+          {...listeners}
+          className="flex items-start justify-between mb-3 cursor-grab active:cursor-grabbing"
+        >
+          <div 
+            className="flex-1 min-w-0 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEditLead?.();
+            }}
+          >
             <h4 className="font-semibold text-sm text-foreground truncate">
               {lead.nome}
             </h4>
