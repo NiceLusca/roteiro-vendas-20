@@ -216,11 +216,18 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         .from('lead_pipeline_entries')
         .update(updateData)
         .eq('id', entryId)
-        .select()
+        .select('*')
         .maybeSingle();
 
       if (error) {
-        console.error('❌ Erro Supabase ao atualizar entry:', error);
+        console.error('❌ Erro Supabase ao atualizar entry:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          entryId,
+          updateData
+        });
         toast({
           title: "Erro ao atualizar",
           description: error.message,
@@ -231,7 +238,11 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
       }
 
       if (!data) {
-        console.error('❌ Update não retornou dados');
+        console.error('❌ Update não retornou dados:', {
+          entryId,
+          updateData,
+          queryInfo: 'UPDATE lead_pipeline_entries executado mas sem retorno'
+        });
         return null;
       }
 

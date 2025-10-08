@@ -337,6 +337,7 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
       const updateResult = await updateEntry(result.entryId, {
         etapa_atual_id: result.toStage,
         data_entrada_etapa: new Date().toISOString(),
+        saude_etapa: 'Verde',
         tempo_em_etapa_dias: 0,
         dias_em_atraso: 0
       });
