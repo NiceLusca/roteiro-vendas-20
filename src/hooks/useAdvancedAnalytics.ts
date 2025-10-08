@@ -67,7 +67,7 @@ export function useAdvancedAnalytics(dateRange?: { start: Date; end: Date }) {
       // Fetch pipeline entries for stage performance
       const { data: pipelineEntries, error: pipelineError } = await supabase
         .from('lead_pipeline_entries')
-        .select('*, pipeline_stages!inner(nome), leads!inner(*)')
+        .select('*, pipeline_stages!etapa_atual_id(nome), leads!lead_id(*)')
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString());
 

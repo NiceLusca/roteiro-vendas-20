@@ -347,6 +347,27 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_lead_pipeline_entries_lead"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_lead_pipeline_entries_pipeline"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_lead_pipeline_entries_stage"
+            columns: ["etapa_atual_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "lead_pipeline_entries_etapa_atual_id_fkey"
             columns: ["etapa_atual_id"]
             isOneToOne: false

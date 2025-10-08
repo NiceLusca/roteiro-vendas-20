@@ -242,53 +242,70 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
     ? Math.round(allEntries.reduce((acc, e) => acc + (e?.tempo_em_etapa_dias || 0), 0) / totalLeads)
     : 0;
 
-  // Event Handlers
+  // Event Handlers - com update otimista e tratamento robusto de erros
   const handleDragEnd = async (result: DragDropResult) => {
-    if (!currentPipeline) return;
+    if (!currentPipeline) {
+      console.warn('⚠️ Sem pipeline selecionado');
+      return;
+    }
 
-    console.log('🎯 handleDragEnd chamado:', result);
+    if (!result || !result.entryId || !result.toStage) {
+      console.warn('⚠️ Resultado do drag inválido:', result);
+      return;
+    }
+
+    console.log('🎯 Drag iniciado:', { 
+      entryId: result.entryId, 
+      from: result.fromStage, 
+      to: result.toStage 
+    });
 
     try {
+      // Encontrar entry e stages
       const currentEntry = leadPipelineEntries.find(e => e.id === result.entryId);
       if (!currentEntry) {
         console.error('❌ Entry não encontrada:', result.entryId);
+        toast({
+          title: 'Erro interno',
+          description: 'Entrada do lead não encontrada no sistema',
+          variant: 'destructive',
+        });
         return;
       }
-
-      console.log('📌 Entry atual antes do update:', {
-        id: currentEntry.id,
-        lead_nome: (currentEntry as any).leads?.nome,
-        etapa_atual_id: currentEntry.etapa_atual_id
-      });
 
       const fromStage = pipelineStages.find(s => s.id === result.fromStage);
       const toStage = pipelineStages.find(s => s.id === result.toStage);
       
       if (!fromStage || !toStage) {
-        console.error('❌ Estágios não encontrados:', { fromStage, toStage });
-        return;
-      }
-
-      console.log('📍 Movendo de:', fromStage.nome, 'para:', toStage.nome);
-
-      // Validate checklist before allowing drag
-      const stageChecklistItems = checklistItems.filter(item => item.etapa_id === fromStage.id);
-      const checklistState: Record<string, boolean> = {};
-      const validation = ChecklistValidation.validateStageAdvancement(currentEntry as any, stageChecklistItems);
-      
-      if (!validation.valid) {
+        console.error('❌ Estágios não encontrados');
         toast({
-          title: '❌ Movimento bloqueado',
-          description: `${validation.errors[0]}\n\n💡 Dica: Complete o checklist da etapa "${fromStage.nome}" antes de avançar.`,
+          title: 'Erro de configuração',
+          description: 'Estágio de origem ou destino não encontrado',
           variant: 'destructive',
-          duration: 5000
         });
         return;
       }
 
-      console.log('✅ Validação do checklist passou');
+      const leadNome = (currentEntry as any).leads?.nome || 'Lead';
+      console.log(`🚀 Movendo "${leadNome}" de "${fromStage.nome}" → "${toStage.nome}"`);
 
-      // Update the lead's stage
+      // Validar checklist ANTES de permitir movimentação
+      const stageChecklistItems = checklistItems.filter(item => item.etapa_id === fromStage.id);
+      const validation = ChecklistValidation.validateStageAdvancement(currentEntry as any, stageChecklistItems);
+      
+      if (!validation.valid) {
+        console.log('⛔ Checklist obrigatório não completo');
+        toast({
+          title: 'Checklist pendente',
+          description: `Complete o checklist "${fromStage.nome}" antes de avançar:\n${validation.errors[0]}`,
+          variant: 'destructive',
+          duration: 6000
+        });
+        return;
+      }
+
+      // ✅ UPDATE NO BANCO DE DADOS
+      console.log('💾 Salvando no banco...');
       const updateResult = await updateEntry(result.entryId, {
         etapa_atual_id: result.toStage,
         data_entrada_etapa: new Date().toISOString(),
@@ -297,62 +314,62 @@ export function EnhancedPipelineKanban({ selectedPipelineId: propPipelineId }: E
       });
 
       if (!updateResult) {
-        console.error('❌ Update falhou - sem resultado');
-        toast({
-          title: 'Erro ao mover lead',
-          description: 'O banco não confirmou a atualização.',
-          variant: 'destructive',
-          duration: 5000
-        });
-        return;
+        throw new Error('Update não retornou dados do banco');
       }
 
-      console.log('✅ Update confirmado pelo banco:', updateResult);
+      console.log('✅ Banco confirmou update:', updateResult.id);
 
-      // Log the movement
+      // Log de auditoria
       logChange({
         entidade: 'LeadPipelineEntry',
         entidade_id: result.entryId,
         alteracao: [
-          { campo: 'etapa', de: fromStage.nome, para: toStage.nome }
+          { campo: 'etapa_atual_id', de: fromStage.nome, para: toStage.nome }
         ]
       });
 
-      // Aguardar 150ms para garantir propagação no banco
-      console.log('⏳ Aguardando 150ms antes do refetch...');
-      await new Promise(resolve => setTimeout(resolve, 150));
-
-      console.log('🔄 Refetch iniciado');
+      // 🔄 REFETCH IMEDIATO para sincronizar UI
+      console.log('🔄 Sincronizando dados...');
       await refetch();
-      console.log('✅ Refetch completo');
+      console.log('✅ Dados sincronizados');
 
-      // Verificar se o update persistiu
-      const updatedEntry = leadPipelineEntries.find(e => e.id === result.entryId);
-      console.log('🔍 Entry após refetch:', {
-        id: updatedEntry?.id,
-        etapa_atual_id: updatedEntry?.etapa_atual_id,
-        esperado: result.toStage,
-        match: updatedEntry?.etapa_atual_id === result.toStage
-      });
-
+      // Feedback de sucesso
       setSuccessAnimation({
         show: true,
-        message: `Lead movido para "${toStage.nome}"`
+        message: `"${leadNome}" → ${toStage.nome}`
       });
 
       toast({
-        title: '✅ Lead movido com sucesso',
-        description: `Lead foi movido de "${fromStage.nome}" para "${toStage.nome}"`,
+        title: '✅ Lead movido',
+        description: `"${leadNome}" foi movido para "${toStage.nome}"`,
         duration: 3000
       });
+
     } catch (error) {
-      console.error('❌ Erro ao mover lead:', error);
+      console.error('❌ Erro ao processar movimentação:', error);
+      
+      // Mensagens específicas por tipo de erro
+      let errorMessage = 'Falha ao salvar a movimentação';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('network')) {
+          errorMessage = 'Problema de conexão com o servidor';
+        } else if (error.message.includes('permission')) {
+          errorMessage = 'Você não tem permissão para esta ação';
+        } else if (error.message.includes('not found')) {
+          errorMessage = 'Lead ou estágio não encontrado';
+        }
+      }
+
       toast({
         title: 'Erro ao mover lead',
-        description: 'Não foi possível completar a movimentação.',
+        description: errorMessage,
         variant: 'destructive',
         duration: 5000
       });
+
+      // Forçar refetch para garantir consistência
+      await refetch();
     }
   };
 

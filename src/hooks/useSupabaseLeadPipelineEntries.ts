@@ -44,7 +44,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         .from('lead_pipeline_entries')
         .select(`
           *,
-          leads!inner(
+          leads!lead_id(
             id,
             nome,
             email,
@@ -56,7 +56,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
             valor_lead,
             user_id
           ),
-          pipeline_stages!inner(nome, ordem, pipeline_id)
+          pipeline_stages!etapa_atual_id(nome, ordem, pipeline_id)
         `)
         .eq('status_inscricao', 'Ativo');
 
