@@ -149,7 +149,9 @@ export function useLeadMovement() {
       });
 
       console.log('✅ [useLeadMovement] Sucesso total');
+      console.log('🔔 Chamando onSuccess callback');
       onSuccess?.();
+      console.log('🔔 onSuccess callback concluído');
 
       return { success: true, message: successMsg };
 

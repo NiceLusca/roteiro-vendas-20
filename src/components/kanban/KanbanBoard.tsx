@@ -18,6 +18,7 @@ interface KanbanBoardProps {
     entries: Array<LeadPipelineEntry & { lead: Lead }>;
     wipExceeded: boolean;
   }>;
+  onRefresh?: () => void;
   onAddLead?: (stageId: string) => void;
   onViewLead?: (leadId: string) => void;
   onEditLead?: (leadId: string) => void;
@@ -39,6 +40,7 @@ interface KanbanBoardProps {
 export function KanbanBoard({
   selectedPipelineId,
   stageEntries,
+  onRefresh,
   onAddLead,
   onViewLead,
   onEditLead,
@@ -140,9 +142,14 @@ export function KanbanBoard({
       checklistItems: stageChecklistItems,
       currentEntriesInTargetStage: toStageEntry.entries.length,
       onSuccess: async () => {
-        console.log('✅ [KanbanBoard] Refetchando dados');
+        console.log('✅ [KanbanBoard] onSuccess INICIADO');
+        console.log('📞 Chamando refetch...');
         await refetch(selectedPipelineId);
-        setRefreshKey(prev => prev + 1); // ✅ Força re-render da página pai
+        console.log('✅ refetch concluído');
+        setRefreshKey(prev => prev + 1);
+        console.log('🔄 Chamando onRefresh do pai...');
+        onRefresh?.();
+        console.log('✅ [KanbanBoard] onSuccess COMPLETO');
       },
       onError: async () => {
         console.log('🔄 [KanbanBoard] Refetch de recuperação');

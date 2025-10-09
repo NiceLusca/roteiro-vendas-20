@@ -9,7 +9,8 @@ import { useKanbanAppointments } from '@/hooks/useKanbanAppointments';
 import { EnhancedLoading } from '@/components/ui/enhanced-loading';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useLeadMovement } from '@/hooks/useLeadMovement';
 
 export default function Pipelines() {
   const { pipelineId } = useParams<{ pipelineId: string }>();
@@ -19,6 +20,10 @@ export default function Pipelines() {
   const { entries: leadPipelineEntries } = useSupabaseLeadPipelineEntries(pipelineId);
   const { stages } = useSupabasePipelineStages(pipelineId);
   const { fetchNextAppointments, getNextAppointmentForLead } = useKanbanAppointments();
+  const { moveLead } = useLeadMovement();
+  
+  // Estado para forçar refresh da UI
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const activePipelines = pipelines.filter(p => p.ativo);
 
@@ -31,6 +36,12 @@ export default function Pipelines() {
   const allEntries = useMemo(() => {
     if (!pipelineId) return [];
     
+    console.log('🔄 [Pipelines] Recalculando allEntries:', { 
+      pipelineId, 
+      entriesCount: leadPipelineEntries.length,
+      refreshTrigger 
+    });
+    
     return leadPipelineEntries
       .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId)
       .map(entry => {
@@ -38,7 +49,45 @@ export default function Pipelines() {
         return lead ? { ...entry, lead } : null;
       })
       .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
-  }, [pipelineId, leadPipelineEntries, leads]);
+  }, [pipelineId, leadPipelineEntries, leads, refreshTrigger]);
+
+  // Handler para forçar refresh da UI
+  const handleRefresh = useCallback(() => {
+    console.log('🔄 [Pipelines] Forçando refresh da UI');
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
+
+  // Handler para avançar etapa via botão
+  const handleAdvanceStage = useCallback(async (entryId: string) => {
+    console.log('📍 [Pipelines] handleAdvanceStage chamado:', entryId);
+    
+    const entry = allEntries.find(e => e.id === entryId);
+    if (!entry) {
+      console.error('❌ Entry não encontrada');
+      return;
+    }
+    
+    const currentStageIndex = pipelineStages.findIndex(s => s.id === entry.etapa_atual_id);
+    const currentStage = pipelineStages[currentStageIndex];
+    const nextStage = pipelineStages[currentStageIndex + 1];
+    
+    if (!currentStage || !nextStage) {
+      console.error('❌ Stages não encontrados');
+      return;
+    }
+    
+    await moveLead({
+      entry,
+      fromStage: currentStage,
+      toStage: nextStage,
+      checklistItems: [],
+      currentEntriesInTargetStage: 0,
+      onSuccess: () => {
+        console.log('✅ [Pipelines] Avançou com sucesso');
+        handleRefresh();
+      }
+    });
+  }, [allEntries, pipelineStages, moveLead, handleRefresh]);
 
   // Buscar agendamentos - ANTES de qualquer return condicional
   useEffect(() => {
@@ -115,10 +164,12 @@ export default function Pipelines() {
         )}
         
         <KanbanBoard
-          key={`kanban-${pipelineId}-${allEntries.length}`}
+          key={`kanban-${pipelineId}-${allEntries.length}-${refreshTrigger}`}
           selectedPipelineId={pipelineId}
           stageEntries={stageEntries}
           onViewLead={(leadId) => window.open(`/leads/${leadId}`, '_blank')}
+          onAdvanceStage={handleAdvanceStage}
+          onRefresh={handleRefresh}
         />
       </div>
     </CRMProviderWrapper>

@@ -38,7 +38,11 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
       return;
     }
     
-    console.log('🔍 fetchEntries chamado com pipelineId:', effectivePipelineId);
+    console.log('🔍 fetchEntries chamado:', { 
+      effectivePipelineId, 
+      forceUpdate,
+      timestamp: Date.now() 
+    });
     
     try {
       setLoading(true);
@@ -65,6 +69,11 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
 
       if (targetPipelineId || pipelineId) {
         query = query.eq('pipeline_id', targetPipelineId || pipelineId);
+      }
+
+      // ✅ Adicionar timestamp na query para quebrar cache HTTP
+      if (forceUpdate) {
+        query = query.limit(9999); // Força query diferente do cache
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -96,10 +105,10 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
 
       console.log('✅ Leads carregados:', processedEntries.length);
       
-      // Forçar React a detectar mudança quando necessário
+      // ✅ SEMPRE forçar novo array quando forceUpdate
       if (forceUpdate) {
-        console.log('🔄 Forçando re-render com novo array');
-        setEntries([...processedEntries as any]);
+        console.log('🔄 Forçando re-render com NOVO array de referência');
+        setEntries([...processedEntries as any]); // Garante nova referência
       } else {
         setEntries(processedEntries as any);
       }
