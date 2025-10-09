@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { KanbanColumn } from './KanbanColumn';
@@ -50,6 +50,7 @@ export function KanbanBoard({
   onTransferPipeline
 }: KanbanBoardProps) {
   const [activeEntry, setActiveEntry] = useState<(LeadPipelineEntry & { lead: Lead }) | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const { moveLead, isMoving } = useLeadMovement();
   const { refetch } = useSupabaseLeadPipelineEntries(selectedPipelineId);
   const { stages } = useSupabasePipelineStages(selectedPipelineId);
@@ -141,6 +142,7 @@ export function KanbanBoard({
       onSuccess: async () => {
         console.log('✅ [KanbanBoard] Refetchando dados');
         await refetch(selectedPipelineId);
+        setRefreshKey(prev => prev + 1); // ✅ Força re-render da página pai
       },
       onError: async () => {
         console.log('🔄 [KanbanBoard] Refetch de recuperação');

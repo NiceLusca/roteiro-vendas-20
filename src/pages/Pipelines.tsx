@@ -9,7 +9,7 @@ import { useKanbanAppointments } from '@/hooks/useKanbanAppointments';
 import { EnhancedLoading } from '@/components/ui/enhanced-loading';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 export default function Pipelines() {
   const { pipelineId } = useParams<{ pipelineId: string }>();
@@ -27,15 +27,18 @@ export default function Pipelines() {
     ? stages.filter(stage => stage.pipeline_id === pipelineId).sort((a, b) => a.ordem - b.ordem)
     : [];
 
-  const allEntries = pipelineId
-    ? leadPipelineEntries
-        .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId)
-        .map(entry => {
-          const lead = leads.find(l => l.id === entry.lead_id);
-          return lead ? { ...entry, lead } : null;
-        })
-        .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
-    : [];
+  // ✅ useMemo para reagir a mudanças nos dados
+  const allEntries = useMemo(() => {
+    if (!pipelineId) return [];
+    
+    return leadPipelineEntries
+      .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId)
+      .map(entry => {
+        const lead = leads.find(l => l.id === entry.lead_id);
+        return lead ? { ...entry, lead } : null;
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+  }, [pipelineId, leadPipelineEntries, leads]);
 
   // Buscar agendamentos - ANTES de qualquer return condicional
   useEffect(() => {
@@ -112,6 +115,7 @@ export default function Pipelines() {
         )}
         
         <KanbanBoard
+          key={`kanban-${pipelineId}-${allEntries.length}`}
           selectedPipelineId={pipelineId}
           stageEntries={stageEntries}
           onViewLead={(leadId) => window.open(`/leads/${leadId}`, '_blank')}

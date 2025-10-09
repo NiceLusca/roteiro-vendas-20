@@ -26,7 +26,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
   const { user } = useAuth();
 
   // Fetch lead pipeline entries
-  const fetchEntries = async (targetPipelineId?: string) => {
+  const fetchEntries = async (targetPipelineId?: string, forceUpdate = false) => {
     if (!user) return;
     
     // ✅ Guard: Não fazer query se não houver pipeline selecionado
@@ -95,7 +95,14 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
       }));
 
       console.log('✅ Leads carregados:', processedEntries.length);
-      setEntries(processedEntries as any);
+      
+      // Forçar React a detectar mudança quando necessário
+      if (forceUpdate) {
+        console.log('🔄 Forçando re-render com novo array');
+        setEntries([...processedEntries as any]);
+      } else {
+        setEntries(processedEntries as any);
+      }
     } catch (error) {
       console.error('Erro ao buscar entries do pipeline:', error);
     } finally {
@@ -344,13 +351,20 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
           table: 'lead_pipeline_entries'
         },
         (payload) => {
-          console.log('🔔 Realtime event recebido:', payload.eventType);
+          const newRecord = payload.new as any;
+          const oldRecord = payload.old as any;
+          
+          console.log('🔔 Realtime event recebido:', {
+            eventType: payload.eventType,
+            leadId: newRecord?.lead_id || oldRecord?.lead_id,
+            etapaAtual: newRecord?.etapa_atual_id
+          });
           
           // Debounce refetch para evitar múltiplas chamadas
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
             console.log('🔄 Executando refetch após debounce');
-            fetchEntries();
+            fetchEntries(pipelineId, true); // Força re-render
           }, 300);
         }
       )
@@ -374,12 +388,12 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     updateHealthStatus,
     refetch: (explicitPipelineId?: string) => {
       const targetId = explicitPipelineId || pipelineId;
-      console.log('🔄 refetch() chamado:', { 
+      console.log('🔄 refetch() FORÇADO:', { 
         explicitPipelineId, 
         hookPipelineId: pipelineId, 
         targetId 
       });
-      return fetchEntries(targetId);
+      return fetchEntries(targetId, true); // ✅ Força re-render
     }
   };
 }
