@@ -12,7 +12,16 @@ import { ArrowLeft } from 'lucide-react';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 
-// Componente interno que usa hooks condicionalmente
+// Camada intermediária que envolve com providers
+function PipelinesWithProviders({ pipelineId }: { pipelineId: string }) {
+  return (
+    <CRMProviderWrapper>
+      <PipelinesContent pipelineId={pipelineId} />
+    </CRMProviderWrapper>
+  );
+}
+
+// Componente interno que usa hooks (agora dentro dos providers)
 function PipelinesContent({ pipelineId }: { pipelineId: string }) {
   const navigate = useNavigate();
   const { pipelines } = useSupabasePipelines();
@@ -129,32 +138,30 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
   });
 
   return (
-    <CRMProviderWrapper>
-      <div className="space-y-4">
-        {activePipelines.length > 1 && (
-          <div className="px-6 pt-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/pipelines/select')}
-              className="gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Voltar para seleção de pipelines
-            </Button>
-          </div>
-        )}
-        
-        <KanbanBoard
-          key={`kanban-${pipelineId}-${allEntries.length}-${refreshTrigger}`}
-          selectedPipelineId={pipelineId}
-          stageEntries={stageEntries}
-          onViewLead={(leadId) => window.open(`/leads/${leadId}`, '_blank')}
-          onAdvanceStage={handleAdvanceStage}
-          onRefresh={handleRefresh}
-        />
-      </div>
-    </CRMProviderWrapper>
+    <div className="space-y-4">
+      {activePipelines.length > 1 && (
+        <div className="px-6 pt-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/pipelines/select')}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Voltar para seleção de pipelines
+          </Button>
+        </div>
+      )}
+      
+      <KanbanBoard
+        key={`kanban-${pipelineId}-${allEntries.length}-${refreshTrigger}`}
+        selectedPipelineId={pipelineId}
+        stageEntries={stageEntries}
+        onViewLead={(leadId) => window.open(`/leads/${leadId}`, '_blank')}
+        onAdvanceStage={handleAdvanceStage}
+        onRefresh={handleRefresh}
+      />
+    </div>
   );
 }
 
@@ -181,5 +188,5 @@ export default function Pipelines() {
     return null;
   }
 
-  return <PipelinesContent pipelineId={pipelineId} />;
+  return <PipelinesWithProviders pipelineId={pipelineId} />;
 }
