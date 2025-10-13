@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    dedupe: ['react', 'react-dom', 'zustand'],
+    dedupe: ['react', 'react-dom'],
   },
   build: {
     target: 'es2020',
@@ -40,7 +40,6 @@ export default defineConfig(({ mode }) => ({
         assetFileNames: 'assets/[name]-[hash].[ext]',
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
-          'zustand-vendor': ['zustand'],
         },
       },
     },
@@ -54,8 +53,6 @@ export default defineConfig(({ mode }) => ({
       'react-router-dom',
       '@tanstack/react-query',
       '@supabase/supabase-js',
-      'zustand',
-      'zustand/middleware',
     ],
     force: true,
   },

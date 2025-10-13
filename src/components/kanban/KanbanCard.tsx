@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo, DragEvent, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,8 +20,6 @@ import {
   CalendarX
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
 interface AppointmentInfo {
   id: string;
@@ -47,6 +45,8 @@ interface KanbanCardProps {
   onOpenChecklist?: () => void;
   onRegressStage?: () => void;
   onTransferPipeline?: () => void;
+  onDragStart?: (entryId: string) => void;
+  onDragEnd?: () => void;
 }
 
 export const KanbanCard = memo(function KanbanCard({
@@ -64,8 +64,12 @@ export const KanbanCard = memo(function KanbanCard({
   onRegisterInteraction,
   onOpenChecklist,
   onRegressStage,
-  onTransferPipeline
+  onTransferPipeline,
+  onDragStart,
+  onDragEnd
 }: KanbanCardProps) {
+  const [isLocalDragging, setIsLocalDragging] = useState(false);
+
   // Early return if lead is not loaded yet
   if (!lead) {
     return (
@@ -79,26 +83,23 @@ export const KanbanCard = memo(function KanbanCard({
       </Card>
     );
   }
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging: dragActive,
-  } = useSortable({ 
-    id: entry.id,
-    // ✅ FASE 2: Fine-tuning @dnd-kit
-    transition: {
-      duration: 150,
-      easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-    },
-  });
 
-  const style = useMemo(() => ({
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }), [transform, transition]);
+  // HTML5 Native Drag Handlers
+  const handleDragStart = (e: DragEvent<HTMLDivElement>) => {
+    setIsLocalDragging(true);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      entryId: entry.id,
+      fromStageId: entry.etapa_atual_id,
+      leadName: lead?.nome
+    }));
+    onDragStart?.(entry.id);
+  };
+
+  const handleDragEnd = () => {
+    setIsLocalDragging(false);
+    onDragEnd?.();
+  };
 
   const getScoreBadgeClass = useCallback((classification: string) => {
     switch (classification) {
@@ -145,21 +146,20 @@ export const KanbanCard = memo(function KanbanCard({
 
   return (
     <Card 
-      ref={setNodeRef}
-      style={style}
+      draggable={true}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       className={cn(
-        "kanban-card group transition-all duration-300 hover:shadow-md hover:-translate-y-1 border-2",
+        "kanban-card group transition-all duration-200 hover:shadow-md hover:-translate-y-1 border-2 cursor-grab active:cursor-grabbing",
         closerColors.bg,
         closerColors.border,
-        (dragActive || isDragging) && "opacity-60 rotate-2 scale-105 shadow-2xl z-50 ring-2 ring-primary/50"
+        (isLocalDragging || isDragging) && "opacity-50 rotate-2 scale-105 shadow-2xl z-50 ring-2 ring-primary/50"
       )}
     >
       <CardContent className="p-4">
         {/* Header do Card - Área de Drag */}
         <div 
-          {...attributes}
-          {...listeners}
-          className="flex items-start justify-between mb-3 cursor-grab active:cursor-grabbing"
+          className="flex items-start justify-between mb-3"
         >
           <div 
             className="flex-1 min-w-0 cursor-pointer"

@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContextSecure';
 import { useAudit } from '@/contexts/AuditContext';
 import { LeadMovementValidator } from '@/lib/leadMovementValidator';
 import { LeadPipelineEntry, PipelineStage, StageChecklistItem } from '@/types/crm';
-import { useLeadPipelineStore } from '@/stores/leadPipelineStore';
 
 interface MoveLeadParams {
   entry: LeadPipelineEntry;
@@ -23,9 +22,9 @@ interface MoveResult {
 }
 
 /**
- * Hook centralizado para movimentação de leads com:
- * - Update otimista
- * - Rollback automático em caso de erro
+ * Hook simplificado para movimentação de leads:
+ * - Update direto no banco (sem Zustand)
+ * - Sincronização via Supabase Realtime (~50ms)
  * - Validações completas
  * - Logs detalhados
  */
@@ -34,7 +33,6 @@ export function useLeadMovement() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { logChange } = useAudit();
-  const { addOptimisticUpdate, clearOptimisticUpdate } = useLeadPipelineStore();
 
   const moveLead = useCallback(async ({
     entry,
@@ -108,21 +106,13 @@ export function useLeadMovement() {
         updated_at: new Date().toISOString()
       };
 
-      console.log('💾 [useLeadMovement] Preparando update:', {
+      console.log('💾 [useLeadMovement] Executando update no banco:', {
         entryId: entry.id,
         fromStage: fromStage.nome,
         toStage: toStage.nome
       });
 
-      // ✅ Update otimista - UI instantânea (0ms)
-      console.log('⚡ [useLeadMovement] Adicionando update otimista');
-      addOptimisticUpdate(entry.id, updateData);
-
-      // ✅ Notificar componente pai IMEDIATAMENTE
-      onSuccess?.();
-
-      // 🔄 DEPOIS fazer update no Supabase (background)
-      console.log('📡 [useLeadMovement] Sincronizando com banco...');
+      // Update direto no Supabase
       const { data, error } = await supabase
         .from('lead_pipeline_entries')
         .update(updateData)
@@ -139,9 +129,6 @@ export function useLeadMovement() {
       }
 
       console.log('✅ [useLeadMovement] Update confirmado:', data.id);
-      
-      // Limpar update otimista após confirmação da API
-      clearOptimisticUpdate(entry.id);
 
       // Log de auditoria
       logChange({
@@ -162,16 +149,15 @@ export function useLeadMovement() {
         duration: 3000
       });
 
-      console.log('✅ [useLeadMovement] Sucesso total - API confirmou update otimista');
+      // Notificar sucesso após API confirmar
+      onSuccess?.();
+
+      console.log('✅ [useLeadMovement] Sucesso total');
 
       return { success: true, message: successMsg };
 
     } catch (error) {
       console.error('❌ [useLeadMovement] Erro no update:', error);
-      
-      // ✅ Limpar update otimista em caso de erro
-      console.log('🔄 [useLeadMovement] Removendo update otimista devido a erro');
-      clearOptimisticUpdate(entry.id);
       
       // Notificar componente pai sobre erro
       onError?.();

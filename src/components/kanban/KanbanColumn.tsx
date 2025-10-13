@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, DragEvent, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StageTemplatesButton } from '@/components/pipeline/StageTemplatesButton';
 import { StageAnalyticsButton } from '@/components/pipeline/StageAnalyticsButton';
@@ -8,8 +8,6 @@ import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-import { useDroppable } from '@dnd-kit/core';
 
 interface KanbanColumnProps {
   stage: PipelineStage;
@@ -27,6 +25,9 @@ interface KanbanColumnProps {
   onOpenChecklist?: (entryId: string) => void;
   onRegressStage?: (entryId: string) => void;
   onTransferPipeline?: (leadId: string) => void;
+  onDropLead?: (entryId: string, toStageId: string) => void;
+  onDragStart?: (entryId: string) => void;
+  onDragEnd?: () => void;
 }
 
 export const KanbanColumn = memo(function KanbanColumn({
@@ -44,11 +45,43 @@ export const KanbanColumn = memo(function KanbanColumn({
   onRegisterInteraction,
   onOpenChecklist,
   onRegressStage,
-  onTransferPipeline
+  onTransferPipeline,
+  onDropLead,
+  onDragStart,
+  onDragEnd
 }: KanbanColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: stage.id,
-  });
+  const [isOver, setIsOver] = useState(false);
+
+  // HTML5 Native Drop Handlers
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault(); // CRUCIAL para permitir drop
+    e.dataTransfer.dropEffect = 'move';
+    setIsOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsOver(false);
+  };
+
+  const handleDrop = async (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsOver(false);
+
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      const { entryId, fromStageId } = data;
+
+      if (fromStageId === stage.id) {
+        console.log('⚠️ Mesma etapa, ignorando drop');
+        return;
+      }
+
+      console.log('📍 Drop recebido:', { entryId, toStageId: stage.id });
+      await onDropLead?.(entryId, stage.id);
+    } catch (error) {
+      console.error('❌ Erro ao processar drop:', error);
+    }
+  };
 
   // ✅ FASE 2: Memoizar computações pesadas
   const healthCounts = useMemo(() => {
@@ -66,10 +99,12 @@ export const KanbanColumn = memo(function KanbanColumn({
 
   return (
     <div 
-      ref={setNodeRef}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
       className={cn(
-        "flex flex-col h-full min-w-80 transition-all duration-300",
-        isOver && "ring-2 ring-primary/50 bg-primary/5 scale-[1.02]"
+        "flex flex-col h-full min-w-80 transition-all duration-200",
+        isOver && "ring-2 ring-primary/50 bg-primary/5 scale-[1.01]"
       )}
     >
       {/* Header da Coluna */}
@@ -190,6 +225,8 @@ export const KanbanColumn = memo(function KanbanColumn({
                 onOpenChecklist={() => onOpenChecklist?.(entry.id)}
                 onRegressStage={() => onRegressStage?.(entry.id)}
                 onTransferPipeline={() => onTransferPipeline?.(entry.lead.id)}
+                onDragStart={onDragStart}
+                onDragEnd={onDragEnd}
               />
             );
           })
