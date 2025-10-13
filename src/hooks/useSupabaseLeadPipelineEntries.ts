@@ -96,22 +96,33 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         return;
       }
       
+      // ✅ SOLUÇÃO 3: Deep clone para forçar nova referência em TODOS os níveis
       const processedEntries = (data || []).map((entry: any) => ({
-        ...entry,
-        saude_etapa: entry.saude_etapa || 'Verde', // Default para Verde se NULL
+        // Deep clone explícito de todos os campos
+        id: entry.id,
+        lead_id: entry.lead_id,
+        pipeline_id: entry.pipeline_id,
+        etapa_atual_id: entry.etapa_atual_id,
+        status_inscricao: entry.status_inscricao,
+        data_entrada_etapa: entry.data_entrada_etapa,
+        data_prevista_proxima_etapa: entry.data_prevista_proxima_etapa,
+        nota_etapa: entry.nota_etapa,
+        saude_etapa: entry.saude_etapa || 'Verde',
         tempo_em_etapa_dias: 0,
-        dias_em_atraso: 0
+        dias_em_atraso: 0,
+        created_at: entry.created_at,
+        updated_at: entry.updated_at,
+        // Clone nested objects (leads e pipeline_stages)
+        leads: entry.leads ? { ...entry.leads } : null,
+        pipeline_stages: entry.pipeline_stages ? { ...entry.pipeline_stages } : null,
+        // Force timestamp para garantir unicidade
+        _fetchedAt: Date.now()
       }));
 
-      console.log('✅ Leads carregados:', processedEntries.length);
+      console.log('✅ Leads carregados com deep clone:', processedEntries.length);
       
-      // ✅ SEMPRE forçar novo array quando forceUpdate
-      if (forceUpdate) {
-        console.log('🔄 Forçando re-render com NOVO array de referência');
-        setEntries([...processedEntries as any]); // Garante nova referência
-      } else {
-        setEntries(processedEntries as any);
-      }
+      // ✅ SEMPRE forçar novo array (sem if/else)
+      setEntries([...processedEntries as any]);
     } catch (error) {
       console.error('Erro ao buscar entries do pipeline:', error);
     } finally {
@@ -363,18 +374,25 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
           const newRecord = payload.new as any;
           const oldRecord = payload.old as any;
           
+          // ✅ SOLUÇÃO 5: Logging completo para debug realtime
+          console.log('🔔 [REALTIME DEBUG] Evento completo:', {
+            eventType: payload.eventType,
+            leadId: newRecord?.lead_id || oldRecord?.lead_id,
+            etapaAtual: newRecord?.etapa_atual_id,
+            etapaAnterior: oldRecord?.etapa_atual_id,
+            mudouEtapa: newRecord?.etapa_atual_id !== oldRecord?.etapa_atual_id,
+            pipelineId: newRecord?.pipeline_id || oldRecord?.pipeline_id,
+            statusInscricao: newRecord?.status_inscricao,
+            timestamp: new Date().toISOString(),
+            payload: payload
+          });
+          
           // ✅ FASE 2: Filtro inteligente - só reagir ao pipeline atual
           const recordPipelineId = newRecord?.pipeline_id || oldRecord?.pipeline_id;
           if (pipelineId && recordPipelineId !== pipelineId) {
             console.log('⏭️ Ignorando evento de outro pipeline:', recordPipelineId);
             return;
           }
-          
-          console.log('🔔 Realtime event recebido:', {
-            eventType: payload.eventType,
-            leadId: newRecord?.lead_id || oldRecord?.lead_id,
-            etapaAtual: newRecord?.etapa_atual_id
-          });
           
           // ✅ FASE 2: Debounce reduzido de 300ms para 50ms
           clearTimeout(debounceTimer);

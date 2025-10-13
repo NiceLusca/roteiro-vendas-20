@@ -25,43 +25,36 @@ function PipelinesWithProviders({ pipelineId }: { pipelineId: string }) {
 function PipelinesContent({ pipelineId }: { pipelineId: string }) {
   const navigate = useNavigate();
   const { pipelines } = useSupabasePipelines();
-  const { leads } = useSupabaseLeads();
-  const { entries: leadPipelineEntries } = useSupabaseLeadPipelineEntries(pipelineId);
+  const { leads, refetch: refetchLeads } = useSupabaseLeads();
+  const entries = useSupabaseLeadPipelineEntries(pipelineId);
+  const leadPipelineEntries = entries.entries;
   const { stages } = useSupabasePipelineStages(pipelineId);
   const { fetchNextAppointments, getNextAppointmentForLead } = useKanbanAppointments();
   const { moveLead } = useLeadMovement();
-  
-  // Estado para forçar refresh da UI
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Processar dados
   const pipelineStages = stages
     .filter(stage => stage.pipeline_id === pipelineId)
     .sort((a, b) => a.ordem - b.ordem);
 
-  // ✅ useMemo para reagir a mudanças nos dados
-  const allEntries = useMemo(() => {
-    console.log('🔄 [Pipelines] Recalculando allEntries:', { 
-      pipelineId, 
-      entriesCount: leadPipelineEntries.length,
-      refreshTrigger 
-    });
-    
-    return leadPipelineEntries
-      .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId)
-      .map(entry => {
-        const lead = leads.find(l => l.id === entry.lead_id);
-        return lead ? { ...entry, lead } : null;
-      })
-      .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
-  }, [pipelineId, leadPipelineEntries, leads, refreshTrigger]);
+  // ✅ SOLUÇÃO 1: Processamento direto sem useMemo (permite re-renders automáticos)
+  const allEntries = leadPipelineEntries
+    .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId)
+    .map(entry => {
+      const lead = leads.find(l => l.id === entry.lead_id);
+      return lead ? { ...entry, lead } : null;
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
-  // ✅ FASE 1: Refresh otimizado - apenas incrementa trigger, realtime faz o resto
-  const handleRefresh = useCallback(() => {
-    console.log('🔄 [Pipelines] Trigger de atualização');
-    setRefreshTrigger(prev => prev + 1);
-    // Realtime (50ms debounce) vai sincronizar automaticamente
-  }, []);
+  // ✅ SOLUÇÃO 2: Forçar refetch explícito no banco de dados
+  const handleRefresh = useCallback(async () => {
+    console.log('🔄 [Pipelines] Forçando refetch explícito');
+    await Promise.all([
+      entries.refetch(pipelineId),
+      refetchLeads()
+    ]);
+    console.log('✅ [Pipelines] Refetch concluído');
+  }, [pipelineId]);
 
   // Handler para avançar etapa via botão
   const handleAdvanceStage = useCallback(async (entryId: string) => {
@@ -155,7 +148,7 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
       )}
       
       <KanbanBoard
-        key={`kanban-${pipelineId}-${allEntries.length}-${refreshTrigger}`}
+        key={`kanban-${pipelineId}-${allEntries.length}-${Date.now()}`}
         selectedPipelineId={pipelineId}
         stageEntries={stageEntries}
         onViewLead={(leadId) => window.open(`/leads/${leadId}`, '_blank')}
