@@ -98,10 +98,6 @@ export function useLeadMovement() {
     try {
       setIsMoving(true);
 
-      // ✅ UPDATE OTIMISTA - Notifica UI ANTES da API responder
-      console.log('⚡ [useLeadMovement] Update otimista - UI atualiza imediatamente');
-      onSuccess?.();
-
       // Preparar dados de update
       const updateData = {
         etapa_atual_id: toStage.id,
@@ -110,25 +106,29 @@ export function useLeadMovement() {
         updated_at: new Date().toISOString()
       };
 
-      console.log('💾 [useLeadMovement] Executando update no banco (background):', {
+      console.log('💾 [useLeadMovement] Executando update no banco:', {
         entryId: entry.id,
         fromStage: fromStage.nome,
         toStage: toStage.nome
       });
 
-      // Update direto no Supabase (sem .select() - realtime enviará dados atualizados)
-      const { error } = await supabase
+      // Update direto no Supabase
+      const { data, error } = await supabase
         .from('lead_pipeline_entries')
         .update(updateData)
-        .eq('id', entry.id);
+        .eq('id', entry.id)
+        .select('*, leads(*), pipeline_stages(*)')
+        .single();
 
       if (error) {
-        // Se falhar, notifica erro para reverter UI
-        onError?.();
         throw new Error(error.message);
       }
 
-      console.log('✅ [useLeadMovement] Update confirmado no banco');
+      if (!data) {
+        throw new Error('Nenhum dado retornado do banco após update');
+      }
+
+      console.log('✅ [useLeadMovement] Update confirmado:', data.id);
 
       // Log de auditoria
       logChange({
@@ -141,13 +141,16 @@ export function useLeadMovement() {
         ator: `${user.email} (Sistema de Movimentação)`
       });
 
-      // Feedback de confirmação (UI já foi atualizada otimisticamente)
+      // Feedback de sucesso
       const successMsg = `Lead movido para "${toStage.nome}"`;
       toast({
-        title: '✅ Movimentação confirmada',
+        title: '✅ Movimentação concluída',
         description: successMsg,
-        duration: 2000
+        duration: 3000
       });
+
+      // Notificar sucesso após API confirmar
+      onSuccess?.();
 
       console.log('✅ [useLeadMovement] Sucesso total');
 
