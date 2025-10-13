@@ -23,6 +23,12 @@ interface CachedSession {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  // Safety check - ensure React hooks are available
+  if (typeof useState !== 'function') {
+    console.error('React hooks not available. React might not be loaded correctly.');
+    return <>{children}</>;
+  }
+
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
