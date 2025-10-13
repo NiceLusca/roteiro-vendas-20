@@ -88,6 +88,42 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
     });
   }, [allEntries, pipelineStages, moveLead, handleRefresh]);
 
+  // Buscar pipeline atual primeiro
+  const currentPipeline = pipelines.find(p => p.id === pipelineId);
+  const activePipelines = pipelines.filter(p => p.ativo);
+
+  // Handler para regredir etapa via botão
+  const handleRegressStage = useCallback(async (entryId: string) => {
+    console.log('📍 [Pipelines] handleRegressStage chamado:', entryId);
+    
+    const entry = allEntries.find(e => e.id === entryId);
+    if (!entry) {
+      console.error('❌ Entry não encontrada');
+      return;
+    }
+    
+    const currentStageIndex = pipelineStages.findIndex(s => s.id === entry.etapa_atual_id);
+    const currentStage = pipelineStages[currentStageIndex];
+    const previousStage = pipelineStages[currentStageIndex - 1];
+    
+    if (!currentStage || !previousStage) {
+      console.error('❌ Não há etapa anterior');
+      return;
+    }
+    
+    await moveLead({
+      entry,
+      fromStage: currentStage,
+      toStage: previousStage,
+      checklistItems: [],
+      currentEntriesInTargetStage: 0,
+      onSuccess: () => {
+        console.log('✅ [Pipelines] Regrediu com sucesso');
+        handleRefresh();
+      }
+    });
+  }, [allEntries, pipelineStages, moveLead, handleRefresh]);
+
   // Buscar agendamentos
   useEffect(() => {
     if (allEntries.length === 0) return;
@@ -96,8 +132,12 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
     fetchNextAppointments(leadIds);
   }, [allEntries.length, fetchNextAppointments]);
 
-  const currentPipeline = pipelines.find(p => p.id === pipelineId);
-  const activePipelines = pipelines.filter(p => p.ativo);
+  // Salvar nome do pipeline no sessionStorage para breadcrumb
+  useEffect(() => {
+    if (currentPipeline) {
+      sessionStorage.setItem(`pipeline_${pipelineId}_name`, currentPipeline.nome);
+    }
+  }, [currentPipeline, pipelineId]);
 
   if (!currentPipeline) {
     return (
@@ -153,6 +193,7 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
         stageEntries={stageEntries}
         onViewLead={(leadId) => window.open(`/leads/${leadId}`, '_blank')}
         onAdvanceStage={handleAdvanceStage}
+        onRegressStage={handleRegressStage}
         onRefresh={handleRefresh}
       />
     </div>

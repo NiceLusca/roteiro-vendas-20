@@ -21,6 +21,8 @@ interface BreadcrumbConfig {
 const breadcrumbConfig: BreadcrumbConfig = {
   '/': { label: 'Dashboard', icon: Home },
   '/pipelines': { label: 'Pipelines' },
+  '/pipelines/select': { label: 'Selecionar Pipeline' },
+  '/pipelines/[id]': { label: 'Pipeline', dynamic: true },
   '/leads': { label: 'Leads' },
   '/leads/[id]': { label: 'Detalhes do Lead', dynamic: true },
   '/agenda': { label: 'Agenda' },
@@ -103,8 +105,18 @@ export function BreadcrumbNavigation({ className, customItems }: BreadcrumbNavig
     
     const config = breadcrumbConfig[configKey];
     if (config) {
+      let label = config.label;
+      
+      // Se for rota de pipeline dinâmica, buscar nome do sessionStorage
+      if (configKey === '/pipelines/[id]' && isDynamic) {
+        const pipelineName = sessionStorage.getItem(`pipeline_${pathSegments[i]}_name`);
+        label = pipelineName || config.label;
+      }
+      
       breadcrumbItems.push({
-        label: config.dynamic && isDynamic ? `${config.label.replace('[id]', pathSegments[i].slice(0, 8))}...` : config.label,
+        label: config.dynamic && isDynamic && !sessionStorage.getItem(`pipeline_${pathSegments[i]}_name`) 
+          ? `${label} ${pathSegments[i].slice(0, 8)}...` 
+          : label,
         href: currentPath,
         icon: config.icon,
         isCurrentPage: i === pathSegments.length - 1
