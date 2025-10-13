@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -48,8 +48,8 @@ interface SimplePipelineFormProps {
 }
 
 export function SimplePipelineForm({ pipeline, onSave, onCancel }: SimplePipelineFormProps) {
-  const [isSaving, setIsSaving] = React.useState(false);
-  const [advancedOpen, setAdvancedOpen] = React.useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // Helper para converter arrays em strings para edição
   const arrayToString = (arr?: string[] | null) => arr?.join(', ') || '';
