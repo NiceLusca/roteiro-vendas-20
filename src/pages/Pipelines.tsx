@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
+import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
+import { Lead } from '@/types/crm';
 
 // Camada intermediária que envolve com providers
 function PipelinesWithProviders({ pipelineId }: { pipelineId: string }) {
@@ -32,6 +34,7 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
   const { stages } = useSupabasePipelineStages(pipelineId);
   const { fetchNextAppointments, getNextAppointmentForLead } = useKanbanAppointments();
   const { moveLead } = useLeadMovement();
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
   // Processar dados
   const pipelineStages = stages
@@ -125,6 +128,14 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
     });
   }, [allEntries, pipelineStages, moveLead, handleRefresh]);
 
+  // Handler para abrir modal de edição
+  const handleViewOrEditLead = useCallback((leadId: string) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (lead) {
+      setEditingLead(lead);
+    }
+  }, [leads]);
+
   // Buscar agendamentos
   useEffect(() => {
     if (allEntries.length === 0) return;
@@ -201,11 +212,21 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
         key={`kanban-${pipelineId}-${allEntries.length}-${Date.now()}`}
         selectedPipelineId={pipelineId}
         stageEntries={stageEntries}
-        onViewLead={(leadId) => window.open(`/leads/${leadId}`, '_blank')}
+        onViewLead={handleViewOrEditLead}
+        onEditLead={handleViewOrEditLead}
         onAdvanceStage={handleAdvanceStage}
         onRegressStage={handleRegressStage}
         onRefresh={handleRefresh}
       />
+
+      {editingLead && (
+        <LeadEditDialog
+          open={!!editingLead}
+          onOpenChange={(open) => !open && setEditingLead(null)}
+          lead={editingLead}
+          onUpdate={handleRefresh}
+        />
+      )}
     </div>
   );
 }

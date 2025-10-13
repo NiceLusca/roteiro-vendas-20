@@ -267,10 +267,15 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
               ) : (
                 notes.map((note) => (
                   <div key={note.id} className="p-3 bg-muted rounded-lg space-y-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-primary">
+                        {note.user_name || 'Usuário'}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(note.created_at).toLocaleString('pt-BR')}
+                      </span>
+                    </div>
                     <p className="text-sm">{note.note_text}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(note.created_at).toLocaleString('pt-BR')}
-                    </p>
                   </div>
                 ))
               )}

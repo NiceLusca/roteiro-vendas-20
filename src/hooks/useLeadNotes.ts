@@ -7,6 +7,8 @@ export interface LeadNote {
   id: string;
   lead_id: string;
   user_id: string;
+  user_name?: string;
+  user_email?: string;
   note_text: string;
   created_at: string;
   updated_at: string;
@@ -24,12 +26,27 @@ export function useLeadNotes(leadId?: string) {
       setLoading(true);
       const { data, error } = await supabase
         .from('lead_notes')
-        .select('*')
+        .select(`
+          *,
+          profiles!lead_notes_user_id_fkey (
+            nome,
+            full_name,
+            email
+          )
+        `)
         .eq('lead_id', leadId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setNotes(data || []);
+
+      const mappedData = (data || []).map((note: any) => ({
+        ...note,
+        user_name: note.profiles?.nome || note.profiles?.full_name || note.profiles?.email || 'Usuário',
+        user_email: note.profiles?.email,
+        profiles: undefined
+      }));
+
+      setNotes(mappedData);
     } catch (error) {
       console.error('Erro ao buscar notas:', error);
       toast.error('Erro ao carregar comentários');
