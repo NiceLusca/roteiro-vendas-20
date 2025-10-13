@@ -383,23 +383,61 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
             mudouEtapa: newRecord?.etapa_atual_id !== oldRecord?.etapa_atual_id,
             pipelineId: newRecord?.pipeline_id || oldRecord?.pipeline_id,
             statusInscricao: newRecord?.status_inscricao,
-            timestamp: new Date().toISOString(),
-            payload: payload
+            timestamp: new Date().toISOString()
           });
           
-          // ✅ FASE 2: Filtro inteligente - só reagir ao pipeline atual
+          // Filtro: só processar eventos do pipeline atual
           const recordPipelineId = newRecord?.pipeline_id || oldRecord?.pipeline_id;
           if (pipelineId && recordPipelineId !== pipelineId) {
             console.log('⏭️ Ignorando evento de outro pipeline:', recordPipelineId);
             return;
           }
           
-          // ✅ FASE 2: Debounce reduzido de 300ms para 50ms
-          clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(() => {
-            console.log('🔄 Executando refetch após debounce (50ms)');
-            fetchEntries(pipelineId, true);
-          }, 50);
+          console.log('⚡ [REALTIME] Processando evento IMEDIATAMENTE (sem debounce)');
+          
+          // ✅ PROCESSAR DIRETAMENTE - Atualizar estado sem refetch
+          if (payload.eventType === 'UPDATE') {
+            console.log('🔄 [REALTIME] UPDATE - Atualizando entrada existente');
+            setEntries(prevEntries => 
+              prevEntries.map(entry => 
+                entry.id === newRecord.id 
+                  ? { 
+                      ...entry, 
+                      ...newRecord,
+                      etapa_atual_id: newRecord.etapa_atual_id,
+                      data_entrada_etapa: newRecord.data_entrada_etapa,
+                      saude_etapa: newRecord.saude_etapa,
+                      updated_at: newRecord.updated_at,
+                      _fetchedAt: Date.now() 
+                    } 
+                  : entry
+              )
+            );
+          } else if (payload.eventType === 'INSERT') {
+            console.log('➕ [REALTIME] INSERT - Buscando entrada completa');
+            // Buscar entrada completa com leads e stages
+            supabase
+              .from('lead_pipeline_entries')
+              .select('*, leads(*), pipeline_stages(*)')
+              .eq('id', newRecord.id)
+              .single()
+              .then(({ data }) => {
+                if (data) {
+                  console.log('✅ [REALTIME] INSERT confirmado');
+                  const processedEntry = {
+                    ...data,
+                    saude_etapa: data.saude_etapa || 'Verde',
+                    tempo_em_etapa_dias: 0,
+                    dias_em_atraso: 0,
+                    _fetchedAt: Date.now()
+                  };
+                  setEntries(prev => [...prev, processedEntry as any]);
+                }
+              });
+          } else if (payload.eventType === 'DELETE') {
+            console.log('🗑️ [REALTIME] DELETE - Removendo entrada');
+            setEntries(prev => prev.filter(e => e.id !== oldRecord.id));
+          }
         }
       )
       .subscribe();

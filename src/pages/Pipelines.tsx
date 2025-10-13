@@ -46,15 +46,11 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
     })
     .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
-  // ✅ SOLUÇÃO 2: Forçar refetch explícito no banco de dados
-  const handleRefresh = useCallback(async () => {
-    console.log('🔄 [Pipelines] Forçando refetch explícito');
-    await Promise.all([
-      entries.refetch(pipelineId),
-      refetchLeads()
-    ]);
-    console.log('✅ [Pipelines] Refetch concluído');
-  }, [pipelineId]);
+  // ✅ OTIMIZAÇÃO: Confiar no realtime (sem refetch explícito)
+  const handleRefresh = useCallback(() => {
+    console.log('🔄 [Pipelines] Sincronização via realtime (sem refetch explícito)');
+    // Realtime já sincroniza automaticamente - não precisa buscar novamente
+  }, []);
 
   // Handler para avançar etapa via botão
   const handleAdvanceStage = useCallback(async (entryId: string) => {
