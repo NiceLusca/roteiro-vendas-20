@@ -4,13 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Edit, Trash2, GripVertical, AlertCircle, CheckCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
 import { ChecklistItemForm } from '@/components/forms/ChecklistItemForm';
 import { useSupabaseChecklistItems } from '@/hooks/useSupabaseChecklistItems';
 import { useToast } from '@/hooks/use-toast';
-import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
 interface ChecklistItem {
   id?: string;
@@ -71,79 +68,9 @@ export function StageChecklistManager({ stageId, stageName }: StageChecklistMana
     }
   };
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
-  );
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = checklistItems.findIndex((item) => item.id === active.id);
-    const newIndex = checklistItems.findIndex((item) => item.id === over.id);
-
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    // Criar nova ordem
-    const reorderedItems = [...checklistItems];
-    const [movedItem] = reorderedItems.splice(oldIndex, 1);
-    reorderedItems.splice(newIndex, 0, movedItem);
-
-    // Atualizar ordem de todos os itens
-    const updates = reorderedItems.map((item, index) => ({
-      ...item,
-      ordem: index + 1,
-    }));
-
-    // Salvar todos os itens com nova ordem
-    try {
-      await Promise.all(updates.map(item => saveChecklistItem(item)));
-      await refetchItems(stageId);
-      toast({
-        title: "Ordem atualizada",
-        description: "A ordem dos itens foi atualizada com sucesso.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erro ao reordenar",
-        description: "Não foi possível atualizar a ordem dos itens.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const SortableChecklistRow = ({ item }: { item: ChecklistItem }) => {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-    } = useSortable({ id: item.id! });
-
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      opacity: isDragging ? 0.5 : 1,
-    };
-
+  const ChecklistRow = ({ item }: { item: ChecklistItem }) => {
     return (
-      <TableRow ref={setNodeRef} style={style} className={isDragging ? 'shadow-lg' : ''}>
-        <TableCell>
-          <div
-            {...attributes}
-            {...listeners}
-            className="cursor-grab active:cursor-grabbing"
-          >
-            <GripVertical className="w-4 h-4 text-muted-foreground" />
-          </div>
-        </TableCell>
+      <TableRow>
         <TableCell className="font-medium">{item.ordem}</TableCell>
         <TableCell>{item.titulo}</TableCell>
         <TableCell>
@@ -257,33 +184,21 @@ export function StageChecklistManager({ stageId, stageName }: StageChecklistMana
             </div>
 
             {/* Items Table */}
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12"></TableHead>
-                    <TableHead>Ordem</TableHead>
-                    <TableHead>Título</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <SortableContext
-                    items={checklistItems.map(item => item.id!)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {checklistItems.map((item) => (
-                      <SortableChecklistRow key={item.id} item={item} />
-                    ))}
-                  </SortableContext>
-                </TableBody>
-              </Table>
-            </DndContext>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ordem</TableHead>
+                  <TableHead>Título</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {checklistItems.map((item) => (
+                  <ChecklistRow key={item.id} item={item} />
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
       </CardContent>

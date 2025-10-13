@@ -2,8 +2,6 @@ import { memo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { 
   Eye, 
   Calendar, 
@@ -42,19 +40,6 @@ export const OptimizedKanbanCard = memo(function OptimizedKanbanCard({
   onAdvanceStage,
   onRegisterInteraction
 }: OptimizedKanbanCardProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging
-  } = useSortable({ id: entry.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
 
   const getHealthColor = (health: string) => {
     switch (health) {
@@ -76,14 +61,8 @@ export const OptimizedKanbanCard = memo(function OptimizedKanbanCard({
   }
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      className={`mb-3 ${isDragging ? 'opacity-50' : ''}`}
-    >
-      <Card className="cursor-grab hover:shadow-md transition-all duration-200 hover-scale">
+    <div className="mb-3">
+      <Card className="hover:shadow-md transition-all duration-200 hover-scale">
         <CardContent className="p-4">
           <div className="space-y-3">
             {/* Header */}

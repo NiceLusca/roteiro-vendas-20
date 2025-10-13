@@ -7,10 +7,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight, Zap, Layers, Copy, GripVertical } from 'lucide-react';
-import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight, Zap, Layers, Copy } from 'lucide-react';
 import { SimplePipelineForm } from '@/components/forms/SimplePipelineForm';
 import { PipelineWizardForm } from '@/components/forms/PipelineWizardForm';
 import { StageForm } from '@/components/forms/StageForm';
@@ -125,88 +122,9 @@ export function PipelineManager() {
     return checklistItems.filter(item => item.etapa_id === stageId).length;
   };
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
-  );
-
-  const handleDragEnd = async (event: DragEndEvent, pipelineId: string) => {
-    const { active, over } = event;
-    
-    if (!over || active.id === over.id) return;
-
-    const pipelineStages = getPipelineStages(pipelineId);
-    
-    console.log('🎯 Drag ended. Pipeline stages before:', pipelineStages.map(s => ({ id: s.id, nome: s.nome, ordem: s.ordem })));
-
-    const oldIndex = pipelineStages.findIndex((s) => s.id === active.id);
-    const newIndex = pipelineStages.findIndex((s) => s.id === over.id);
-
-    if (oldIndex === -1 || newIndex === -1) return;
-
-    // Criar nova ordem
-    const reorderedStages = [...pipelineStages];
-    const [movedStage] = reorderedStages.splice(oldIndex, 1);
-    reorderedStages.splice(newIndex, 0, movedStage);
-
-    console.log('📦 Reordered stages:', reorderedStages.map(s => s.nome));
-
-    // Salvar todas as etapas com nova ordem usando batch update
-    try {
-      const stagesToUpdate = reorderedStages.map((stage, index) => ({
-        id: stage.id!,
-        ordem: index + 1,
-      }));
-
-      console.log('💾 Saving new order:', stagesToUpdate);
-
-      const success = await batchUpdateStages(stagesToUpdate);
-      
-      if (success) {
-        // Single refetch after all updates
-        await refetchStages();
-        console.log('✅ Refetch complete');
-      }
-    } catch (error) {
-      console.error('❌ Error reordering stages:', error);
-      toast({
-        title: "Erro ao reordenar",
-        description: "Não foi possível atualizar a ordem das etapas.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const SortableStageRow = ({ stage, pipelineId }: { stage: StageData; pipelineId: string }) => {
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-    } = useSortable({ id: stage.id! });
-
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      opacity: isDragging ? 0.5 : 1,
-    };
-
+  const StageRow = ({ stage, pipelineId }: { stage: StageData; pipelineId: string }) => {
     return (
-      <TableRow ref={setNodeRef} style={style} className={isDragging ? 'shadow-lg' : ''}>
-        <TableCell>
-          <div
-            {...attributes}
-            {...listeners}
-            className="cursor-grab active:cursor-grabbing"
-          >
-            <GripVertical className="w-4 h-4 text-muted-foreground" />
-          </div>
-        </TableCell>
+      <TableRow>
         <TableCell className="font-medium">{stage.ordem}</TableCell>
         <TableCell>{stage.nome}</TableCell>
         <TableCell>{stage.prazo_em_dias}</TableCell>
@@ -400,39 +318,27 @@ export function PipelineManager() {
                 </Button>
               </div>
 
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={(event) => handleDragEnd(event, pipeline.id)}
-              >
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12"></TableHead>
-                      <TableHead>Ordem</TableHead>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>SLA (dias)</TableHead>
-                      <TableHead>Próximo Passo</TableHead>
-                      <TableHead>Checklist</TableHead>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <SortableContext
-                      items={pipelineStages.map(s => s.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {pipelineStages.map((stage) => (
-                        <SortableStageRow
-                          key={stage.id}
-                          stage={stage}
-                          pipelineId={pipeline.id}
-                        />
-                      ))}
-                    </SortableContext>
-                  </TableBody>
-                </Table>
-              </DndContext>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Ordem</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>SLA (dias)</TableHead>
+                    <TableHead>Próximo Passo</TableHead>
+                    <TableHead>Checklist</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pipelineStages.map((stage) => (
+                    <StageRow
+                      key={stage.id}
+                      stage={stage}
+                      pipelineId={pipeline.id}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         )}
