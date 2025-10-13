@@ -945,6 +945,10 @@ export type Database = {
         Args: { input_text: string }
         Returns: string
       }
+      fix_utf8_encoding: {
+        Args: { input_text: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
