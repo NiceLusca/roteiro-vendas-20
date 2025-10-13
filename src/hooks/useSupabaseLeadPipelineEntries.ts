@@ -393,26 +393,34 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
             return;
           }
           
-          console.log('⚡ [REALTIME] Processando evento IMEDIATAMENTE (sem debounce)');
+          console.log('⚡ [REALTIME] Processando evento IMEDIATAMENTE');
           
-          // ✅ PROCESSAR DIRETAMENTE - Atualizar estado sem refetch
+          // ✅ PROCESSAR DIRETAMENTE - Buscar dados completos para manter joins
           if (payload.eventType === 'UPDATE') {
-            console.log('🔄 [REALTIME] UPDATE - Atualizando entrada existente');
-            setEntries(prevEntries => 
-              prevEntries.map(entry => 
-                entry.id === newRecord.id 
-                  ? { 
-                      ...entry, 
-                      ...newRecord,
-                      etapa_atual_id: newRecord.etapa_atual_id,
-                      data_entrada_etapa: newRecord.data_entrada_etapa,
-                      saude_etapa: newRecord.saude_etapa,
-                      updated_at: newRecord.updated_at,
-                      _fetchedAt: Date.now() 
-                    } 
-                  : entry
-              )
-            );
+            console.log('🔄 [REALTIME] UPDATE - Buscando entrada completa com joins');
+            // Buscar entrada completa com leads e stages (necessário para manter dados de join)
+            supabase
+              .from('lead_pipeline_entries')
+              .select('*, leads(*), pipeline_stages(*)')
+              .eq('id', newRecord.id)
+              .single()
+              .then(({ data }) => {
+                if (data) {
+                  console.log('✅ [REALTIME] UPDATE confirmado com dados completos');
+                  const processedEntry = {
+                    ...data,
+                    saude_etapa: data.saude_etapa || 'Verde',
+                    tempo_em_etapa_dias: 0,
+                    dias_em_atraso: 0,
+                    _fetchedAt: Date.now()
+                  };
+                  setEntries(prevEntries => 
+                    prevEntries.map(entry => 
+                      entry.id === newRecord.id ? processedEntry as any : entry
+                    )
+                  );
+                }
+              });
           } else if (payload.eventType === 'INSERT') {
             console.log('➕ [REALTIME] INSERT - Buscando entrada completa');
             // Buscar entrada completa com leads e stages
