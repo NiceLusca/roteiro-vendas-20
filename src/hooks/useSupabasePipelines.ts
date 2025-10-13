@@ -398,9 +398,6 @@ export function useSupabasePipelines() {
         objetivo: originalPipeline.objetivo,
         ativo: true,
         primary_pipeline: false,
-        segmento_alvo: (originalPipeline as any).segmento_alvo,
-        responsaveis: (originalPipeline as any).responsaveis || [],
-        tags: (originalPipeline as any).tags || [],
         
         stages: originalStages?.map(stage => ({
           nome: stage.nome,
@@ -408,12 +405,10 @@ export function useSupabasePipelines() {
           prazo_em_dias: stage.prazo_em_dias,
           proximo_passo_tipo: stage.proximo_passo_tipo as any,
           proximo_passo_label: stage.proximo_passo_label,
-          criterios_avanco: stage.criterios_avanco,
-          saida_criteria: typeof stage.saida_criteria === 'string' ? stage.saida_criteria : JSON.stringify(stage.saida_criteria || null),
           wip_limit: stage.wip_limit,
           gerar_agendamento_auto: stage.gerar_agendamento_auto,
           duracao_minutos: stage.duracao_minutos,
-          checklist_items: stage.stage_checklist_items?.map(item => ({
+          checklist_items: (stage.stage_checklist_items as any[])?.map(item => ({
             titulo: item.titulo,
             ordem: item.ordem,
             obrigatorio: item.obrigatorio,
