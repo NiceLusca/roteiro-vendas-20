@@ -172,4 +172,39 @@
   .metric-card {
     @apply bg-gradient-to-br from-card to-muted/5 border shadow-sm hover:shadow-md transition-all duration-200;
   }
+
+  /* Cores específicas por etapa do Kanban */
+  .stage-entrada {
+    --stage-color: 217 91% 70%;
+  }
+
+  .stage-contato-1 {
+    --stage-color: 217 91% 60%;
+  }
+
+  .stage-contato-2 {
+    --stage-color: 24 95% 53%;
+  }
+
+  .stage-agendou {
+    --stage-color: 263 69% 65%;
+  }
+
+  .stage-fechou {
+    --stage-color: 158 64% 50%;
+  }
+
+  /* Header da coluna Kanban com barra colorida */
+  .kanban-column-header {
+    @apply border-t-4 bg-card;
+    border-top-color: hsl(var(--stage-color));
+    background: linear-gradient(180deg, hsl(var(--stage-color) / 0.05), hsl(var(--card)));
+  }
+
+  /* Cards do Kanban com borda colorida */
+  .kanban-card-stage {
+    background: hsl(var(--stage-color) / 0.02);
+    border-left: 4px solid;
+    border-left-color: hsl(var(--stage-color));
+  }
 }

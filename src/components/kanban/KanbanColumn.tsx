@@ -1,12 +1,10 @@
-import { memo, useMemo, DragEvent, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { StageTemplatesButton } from '@/components/pipeline/StageTemplatesButton';
-import { StageAnalyticsButton } from '@/components/pipeline/StageAnalyticsButton';
+import { memo, useMemo, useCallback, DragEvent, useState } from 'react';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { KanbanCard } from './KanbanCard';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
-import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Plus } from 'lucide-react';
+import { Plus, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface KanbanColumnProps {
@@ -83,7 +81,6 @@ export const KanbanColumn = memo(function KanbanColumn({
     }
   };
 
-  // ✅ FASE 2: Memoizar computações pesadas
   const healthCounts = useMemo(() => {
     return entries.reduce((acc, entry) => {
       acc[entry.saude_etapa] = (acc[entry.saude_etapa] || 0) + 1;
@@ -97,6 +94,18 @@ export const KanbanColumn = memo(function KanbanColumn({
     });
   }, [entries]);
 
+  const getStageColorClass = useCallback((stageName: string): string => {
+    const normalized = stageName.toLowerCase();
+    if (normalized.includes('entrada')) return 'stage-entrada';
+    if (normalized.includes('contato 1')) return 'stage-contato-1';
+    if (normalized.includes('contato 2')) return 'stage-contato-2';
+    if (normalized.includes('agendou')) return 'stage-agendou';
+    if (normalized.includes('fechou')) return 'stage-fechou';
+    return 'stage-entrada';
+  }, []);
+
+  const stageClass = useMemo(() => getStageColorClass(stage.nome), [stage.nome, getStageColorClass]);
+
   return (
     <div 
       onDragOver={handleDragOver}
@@ -108,10 +117,10 @@ export const KanbanColumn = memo(function KanbanColumn({
       )}
     >
       {/* Header da Coluna */}
-      <Card className={cn('mb-4', wipExceeded && 'border-warning')}>
+      <Card className={cn('mb-4 kanban-column-header', stageClass, wipExceeded && 'border-warning')}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold">
+            <CardTitle className="text-base font-bold">
               {stage.nome}
             </CardTitle>
             <Button
@@ -126,69 +135,17 @@ export const KanbanColumn = memo(function KanbanColumn({
           </div>
           
           {/* Contadores */}
-          <div className="flex items-center gap-2 text-xs">
-            <Badge variant="secondary">
-              {entries.length} leads
-            </Badge>
+          <div className="flex items-center gap-2 text-sm mt-1">
+            <span className="text-muted-foreground font-medium">
+              {entries.length} {entries.length === 1 ? 'lead' : 'leads'}
+            </span>
             
             {stage.wip_limit && wipExceeded && (
-              <Badge variant="outline" className="border-warning text-warning">
+              <Badge variant="outline" className="border-warning text-warning text-xs">
                 <AlertTriangle className="h-3 w-3 mr-1" />
                 WIP excedido
               </Badge>
             )}
-          </div>
-
-          {/* WIP Limit */}
-          {stage.wip_limit && (
-            <div className="text-xs text-muted-foreground">
-              WIP Limit: {stage.wip_limit}
-            </div>
-          )}
-
-          {/* Indicadores de Saúde */}
-          {entries.length > 0 && (
-            <div className="flex items-center gap-2 pt-2">
-              {healthCounts.Verde && (
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-success" />
-                  <span className="text-xs text-muted-foreground">
-                    {healthCounts.Verde}
-                  </span>
-                </div>
-              )}
-              {healthCounts.Amarelo && (
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-warning" />
-                  <span className="text-xs text-muted-foreground">
-                    {healthCounts.Amarelo}
-                  </span>
-                </div>
-              )}
-              {healthCounts.Vermelho && (
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-danger" />
-                  <span className="text-xs text-muted-foreground">
-                    {healthCounts.Vermelho}
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-          {/* Analytics & Templates Integration */}
-          <div className="flex items-center gap-1 pt-2">
-            <StageTemplatesButton
-              stageId={stage.id}
-              stageName={stage.nome}
-              templateCount={2}
-              compact
-            />
-            <StageAnalyticsButton
-              stageId={stage.id}
-              stageName={stage.nome}
-              pipelineId="pipeline-id"
-              compact
-            />
           </div>
         </CardHeader>
       </Card>
