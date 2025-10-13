@@ -50,6 +50,7 @@ export default defineConfig(({ mode }) => ({
       'react-router-dom',
       '@tanstack/react-query',
       '@supabase/supabase-js',
+      'zustand',
     ],
   },
 }));
