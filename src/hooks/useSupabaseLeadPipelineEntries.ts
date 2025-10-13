@@ -29,14 +29,8 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
   const fetchEntries = async (targetPipelineId?: string, forceUpdate = false) => {
     if (!user) return;
     
-    // ✅ Guard: Não fazer query se não houver pipeline selecionado
+    // ✅ Permitir buscar TODAS as entries quando pipelineId for undefined
     const effectivePipelineId = targetPipelineId || pipelineId;
-    if (!effectivePipelineId || effectivePipelineId.trim() === '') {
-      console.log('⚠️ useSupabaseLeadPipelineEntries: Sem pipeline selecionado, pulando fetch');
-      setLoading(false);
-      // NÃO limpar entries aqui - manter estado anterior
-      return;
-    }
     
     console.log('🔍 fetchEntries chamado:', { 
       effectivePipelineId, 
@@ -67,8 +61,9 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         `)
         .eq('status_inscricao', 'Ativo');
 
-      if (targetPipelineId || pipelineId) {
-        query = query.eq('pipeline_id', targetPipelineId || pipelineId);
+      // ✅ Só filtrar por pipeline se um ID específico for fornecido
+      if (effectivePipelineId && effectivePipelineId.trim() !== '') {
+        query = query.eq('pipeline_id', effectivePipelineId);
       }
 
       // ✅ Adicionar timestamp na query para quebrar cache HTTP

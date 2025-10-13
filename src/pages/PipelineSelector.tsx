@@ -11,7 +11,7 @@ import { useEffect } from 'react';
 export default function PipelineSelector() {
   const navigate = useNavigate();
   const { pipelines, loading: pipelinesLoading } = useSupabasePipelines();
-  const { entries, loading: entriesLoading } = useSupabaseLeadPipelineEntries();
+  const { entries, loading: entriesLoading } = useSupabaseLeadPipelineEntries(undefined);
 
   const activePipelines = pipelines.filter(p => p.ativo);
 
@@ -28,7 +28,7 @@ export default function PipelineSelector() {
 
   const getPipelineMetrics = (pipelineId: string) => {
     const pipelineEntries = entries.filter(
-      e => e.pipeline_id === pipelineId && e.status_inscricao === 'ativo'
+      e => e.pipeline_id === pipelineId && (e.status_inscricao === 'Ativo' || e.status_inscricao === 'ativo')
     );
     
     const totalLeads = pipelineEntries.length;
