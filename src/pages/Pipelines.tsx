@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { CRMProviderWrapper } from '@/contexts/CRMProviderWrapper';
+import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
@@ -139,6 +140,19 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
     }
   }, [currentPipeline, pipelineId]);
 
+  // Handlers para PipelineSelector
+  const handleConfigurePipeline = useCallback(() => {
+    navigate('/settings?tab=pipelines');
+  }, [navigate]);
+
+  const handleCreatePipeline = useCallback(() => {
+    navigate('/settings?tab=pipelines&action=create');
+  }, [navigate]);
+
+  const handlePipelineChange = useCallback((newPipelineId: string) => {
+    navigate(`/pipelines/${newPipelineId}`);
+  }, [navigate]);
+
   if (!currentPipeline) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -173,19 +187,15 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
 
   return (
     <div className="space-y-4">
-      {activePipelines.length > 1 && (
-        <div className="px-6 pt-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/pipelines/select')}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Voltar para seleção de pipelines
-          </Button>
-        </div>
-      )}
+      <div className="px-6 pt-4">
+        <PipelineSelector
+          pipelines={activePipelines}
+          selectedPipelineId={pipelineId}
+          onPipelineChange={handlePipelineChange}
+          onConfigurePipeline={handleConfigurePipeline}
+          onCreatePipeline={handleCreatePipeline}
+        />
+      </div>
       
       <KanbanBoard
         key={`kanban-${pipelineId}-${allEntries.length}-${Date.now()}`}
