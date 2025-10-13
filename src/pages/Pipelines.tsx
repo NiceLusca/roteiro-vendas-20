@@ -12,10 +12,10 @@ import { ArrowLeft } from 'lucide-react';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 
-export default function Pipelines() {
-  const { pipelineId } = useParams<{ pipelineId: string }>();
+// Componente interno que usa hooks condicionalmente
+function PipelinesContent({ pipelineId }: { pipelineId: string }) {
   const navigate = useNavigate();
-  const { pipelines, loading } = useSupabasePipelines();
+  const { pipelines } = useSupabasePipelines();
   const { leads } = useSupabaseLeads();
   const { entries: leadPipelineEntries } = useSupabaseLeadPipelineEntries(pipelineId);
   const { stages } = useSupabasePipelineStages(pipelineId);
@@ -25,17 +25,13 @@ export default function Pipelines() {
   // Estado para forçar refresh da UI
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const activePipelines = pipelines.filter(p => p.ativo);
-
-  // Processar dados apenas se tiver pipelineId
-  const pipelineStages = pipelineId 
-    ? stages.filter(stage => stage.pipeline_id === pipelineId).sort((a, b) => a.ordem - b.ordem)
-    : [];
+  // Processar dados
+  const pipelineStages = stages
+    .filter(stage => stage.pipeline_id === pipelineId)
+    .sort((a, b) => a.ordem - b.ordem);
 
   // ✅ useMemo para reagir a mudanças nos dados
   const allEntries = useMemo(() => {
-    if (!pipelineId) return [];
-    
     console.log('🔄 [Pipelines] Recalculando allEntries:', { 
       pipelineId, 
       entriesCount: leadPipelineEntries.length,
@@ -89,30 +85,16 @@ export default function Pipelines() {
     });
   }, [allEntries, pipelineStages, moveLead, handleRefresh]);
 
-  // Buscar agendamentos - ANTES de qualquer return condicional
+  // Buscar agendamentos
   useEffect(() => {
-    if (!pipelineId || allEntries.length === 0) return;
+    if (allEntries.length === 0) return;
     
     const leadIds = allEntries.map(entry => entry.lead_id);
     fetchNextAppointments(leadIds);
-  }, [pipelineId, allEntries.length, fetchNextAppointments]);
-
-  // Redirecionar para seleção se necessário
-  useEffect(() => {
-    if (!loading && !pipelineId && activePipelines.length > 0) {
-      navigate('/pipelines/select', { replace: true });
-    }
-  }, [loading, pipelineId, activePipelines, navigate]);
-
-  if (loading) {
-    return <EnhancedLoading loading={true}><></></EnhancedLoading>;
-  }
-
-  if (!pipelineId) {
-    return null;
-  }
+  }, [allEntries.length, fetchNextAppointments]);
 
   const currentPipeline = pipelines.find(p => p.id === pipelineId);
+  const activePipelines = pipelines.filter(p => p.ativo);
 
   if (!currentPipeline) {
     return (
@@ -174,4 +156,30 @@ export default function Pipelines() {
       </div>
     </CRMProviderWrapper>
   );
+}
+
+// Componente principal com guards
+export default function Pipelines() {
+  const { pipelineId } = useParams<{ pipelineId: string }>();
+  const navigate = useNavigate();
+  const { pipelines, loading } = useSupabasePipelines();
+
+  const activePipelines = pipelines.filter(p => p.ativo);
+
+  // Redirecionar para seleção se necessário
+  useEffect(() => {
+    if (!loading && !pipelineId && activePipelines.length > 0) {
+      navigate('/pipelines/select', { replace: true });
+    }
+  }, [loading, pipelineId, activePipelines, navigate]);
+
+  if (loading) {
+    return <EnhancedLoading loading={true}><></></EnhancedLoading>;
+  }
+
+  if (!pipelineId) {
+    return null;
+  }
+
+  return <PipelinesContent pipelineId={pipelineId} />;
 }
