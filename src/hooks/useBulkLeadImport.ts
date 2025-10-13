@@ -7,6 +7,7 @@ import { ColumnMapping, ParsedLead, ImportResult, ImportProgress } from '@/types
 import { useSupabaseLeads } from './useSupabaseLeads';
 import { useLeadTags } from './useLeadTags';
 import { useMultiPipeline } from './useMultiPipeline';
+import { sanitizeText } from '@/schemas/leadValidation';
 
 const BATCH_SIZE = 50;
 
@@ -85,7 +86,8 @@ export function useBulkLeadImport() {
               (leadData as any)['lead_score'] = scoreValue;
             }
             else {
-              (leadData as any)[map.targetField] = trimmedValue;
+              // Decodificar HTML entities em campos de texto
+              (leadData as any)[map.targetField] = sanitizeText(trimmedValue);
             }
           }
       });
@@ -123,7 +125,7 @@ export function useBulkLeadImport() {
             (leadData as any)['lead_score'] = scoreValue;
           }
           else if (typeof dv === 'string') {
-            (leadData as any)[key] = dv.trim();
+            (leadData as any)[key] = sanitizeText(dv);
           } else {
             (leadData as any)[key] = dv;
           }

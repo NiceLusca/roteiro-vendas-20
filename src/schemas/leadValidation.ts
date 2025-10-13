@@ -46,7 +46,13 @@ export const leadSchema = z.object({
   nome: z.string()
     .min(1, 'Nome é obrigatório')
     .max(100, 'Nome deve ter no máximo 100 caracteres')
-    .trim(),
+    .trim()
+    .transform(val => {
+      if (typeof document === 'undefined') return val;
+      const textArea = document.createElement('textarea');
+      textArea.innerHTML = val;
+      return textArea.value;
+    }),
   
   whatsapp: whatsappSchema,
   
@@ -154,12 +160,22 @@ export function validateLead(data: unknown): { success: true; data: LeadValidati
 }
 
 /**
- * Sanitiza entrada de texto para prevenir XSS
+ * Decodifica entidades HTML (ex: &aacute; → á, &Aacute; → Á)
+ */
+function decodeHTMLEntities(text: string): string {
+  if (typeof document === 'undefined') return text; // SSR safety
+  const textArea = document.createElement('textarea');
+  textArea.innerHTML = text;
+  return textArea.value;
+}
+
+/**
+ * Sanitiza entrada de texto para prevenir XSS e decodificar HTML entities
  */
 export function sanitizeText(text: string | undefined | null): string {
   if (!text) return '';
   
-  return text
+  return decodeHTMLEntities(text)
     .trim()
     .replace(/[<>]/g, '') // Remove < e > para prevenir tags HTML
     .substring(0, 1000); // Limite de segurança
