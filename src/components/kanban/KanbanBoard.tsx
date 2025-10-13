@@ -1,14 +1,22 @@
-import { useState, useMemo } from 'react';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
+import { useState, useCallback, useEffect } from 'react';
+import { 
+  DndContext, 
+  DragOverlay, 
+  useSensors, 
+  useSensor, 
+  PointerSensor, 
+  closestCorners,
+  DragStartEvent,
+  DragEndEvent
+} from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
-import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { useSupabaseChecklistItems } from '@/hooks/useSupabaseChecklistItems';
-import { useToast } from '@/hooks/use-toast';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
+import { useLeadPipelineStore } from '@/stores/leadPipelineStore';
 
 interface KanbanBoardProps {
   selectedPipelineId: string;
@@ -52,22 +60,29 @@ export function KanbanBoard({
   onTransferPipeline
 }: KanbanBoardProps) {
   const [activeEntry, setActiveEntry] = useState<(LeadPipelineEntry & { lead: Lead }) | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
   const { moveLead, isMoving } = useLeadMovement();
-  const { refetch } = useSupabaseLeadPipelineEntries(selectedPipelineId);
   const { stages } = useSupabasePipelineStages(selectedPipelineId);
   const { checklistItems } = useSupabaseChecklistItems();
-  const { toast } = useToast();
+  const { setEntries } = useLeadPipelineStore();
 
+  // ✅ FASE 2: Sincronizar stageEntries com Zustand store
+  useEffect(() => {
+    const allEntries = stageEntries.flatMap(({ entries }) => entries);
+    setEntries(allEntries);
+  }, [stageEntries, setEntries]);
+
+  // ✅ FASE 2: Sensores otimizados para @dnd-kit
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 8, // Previne drag acidental, permite cliques
+        delay: 100,
+        tolerance: 5,
       },
     })
   );
 
-  const handleDragStart = (event: DragStartEvent) => {
+  const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event;
     const entry = stageEntries
       .flatMap(s => s.entries)
@@ -77,9 +92,9 @@ export function KanbanBoard({
       setActiveEntry(entry);
       console.log('🎯 [KanbanBoard] Drag iniciado:', entry.lead?.nome);
     }
-  };
+  }, [stageEntries]);
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveEntry(null);
 
@@ -155,7 +170,7 @@ export function KanbanBoard({
     if (result.success) {
       console.log('✅ [KanbanBoard] Movimentação completa');
     }
-  };
+  }, [stageEntries, checklistItems, moveLead, onRefresh, isMoving]);
 
   return (
     <DndContext
@@ -163,6 +178,7 @@ export function KanbanBoard({
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      autoScroll={{ threshold: { x: 0.2, y: 0.2 } }}
     >
       <div className="flex gap-6 overflow-x-auto pb-6">
         {stageEntries.map(({ stage, nextStage, entries, wipExceeded }) => (

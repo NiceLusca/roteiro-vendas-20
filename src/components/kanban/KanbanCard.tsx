@@ -1,3 +1,4 @@
+import { memo, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -48,7 +49,7 @@ interface KanbanCardProps {
   onTransferPipeline?: () => void;
 }
 
-export function KanbanCard({
+export const KanbanCard = memo(function KanbanCard({
   entry,
   lead,
   stage,
@@ -85,13 +86,21 @@ export function KanbanCard({
     transform,
     transition,
     isDragging: dragActive,
-  } = useSortable({ id: entry.id });
+  } = useSortable({ 
+    id: entry.id,
+    // ✅ FASE 2: Fine-tuning @dnd-kit
+    transition: {
+      duration: 150,
+      easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+    },
+  });
 
-  const style = {
+  const style = useMemo(() => ({
     transform: CSS.Transform.toString(transform),
     transition,
-  };
-  const getScoreBadgeClass = (classification: string) => {
+  }), [transform, transition]);
+
+  const getScoreBadgeClass = useCallback((classification: string) => {
     switch (classification) {
       case 'Alto':
         return 'score-alto';
@@ -100,9 +109,9 @@ export function KanbanCard({
       default:
         return 'score-baixo';
     }
-  };
+  }, []);
 
-  const getHealthBadgeClass = (saude: string) => {
+  const getHealthBadgeClass = useCallback((saude: string) => {
     switch (saude) {
       case 'Verde':
         return 'health-verde';
@@ -111,10 +120,10 @@ export function KanbanCard({
       default:
         return 'health-vermelho';
     }
-  };
+  }, []);
 
   // Função para determinar as cores do cartão baseado no closer
-  const getCloserCardColors = (closer?: string) => {
+  const getCloserCardColors = useCallback((closer?: string) => {
     if (!closer) return { bg: 'bg-card', border: 'border-border' };
     
     switch (closer) {
@@ -129,9 +138,9 @@ export function KanbanCard({
       default:
         return { bg: 'bg-card', border: 'border-border' };
     }
-  };
+  }, []);
 
-  const closerColors = getCloserCardColors(lead?.closer);
+  const closerColors = useMemo(() => getCloserCardColors(lead?.closer), [lead?.closer, getCloserCardColors]);
 
 
   return (
@@ -404,4 +413,4 @@ export function KanbanCard({
       </CardContent>
     </Card>
   );
-}
+});

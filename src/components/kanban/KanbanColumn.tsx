@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StageTemplatesButton } from '@/components/pipeline/StageTemplatesButton';
 import { StageAnalyticsButton } from '@/components/pipeline/StageAnalyticsButton';
@@ -28,7 +29,7 @@ interface KanbanColumnProps {
   onTransferPipeline?: (leadId: string) => void;
 }
 
-export function KanbanColumn({
+export const KanbanColumn = memo(function KanbanColumn({
   stage,
   nextStage,
   entries,
@@ -48,16 +49,20 @@ export function KanbanColumn({
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
   });
-  // Contar leads por saúde
-  const healthCounts = entries.reduce((acc, entry) => {
-    acc[entry.saude_etapa] = (acc[entry.saude_etapa] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
 
-  // Ordenar por lead score
-  const sortedEntries = [...entries].sort((a, b) => {
-    return (b.lead.lead_score || 0) - (a.lead.lead_score || 0);
-  });
+  // ✅ FASE 2: Memoizar computações pesadas
+  const healthCounts = useMemo(() => {
+    return entries.reduce((acc, entry) => {
+      acc[entry.saude_etapa] = (acc[entry.saude_etapa] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [entries]);
+
+  const sortedEntries = useMemo(() => {
+    return [...entries].sort((a, b) => {
+      return (b.lead.lead_score || 0) - (a.lead.lead_score || 0);
+    });
+  }, [entries]);
 
   return (
     <div 
@@ -192,4 +197,4 @@ export function KanbanColumn({
       </div>
     </div>
   );
-}
+});

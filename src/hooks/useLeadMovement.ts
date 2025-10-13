@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContextSecure';
 import { useAudit } from '@/contexts/AuditContext';
 import { LeadMovementValidator } from '@/lib/leadMovementValidator';
 import { LeadPipelineEntry, PipelineStage, StageChecklistItem } from '@/types/crm';
+import { useLeadPipelineStore } from '@/stores/leadPipelineStore';
 
 interface MoveLeadParams {
   entry: LeadPipelineEntry;
@@ -33,6 +34,7 @@ export function useLeadMovement() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { logChange } = useAudit();
+  const { updateEntryOptimistic, revertOptimisticUpdate, getEntry } = useLeadPipelineStore();
 
   const moveLead = useCallback(async ({
     entry,
@@ -106,16 +108,21 @@ export function useLeadMovement() {
         updated_at: new Date().toISOString()
       };
 
-      console.log('💾 [useLeadMovement] Salvando no banco:', {
+      console.log('💾 [useLeadMovement] Preparando update:', {
         entryId: entry.id,
-        ...updateData
+        fromStage: fromStage.nome,
+        toStage: toStage.nome
       });
 
-      // ✅ FASE 3: Update otimista - notificar UI IMEDIATAMENTE
-      console.log('⚡ [useLeadMovement] Executando update otimista');
-      onSuccess?.(); // UI atualiza ANTES da API responder
+      // ✅ FASE 2: Update otimista no STORE - UI instantânea (0ms)
+      console.log('⚡ [useLeadMovement] Update otimista no Zustand store');
+      updateEntryOptimistic(entry.id, updateData);
 
-      // Executar update no Supabase em background
+      // ✅ Notificar componente pai IMEDIATAMENTE
+      onSuccess?.();
+
+      // 🔄 DEPOIS fazer update no Supabase (background)
+      console.log('📡 [useLeadMovement] Sincronizando com banco...');
       const { data, error } = await supabase
         .from('lead_pipeline_entries')
         .update(updateData)
@@ -157,11 +164,18 @@ export function useLeadMovement() {
       return { success: true, message: successMsg };
 
     } catch (error) {
-      console.error('❌ [useLeadMovement] Erro:', error);
+      console.error('❌ [useLeadMovement] Erro no update:', error);
       
-      // ✅ FASE 3: Rollback do update otimista
-      console.log('🔄 [useLeadMovement] Executando rollback do update otimista');
-      onError?.(); // Notifica UI para reverter mudança
+      // ✅ FASE 2: Rollback do update otimista no store
+      console.log('🔄 [useLeadMovement] Revertendo update otimista no Zustand');
+      revertOptimisticUpdate(entry.id, {
+        etapa_atual_id: fromStage.id,
+        data_entrada_etapa: entry.data_entrada_etapa,
+        saude_etapa: entry.saude_etapa
+      } as LeadPipelineEntry);
+      
+      // Notificar componente pai sobre erro
+      onError?.();
       
       let errorMessage = 'Erro ao mover lead';
       
