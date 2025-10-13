@@ -63,13 +63,9 @@ export function KanbanBoard({
   const { moveLead, isMoving } = useLeadMovement();
   const { stages } = useSupabasePipelineStages(selectedPipelineId);
   const { checklistItems } = useSupabaseChecklistItems();
-  const { setEntries } = useLeadPipelineStore();
 
-  // ✅ FASE 2: Sincronizar stageEntries com Zustand store
-  useEffect(() => {
-    const allEntries = stageEntries.flatMap(({ entries }) => entries);
-    setEntries(allEntries);
-  }, [stageEntries, setEntries]);
+  // ✅ REMOVIDO: useEffect que causava loop infinito
+  // O store agora é usado apenas para updates otimistas, não para armazenar dados
 
   // ✅ FASE 2: Sensores otimizados para @dnd-kit
   const sensors = useSensors(

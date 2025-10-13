@@ -1,84 +1,60 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { LeadPipelineEntry, Lead, PipelineStage } from '@/types/crm';
+import { LeadPipelineEntry } from '@/types/crm';
 
-export interface EnrichedEntry extends LeadPipelineEntry {
-  lead: Lead;
-  stage?: PipelineStage;
-}
-
+/**
+ * Store simplificado - Usado APENAS para updates otimistas temporários
+ * NÃO é a fonte de verdade dos dados (props são a fonte)
+ */
 interface LeadPipelineStore {
-  entries: EnrichedEntry[];
-  loading: boolean;
-  lastUpdated: number;
+  // Mapa de updates otimistas em memória
+  optimisticUpdates: Map<string, Partial<LeadPipelineEntry>>;
 
-  // Atualização otimista - UI instantânea
-  updateEntryOptimistic: (entryId: string, updates: Partial<LeadPipelineEntry>) => void;
+  // Adicionar update otimista
+  addOptimisticUpdate: (entryId: string, updates: Partial<LeadPipelineEntry>) => void;
   
-  // Reverter update otimista em caso de erro
-  revertOptimisticUpdate: (entryId: string, originalEntry: LeadPipelineEntry) => void;
+  // Buscar update otimista
+  getOptimisticUpdate: (entryId: string) => Partial<LeadPipelineEntry> | undefined;
   
-  // Setar dados iniciais
-  setEntries: (entries: EnrichedEntry[]) => void;
+  // Limpar update otimista após confirmação
+  clearOptimisticUpdate: (entryId: string) => void;
   
-  // Buscar entry específica
-  getEntry: (entryId: string) => EnrichedEntry | undefined;
-  
-  // Limpar store
-  clear: () => void;
+  // Limpar todos os updates
+  clearAll: () => void;
 }
 
 export const useLeadPipelineStore = create<LeadPipelineStore>()(
   devtools(
     (set, get) => ({
-      entries: [],
-      loading: false,
-      lastUpdated: 0,
+      optimisticUpdates: new Map(),
 
-      updateEntryOptimistic: (entryId, updates) => {
-        console.log('⚡ [Store] Update otimista:', { entryId, updates });
+      addOptimisticUpdate: (entryId, updates) => {
+        console.log('⚡ [Store] Adicionando update otimista:', { entryId, updates });
         
-        set((state) => ({
-          entries: state.entries.map(entry =>
-            entry.id === entryId 
-              ? { ...entry, ...updates }
-              : entry
-          ),
-          lastUpdated: Date.now()
-        }));
-      },
-
-      revertOptimisticUpdate: (entryId, originalEntry) => {
-        console.log('🔄 [Store] Revertendo update otimista:', entryId);
-        
-        set((state) => ({
-          entries: state.entries.map(entry =>
-            entry.id === entryId 
-              ? { ...entry, ...originalEntry }
-              : entry
-          ),
-          lastUpdated: Date.now()
-        }));
-      },
-
-      setEntries: (entries) => {
-        set({ 
-          entries, 
-          loading: false,
-          lastUpdated: Date.now() 
+        set((state) => {
+          const newMap = new Map(state.optimisticUpdates);
+          newMap.set(entryId, updates);
+          return { optimisticUpdates: newMap };
         });
       },
 
-      getEntry: (entryId) => {
-        return get().entries.find(e => e.id === entryId);
+      getOptimisticUpdate: (entryId) => {
+        return get().optimisticUpdates.get(entryId);
       },
 
-      clear: () => {
-        set({ 
-          entries: [], 
-          loading: false,
-          lastUpdated: 0 
+      clearOptimisticUpdate: (entryId) => {
+        console.log('🧹 [Store] Limpando update otimista:', entryId);
+        
+        set((state) => {
+          const newMap = new Map(state.optimisticUpdates);
+          newMap.delete(entryId);
+          return { optimisticUpdates: newMap };
         });
+      },
+
+      clearAll: () => {
+        console.log('🧹 [Store] Limpando todos os updates otimistas');
+        set({ optimisticUpdates: new Map() });
       }
     }),
     { name: 'LeadPipelineStore' }

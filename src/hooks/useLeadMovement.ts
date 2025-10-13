@@ -34,7 +34,7 @@ export function useLeadMovement() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { logChange } = useAudit();
-  const { updateEntryOptimistic, revertOptimisticUpdate, getEntry } = useLeadPipelineStore();
+  const { addOptimisticUpdate, clearOptimisticUpdate } = useLeadPipelineStore();
 
   const moveLead = useCallback(async ({
     entry,
@@ -114,9 +114,9 @@ export function useLeadMovement() {
         toStage: toStage.nome
       });
 
-      // ✅ FASE 2: Update otimista no STORE - UI instantânea (0ms)
-      console.log('⚡ [useLeadMovement] Update otimista no Zustand store');
-      updateEntryOptimistic(entry.id, updateData);
+      // ✅ Update otimista - UI instantânea (0ms)
+      console.log('⚡ [useLeadMovement] Adicionando update otimista');
+      addOptimisticUpdate(entry.id, updateData);
 
       // ✅ Notificar componente pai IMEDIATAMENTE
       onSuccess?.();
@@ -139,6 +139,9 @@ export function useLeadMovement() {
       }
 
       console.log('✅ [useLeadMovement] Update confirmado:', data.id);
+      
+      // Limpar update otimista após confirmação da API
+      clearOptimisticUpdate(entry.id);
 
       // Log de auditoria
       logChange({
@@ -166,13 +169,9 @@ export function useLeadMovement() {
     } catch (error) {
       console.error('❌ [useLeadMovement] Erro no update:', error);
       
-      // ✅ FASE 2: Rollback do update otimista no store
-      console.log('🔄 [useLeadMovement] Revertendo update otimista no Zustand');
-      revertOptimisticUpdate(entry.id, {
-        etapa_atual_id: fromStage.id,
-        data_entrada_etapa: entry.data_entrada_etapa,
-        saude_etapa: entry.saude_etapa
-      } as LeadPipelineEntry);
+      // ✅ Limpar update otimista em caso de erro
+      console.log('🔄 [useLeadMovement] Removendo update otimista devido a erro');
+      clearOptimisticUpdate(entry.id);
       
       // Notificar componente pai sobre erro
       onError?.();
