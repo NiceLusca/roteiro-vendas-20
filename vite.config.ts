@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    dedupe: ['react', 'react-dom'],
+    dedupe: ['react', 'react-dom', 'zustand'],
   },
   build: {
     target: 'es2020',
@@ -38,6 +38,10 @@ export default defineConfig(({ mode }) => ({
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'zustand-vendor': ['zustand'],
+        },
       },
     },
     chunkSizeWarningLimit: 600,
@@ -51,6 +55,8 @@ export default defineConfig(({ mode }) => ({
       '@tanstack/react-query',
       '@supabase/supabase-js',
       'zustand',
+      'zustand/middleware',
     ],
+    force: true,
   },
 }));
