@@ -363,18 +363,25 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
           const newRecord = payload.new as any;
           const oldRecord = payload.old as any;
           
+          // ✅ FASE 2: Filtro inteligente - só reagir ao pipeline atual
+          const recordPipelineId = newRecord?.pipeline_id || oldRecord?.pipeline_id;
+          if (pipelineId && recordPipelineId !== pipelineId) {
+            console.log('⏭️ Ignorando evento de outro pipeline:', recordPipelineId);
+            return;
+          }
+          
           console.log('🔔 Realtime event recebido:', {
             eventType: payload.eventType,
             leadId: newRecord?.lead_id || oldRecord?.lead_id,
             etapaAtual: newRecord?.etapa_atual_id
           });
           
-          // Debounce refetch para evitar múltiplas chamadas
+          // ✅ FASE 2: Debounce reduzido de 300ms para 50ms
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
-            console.log('🔄 Executando refetch após debounce');
-            fetchEntries(pipelineId, true); // Força re-render
-          }, 300);
+            console.log('🔄 Executando refetch após debounce (50ms)');
+            fetchEntries(pipelineId, true);
+          }, 50);
         }
       )
       .subscribe();

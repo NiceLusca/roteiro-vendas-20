@@ -111,7 +111,11 @@ export function useLeadMovement() {
         ...updateData
       });
 
-      // Executar update no Supabase
+      // ✅ FASE 3: Update otimista - notificar UI IMEDIATAMENTE
+      console.log('⚡ [useLeadMovement] Executando update otimista');
+      onSuccess?.(); // UI atualiza ANTES da API responder
+
+      // Executar update no Supabase em background
       const { data, error } = await supabase
         .from('lead_pipeline_entries')
         .update(updateData)
@@ -148,15 +152,16 @@ export function useLeadMovement() {
         duration: 3000
       });
 
-      console.log('✅ [useLeadMovement] Sucesso total');
-      console.log('🔔 Chamando onSuccess callback');
-      onSuccess?.();
-      console.log('🔔 onSuccess callback concluído');
+      console.log('✅ [useLeadMovement] Sucesso total - API confirmou update otimista');
 
       return { success: true, message: successMsg };
 
     } catch (error) {
       console.error('❌ [useLeadMovement] Erro:', error);
+      
+      // ✅ FASE 3: Rollback do update otimista
+      console.log('🔄 [useLeadMovement] Executando rollback do update otimista');
+      onError?.(); // Notifica UI para reverter mudança
       
       let errorMessage = 'Erro ao mover lead';
       
@@ -176,8 +181,6 @@ export function useLeadMovement() {
         variant: 'destructive',
         duration: 5000
       });
-
-      onError?.();
 
       return { success: false, message: errorMessage };
 

@@ -141,19 +141,14 @@ export function KanbanBoard({
       toStage,
       checklistItems: stageChecklistItems,
       currentEntriesInTargetStage: toStageEntry.entries.length,
-      onSuccess: async () => {
-        console.log('✅ [KanbanBoard] onSuccess INICIADO');
-        console.log('📞 Chamando refetch...');
-        await refetch(selectedPipelineId);
-        console.log('✅ refetch concluído');
-        setRefreshKey(prev => prev + 1);
-        console.log('🔄 Chamando onRefresh do pai...');
+      onSuccess: () => {
+        // ✅ FASE 1: Removido refetch daqui - deixa o pai (Pipelines.tsx) controlar
+        // Apenas notifica o pai para atualizar
         onRefresh?.();
-        console.log('✅ [KanbanBoard] onSuccess COMPLETO');
       },
-      onError: async () => {
-        console.log('🔄 [KanbanBoard] Refetch de recuperação');
-        await refetch(selectedPipelineId);
+      onError: () => {
+        // ✅ FASE 1: Removido refetch - o realtime vai sincronizar
+        onRefresh?.();
       }
     });
 

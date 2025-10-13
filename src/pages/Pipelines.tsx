@@ -56,10 +56,11 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
       .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
   }, [pipelineId, leadPipelineEntries, leads, refreshTrigger]);
 
-  // Handler para forçar refresh da UI
+  // ✅ FASE 1: Refresh otimizado - apenas incrementa trigger, realtime faz o resto
   const handleRefresh = useCallback(() => {
-    console.log('🔄 [Pipelines] Forçando refresh da UI');
+    console.log('🔄 [Pipelines] Trigger de atualização');
     setRefreshTrigger(prev => prev + 1);
+    // Realtime (50ms debounce) vai sincronizar automaticamente
   }, []);
 
   // Handler para avançar etapa via botão
