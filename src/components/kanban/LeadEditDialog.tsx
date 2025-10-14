@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -46,6 +46,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
   });
   const [newNote, setNewNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const [pasteEnabled, setPasteEnabled] = useState(false);
 
   const { notes, loading: notesLoading, addNote } = useLeadNotes(lead.id);
   const { 
@@ -98,6 +99,38 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
 
     await uploadAttachment(file);
   };
+
+  // Listener para Ctrl+V quando a aba de anexos estiver ativa
+  useEffect(() => {
+    if (!open || !pasteEnabled) return;
+
+    const handlePaste = async (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        
+        // Verificar se é uma imagem
+        if (item.type.indexOf('image') !== -1) {
+          e.preventDefault();
+          const blob = item.getAsFile();
+          
+          if (blob) {
+            // Gerar nome baseado no timestamp
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const file = new File([blob], `print-${timestamp}.png`, { type: 'image/png' });
+            
+            toast.info('Fazendo upload do print...');
+            await uploadAttachment(file);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [open, pasteEnabled, uploadAttachment]);
 
   const getCloserColor = (closer: string) => {
     switch (closer) {
@@ -283,7 +316,13 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
           </TabsContent>
 
           {/* Tab de Anexos */}
-          <TabsContent value="attachments" className="space-y-4 mt-4">
+          <TabsContent 
+            value="attachments" 
+            className="space-y-4 mt-4"
+            onFocus={() => setPasteEnabled(true)}
+            onBlur={() => setPasteEnabled(false)}
+            tabIndex={-1}
+          >
             <div className="space-y-2">
               <Label htmlFor="file-upload">Upload de Arquivo</Label>
               <div className="flex items-center gap-2">
@@ -299,7 +338,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Máximo 20MB por arquivo
+                Máximo 20MB por arquivo • Pressione Ctrl+V para colar prints
               </p>
             </div>
 
@@ -332,23 +371,33 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{attachment.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {attachment.metadata?.size ? `${(attachment.metadata.size / 1024).toFixed(2)} KB` : 'Tamanho desconhecido'}
-                        </p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>
+                            {attachment.file_size ? `${(attachment.file_size / 1024).toFixed(2)} KB` : 'Tamanho desconhecido'}
+                          </span>
+                          <span>•</span>
+                          <span className="font-semibold text-primary">
+                            {attachment.uploader_name || 'Usuário'}
+                          </span>
+                          <span>•</span>
+                          <span>
+                            {new Date(attachment.created_at).toLocaleString('pt-BR')}
+                          </span>
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => downloadAttachment(attachment.name)}
+                        onClick={() => downloadAttachment(attachment.file_path, attachment.name)}
                       >
                         <Download className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => deleteAttachment(attachment.name)}
+                        onClick={() => deleteAttachment(attachment.id, attachment.file_path)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
