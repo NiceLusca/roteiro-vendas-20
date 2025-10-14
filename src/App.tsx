@@ -5,7 +5,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import React, { lazy, Suspense } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { GlobalErrorBoundary } from "@/components/ui/GlobalErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContextSecure";
@@ -45,7 +45,7 @@ const queryClient = new QueryClient({
 });
 
 // Protected Route Component
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
 
   if (loading) {
