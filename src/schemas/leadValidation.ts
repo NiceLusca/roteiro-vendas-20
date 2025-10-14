@@ -170,15 +170,62 @@ function decodeHTMLEntities(text: string): string {
 }
 
 /**
- * Sanitiza entrada de texto para prevenir XSS e decodificar HTML entities
+ * Corrige bytes UTF-8 mal interpretados como Latin-1
+ * Ex: "MÃ¡rcia" → "Márcia"
+ */
+function fixUTF8Encoding(text: string): string {
+  let output = text;
+  
+  // Corrigir bytes UTF-8 mal interpretados - minúsculas
+  output = output.replace(/Ã¡/g, 'á');
+  output = output.replace(/Ã©/g, 'é');
+  output = output.replace(/Ã­/g, 'í');
+  output = output.replace(/Ã³/g, 'ó');
+  output = output.replace(/Ãº/g, 'ú');
+  output = output.replace(/Ã£/g, 'ã');
+  output = output.replace(/Ãµ/g, 'õ');
+  output = output.replace(/Ã§/g, 'ç');
+  output = output.replace(/Ã¢/g, 'â');
+  output = output.replace(/Ãª/g, 'ê');
+  output = output.replace(/Ã´/g, 'ô');
+  output = output.replace(/Ã¹/g, 'ù');
+  output = output.replace(/Ã /g, 'à');
+  
+  // Maiúsculas
+  output = output.replace(/Ã\u0081/g, 'Á');
+  output = output.replace(/Ã\u0089/g, 'É');
+  output = output.replace(/Ã\u008d/g, 'Í');
+  output = output.replace(/Ã\u0093/g, 'Ó');
+  output = output.replace(/Ã\u009a/g, 'Ú');
+  output = output.replace(/Ã\u0083/g, 'Ã');
+  output = output.replace(/Ã\u0095/g, 'Õ');
+  output = output.replace(/Ã\u0087/g, 'Ç');
+  output = output.replace(/Ã\u0082/g, 'Â');
+  output = output.replace(/Ã\u008a/g, 'Ê');
+  output = output.replace(/Ã\u0094/g, 'Ô');
+  
+  return output;
+}
+
+/**
+ * Sanitiza entrada de texto para prevenir XSS, decodificar HTML entities e corrigir UTF-8
  */
 export function sanitizeText(text: string | undefined | null): string {
   if (!text) return '';
   
-  return decodeHTMLEntities(text)
-    .trim()
-    .replace(/[<>]/g, '') // Remove < e > para prevenir tags HTML
-    .substring(0, 1000); // Limite de segurança
+  let cleaned = text;
+  
+  // 1. Corrigir UTF-8 mal interpretado (ANTES de decodificar HTML)
+  cleaned = fixUTF8Encoding(cleaned);
+  
+  // 2. Decodificar entidades HTML
+  cleaned = decodeHTMLEntities(cleaned);
+  
+  // 3. Trim e remover tags HTML perigosas
+  cleaned = cleaned.trim().replace(/[<>]/g, '');
+  
+  // 4. Limite de segurança
+  return cleaned.substring(0, 1000);
 }
 
 /**
