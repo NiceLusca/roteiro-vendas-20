@@ -163,8 +163,8 @@ function App() {
       <GlobalErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <AllLogsAuditProvider>
-              <CRMProviderWrapper>
+            <CRMProviderWrapper>
+              <AllLogsAuditProvider>
                 <TooltipProvider>
                   <SecurityHeaders environment={process.env.NODE_ENV as 'development' | 'production'} />
                   <Toaster />
@@ -173,8 +173,8 @@ function App() {
                     <AppContent />
                   </BrowserRouter>
                 </TooltipProvider>
-              </CRMProviderWrapper>
-            </AllLogsAuditProvider>
+              </AllLogsAuditProvider>
+            </CRMProviderWrapper>
           </AuthProvider>
         </QueryClientProvider>
       </GlobalErrorBoundary>
