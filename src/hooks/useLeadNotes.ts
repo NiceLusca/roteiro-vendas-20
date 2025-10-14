@@ -28,7 +28,7 @@ export function useLeadNotes(leadId?: string) {
         .from('lead_notes')
         .select(`
           *,
-          profiles!lead_notes_user_id_fkey (
+          profiles:user_id (
             nome,
             full_name,
             email
@@ -74,8 +74,8 @@ export function useLeadNotes(leadId?: string) {
 
       if (error) throw error;
 
-      setNotes(prev => [data, ...prev]);
       toast.success('Comentário adicionado');
+      await fetchNotes();
       return data;
     } catch (error) {
       console.error('Erro ao adicionar nota:', error);

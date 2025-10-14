@@ -72,7 +72,10 @@ export function useLeadAttachments(leadId?: string) {
         .from('lead-attachments')
         .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Upload error details:', uploadError);
+        throw uploadError;
+      }
 
       toast.success('Arquivo enviado com sucesso');
       await fetchAttachments();
