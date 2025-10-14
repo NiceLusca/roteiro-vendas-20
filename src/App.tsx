@@ -19,6 +19,10 @@ import NotFound from "./pages/NotFound";
 import { Auth } from "./pages/Auth";
 import { EnhancedInstallPrompt, InstallBanner } from "@/components/pwa/EnhancedInstallPrompt";
 import { EnhancedLoading } from "@/components/ui/enhanced-loading";
+import { NotificationPermissionBanner } from "@/components/notifications/NotificationPermissionBanner";
+import { useAppointmentNotifications } from "@/hooks/useAppointmentNotifications";
+import { AllLogsAuditProvider } from "@/contexts/AllLogsAuditContext";
+import { CRMProviderWrapper } from "@/contexts/CRMProviderWrapper";
 
 // Lazy imports with enhanced loading
 const Agenda = lazy(() => import('./pages/Agenda'));
@@ -70,93 +74,107 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+function AppContent() {
+  const { checkAppointments } = useAppointmentNotifications();
+
+  return (
+    <>
+      <GlobalKeyboardShortcuts />
+      <EnhancedInstallPrompt />
+      <InstallBanner />
+      <NotificationPermissionBanner onPermissionGranted={checkAppointments} />
+      <Routes>
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/" element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }>
+          <Route index element={<Index />} />
+          <Route path="pipelines/select" element={<PipelineSelector />} />
+          <Route path="pipelines/:pipelineId" element={<Pipelines />} />
+          <Route path="pipelines" element={<Navigate to="/pipelines/select" replace />} />
+          <Route path="leads" element={<Leads />} />
+          <Route path="agenda" element={
+            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+              <Agenda />
+            </Suspense>
+          } />
+          <Route path="deals" element={
+            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+              <Deals />
+            </Suspense>
+          } />
+          <Route path="orders" element={
+            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+              <Orders />
+            </Suspense>
+          } />
+          <Route path="reports" element={
+            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+              <Reports />
+            </Suspense>
+          } />
+          <Route path="analytics" element={
+            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+              <Analytics />
+            </Suspense>
+          } />
+          <Route path="intelligence" element={
+            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+              <Intelligence />
+            </Suspense>
+          } />
+          <Route path="settings" element={
+            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+              <Settings />
+            </Suspense>
+          } />
+          <Route path="security" element={
+            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+              <Security />
+            </Suspense>
+          } />
+          <Route path="production" element={
+            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+              <Production />
+            </Suspense>
+          } />
+          <Route path="leads/:id" element={
+            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+              <LeadDetail />
+            </Suspense>
+          } />
+          <Route path="help" element={
+            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+              <Help />
+            </Suspense>
+          } />
+        </Route>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
+  );
+}
+
 function App() {
   return (
     <HelmetProvider>
       <GlobalErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <TooltipProvider>
-              <SecurityHeaders environment={process.env.NODE_ENV as 'development' | 'production'} />
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <GlobalKeyboardShortcuts />
-                <EnhancedInstallPrompt />
-                <InstallBanner />
-                <Routes>
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/" element={
-                    <ProtectedRoute>
-                      <AppLayout />
-                    </ProtectedRoute>
-                  }>
-                    <Route index element={<Index />} />
-                    <Route path="pipelines/select" element={<PipelineSelector />} />
-                    <Route path="pipelines/:pipelineId" element={<Pipelines />} />
-                    <Route path="pipelines" element={<Navigate to="/pipelines/select" replace />} />
-                    <Route path="leads" element={<Leads />} />
-                          <Route path="agenda" element={
-                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-                              <Agenda />
-                            </Suspense>
-                          } />
-                          <Route path="deals" element={
-                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-                              <Deals />
-                            </Suspense>
-                          } />
-                          <Route path="orders" element={
-                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-                              <Orders />
-                            </Suspense>
-                          } />
-                          <Route path="reports" element={
-                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-                              <Reports />
-                            </Suspense>
-                          } />
-                          <Route path="analytics" element={
-                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-                              <Analytics />
-                            </Suspense>
-                          } />
-                          <Route path="intelligence" element={
-                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-                              <Intelligence />
-                            </Suspense>
-                          } />
-                          <Route path="settings" element={
-                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-                              <Settings />
-                            </Suspense>
-                          } />
-                          <Route path="security" element={
-                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-                              <Security />
-                            </Suspense>
-                          } />
-                          <Route path="production" element={
-                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-                              <Production />
-                            </Suspense>
-                          } />
-                          <Route path="leads/:id" element={
-                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-                              <LeadDetail />
-                            </Suspense>
-                          } />
-                          <Route path="help" element={
-                            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-                              <Help />
-                            </Suspense>
-                          } />
-                        </Route>
-                        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
+            <AllLogsAuditProvider>
+              <CRMProviderWrapper>
+                <TooltipProvider>
+                  <SecurityHeaders environment={process.env.NODE_ENV as 'development' | 'production'} />
+                  <Toaster />
+                  <Sonner />
+                  <BrowserRouter>
+                    <AppContent />
                   </BrowserRouter>
                 </TooltipProvider>
+              </CRMProviderWrapper>
+            </AllLogsAuditProvider>
           </AuthProvider>
         </QueryClientProvider>
       </GlobalErrorBoundary>

@@ -7,11 +7,13 @@ import { formatWhatsApp } from '@/utils/formatters';
 import { Phone, ArrowRight, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { KanbanCardMenu } from './KanbanCardMenu';
+import { AppointmentBadge } from '@/components/notifications/AppointmentBadge';
 
 interface AppointmentInfo {
   id: string;
   start_at: string;
   status: string;
+  titulo?: string;
   tipo_sessao?: string;
   closer_responsavel?: string;
 }
@@ -159,6 +161,17 @@ export const KanbanCard = memo(function KanbanCard({
           <Phone className="h-3 w-3 flex-shrink-0" />
           <span className="truncate">{formatWhatsApp(lead.whatsapp)}</span>
         </div>
+
+        {/* Próximo Agendamento */}
+        {nextAppointment && (
+          <div className="mb-2">
+            <AppointmentBadge 
+              startAt={nextAppointment.start_at}
+              title={nextAppointment.titulo}
+              compact
+            />
+          </div>
+        )}
 
         {/* Próximo passo em 1 linha */}
         <div className="flex items-center justify-between text-xs mb-3 py-1.5 px-2 bg-muted/30 rounded">
