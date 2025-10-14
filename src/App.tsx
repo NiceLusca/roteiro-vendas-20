@@ -74,15 +74,19 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-function AppContent() {
+function NotificationHandler() {
   const { checkAppointments } = useAppointmentNotifications();
+  
+  return <NotificationPermissionBanner onPermissionGranted={checkAppointments} />;
+}
 
+function AppContent() {
   return (
     <>
       <GlobalKeyboardShortcuts />
       <EnhancedInstallPrompt />
       <InstallBanner />
-      <NotificationPermissionBanner onPermissionGranted={checkAppointments} />
+      <NotificationHandler />
       <Routes>
         <Route path="/auth" element={<Auth />} />
         <Route path="/" element={
