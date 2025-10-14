@@ -3,10 +3,7 @@ import {
   GitBranch,
   Users,
   Kanban,
-  Calendar,
-  Briefcase,
-  BarChart3,
-  Settings,
+  Paperclip,
   Keyboard,
 } from 'lucide-react';
 
@@ -405,42 +402,6 @@ export const helpSections: HelpSection[] = [
         keywords: ['personalização', 'customização', 'layout', 'campos', 'automação'],
       }
     ]
-  },
-  {
-    id: 'calendar-appointments',
-    title: 'Agenda e Compromissos',
-    description: 'Organize sua agenda e maximize sua produtividade',
-    icon: Calendar,
-    difficulty: 'Iniciante',
-    estimatedTime: '25-35 minutos',
-    audience: 'Todos os usuários',
-  },
-  {
-    id: 'sales-deals',
-    title: 'Vendas e Negociações',
-    description: 'Feche mais negócios com técnicas e ferramentas avançadas',
-    icon: Briefcase,
-    difficulty: 'Intermediário',
-    estimatedTime: '40-50 minutos',
-    audience: 'Vendedores e gestores',
-  },
-  {
-    id: 'reports-analytics',
-    title: 'Relatórios e Analytics',
-    description: 'Transforme dados em insights acionáveis',
-    icon: BarChart3,
-    difficulty: 'Intermediário',
-    estimatedTime: '35-45 minutos',
-    audience: 'Gestores e analistas',
-  },
-  {
-    id: 'advanced-settings',
-    title: 'Configurações Avançadas',
-    description: 'Personalize a plataforma para suas necessidades específicas',
-    icon: Settings,
-    difficulty: 'Avançado',
-    estimatedTime: '60+ minutos',
-    audience: 'Administradores',
   },
   {
     id: 'keyboard-shortcuts',
