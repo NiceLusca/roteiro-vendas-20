@@ -16,6 +16,7 @@ import {
   GitBranch,
   Calendar,
   MessageCircle,
+  FastForward,
 } from 'lucide-react';
 
 interface KanbanCardMenuProps {
@@ -25,6 +26,7 @@ interface KanbanCardMenuProps {
   onOpenChecklist?: () => void;
   onRegressStage?: () => void;
   onAdvanceStage?: () => void;
+  onJumpToStage?: () => void;
   onTransferPipeline?: () => void;
   onCreateAppointment?: () => void;
   onRegisterInteraction?: () => void;
@@ -37,6 +39,7 @@ export const KanbanCardMenu = memo(function KanbanCardMenu({
   onOpenChecklist,
   onRegressStage,
   onAdvanceStage,
+  onJumpToStage,
   onTransferPipeline,
   onCreateAppointment,
   onRegisterInteraction,
@@ -87,15 +90,27 @@ export const KanbanCardMenu = memo(function KanbanCardMenu({
         </DropdownMenuItem>
         
         {hasNextStage && (
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              onAdvanceStage?.();
-            }}
-          >
-            <ArrowRight className="h-4 w-4 mr-2" />
-            Avançar Etapa
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onAdvanceStage?.();
+              }}
+            >
+              <ArrowRight className="h-4 w-4 mr-2" />
+              Avançar para Próxima
+            </DropdownMenuItem>
+            
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onJumpToStage?.();
+              }}
+            >
+              <FastForward className="h-4 w-4 mr-2" />
+              Pular para Etapa...
+            </DropdownMenuItem>
+          </>
         )}
         
         <DropdownMenuSeparator />

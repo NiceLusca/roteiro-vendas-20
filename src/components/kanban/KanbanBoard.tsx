@@ -18,6 +18,7 @@ interface KanbanBoardProps {
   onEditLead?: (leadId: string) => void;
   onCreateAppointment?: (leadId: string) => void;
   onAdvanceStage?: (entryId: string) => void;
+  onJumpToStage?: (entryId: string) => void;
   onRegisterInteraction?: (leadId: string) => void;
   onOpenChecklist?: (entryId: string) => void;
   onRegressStage?: (entryId: string) => void;
@@ -40,6 +41,7 @@ export function KanbanBoard({
   onEditLead,
   onCreateAppointment,
   onAdvanceStage,
+  onJumpToStage,
   onRegisterInteraction,
   onOpenChecklist,
   onRegressStage,
@@ -120,6 +122,7 @@ export function KanbanBoard({
           onEditLead={onEditLead}
           onCreateAppointment={onCreateAppointment}
           onAdvanceStage={onAdvanceStage}
+          onJumpToStage={onJumpToStage}
           onRegisterInteraction={onRegisterInteraction}
           onOpenChecklist={onOpenChecklist}
           onRegressStage={onRegressStage}

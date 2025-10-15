@@ -19,6 +19,7 @@ interface KanbanColumnProps {
   onEditLead?: (leadId: string) => void;
   onCreateAppointment?: (leadId: string) => void;
   onAdvanceStage?: (entryId: string) => void;
+  onJumpToStage?: (entryId: string) => void;
   onRegisterInteraction?: (leadId: string) => void;
   onOpenChecklist?: (entryId: string) => void;
   onRegressStage?: (entryId: string) => void;
@@ -40,6 +41,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   onEditLead,
   onCreateAppointment,
   onAdvanceStage,
+  onJumpToStage,
   onRegisterInteraction,
   onOpenChecklist,
   onRegressStage,
@@ -90,7 +92,10 @@ export const KanbanColumn = memo(function KanbanColumn({
 
   const sortedEntries = useMemo(() => {
     return [...entries].sort((a, b) => {
-      return (b.lead.lead_score || 0) - (a.lead.lead_score || 0);
+      // Ordenar por data de entrada na etapa (crescente - cards mais antigos primeiro, novos no final)
+      const dateA = new Date(a.data_entrada_etapa || a.created_at).getTime();
+      const dateB = new Date(b.data_entrada_etapa || b.created_at).getTime();
+      return dateA - dateB;
     });
   }, [entries]);
 
@@ -178,6 +183,7 @@ export const KanbanColumn = memo(function KanbanColumn({
                 onEditLead={() => onEditLead?.(entry.lead.id)}
                 onCreateAppointment={() => onCreateAppointment?.(entry.lead.id)}
                 onAdvanceStage={() => onAdvanceStage?.(entry.id)}
+                onJumpToStage={() => onJumpToStage?.(entry.id)}
                 onRegisterInteraction={() => onRegisterInteraction?.(entry.lead.id)}
                 onOpenChecklist={() => onOpenChecklist?.(entry.id)}
                 onRegressStage={() => onRegressStage?.(entry.id)}

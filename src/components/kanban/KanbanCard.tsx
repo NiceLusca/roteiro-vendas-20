@@ -30,6 +30,7 @@ interface KanbanCardProps {
   onEditLead?: () => void;
   onCreateAppointment?: () => void;
   onAdvanceStage?: () => void;
+  onJumpToStage?: () => void;
   onRegisterInteraction?: () => void;
   onOpenChecklist?: () => void;
   onRegressStage?: () => void;
@@ -50,6 +51,7 @@ export const KanbanCard = memo(function KanbanCard({
   onEditLead,
   onCreateAppointment,
   onAdvanceStage,
+  onJumpToStage,
   onRegisterInteraction,
   onOpenChecklist,
   onRegressStage,
@@ -148,6 +150,7 @@ export const KanbanCard = memo(function KanbanCard({
                 onOpenChecklist={onOpenChecklist}
                 onRegressStage={onRegressStage}
                 onAdvanceStage={onAdvanceStage}
+                onJumpToStage={onJumpToStage}
                 onTransferPipeline={onTransferPipeline}
                 onCreateAppointment={onCreateAppointment}
                 onRegisterInteraction={onRegisterInteraction}

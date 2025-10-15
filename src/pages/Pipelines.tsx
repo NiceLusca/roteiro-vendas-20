@@ -16,6 +16,7 @@ import { ArrowLeft, Filter, Search, RotateCcw } from 'lucide-react';
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
+import { StageJumpDialog } from '@/components/pipeline/StageJumpDialog';
 import { Lead } from '@/types/crm';
 
 // Camada intermediária que envolve com providers
@@ -38,6 +39,10 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
   const { fetchNextAppointments, getNextAppointmentForLead } = useKanbanAppointments();
   const { moveLead } = useLeadMovement();
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [stageJumpDialogState, setStageJumpDialogState] = useState<{
+    open: boolean;
+    entryId: string | null;
+  }>({ open: false, entryId: null });
   
   // Estados para busca e filtros
   const [searchTerm, setSearchTerm] = useState('');
@@ -163,6 +168,43 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
       }
     });
   }, [allEntries, pipelineStages, moveLead, handleRefresh]);
+
+  // Handler para abrir modal de pulo de etapas
+  const handleJumpToStage = useCallback((entryId: string) => {
+    setStageJumpDialogState({ open: true, entryId });
+  }, []);
+
+  // Handler para confirmar pulo de etapas
+  const handleConfirmJump = useCallback(async (targetStageId: string) => {
+    if (!stageJumpDialogState.entryId) return;
+    
+    const entry = allEntries.find(e => e.id === stageJumpDialogState.entryId);
+    if (!entry) {
+      console.error('❌ Entry não encontrada');
+      return;
+    }
+    
+    const fromStage = pipelineStages.find(s => s.id === entry.etapa_atual_id);
+    const toStage = pipelineStages.find(s => s.id === targetStageId);
+    
+    if (!fromStage || !toStage) {
+      console.error('❌ Stages não encontrados');
+      return;
+    }
+    
+    await moveLead({
+      entry,
+      fromStage,
+      toStage,
+      checklistItems: [],
+      currentEntriesInTargetStage: allEntries.filter(e => e.etapa_atual_id === targetStageId).length,
+      onSuccess: () => {
+        console.log('✅ [Pipelines] Pulou etapas com sucesso');
+        setStageJumpDialogState({ open: false, entryId: null });
+        handleRefresh();
+      }
+    });
+  }, [stageJumpDialogState.entryId, allEntries, pipelineStages, moveLead, handleRefresh]);
 
   // Handler para abrir modal de edição
   const handleViewOrEditLead = useCallback((leadId: string) => {
@@ -345,6 +387,7 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
         onViewLead={handleViewOrEditLead}
         onEditLead={handleViewOrEditLead}
         onAdvanceStage={handleAdvanceStage}
+        onJumpToStage={handleJumpToStage}
         onRegressStage={handleRegressStage}
         onRefresh={handleRefresh}
       />
@@ -357,6 +400,22 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
           onUpdate={handleRefresh}
         />
       )}
+
+      <StageJumpDialog
+        open={stageJumpDialogState.open}
+        onOpenChange={(open) => setStageJumpDialogState({ open, entryId: null })}
+        entry={allEntries.find(e => e.id === stageJumpDialogState.entryId)}
+        currentStage={pipelineStages.find(s => 
+          s.id === allEntries.find(e => e.id === stageJumpDialogState.entryId)?.etapa_atual_id
+        )}
+        availableStages={pipelineStages.filter(s => {
+          const currentStageOrder = pipelineStages.find(ps => 
+            ps.id === allEntries.find(e => e.id === stageJumpDialogState.entryId)?.etapa_atual_id
+          )?.ordem ?? 0;
+          return s.ordem > currentStageOrder;
+        })}
+        onConfirm={handleConfirmJump}
+      />
     </div>
   );
 }
