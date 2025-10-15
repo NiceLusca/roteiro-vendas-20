@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { HelpCircle, X, BookOpen, Video, ExternalLink } from 'lucide-react';
 import {
   Popover,

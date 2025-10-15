@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode } from 'react';
 import { Lead, Pipeline, PipelineStage, LeadPipelineEntry } from '@/types/crm';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode } from 'react';
 import { AuditLog } from '@/types/crm';
 import { useAudit } from './AuditContext';
 import { supabase } from '@/integrations/supabase/client';
