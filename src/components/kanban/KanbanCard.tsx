@@ -8,6 +8,7 @@ import { Phone, ArrowRight, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { KanbanCardMenu } from './KanbanCardMenu';
 import { AppointmentBadge } from '@/components/notifications/AppointmentBadge';
+import { getCloserColor, getCloserBorderColor } from '@/utils/closerColors';
 
 interface AppointmentInfo {
   id: string;
@@ -118,8 +119,14 @@ export const KanbanCard = memo(function KanbanCard({
       className={cn(
         "kanban-card kanban-card-stage group cursor-grab active:cursor-grabbing border-l-4",
         stageClass,
+        lead.closer && "border-r-4",
         (isLocalDragging || isDragging) && "opacity-50 rotate-1 scale-105 shadow-xl z-50"
       )}
+      style={{
+        ...(lead.closer && {
+          borderRightColor: getCloserBorderColor(lead.closer)
+        })
+      }}
     >
       <CardContent className="p-3">
         {/* Header compacto com menu */}
@@ -142,6 +149,11 @@ export const KanbanCard = memo(function KanbanCard({
             <Badge variant="secondary" className="bg-primary/10 text-primary font-bold text-xs px-2">
               {lead.lead_score}
             </Badge>
+            {lead.closer && (
+              <Badge className={cn('text-xs px-2 py-0.5 font-semibold', getCloserColor(lead.closer))}>
+                {lead.closer}
+              </Badge>
+            )}
             <div className="opacity-0 group-hover:opacity-100 transition-opacity">
               <KanbanCardMenu
                 hasNextStage={!!nextStage}

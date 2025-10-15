@@ -26,6 +26,7 @@ import {
 import { formatWhatsApp } from '@/utils/formatters';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { CLOSERS, getCloserColor, getCloserDotColor } from '@/utils/closerColors';
 
 interface LeadEditDialogProps {
   open: boolean;
@@ -33,8 +34,6 @@ interface LeadEditDialogProps {
   lead: Lead;
   onUpdate?: () => void;
 }
-
-const CLOSERS = ['Gabriel', 'Uilma', 'Lucas', 'Vagner'];
 
 export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditDialogProps) {
   const [formData, setFormData] = useState({
@@ -131,16 +130,6 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
     document.addEventListener('paste', handlePaste);
     return () => document.removeEventListener('paste', handlePaste);
   }, [open, pasteEnabled, uploadAttachment]);
-
-  const getCloserColor = (closer: string) => {
-    switch (closer) {
-      case 'Gabriel': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'Uilma': return 'bg-pink-100 text-pink-800 border-pink-300';
-      case 'Lucas': return 'bg-purple-100 text-purple-800 border-purple-300';
-      case 'Vagner': return 'bg-blue-100 text-blue-800 border-blue-300';
-      default: return 'bg-gray-100 text-gray-800 border-gray-300';
-    }
-  };
 
   const isImage = (filename: string) => {
     return /\.(jpg|jpeg|png|gif|webp)$/i.test(filename);
@@ -239,12 +228,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
                   {CLOSERS.map((closer) => (
                     <SelectItem key={closer} value={closer}>
                       <div className="flex items-center gap-2">
-                        <div className={cn('w-3 h-3 rounded-full', {
-                          'bg-yellow-400': closer === 'Gabriel',
-                          'bg-pink-400': closer === 'Uilma',
-                          'bg-purple-400': closer === 'Lucas',
-                          'bg-blue-400': closer === 'Vagner'
-                        })} />
+                        <div className={cn('w-3 h-3 rounded-full', getCloserDotColor(closer))} />
                         {closer}
                       </div>
                     </SelectItem>
