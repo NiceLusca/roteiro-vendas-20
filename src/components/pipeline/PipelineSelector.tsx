@@ -23,7 +23,7 @@ export function PipelineSelector({
 
   return (
     <div className="flex items-start justify-between gap-4 max-w-full">
-      <div className="flex-1 min-w-0 max-w-full overflow-hidden">
+      <div className="flex-1 min-w-0 overflow-hidden">
         <div>
           <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground">Pipeline de Vendas</h1>
           <div className="flex items-center gap-2 mt-1">
@@ -55,16 +55,26 @@ export function PipelineSelector({
         </div>
       </div>
       
-      <div className="flex-shrink-0 flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={onCreatePipeline} className="whitespace-nowrap">
-          <Plus className="h-4 w-4 mr-1 md:mr-2" />
-          <span className="hidden sm:inline">Novo Pipeline</span>
-          <span className="sm:hidden">Novo</span>
+      <div className="flex-shrink-0 flex items-center gap-1.5">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={onCreatePipeline} 
+          className="h-8 px-2 gap-1 whitespace-nowrap"
+        >
+          <Plus className="h-3.5 w-3.5 flex-shrink-0" />
+          <span className="hidden xl:inline text-xs">Novo Pipeline</span>
+          <span className="xl:hidden text-xs">Novo</span>
         </Button>
-        <Button variant="outline" size="sm" onClick={onConfigurePipeline} className="whitespace-nowrap">
-          <Settings className="h-4 w-4 mr-1 md:mr-2" />
-          <span className="hidden sm:inline">Configurar</span>
-          <span className="sm:hidden">Config</span>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={onConfigurePipeline} 
+          className="h-8 px-2 gap-1 whitespace-nowrap"
+        >
+          <Settings className="h-3.5 w-3.5 flex-shrink-0" />
+          <span className="hidden xl:inline text-xs">Configurar</span>
+          <span className="xl:hidden text-xs">Config</span>
         </Button>
       </div>
     </div>

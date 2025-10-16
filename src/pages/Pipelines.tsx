@@ -272,105 +272,107 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
   });
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)] overflow-x-hidden">
+    <div className="flex flex-col min-h-[calc(100vh-4rem)]">
       {/* Header Fixo - PipelineSelector + Filtros */}
-      <div className="sticky top-0 z-10 flex-none px-6 pt-4 pb-4 space-y-4 border-b bg-background max-w-full overflow-x-hidden">
-        <PipelineSelector
-          pipelines={activePipelines}
-          selectedPipelineId={pipelineId}
-          onPipelineChange={handlePipelineChange}
-          onConfigurePipeline={handleConfigurePipeline}
-          onCreatePipeline={handleCreatePipeline}
-        />
+      <div className="sticky top-0 z-20 bg-background border-b">
+        <div className="px-6 pt-4 pb-4 space-y-4 max-w-full overflow-x-hidden">
+          <PipelineSelector
+            pipelines={activePipelines}
+            selectedPipelineId={pipelineId}
+            onPipelineChange={handlePipelineChange}
+            onConfigurePipeline={handleConfigurePipeline}
+            onCreatePipeline={handleCreatePipeline}
+          />
         
-        {/* Busca e Filtros */}
-        <Card className="overflow-x-hidden">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Filter className="h-4 w-4" />
-              Buscar e Filtrar Leads
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4 flex-wrap max-w-full">
-              {/* Busca */}
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por nome do lead..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="flex-1"
-                />
+          {/* Busca e Filtros */}
+          <Card className="overflow-x-hidden">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Filter className="h-4 w-4" />
+                Buscar e Filtrar Leads
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4 flex-wrap max-w-full">
+                {/* Busca */}
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome do lead..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
+
+                {/* Filtro Closer */}
+                <Select value={filterCloser} onValueChange={setFilterCloser}>
+                  <SelectTrigger className="w-32 sm:w-40">
+                    <SelectValue placeholder="Closer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os closers</SelectItem>
+                    {closers.map((closer, index) => (
+                      <SelectItem key={closer || index} value={closer as string}>
+                        {closer as string}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Filtro Score */}
+                <Select value={filterScore} onValueChange={setFilterScore}>
+                  <SelectTrigger className="w-28 sm:w-32">
+                    <SelectValue placeholder="Score" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="Alto">Alto</SelectItem>
+                    <SelectItem value="Médio">Médio</SelectItem>
+                    <SelectItem value="Baixo">Baixo</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Filtro Saúde */}
+                <Select value={filterHealth} onValueChange={setFilterHealth}>
+                  <SelectTrigger className="w-28 sm:w-32">
+                    <SelectValue placeholder="Saúde" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="Verde">Verde</SelectItem>
+                    <SelectItem value="Amarelo">Amarelo</SelectItem>
+                    <SelectItem value="Vermelho">Vermelho</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Limpar filtros */}
+                {(searchTerm || filterCloser !== 'all' || filterScore !== 'all' || filterHealth !== 'all') && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearFilters}
+                    className="ml-auto"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Limpar Filtros
+                  </Button>
+                )}
               </div>
-
-              {/* Filtro Closer */}
-              <Select value={filterCloser} onValueChange={setFilterCloser}>
-                <SelectTrigger className="w-32 sm:w-40">
-                  <SelectValue placeholder="Closer" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os closers</SelectItem>
-                  {closers.map((closer, index) => (
-                    <SelectItem key={closer || index} value={closer as string}>
-                      {closer as string}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Filtro Score */}
-              <Select value={filterScore} onValueChange={setFilterScore}>
-                <SelectTrigger className="w-28 sm:w-32">
-                  <SelectValue placeholder="Score" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="Alto">Alto</SelectItem>
-                  <SelectItem value="Médio">Médio</SelectItem>
-                  <SelectItem value="Baixo">Baixo</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Filtro Saúde */}
-              <Select value={filterHealth} onValueChange={setFilterHealth}>
-                <SelectTrigger className="w-28 sm:w-32">
-                  <SelectValue placeholder="Saúde" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  <SelectItem value="Verde">Verde</SelectItem>
-                  <SelectItem value="Amarelo">Amarelo</SelectItem>
-                  <SelectItem value="Vermelho">Vermelho</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Limpar filtros */}
-              {(searchTerm || filterCloser !== 'all' || filterScore !== 'all' || filterHealth !== 'all') && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="ml-auto"
-                >
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Limpar Filtros
-                </Button>
+              
+              {/* Contador de resultados */}
+              {searchTerm && (
+                <p className="text-sm text-muted-foreground mt-3">
+                  {allEntries.length} lead{allEntries.length !== 1 ? 's' : ''} encontrado{allEntries.length !== 1 ? 's' : ''}
+                </p>
               )}
-            </div>
-            
-            {/* Contador de resultados */}
-            {searchTerm && (
-              <p className="text-sm text-muted-foreground mt-3">
-                {allEntries.length} lead{allEntries.length !== 1 ? 's' : ''} encontrado{allEntries.length !== 1 ? 's' : ''}
-              </p>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Área de Scroll APENAS para o Kanban */}
-      <div className="flex-1 px-6 pt-6 pb-6">
+      <div className="flex-1 overflow-x-auto overflow-y-auto px-6 pt-6 pb-6">
         <KanbanBoard
           key={`kanban-${pipelineId}-${allEntries.length}-${Date.now()}`}
           selectedPipelineId={pipelineId}

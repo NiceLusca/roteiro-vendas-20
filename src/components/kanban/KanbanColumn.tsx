@@ -117,7 +117,7 @@ export const KanbanColumn = memo(function KanbanColumn({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={cn(
-        "flex flex-col min-w-48 md:min-w-52 lg:min-w-56 transition-all duration-200",
+        "flex flex-col w-56 min-w-56 flex-shrink-0 transition-all duration-200",
         isOver && "ring-2 ring-primary/50 bg-primary/5 scale-[1.01]"
       )}
     >
