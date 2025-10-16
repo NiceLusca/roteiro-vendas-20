@@ -2,7 +2,7 @@ import { IntelligentDashboard } from '@/components/intelligence/IntelligentDashb
 
 export default function Intelligence() {
   return (
-    <div className="container mx-auto py-6">
+    <div className="p-6 h-full overflow-auto">
       <IntelligentDashboard />
     </div>
   );

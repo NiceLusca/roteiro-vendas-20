@@ -179,11 +179,8 @@ export function AppLayout() {
           </header>
 
           {/* Main Content */}
-          <main className="flex-1 overflow-auto relative">
-            <div className="p-6">
-              <Outlet />
-            </div>
-            
+          <main className="flex-1 overflow-hidden relative">
+            <Outlet />
           </main>
         </div>
 

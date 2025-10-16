@@ -282,7 +282,7 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
   });
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
+    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
       {/* Header Fixo - PipelineSelector + Filtros */}
       <div className="flex-none px-6 pt-4 pb-4 space-y-4 border-b bg-background">
         <PipelineSelector

@@ -392,7 +392,8 @@ function LeadsContent() {
 
   return (
     <GlobalErrorBoundary>
-      <div className="space-y-6">
+      <div className="p-6 h-full overflow-auto">
+        <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -733,7 +734,8 @@ function LeadsContent() {
         isLoading={bulkActionsLoading}
         progress={bulkActionsProgress}
       />
-    </div>
+        </div>
+      </div>
     </GlobalErrorBoundary>
   );
 }
