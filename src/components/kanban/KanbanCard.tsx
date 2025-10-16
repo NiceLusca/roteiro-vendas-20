@@ -215,13 +215,13 @@ export const KanbanCard = memo(function KanbanCard({
           >
             {checklistComplete ? (
               <>
-                Avançar para {nextStage.nome}
-                <ArrowRight className="h-4 w-4" />
+                <span className="truncate">▶ {nextStage.nome}</span>
+                <ArrowRight className="h-4 w-4 flex-shrink-0" />
               </>
             ) : (
               <>
-                <AlertCircle className="h-4 w-4" />
-                Checklist incompleto
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span className="truncate">Checklist incompleto</span>
               </>
             )}
           </Button>
