@@ -160,7 +160,7 @@ export default function Settings() {
   );
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <div className="p-6 h-full overflow-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold">Configurações</h1>
         <p className="text-muted-foreground">Configure pipelines, produtos e preferências do sistema</p>

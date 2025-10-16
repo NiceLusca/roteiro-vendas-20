@@ -54,7 +54,7 @@ export default function Security() {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="p-6 h-full overflow-auto">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center space-x-2">

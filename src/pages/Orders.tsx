@@ -14,10 +14,7 @@ import { OrderForm } from '@/components/orders/OrderForm';
 import { RefundDialog } from '@/components/orders/RefundDialog';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { Order, StatusPedido } from '@/types/crm';
-import { CRMProviderWrapper } from '@/contexts/CRMProviderWrapper';
 import { useLeadData } from '@/hooks/useLeadData';
-
-type StatusOrder = StatusPedido;
 
 function OrdersContent() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -71,7 +68,7 @@ function OrdersContent() {
   };
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <div className="p-6 h-full overflow-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Vendas</h1>
@@ -343,8 +340,8 @@ function OrdersContent() {
 
 export default function Orders() {
   return (
-    <CRMProviderWrapper>
+    <div className="p-6 h-full overflow-auto">
       <OrdersContent />
-    </CRMProviderWrapper>
+    </div>
   );
 }

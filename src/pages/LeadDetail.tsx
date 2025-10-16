@@ -401,7 +401,8 @@ export default function LeadDetail() {
 
   if (isEditing) {
     return (
-      <div className="container mx-auto px-6 py-8">
+      <div className="p-6 h-full overflow-auto">
+        <div className="container mx-auto px-6 py-8">
         <div className="flex items-center mb-6">
           <Button variant="ghost" onClick={() => setIsEditing(false)} className="mr-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -417,12 +418,14 @@ export default function LeadDetail() {
           }}
           onCancel={() => setIsEditing(false)}
         />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <div className="p-6 h-full overflow-auto">
+      <div className="container mx-auto px-6 py-8">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
           <Button variant="ghost" onClick={() => navigate('/leads')} className="mr-4">
@@ -732,6 +735,7 @@ export default function LeadDetail() {
           }}
         />
       )}
+      </div>
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
-import { CRMProviderWrapper } from '@/contexts/CRMProviderWrapper';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
@@ -19,16 +18,7 @@ import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
 import { StageJumpDialog } from '@/components/pipeline/StageJumpDialog';
 import { Lead } from '@/types/crm';
 
-// Camada intermediária que envolve com providers
-function PipelinesWithProviders({ pipelineId }: { pipelineId: string }) {
-  return (
-    <CRMProviderWrapper>
-      <PipelinesContent pipelineId={pipelineId} />
-    </CRMProviderWrapper>
-  );
-}
-
-// Componente interno que usa hooks (agora dentro dos providers)
+// Componente que usa hooks do CRM (já está dentro do CRMProviderWrapper do App.tsx)
 function PipelinesContent({ pipelineId }: { pipelineId: string }) {
   const navigate = useNavigate();
   const { pipelines } = useSupabasePipelines();
@@ -445,5 +435,5 @@ export default function Pipelines() {
     return null;
   }
 
-  return <PipelinesWithProviders pipelineId={pipelineId} />;
+  return <PipelinesContent pipelineId={pipelineId} />;
 }

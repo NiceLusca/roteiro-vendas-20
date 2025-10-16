@@ -125,7 +125,7 @@ export default function Agenda() {
   };
 
   return (
-    <div className="container mx-auto px-6 py-8">
+    <div className="p-6 h-full overflow-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Agenda</h1>

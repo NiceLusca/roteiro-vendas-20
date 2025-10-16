@@ -24,9 +24,10 @@ export default function Production() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="p-6 h-full overflow-auto">
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
             <Rocket className="w-8 h-8 text-primary" />
@@ -226,6 +227,7 @@ export default function Production() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
