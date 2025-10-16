@@ -272,7 +272,7 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
   });
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="flex flex-col min-h-[calc(100vh-4rem)]">
       {/* Header Fixo - PipelineSelector + Filtros */}
       <div className="flex-none px-6 pt-4 pb-4 space-y-4 border-b bg-background">
         <PipelineSelector
@@ -370,7 +370,7 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
       </div>
 
       {/* Área de Scroll APENAS para o Kanban */}
-      <div className="flex-1 overflow-hidden px-6 pt-6">
+      <div className="flex-1 px-6 pt-6 pb-6">
         <KanbanBoard
           key={`kanban-${pipelineId}-${allEntries.length}-${Date.now()}`}
           selectedPipelineId={pipelineId}
