@@ -116,132 +116,137 @@ export function PipelineKanban() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Pipeline de Vendas</h1>
-          <p className="text-muted-foreground">
-            {mockPipeline.nome} - {mockPipeline.descricao}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Settings className="h-4 w-4 mr-2" />
-            Configurar
-          </Button>
-        </div>
-      </div>
-
-      {/* Métricas Rápidas */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium">{totalLeads} leads</span>
-        </div>
-        {leadsAtrasados > 0 && (
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-danger" />
-            <span className="text-sm font-medium text-danger">{leadsAtrasados} atrasados</span>
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
+      {/* Header Fixo */}
+      <div className="flex-none space-y-4 pb-4 border-b bg-background">
+        {/* Título e Botões */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Pipeline de Vendas</h1>
+            <p className="text-muted-foreground">
+              {mockPipeline.nome} - {mockPipeline.descricao}
+            </p>
           </div>
-        )}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            Tempo médio: {tempoMedioEtapa} dias
-          </span>
-        </div>
-      </div>
-
-      {/* Filtros */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Filter className="h-4 w-4" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4 flex-wrap">
-            {/* Busca */}
-            <div className="flex items-center gap-2 min-w-64">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome do lead..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1"
-              />
-            </div>
-
-            {/* Filtro Closer */}
-            <Select value={filterCloser} onValueChange={setFilterCloser}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Closer" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os closers</SelectItem>
-                {closers.map((closer, index) => (
-                  <SelectItem key={closer || index} value={closer as string}>
-                    {closer as string}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Filtro Score */}
-            <Select value={filterScore} onValueChange={setFilterScore}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Score" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="Alto">Alto</SelectItem>
-                <SelectItem value="Médio">Médio</SelectItem>
-                <SelectItem value="Baixo">Baixo</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Filtro Saúde */}
-            <Select value={filterHealth} onValueChange={setFilterHealth}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Saúde" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="Verde">Verde</SelectItem>
-                <SelectItem value="Amarelo">Amarelo</SelectItem>
-                <SelectItem value="Vermelho">Vermelho</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Limpar filtros */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={clearFilters}
-              className="ml-auto"
-            >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Limpar
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm">
+              <Settings className="h-4 w-4 mr-2" />
+              Configurar
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Kanban Board */}
-      <div className="flex gap-6 overflow-x-auto pb-6">
-        {stageEntries.map(({ stage, entries, wipExceeded }) => (
-          <KanbanColumn
-            key={stage.id}
-            stage={stage}
-            entries={entries}
-            wipExceeded={wipExceeded}
-            onViewLead={handleViewLead}
-            onCreateAppointment={handleCreateAppointment}
-            onAdvanceStage={handleAdvanceStage}
-            onRegisterInteraction={handleRegisterInteraction}
-          />
-        ))}
+        {/* Métricas Rápidas */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">{totalLeads} leads</span>
+          </div>
+          {leadsAtrasados > 0 && (
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-danger" />
+              <span className="text-sm font-medium text-danger">{leadsAtrasados} atrasados</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              Tempo médio: {tempoMedioEtapa} dias
+            </span>
+          </div>
+        </div>
+
+        {/* Filtros */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Filter className="h-4 w-4" />
+              Filtros
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4 flex-wrap">
+              {/* Busca */}
+              <div className="flex items-center gap-2 min-w-64">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome do lead..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="flex-1"
+                />
+              </div>
+
+              {/* Filtro Closer */}
+              <Select value={filterCloser} onValueChange={setFilterCloser}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Closer" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os closers</SelectItem>
+                  {closers.map((closer, index) => (
+                    <SelectItem key={closer || index} value={closer as string}>
+                      {closer as string}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Filtro Score */}
+              <Select value={filterScore} onValueChange={setFilterScore}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Score" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="Alto">Alto</SelectItem>
+                  <SelectItem value="Médio">Médio</SelectItem>
+                  <SelectItem value="Baixo">Baixo</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Filtro Saúde */}
+              <Select value={filterHealth} onValueChange={setFilterHealth}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Saúde" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="Verde">Verde</SelectItem>
+                  <SelectItem value="Amarelo">Amarelo</SelectItem>
+                  <SelectItem value="Vermelho">Vermelho</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Limpar filtros */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearFilters}
+                className="ml-auto"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Limpar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Área de Scroll APENAS para o Kanban */}
+      <div className="flex-1 overflow-x-auto overflow-y-hidden pt-6">
+        <div className="flex gap-2 md:gap-3 lg:gap-4 pb-6 h-full scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+          {stageEntries.map(({ stage, entries, wipExceeded }) => (
+            <KanbanColumn
+              key={stage.id}
+              stage={stage}
+              entries={entries}
+              wipExceeded={wipExceeded}
+              onViewLead={handleViewLead}
+              onCreateAppointment={handleCreateAppointment}
+              onAdvanceStage={handleAdvanceStage}
+              onRegisterInteraction={handleRegisterInteraction}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
