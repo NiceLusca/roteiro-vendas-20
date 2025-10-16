@@ -274,7 +274,7 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)] overflow-x-hidden">
       {/* Header Fixo - PipelineSelector + Filtros */}
-      <div className="sticky top-0 z-10 flex-none px-6 pt-4 pb-4 space-y-4 border-b bg-background max-w-full">
+      <div className="sticky top-0 z-10 flex-none px-6 pt-4 pb-4 space-y-4 border-b bg-background max-w-full overflow-x-hidden">
         <PipelineSelector
           pipelines={activePipelines}
           selectedPipelineId={pipelineId}
@@ -284,7 +284,7 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
         />
         
         {/* Busca e Filtros */}
-        <Card>
+        <Card className="overflow-x-hidden">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="h-4 w-4" />
@@ -292,9 +292,9 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-4 flex-wrap max-w-full">
               {/* Busca */}
-              <div className="flex items-center gap-2 min-w-64">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por nome do lead..."
@@ -306,7 +306,7 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
 
               {/* Filtro Closer */}
               <Select value={filterCloser} onValueChange={setFilterCloser}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-32 sm:w-40">
                   <SelectValue placeholder="Closer" />
                 </SelectTrigger>
                 <SelectContent>
@@ -321,7 +321,7 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
 
               {/* Filtro Score */}
               <Select value={filterScore} onValueChange={setFilterScore}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-28 sm:w-32">
                   <SelectValue placeholder="Score" />
                 </SelectTrigger>
                 <SelectContent>
@@ -334,7 +334,7 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
 
               {/* Filtro Saúde */}
               <Select value={filterHealth} onValueChange={setFilterHealth}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-28 sm:w-32">
                   <SelectValue placeholder="Saúde" />
                 </SelectTrigger>
                 <SelectContent>
