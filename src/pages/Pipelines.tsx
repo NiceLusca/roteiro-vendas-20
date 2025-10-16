@@ -282,8 +282,9 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
   });
 
   return (
-    <div className="space-y-4">
-      <div className="px-6 pt-4">
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
+      {/* Header Fixo - PipelineSelector + Filtros */}
+      <div className="flex-none px-6 pt-4 pb-4 space-y-4 border-b bg-background">
         <PipelineSelector
           pipelines={activePipelines}
           selectedPipelineId={pipelineId}
@@ -291,10 +292,8 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
           onConfigurePipeline={handleConfigurePipeline}
           onCreatePipeline={handleCreatePipeline}
         />
-      </div>
-      
-      {/* Busca e Filtros */}
-      <div className="px-6">
+        
+        {/* Busca e Filtros */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -379,18 +378,21 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
           </CardContent>
         </Card>
       </div>
-      
-      <KanbanBoard
-        key={`kanban-${pipelineId}-${allEntries.length}-${Date.now()}`}
-        selectedPipelineId={pipelineId}
-        stageEntries={stageEntries}
-        onViewLead={handleViewOrEditLead}
-        onEditLead={handleViewOrEditLead}
-        onAdvanceStage={handleAdvanceStage}
-        onJumpToStage={handleJumpToStage}
-        onRegressStage={handleRegressStage}
-        onRefresh={handleRefresh}
-      />
+
+      {/* Área de Scroll APENAS para o Kanban */}
+      <div className="flex-1 overflow-hidden px-6 pt-6">
+        <KanbanBoard
+          key={`kanban-${pipelineId}-${allEntries.length}-${Date.now()}`}
+          selectedPipelineId={pipelineId}
+          stageEntries={stageEntries}
+          onViewLead={handleViewOrEditLead}
+          onEditLead={handleViewOrEditLead}
+          onAdvanceStage={handleAdvanceStage}
+          onJumpToStage={handleJumpToStage}
+          onRegressStage={handleRegressStage}
+          onRefresh={handleRefresh}
+        />
+      </div>
 
       {editingLead && (
         <LeadEditDialog

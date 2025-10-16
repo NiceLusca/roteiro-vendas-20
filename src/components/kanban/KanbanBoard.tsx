@@ -108,7 +108,7 @@ export function KanbanBoard({
   }, [stageEntries, checklistItems, moveLead, isMoving, onRefresh]);
 
   return (
-    <div className="flex gap-2 md:gap-3 lg:gap-4 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+    <div className="flex gap-2 md:gap-3 lg:gap-4 h-full overflow-x-auto overflow-y-hidden pb-6 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
       {stageEntries.map(({ stage, nextStage, entries, wipExceeded }) => (
         <KanbanColumn
           key={stage.id}
