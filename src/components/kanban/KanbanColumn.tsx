@@ -155,7 +155,7 @@ export const KanbanColumn = memo(function KanbanColumn({
         </CardHeader>
       </Card>
 
-      <div className="flex-1 space-y-3 overflow-y-auto">
+      <div className="flex-1 space-y-3">
         {sortedEntries.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-sm text-muted-foreground">
