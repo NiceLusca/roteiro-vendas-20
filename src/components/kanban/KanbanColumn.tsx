@@ -117,13 +117,13 @@ export const KanbanColumn = memo(function KanbanColumn({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={cn(
-        "flex flex-col min-w-56 md:min-w-64 lg:min-w-72 transition-all duration-200",
+        "flex flex-col min-w-48 md:min-w-52 lg:min-w-56 transition-all duration-200",
         isOver && "ring-2 ring-primary/50 bg-primary/5 scale-[1.01]"
       )}
     >
       {/* Header da Coluna */}
       <Card className={cn('mb-4 kanban-column-header', stageClass, wipExceeded && 'border-warning')}>
-        <CardHeader className="pb-2 px-2 md:px-3 lg:px-4">
+        <CardHeader className="pb-2 px-2 md:px-2 lg:px-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base font-bold">
               {stage.nome}
