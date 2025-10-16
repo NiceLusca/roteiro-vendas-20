@@ -1,6 +1,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Pipeline } from '@/types/crm';
 import { Settings, Plus } from 'lucide-react';
 
@@ -55,28 +56,41 @@ export function PipelineSelector({
         </div>
       </div>
       
-      <div className="flex-shrink-0 flex items-center gap-1.5">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={onCreatePipeline} 
-          className="h-8 px-2 gap-1 whitespace-nowrap"
-        >
-          <Plus className="h-3.5 w-3.5 flex-shrink-0" />
-          <span className="hidden xl:inline text-xs">Novo Pipeline</span>
-          <span className="xl:hidden text-xs">Novo</span>
-        </Button>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={onConfigurePipeline} 
-          className="h-8 px-2 gap-1 whitespace-nowrap"
-        >
-          <Settings className="h-3.5 w-3.5 flex-shrink-0" />
-          <span className="hidden xl:inline text-xs">Configurar</span>
-          <span className="xl:hidden text-xs">Config</span>
-        </Button>
-      </div>
+      <TooltipProvider>
+        <div className="flex-shrink-0 flex items-center gap-1.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onCreatePipeline} 
+                className="h-8 w-8 p-0 flex items-center justify-center 2xl:w-auto 2xl:px-2 2xl:gap-1 whitespace-nowrap"
+              >
+                <Plus className="h-4 w-4 flex-shrink-0" />
+                <span className="hidden 2xl:inline text-xs">Novo Pipeline</span>
+                <span className="2xl:hidden sr-only">Novo Pipeline</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Novo Pipeline</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onConfigurePipeline} 
+                className="h-8 w-8 p-0 flex items-center justify-center 2xl:w-auto 2xl:px-2 2xl:gap-1 whitespace-nowrap"
+              >
+                <Settings className="h-4 w-4 flex-shrink-0" />
+                <span className="hidden 2xl:inline text-xs">Configurar</span>
+                <span className="2xl:hidden sr-only">Configurar</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Configurar Pipeline</TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
     </div>
   );
 }
