@@ -21,7 +21,6 @@ import { EnhancedInstallPrompt, InstallBanner } from "@/components/pwa/EnhancedI
 import { EnhancedLoading } from "@/components/ui/enhanced-loading";
 import { NotificationPermissionBanner } from "@/components/notifications/NotificationPermissionBanner";
 import { useAppointmentNotifications } from "@/hooks/useAppointmentNotifications";
-import { AllLogsAuditProvider } from "@/contexts/AllLogsAuditContext";
 import { CRMProviderWrapper } from "@/contexts/CRMProviderWrapper";
 
 // Lazy imports with enhanced loading
@@ -168,16 +167,14 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <CRMProviderWrapper>
-              <AllLogsAuditProvider>
-                <TooltipProvider>
-                  <SecurityHeaders environment={process.env.NODE_ENV as 'development' | 'production'} />
-                  <Toaster />
-                  <Sonner />
-                  <BrowserRouter>
-                    <AppContent />
-                  </BrowserRouter>
-                </TooltipProvider>
-              </AllLogsAuditProvider>
+              <TooltipProvider>
+                <SecurityHeaders environment={process.env.NODE_ENV as 'development' | 'production'} />
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <AppContent />
+                </BrowserRouter>
+              </TooltipProvider>
             </CRMProviderWrapper>
           </AuthProvider>
         </QueryClientProvider>
