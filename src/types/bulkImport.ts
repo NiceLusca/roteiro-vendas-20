@@ -24,6 +24,8 @@ export interface ImportProgress {
   processed: number;
   success: number;
   errors: number;
+  created: number;    // Novos leads criados
+  updated: number;    // Leads existentes atualizados
 }
 
 export interface ImportResult {

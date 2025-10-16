@@ -17,12 +17,168 @@ const VALID_ORIGENS = [
   'WhatsApp', 'LinkedIn', 'Evento', 'Outro'
 ] as const;
 
+/**
+ * Busca lead existente no banco usando estratégia de prioridade
+ * 1. WhatsApp (mais confiável)
+ * 2. Email (se WhatsApp não fornecido)
+ * 3. Nome + Origem (menos confiável)
+ */
+const findExistingLead = async (leadData: Partial<Lead>): Promise<Lead | null> => {
+  try {
+    // Estratégia 1: Buscar por WhatsApp (mais confiável)
+    if (leadData.whatsapp) {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('whatsapp', leadData.whatsapp)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erro ao buscar por WhatsApp:', error);
+        return null;
+      }
+      
+      if (data) {
+        return {
+          ...data,
+          created_at: new Date(data.created_at),
+          updated_at: new Date(data.updated_at)
+        } as Lead;
+      }
+    }
+
+    // Estratégia 2: Buscar por Email
+    if (leadData.email && leadData.email.trim() !== '') {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('email', leadData.email)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erro ao buscar por Email:', error);
+        return null;
+      }
+
+      if (data) {
+        return {
+          ...data,
+          created_at: new Date(data.created_at),
+          updated_at: new Date(data.updated_at)
+        } as Lead;
+      }
+    }
+
+    // Estratégia 3: Buscar por Nome + Origem (menos confiável)
+    if (leadData.nome && leadData.origem) {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('nome', leadData.nome)
+        .eq('origem', leadData.origem)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erro ao buscar por Nome + Origem:', error);
+        return null;
+      }
+
+      if (data) {
+        return {
+          ...data,
+          created_at: new Date(data.created_at),
+          updated_at: new Date(data.updated_at)
+        } as Lead;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Erro fatal ao buscar lead existente:', error);
+    return null;
+  }
+};
+
+/**
+ * Faz merge inteligente de dados do lead
+ * REGRAS:
+ * - Campos vazios no novo lead NÃO sobrescrevem campos preenchidos no lead existente
+ * - lead_score e valor_lead SEMPRE são atualizados (conforme solicitado)
+ * - Tags são ADICIONADAS, não substituídas
+ * - Campos críticos como WhatsApp e Email são preservados se já existirem
+ */
+const mergeLeadData = (existingLead: Lead, newLeadData: Partial<Lead>): Partial<Lead> => {
+  const merged: Partial<Lead> = { ...existingLead };
+
+  // Campos que SEMPRE devem ser atualizados (conforme solicitado)
+  const alwaysUpdateFields = ['lead_score', 'valor_lead'];
+
+  // Campos de texto que só devem ser atualizados se não estiverem vazios
+  const textFields = [
+    'nome', 'email', 'whatsapp', 'origem', 'segmento', 
+    'closer', 'desejo_na_sessao', 'objecao_obs', 'observacoes',
+    'resultado_sessao_ultimo', 'resultado_obs_ultima_sessao'
+  ];
+
+  // Campos numéricos que só devem ser atualizados se tiverem valor válido
+  const numericFields = ['seguidores', 'faturamento_medio', 'meta_faturamento'];
+
+  // Campos booleanos
+  const booleanFields = ['ja_vendeu_no_digital'];
+
+  // Campos ENUM
+  const enumFields = ['status_geral', 'objecao_principal', 'lead_score_classification'];
+
+  // Atualizar campos de SEMPRE atualizar
+  alwaysUpdateFields.forEach(field => {
+    if (newLeadData[field as keyof Lead] !== undefined) {
+      (merged as any)[field] = newLeadData[field as keyof Lead];
+    }
+  });
+
+  // Atualizar campos de texto (apenas se novo valor não for vazio)
+  textFields.forEach(field => {
+    const newValue = newLeadData[field as keyof Lead];
+    if (newValue && String(newValue).trim() !== '') {
+      (merged as any)[field] = newValue;
+    }
+  });
+
+  // Atualizar campos numéricos (apenas se tiverem valor válido)
+  numericFields.forEach(field => {
+    const newValue = newLeadData[field as keyof Lead];
+    if (newValue !== undefined && newValue !== null && Number(newValue) > 0) {
+      (merged as any)[field] = newValue;
+    }
+  });
+
+  // Atualizar campos booleanos (apenas se estiver explicitamente definido)
+  booleanFields.forEach(field => {
+    const newValue = newLeadData[field as keyof Lead];
+    if (newValue !== undefined && newValue !== null) {
+      (merged as any)[field] = newValue;
+    }
+  });
+
+  // Atualizar campos ENUM
+  enumFields.forEach(field => {
+    const newValue = newLeadData[field as keyof Lead];
+    if (newValue && String(newValue).trim() !== '') {
+      (merged as any)[field] = newValue;
+    }
+  });
+
+  return merged;
+};
+
 export function useBulkLeadImport() {
   const [progress, setProgress] = useState<ImportProgress>({
     total: 0,
     processed: 0,
     success: 0,
     errors: 0,
+    created: 0,
+    updated: 0,
   });
   const [importing, setImporting] = useState(false);
   const { user } = useAuth();
@@ -171,6 +327,8 @@ export function useBulkLeadImport() {
       processed: 0,
       success: 0,
       errors: 0,
+      created: 0,
+      updated: 0,
     });
 
     const errors: Array<{ row: number; message: string }> = [];
@@ -196,20 +354,40 @@ export function useBulkLeadImport() {
               continue;
             }
 
-            // Salvar lead (sanitiza origem novamente por segurança)
+            // Sanitizar origem
             const sanitizedData = { ...parsed.data } as any;
             if (sanitizedData.origem && !VALID_ORIGENS.includes(String(sanitizedData.origem) as any)) {
               sanitizedData.origem = 'Outro';
             }
-            
-            // Save lead and get the created lead object with ID
-            const createdLead = await saveLead(sanitizedData);
 
-            if (!createdLead || !createdLead.id) {
-              throw new Error('Erro ao criar lead - ID não retornado');
+            // Buscar lead existente
+            const existingLead = await findExistingLead(sanitizedData);
+
+            let leadId: string;
+            let wasUpdate = false;
+
+            if (existingLead) {
+              // Lead já existe - fazer merge e atualizar
+              const mergedData = mergeLeadData(existingLead, sanitizedData);
+              const updatedLead = await saveLead({ ...mergedData, id: existingLead.id });
+              
+              if (!updatedLead || !updatedLead.id) {
+                throw new Error('Erro ao atualizar lead - ID não retornado');
+              }
+              
+              leadId = updatedLead.id;
+              wasUpdate = true;
+            } else {
+              // Lead novo - criar
+              const createdLead = await saveLead(sanitizedData);
+              
+              if (!createdLead || !createdLead.id) {
+                throw new Error('Erro ao criar lead - ID não retornado');
+              }
+              
+              leadId = createdLead.id;
+              wasUpdate = false;
             }
-
-            const leadId = createdLead.id;
 
             // Atribuir tags
             if (selectedTags.length > 0) {
@@ -234,6 +412,8 @@ export function useBulkLeadImport() {
               ...prev,
               processed: prev.processed + 1,
               success: prev.success + 1,
+              created: wasUpdate ? prev.created : prev.created + 1,
+              updated: wasUpdate ? prev.updated + 1 : prev.updated,
             }));
           } catch (error: any) {
             console.error(`Error importing lead at row ${parsed.rowIndex}:`, error);
@@ -264,9 +444,12 @@ export function useBulkLeadImport() {
         .select()
         .single();
 
+      const createdCount = progress.created;
+      const updatedCount = progress.updated;
+
       toast({
         title: 'Importação concluída',
-        description: `${successCount} leads importados com sucesso. ${errors.length} erros.`,
+        description: `✅ ${createdCount} novos leads | 🔄 ${updatedCount} atualizados | ❌ ${errors.length} erros`,
         variant: errors.length > 0 ? 'destructive' : 'default',
       });
 

@@ -85,7 +85,10 @@ export function useLeadTags() {
 
       const { error } = await supabase
         .from('lead_tag_assignments')
-        .insert(assignments);
+        .upsert(assignments, {
+          onConflict: 'lead_id,tag_id',
+          ignoreDuplicates: true
+        });
 
       if (error) throw error;
     } catch (error: any) {

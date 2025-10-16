@@ -198,10 +198,14 @@ export function LeadBulkUploadDialog({ open, onOpenChange, onSuccess }: LeadBulk
 
               <Progress value={(progress.processed / progress.total) * 100} className="h-3" />
 
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <div>
-                  <div className="text-2xl font-bold text-success">{progress.success}</div>
-                  <div className="text-sm text-muted-foreground">Sucesso</div>
+                  <div className="text-2xl font-bold text-success">{progress.created}</div>
+                  <div className="text-sm text-muted-foreground">Criados</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-info">{progress.updated}</div>
+                  <div className="text-sm text-muted-foreground">Atualizados</div>
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-danger">{progress.errors}</div>
