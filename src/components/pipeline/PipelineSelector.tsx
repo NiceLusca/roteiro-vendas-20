@@ -22,8 +22,8 @@ export function PipelineSelector({
   const selectedPipeline = pipelines.find(p => p.id === selectedPipelineId);
 
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex-1 min-w-0">
+    <div className="flex items-start justify-between gap-4 max-w-full">
+      <div className="flex-1 min-w-0 max-w-full overflow-hidden">
         <div>
           <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground">Pipeline de Vendas</h1>
           <div className="flex items-center gap-2 mt-1">
