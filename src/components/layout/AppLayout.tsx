@@ -179,7 +179,7 @@ export function AppLayout() {
           </header>
 
           {/* Main Content */}
-          <main className="flex-1 overflow-x-hidden relative">
+          <main className="flex-1 relative">
             <Outlet />
           </main>
         </div>
