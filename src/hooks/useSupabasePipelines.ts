@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContextSecure';
 interface Pipeline {
   id: string;
   nome: string;
+  slug: string;
   descricao?: string;
   objetivo?: string;
   ativo: boolean;
@@ -523,6 +524,30 @@ export function useSupabasePipelines() {
     }
   };
 
+  // Get pipeline by slug
+  const getPipelineBySlug = async (slug: string) => {
+    if (!user) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('pipelines')
+        .select('*')
+        .eq('slug', slug)
+        .eq('ativo', true)
+        .single();
+
+      if (error) {
+        console.error('Erro ao buscar pipeline por slug:', error);
+        return null;
+      }
+
+      return data as Pipeline;
+    } catch (error) {
+      console.error('Erro ao buscar pipeline por slug:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchPipelines();
@@ -537,6 +562,7 @@ export function useSupabasePipelines() {
     duplicatePipeline,
     deletePipeline,
     getPipelineById,
+    getPipelineBySlug,
     getActivePipelines,
     getPrimaryPipeline,
     refetch: fetchPipelines

@@ -19,9 +19,21 @@ import { StageJumpDialog } from '@/components/pipeline/StageJumpDialog';
 import { Lead } from '@/types/crm';
 
 // Componente que usa hooks do CRM (já está dentro do CRMProviderWrapper do App.tsx)
-function PipelinesContent({ pipelineId }: { pipelineId: string }) {
+function PipelinesContent({ slug }: { slug: string }) {
   const navigate = useNavigate();
-  const { pipelines } = useSupabasePipelines();
+  const { pipelines, getPipelineBySlug } = useSupabasePipelines();
+  const [currentPipeline, setCurrentPipeline] = useState<any>(null);
+  
+  // Buscar pipeline por slug
+  useEffect(() => {
+    const loadPipeline = async () => {
+      const pipeline = await getPipelineBySlug(slug);
+      setCurrentPipeline(pipeline);
+    };
+    loadPipeline();
+  }, [slug, getPipelineBySlug]);
+
+  const pipelineId = currentPipeline?.id;
   const { leads, refetch: refetchLeads } = useSupabaseLeads();
   const entries = useSupabaseLeadPipelineEntries(pipelineId);
   const leadPipelineEntries = entries.entries;
@@ -123,8 +135,7 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
     });
   }, [allEntries, pipelineStages, moveLead, handleRefresh]);
 
-  // Buscar pipeline atual primeiro
-  const currentPipeline = pipelines.find(p => p.id === pipelineId);
+  // Pipeline já foi carregado pelo useEffect acima (currentPipeline)
   const activePipelines = pipelines.filter(p => p.ativo);
 
   // Handler para regredir etapa via botão
@@ -229,8 +240,11 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
   }, [navigate]);
 
   const handlePipelineChange = useCallback((newPipelineId: string) => {
-    navigate(`/pipelines/${newPipelineId}`);
-  }, [navigate]);
+    const selectedPipeline = pipelines.find(p => p.id === newPipelineId);
+    if (selectedPipeline) {
+      navigate(`/pipelines/${selectedPipeline.slug}`);
+    }
+  }, [navigate, pipelines]);
 
   const clearFilters = useCallback(() => {
     setSearchTerm('');
@@ -416,7 +430,7 @@ function PipelinesContent({ pipelineId }: { pipelineId: string }) {
 
 // Componente principal com guards
 export default function Pipelines() {
-  const { pipelineId } = useParams<{ pipelineId: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { pipelines, loading } = useSupabasePipelines();
 
@@ -424,18 +438,18 @@ export default function Pipelines() {
 
   // Redirecionar para seleção se necessário
   useEffect(() => {
-    if (!loading && !pipelineId && activePipelines.length > 0) {
+    if (!loading && !slug && activePipelines.length > 0) {
       navigate('/pipelines/select', { replace: true });
     }
-  }, [loading, pipelineId, activePipelines, navigate]);
+  }, [loading, slug, activePipelines, navigate]);
 
   if (loading) {
     return <EnhancedLoading loading={true}><></></EnhancedLoading>;
   }
 
-  if (!pipelineId) {
+  if (!slug) {
     return null;
   }
 
-  return <PipelinesContent pipelineId={pipelineId} />;
+  return <PipelinesContent slug={slug} />;
 }

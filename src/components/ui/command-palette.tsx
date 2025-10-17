@@ -240,7 +240,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       label: `Pipeline: ${pipeline.nome}`,
       icon: GitBranch,
       group: 'Pipelines',
-      action: () => navigate(`/pipelines?id=${pipeline.id}`),
+      action: () => navigate(`/pipelines/${pipeline.slug}`),
       keywords: [pipeline.nome, 'pipeline', 'funil']
     }))
   ];

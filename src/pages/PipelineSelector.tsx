@@ -18,7 +18,7 @@ export default function PipelineSelector() {
   // Se houver apenas 1 pipeline, redirecionar automaticamente
   useEffect(() => {
     if (!pipelinesLoading && activePipelines.length === 1) {
-      navigate(`/pipelines/${activePipelines[0].id}`, { replace: true });
+      navigate(`/pipelines/${activePipelines[0].slug}`, { replace: true });
     }
   }, [pipelinesLoading, activePipelines, navigate]);
 
@@ -59,7 +59,7 @@ export default function PipelineSelector() {
               <Card
                 key={pipeline.id}
                 className="hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/50 cursor-pointer group"
-                onClick={() => navigate(`/pipelines/${pipeline.id}`)}
+                onClick={() => navigate(`/pipelines/${pipeline.slug}`)}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between mb-2">

@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
+import { generateSlug } from '@/lib/utils';
 
 // Schema de validação - apenas campos que existem na tabela pipelines
 const pipelineSchema = z.object({
@@ -81,6 +82,9 @@ export function SimplePipelineForm({ pipeline, onSave, onCancel }: SimplePipelin
                   disabled={isSaving}
                 />
               </FormControl>
+              <FormDescription>
+                URL: /pipelines/{generateSlug(field.value || 'novo-pipeline')}
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

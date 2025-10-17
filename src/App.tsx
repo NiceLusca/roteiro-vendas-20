@@ -95,7 +95,7 @@ function AppContent() {
         }>
           <Route index element={<Index />} />
           <Route path="pipelines/select" element={<PipelineSelector />} />
-          <Route path="pipelines/:pipelineId" element={<Pipelines />} />
+          <Route path="pipelines/:slug" element={<Pipelines />} />
           <Route path="pipelines" element={<Navigate to="/pipelines/select" replace />} />
           <Route path="leads" element={<Leads />} />
           <Route path="agenda" element={

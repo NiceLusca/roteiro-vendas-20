@@ -741,6 +741,7 @@ export type Database = {
           nome: string
           objetivo: string | null
           primary_pipeline: boolean | null
+          slug: string
           updated_at: string | null
         }
         Insert: {
@@ -751,6 +752,7 @@ export type Database = {
           nome: string
           objetivo?: string | null
           primary_pipeline?: boolean | null
+          slug: string
           updated_at?: string | null
         }
         Update: {
@@ -761,6 +763,7 @@ export type Database = {
           nome?: string
           objetivo?: string | null
           primary_pipeline?: boolean | null
+          slug?: string
           updated_at?: string | null
         }
         Relationships: []
@@ -1004,6 +1007,10 @@ export type Database = {
         Returns: string
       }
       fix_utf8_encoding: {
+        Args: { input_text: string }
+        Returns: string
+      }
+      generate_slug: {
         Args: { input_text: string }
         Returns: string
       }
