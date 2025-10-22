@@ -154,7 +154,7 @@ export const KanbanCard = memo(function KanbanCard({
                 {lead.closer}
               </Badge>
             )}
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="invisible group-hover:visible transition-opacity">
               <KanbanCardMenu
                 hasNextStage={!!nextStage}
                 showMessageAction={stage.proximo_passo_tipo === 'Mensagem'}
