@@ -109,30 +109,15 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         updated_at: entry.updated_at,
         // Clone nested objects (leads e pipeline_stages)
         leads: entry.leads ? { ...entry.leads } : null,
-        pipeline_stages: entry.pipeline_stages ? { ...entry.pipeline_stages } : null
+        pipeline_stages: entry.pipeline_stages ? { ...entry.pipeline_stages } : null,
+        // Force timestamp para garantir unicidade
+        _fetchedAt: Date.now()
       }));
 
       console.log('✅ Leads carregados com deep clone:', processedEntries.length);
       
-      // ✅ Comparação profunda para evitar updates desnecessários
-      setEntries(prevEntries => {
-        if (prevEntries.length === processedEntries.length) {
-          const areEqual = prevEntries.every((prevEntry, index) => {
-            const newEntry = processedEntries[index];
-            return prevEntry.id === newEntry.id &&
-                   prevEntry.etapa_atual_id === newEntry.etapa_atual_id &&
-                   prevEntry.updated_at === newEntry.updated_at &&
-                   prevEntry.saude_etapa === newEntry.saude_etapa;
-          });
-          
-          if (areEqual) {
-            console.log('⏭️ Dados idênticos, mantendo referência anterior');
-            return prevEntries; // ✅ Manter referência anterior
-          }
-        }
-        console.log('✅ Dados diferentes, atualizando entries');
-        return processedEntries as any;
-      });
+      // ✅ SEMPRE forçar novo array (sem if/else)
+      setEntries([...processedEntries as any]);
     } catch (error) {
       console.error('Erro ao buscar entries do pipeline:', error);
     } finally {
@@ -384,38 +369,32 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
           const newRecord = payload.new as any;
           const oldRecord = payload.old as any;
           
-          // Filtro por pipeline
+          // ✅ SOLUÇÃO 5: Logging completo para debug realtime
+          console.log('🔔 [REALTIME DEBUG] Evento completo:', {
+            eventType: payload.eventType,
+            leadId: newRecord?.lead_id || oldRecord?.lead_id,
+            etapaAtual: newRecord?.etapa_atual_id,
+            etapaAnterior: oldRecord?.etapa_atual_id,
+            mudouEtapa: newRecord?.etapa_atual_id !== oldRecord?.etapa_atual_id,
+            pipelineId: newRecord?.pipeline_id || oldRecord?.pipeline_id,
+            statusInscricao: newRecord?.status_inscricao,
+            timestamp: new Date().toISOString(),
+            payload: payload
+          });
+          
+          // ✅ FASE 2: Filtro inteligente - só reagir ao pipeline atual
           const recordPipelineId = newRecord?.pipeline_id || oldRecord?.pipeline_id;
           if (pipelineId && recordPipelineId !== pipelineId) {
             console.log('⏭️ Ignorando evento de outro pipeline:', recordPipelineId);
             return;
           }
           
-          // ✅ Ignorar eventos que não mudam dados relevantes
-          if (payload.eventType === 'UPDATE') {
-            const changedFields = Object.keys(newRecord || {}).filter(
-              key => newRecord[key] !== oldRecord?.[key]
-            );
-            
-            // Ignorar se só mudou updated_at (sem mudanças reais)
-            if (changedFields.length === 1 && changedFields[0] === 'updated_at') {
-              console.log('⏭️ Ignorando update de updated_at apenas');
-              return;
-            }
-          }
-          
-          console.log('🔔 [REALTIME] Evento relevante detectado:', {
-            eventType: payload.eventType,
-            leadId: newRecord?.lead_id || oldRecord?.lead_id,
-            etapaAtual: newRecord?.etapa_atual_id,
-            mudouEtapa: newRecord?.etapa_atual_id !== oldRecord?.etapa_atual_id
-          });
-          
+          // ✅ FASE 2: Debounce reduzido de 300ms para 50ms
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
-            console.log('🔄 Executando refetch após debounce (1000ms)');
+            console.log('🔄 Executando refetch após debounce (50ms)');
             fetchEntries(pipelineId, true);
-          }, 1000); // ✅ 1 segundo para evitar múltiplos triggers
+          }, 50);
         }
       )
       .subscribe();

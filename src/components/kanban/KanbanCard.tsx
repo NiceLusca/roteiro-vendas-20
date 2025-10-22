@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils';
 import { KanbanCardMenu } from './KanbanCardMenu';
 import { AppointmentBadge } from '@/components/notifications/AppointmentBadge';
 import { getCloserColor, getCloserBorderColor } from '@/utils/closerColors';
-import { useKanbanAppointments } from '@/hooks/useKanbanAppointments';
 
 interface AppointmentInfo {
   id: string;
@@ -47,7 +46,7 @@ export const KanbanCard = memo(function KanbanCard({
   stage,
   nextStage,
   checklistComplete = true,
-  nextAppointment: _nextAppointment, // ✅ Ignorar prop
+  nextAppointment,
   isDragging = false,
   onViewLead,
   onEditLead,
@@ -62,12 +61,6 @@ export const KanbanCard = memo(function KanbanCard({
   onDragEnd
 }: KanbanCardProps) {
   const [isLocalDragging, setIsLocalDragging] = useState(false);
-  
-  // ✅ Buscar appointment diretamente do hook
-  const { getNextAppointmentForLead } = useKanbanAppointments();
-  const nextAppointment = useMemo(() => 
-    getNextAppointmentForLead(entry.lead_id)
-  , [getNextAppointmentForLead, entry.lead_id]);
 
   // Early return if lead is not loaded yet
   if (!lead) {

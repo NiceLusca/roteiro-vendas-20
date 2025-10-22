@@ -71,16 +71,10 @@ export function useKanbanAppointments() {
           schema: 'public',
           table: 'appointments'
         },
-        (payload) => {
-          // ✅ Só atualizar o lead específico afetado
-          const affectedLeadId = (payload.new as any)?.lead_id || (payload.old as any)?.lead_id;
-          if (affectedLeadId) {
-            setAppointments(prev => {
-              const updated = { ...prev };
-              delete updated[affectedLeadId]; // Remover entry específica para forçar re-fetch
-              return updated;
-            });
-          }
+        () => {
+          // Quando há mudanças, precisamos saber quais leads atualizar
+          // Por simplicidade, vamos limpar o cache e deixar o componente pai requisitar novamente
+          setAppointments({});
         }
       )
       .subscribe();

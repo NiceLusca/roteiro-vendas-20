@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Filter, Search, RotateCcw } from 'lucide-react';
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
 import { StageJumpDialog } from '@/components/pipeline/StageJumpDialog';
@@ -23,31 +23,21 @@ function PipelinesContent({ slug }: { slug: string }) {
   const navigate = useNavigate();
   const { pipelines, getPipelineBySlug } = useSupabasePipelines();
   const [currentPipeline, setCurrentPipeline] = useState<any>(null);
-  const [pipelineLoading, setPipelineLoading] = useState(true);
   
   // Buscar pipeline por slug
   useEffect(() => {
     const loadPipeline = async () => {
-      setPipelineLoading(true);
       const pipeline = await getPipelineBySlug(slug);
       setCurrentPipeline(pipeline);
-      setPipelineLoading(false);
-      
-      // Se pipeline não existe, redirecionar para seletor
-      if (!pipeline) {
-        navigate('/pipelines/select', { replace: true });
-      }
     };
     loadPipeline();
-  }, [slug, getPipelineBySlug, navigate]);
+  }, [slug, getPipelineBySlug]);
 
   const pipelineId = currentPipeline?.id;
-  
-  // Só buscar dados se temos um pipelineId válido
   const { leads, refetch: refetchLeads } = useSupabaseLeads();
-  const entries = useSupabaseLeadPipelineEntries(pipelineId || '');
+  const entries = useSupabaseLeadPipelineEntries(pipelineId);
   const leadPipelineEntries = entries.entries;
-  const { stages } = useSupabasePipelineStages(pipelineId || '');
+  const { stages } = useSupabasePipelineStages(pipelineId);
   const { fetchNextAppointments, getNextAppointmentForLead } = useKanbanAppointments();
   const { moveLead } = useLeadMovement();
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -62,44 +52,75 @@ function PipelinesContent({ slug }: { slug: string }) {
   const [filterScore, setFilterScore] = useState<string>('all');
   const [filterHealth, setFilterHealth] = useState<string>('all');
 
-  // ✅ Usar ref para estabilizar entries.refetch
-  const refetchEntriesRef = useRef(entries.refetch);
-  useEffect(() => {
-    refetchEntriesRef.current = entries.refetch;
-  }, [entries.refetch]);
+  // Processar dados
+  const pipelineStages = stages
+    .filter(stage => stage.pipeline_id === pipelineId)
+    .sort((a, b) => a.ordem - b.ordem);
 
-  // ✅ TODOS OS useCallback ANTES de qualquer return condicional
+  // ✅ SOLUÇÃO 1: Processamento direto sem useMemo (permite re-renders automáticos)
+  const allEntries = leadPipelineEntries
+    .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId)
+    .map(entry => {
+      const lead = leads.find(l => l.id === entry.lead_id);
+      return lead ? { ...entry, lead } : null;
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+    // Aplicar filtros
+    .filter(entry => {
+      // Filtro de busca por nome
+      if (searchTerm && !entry.lead.nome.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false;
+      }
+      
+      // Filtro de closer
+      if (filterCloser !== 'all' && entry.lead.closer !== filterCloser) {
+        return false;
+      }
+      
+      // Filtro de score
+      if (filterScore !== 'all' && entry.lead.lead_score_classification !== filterScore) {
+        return false;
+      }
+      
+      // Filtro de saúde
+      if (filterHealth !== 'all' && entry.saude_etapa !== filterHealth) {
+        return false;
+      }
+      
+      return true;
+    });
+
+  // Obter closers únicos para o filtro
+  const closers = Array.from(new Set(leads.map(l => l.closer).filter(Boolean)));
+
+  // ✅ SOLUÇÃO 2: Forçar refetch explícito no banco de dados
   const handleRefresh = useCallback(async () => {
     console.log('🔄 [Pipelines] Forçando refetch explícito');
     await Promise.all([
-      refetchEntriesRef.current(pipelineId),
+      entries.refetch(pipelineId),
       refetchLeads()
     ]);
     console.log('✅ [Pipelines] Refetch concluído');
-  }, [pipelineId, refetchLeads]);
+  }, [pipelineId]);
 
   // Handler para avançar etapa via botão
   const handleAdvanceStage = useCallback(async (entryId: string) => {
-    const entry = leadPipelineEntries
-      .filter(e => e.status_inscricao === 'Ativo' && e.pipeline_id === pipelineId)
-      .map(e => {
-        const lead = leads.find(l => l.id === e.lead_id);
-        return lead ? { ...e, lead } : null;
-      })
-      .filter((e): e is NonNullable<typeof e> => e !== null)
-      .find(e => e.id === entryId);
-      
-    if (!entry) return;
+    console.log('📍 [Pipelines] handleAdvanceStage chamado:', entryId);
     
-    const pipelineStages = stages
-      .filter(stage => stage.pipeline_id === pipelineId)
-      .sort((a, b) => a.ordem - b.ordem);
+    const entry = allEntries.find(e => e.id === entryId);
+    if (!entry) {
+      console.error('❌ Entry não encontrada');
+      return;
+    }
     
     const currentStageIndex = pipelineStages.findIndex(s => s.id === entry.etapa_atual_id);
     const currentStage = pipelineStages[currentStageIndex];
     const nextStage = pipelineStages[currentStageIndex + 1];
     
-    if (!currentStage || !nextStage) return;
+    if (!currentStage || !nextStage) {
+      console.error('❌ Stages não encontrados');
+      return;
+    }
     
     await moveLead({
       entry,
@@ -107,32 +128,34 @@ function PipelinesContent({ slug }: { slug: string }) {
       toStage: nextStage,
       checklistItems: [],
       currentEntriesInTargetStage: 0,
-      onSuccess: handleRefresh
+      onSuccess: () => {
+        console.log('✅ [Pipelines] Avançou com sucesso');
+        handleRefresh();
+      }
     });
-  }, [leadPipelineEntries, pipelineId, leads, stages, moveLead, handleRefresh]);
+  }, [allEntries, pipelineStages, moveLead, handleRefresh]);
+
+  // Pipeline já foi carregado pelo useEffect acima (currentPipeline)
+  const activePipelines = pipelines.filter(p => p.ativo);
 
   // Handler para regredir etapa via botão
   const handleRegressStage = useCallback(async (entryId: string) => {
-    const entry = leadPipelineEntries
-      .filter(e => e.status_inscricao === 'Ativo' && e.pipeline_id === pipelineId)
-      .map(e => {
-        const lead = leads.find(l => l.id === e.lead_id);
-        return lead ? { ...e, lead } : null;
-      })
-      .filter((e): e is NonNullable<typeof e> => e !== null)
-      .find(e => e.id === entryId);
-      
-    if (!entry) return;
+    console.log('📍 [Pipelines] handleRegressStage chamado:', entryId);
     
-    const pipelineStages = stages
-      .filter(stage => stage.pipeline_id === pipelineId)
-      .sort((a, b) => a.ordem - b.ordem);
+    const entry = allEntries.find(e => e.id === entryId);
+    if (!entry) {
+      console.error('❌ Entry não encontrada');
+      return;
+    }
     
     const currentStageIndex = pipelineStages.findIndex(s => s.id === entry.etapa_atual_id);
     const currentStage = pipelineStages[currentStageIndex];
     const previousStage = pipelineStages[currentStageIndex - 1];
     
-    if (!currentStage || !previousStage) return;
+    if (!currentStage || !previousStage) {
+      console.error('❌ Não há etapa anterior');
+      return;
+    }
     
     await moveLead({
       entry,
@@ -140,9 +163,12 @@ function PipelinesContent({ slug }: { slug: string }) {
       toStage: previousStage,
       checklistItems: [],
       currentEntriesInTargetStage: 0,
-      onSuccess: handleRefresh
+      onSuccess: () => {
+        console.log('✅ [Pipelines] Regrediu com sucesso');
+        handleRefresh();
+      }
     });
-  }, [leadPipelineEntries, pipelineId, leads, stages, moveLead, handleRefresh]);
+  }, [allEntries, pipelineStages, moveLead, handleRefresh]);
 
   // Handler para abrir modal de pulo de etapas
   const handleJumpToStage = useCallback((entryId: string) => {
@@ -153,25 +179,19 @@ function PipelinesContent({ slug }: { slug: string }) {
   const handleConfirmJump = useCallback(async (targetStageId: string) => {
     if (!stageJumpDialogState.entryId) return;
     
-    const allEntries = leadPipelineEntries
-      .filter(e => e.status_inscricao === 'Ativo' && e.pipeline_id === pipelineId)
-      .map(e => {
-        const lead = leads.find(l => l.id === e.lead_id);
-        return lead ? { ...e, lead } : null;
-      })
-      .filter((e): e is NonNullable<typeof e> => e !== null);
-    
     const entry = allEntries.find(e => e.id === stageJumpDialogState.entryId);
-    if (!entry) return;
-    
-    const pipelineStages = stages
-      .filter(stage => stage.pipeline_id === pipelineId)
-      .sort((a, b) => a.ordem - b.ordem);
+    if (!entry) {
+      console.error('❌ Entry não encontrada');
+      return;
+    }
     
     const fromStage = pipelineStages.find(s => s.id === entry.etapa_atual_id);
     const toStage = pipelineStages.find(s => s.id === targetStageId);
     
-    if (!fromStage || !toStage) return;
+    if (!fromStage || !toStage) {
+      console.error('❌ Stages não encontrados');
+      return;
+    }
     
     await moveLead({
       entry,
@@ -180,11 +200,12 @@ function PipelinesContent({ slug }: { slug: string }) {
       checklistItems: [],
       currentEntriesInTargetStage: allEntries.filter(e => e.etapa_atual_id === targetStageId).length,
       onSuccess: () => {
+        console.log('✅ [Pipelines] Pulou etapas com sucesso');
         setStageJumpDialogState({ open: false, entryId: null });
         handleRefresh();
       }
     });
-  }, [stageJumpDialogState.entryId, leadPipelineEntries, pipelineId, leads, stages, moveLead, handleRefresh]);
+  }, [stageJumpDialogState.entryId, allEntries, pipelineStages, moveLead, handleRefresh]);
 
   // Handler para abrir modal de edição
   const handleViewOrEditLead = useCallback((leadId: string) => {
@@ -193,6 +214,21 @@ function PipelinesContent({ slug }: { slug: string }) {
       setEditingLead(lead);
     }
   }, [leads]);
+
+  // Buscar agendamentos
+  useEffect(() => {
+    if (allEntries.length === 0) return;
+    
+    const leadIds = allEntries.map(entry => entry.lead_id);
+    fetchNextAppointments(leadIds);
+  }, [allEntries.length, fetchNextAppointments]);
+
+  // Salvar nome do pipeline no sessionStorage para breadcrumb
+  useEffect(() => {
+    if (currentPipeline) {
+      sessionStorage.setItem(`pipeline_${pipelineId}_name`, currentPipeline.nome);
+    }
+  }, [currentPipeline, pipelineId]);
 
   // Handlers para PipelineSelector
   const handleConfigurePipeline = useCallback(() => {
@@ -217,88 +253,37 @@ function PipelinesContent({ slug }: { slug: string }) {
     setFilterHealth('all');
   }, []);
 
-  // ✅ TODOS OS useMemo ANTES de qualquer return condicional
-  const pipelineStages = useMemo(() => 
-    stages
-      .filter(stage => stage.pipeline_id === pipelineId)
-      .sort((a, b) => a.ordem - b.ordem),
-    [stages, pipelineId]
-  );
-
-  const allEntries = useMemo(() => 
-    leadPipelineEntries
-      .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId)
-      .map(entry => {
-        const lead = leads.find(l => l.id === entry.lead_id);
-        return lead ? { ...entry, lead } : null;
-      })
-      .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
-      .filter(entry => {
-        if (searchTerm && !entry.lead.nome.toLowerCase().includes(searchTerm.toLowerCase())) {
-          return false;
-        }
-        if (filterCloser !== 'all' && entry.lead.closer !== filterCloser) {
-          return false;
-        }
-        if (filterScore !== 'all' && entry.lead.lead_score_classification !== filterScore) {
-          return false;
-        }
-        if (filterHealth !== 'all' && entry.saude_etapa !== filterHealth) {
-          return false;
-        }
-        return true;
-      }),
-    [leadPipelineEntries, pipelineId, leads, searchTerm, filterCloser, filterScore, filterHealth]
-  );
-
-  const closers = useMemo(() => 
-    Array.from(new Set(leads.map(l => l.closer).filter(Boolean))),
-    [leads]
-  );
-
-  const activePipelines = useMemo(() => 
-    pipelines.filter(p => p.ativo),
-    [pipelines]
-  );
-
-  const leadIds = useMemo(() => {
-    const ids = allEntries.map(entry => entry.lead_id);
-    // ✅ Ordenar para comparação estável
-    return ids.sort();
-  }, [allEntries]);
-
-  const stageEntries = useMemo(() => {
-    return pipelineStages.map((stage, index) => {
-      const entries = allEntries.filter(entry => entry.etapa_atual_id === stage.id);
-      const wipExceeded = stage.wip_limit ? entries.length > stage.wip_limit : false;
-      const nextStage = index < pipelineStages.length - 1 ? pipelineStages[index + 1] : null;
-
-      // ✅ NÃO adicionar appointments aqui - KanbanCard vai buscar diretamente
-      return {
-        stage,
-        nextStage,
-        entries, // ✅ Sem nextAppointment
-        wipExceeded
-      };
-    });
-  }, [pipelineStages, allEntries]);
-
-  // ✅ useEffect DEPOIS de todos os useMemo mas ANTES dos returns
-  useEffect(() => {
-    if (currentPipeline) {
-      sessionStorage.setItem(`pipeline_${pipelineId}_name`, currentPipeline.nome);
-    }
-  }, [currentPipeline, pipelineId]);
-
-  useEffect(() => {
-    if (leadIds.length === 0) return;
-    fetchNextAppointments(leadIds);
-  }, [leadIds, fetchNextAppointments]);
-
-  // ✅ AGORA SIM: RETURNS CONDICIONAIS (depois de TODOS os hooks)
-  if (pipelineLoading || !currentPipeline) {
-    return <EnhancedLoading loading={true}><></></EnhancedLoading>;
+  if (!currentPipeline) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Pipeline não encontrado</h2>
+          <Button onClick={() => navigate('/pipelines/select')}>
+            Voltar para seleção
+          </Button>
+        </div>
+      </div>
+    );
   }
+
+  // Agrupar por stage
+  const stageEntries = pipelineStages.map((stage, index) => {
+    const entries = allEntries.filter(entry => entry.etapa_atual_id === stage.id);
+    const wipExceeded = stage.wip_limit ? entries.length > stage.wip_limit : false;
+    const nextStage = index < pipelineStages.length - 1 ? pipelineStages[index + 1] : null;
+
+    const entriesWithAppointments = entries.map(entry => ({
+      ...entry,
+      nextAppointment: getNextAppointmentForLead(entry.lead_id)
+    }));
+
+    return {
+      stage,
+      nextStage,
+      entries: entriesWithAppointments,
+      wipExceeded
+    };
+  });
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
@@ -403,7 +388,7 @@ function PipelinesContent({ slug }: { slug: string }) {
       {/* Área de Scroll APENAS para o Kanban */}
       <div className="flex-1 overflow-x-auto overflow-y-auto px-6 pt-6 pb-6">
         <KanbanBoard
-          key={`kanban-${pipelineId}-${allEntries.length}`}
+          key={`kanban-${pipelineId}-${allEntries.length}-${Date.now()}`}
           selectedPipelineId={pipelineId}
           stageEntries={stageEntries}
           onViewLead={handleViewOrEditLead}
@@ -449,18 +434,14 @@ export default function Pipelines() {
   const navigate = useNavigate();
   const { pipelines, loading } = useSupabasePipelines();
 
-  // Memoizar activePipelines para evitar re-renders infinitos
-  const activePipelines = useMemo(() => 
-    pipelines.filter(p => p.ativo), 
-    [pipelines]
-  );
+  const activePipelines = pipelines.filter(p => p.ativo);
 
   // Redirecionar para seleção se necessário
   useEffect(() => {
     if (!loading && !slug && activePipelines.length > 0) {
       navigate('/pipelines/select', { replace: true });
     }
-  }, [loading, slug, activePipelines.length, navigate]); // Usar length ao invés do array
+  }, [loading, slug, activePipelines, navigate]);
 
   if (loading) {
     return <EnhancedLoading loading={true}><></></EnhancedLoading>;
