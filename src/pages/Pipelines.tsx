@@ -211,7 +211,7 @@ function PipelinesContent({ slug }: { slug: string }) {
     setFilterHealth('all');
   }, []);
 
-  // ✅ PROCESSAMENTO DE DADOS (depois de todos os hooks)
+  // ✅ TODOS OS useMemo ANTES de qualquer return condicional
   const pipelineStages = useMemo(() => 
     stages
       .filter(stage => stage.pipeline_id === pipelineId)
@@ -245,43 +245,21 @@ function PipelinesContent({ slug }: { slug: string }) {
     [leadPipelineEntries, pipelineId, leads, searchTerm, filterCloser, filterScore, filterHealth]
   );
 
-  const closers = Array.from(new Set(leads.map(l => l.closer).filter(Boolean)));
-  const activePipelines = pipelines.filter(p => p.ativo);
+  const closers = useMemo(() => 
+    Array.from(new Set(leads.map(l => l.closer).filter(Boolean))),
+    [leads]
+  );
 
-  // Salvar nome do pipeline no sessionStorage para breadcrumb
-  useEffect(() => {
-    if (currentPipeline) {
-      sessionStorage.setItem(`pipeline_${pipelineId}_name`, currentPipeline.nome);
-    }
-  }, [currentPipeline, pipelineId]);
+  const activePipelines = useMemo(() => 
+    pipelines.filter(p => p.ativo),
+    [pipelines]
+  );
 
-  // Buscar agendamentos (useEffect que depende de allEntries)
-  const leadIds = useMemo(() => allEntries.map(entry => entry.lead_id), [allEntries]);
+  const leadIds = useMemo(() => 
+    allEntries.map(entry => entry.lead_id), 
+    [allEntries]
+  );
 
-  useEffect(() => {
-    if (leadIds.length === 0) return;
-    fetchNextAppointments(leadIds);
-  }, [leadIds, fetchNextAppointments]);
-
-  // ✅ RETURNS CONDICIONAIS (depois de todos os hooks e processamento)
-  if (pipelineLoading || !currentPipeline) {
-    return <EnhancedLoading loading={true}><></></EnhancedLoading>;
-  }
-
-  if (!currentPipeline) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Pipeline não encontrado</h2>
-          <Button onClick={() => navigate('/pipelines/select')}>
-            Voltar para seleção
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Agrupar por stage
   const stageEntries = useMemo(() => 
     pipelineStages.map((stage, index) => {
       const entries = allEntries.filter(entry => entry.etapa_atual_id === stage.id);
@@ -302,6 +280,23 @@ function PipelinesContent({ slug }: { slug: string }) {
     }),
     [pipelineStages, allEntries, getNextAppointmentForLead]
   );
+
+  // ✅ useEffect DEPOIS de todos os useMemo mas ANTES dos returns
+  useEffect(() => {
+    if (currentPipeline) {
+      sessionStorage.setItem(`pipeline_${pipelineId}_name`, currentPipeline.nome);
+    }
+  }, [currentPipeline, pipelineId]);
+
+  useEffect(() => {
+    if (leadIds.length === 0) return;
+    fetchNextAppointments(leadIds);
+  }, [leadIds, fetchNextAppointments]);
+
+  // ✅ AGORA SIM: RETURNS CONDICIONAIS (depois de TODOS os hooks)
+  if (pipelineLoading || !currentPipeline) {
+    return <EnhancedLoading loading={true}><></></EnhancedLoading>;
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
