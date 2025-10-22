@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Filter, Search, RotateCcw } from 'lucide-react';
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
 import { StageJumpDialog } from '@/components/pipeline/StageJumpDialog';
@@ -62,15 +62,21 @@ function PipelinesContent({ slug }: { slug: string }) {
   const [filterScore, setFilterScore] = useState<string>('all');
   const [filterHealth, setFilterHealth] = useState<string>('all');
 
+  // ✅ Usar ref para estabilizar entries.refetch
+  const refetchEntriesRef = useRef(entries.refetch);
+  useEffect(() => {
+    refetchEntriesRef.current = entries.refetch;
+  }, [entries.refetch]);
+
   // ✅ TODOS OS useCallback ANTES de qualquer return condicional
   const handleRefresh = useCallback(async () => {
     console.log('🔄 [Pipelines] Forçando refetch explícito');
     await Promise.all([
-      entries.refetch(pipelineId),
+      refetchEntriesRef.current(pipelineId),
       refetchLeads()
     ]);
     console.log('✅ [Pipelines] Refetch concluído');
-  }, [pipelineId, entries.refetch, refetchLeads]);
+  }, [pipelineId, refetchLeads]);
 
   // Handler para avançar etapa via botão
   const handleAdvanceStage = useCallback(async (entryId: string) => {
@@ -260,15 +266,18 @@ function PipelinesContent({ slug }: { slug: string }) {
     [allEntries]
   );
 
-  const stageEntries = useMemo(() => 
-    pipelineStages.map((stage, index) => {
+  const stageEntries = useMemo(() => {
+    // Capturar a função uma vez no início do useMemo
+    const getAppointment = getNextAppointmentForLead;
+    
+    return pipelineStages.map((stage, index) => {
       const entries = allEntries.filter(entry => entry.etapa_atual_id === stage.id);
       const wipExceeded = stage.wip_limit ? entries.length > stage.wip_limit : false;
       const nextStage = index < pipelineStages.length - 1 ? pipelineStages[index + 1] : null;
 
       const entriesWithAppointments = entries.map(entry => ({
         ...entry,
-        nextAppointment: getNextAppointmentForLead(entry.lead_id)
+        nextAppointment: getAppointment(entry.lead_id)
       }));
 
       return {
@@ -277,9 +286,8 @@ function PipelinesContent({ slug }: { slug: string }) {
         entries: entriesWithAppointments,
         wipExceeded
       };
-    }),
-    [pipelineStages, allEntries, getNextAppointmentForLead]
-  );
+    });
+  }, [pipelineStages, allEntries]);
 
   // ✅ useEffect DEPOIS de todos os useMemo mas ANTES dos returns
   useEffect(() => {
