@@ -166,7 +166,7 @@
 
   /* CRM specific animations */
   .kanban-card {
-    @apply transition-all duration-200 hover:shadow-md hover:-translate-y-1;
+    @apply transition-all duration-200 hover:shadow-md;
   }
   
   .metric-card {
