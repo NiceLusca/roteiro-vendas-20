@@ -62,53 +62,7 @@ function PipelinesContent({ slug }: { slug: string }) {
   const [filterScore, setFilterScore] = useState<string>('all');
   const [filterHealth, setFilterHealth] = useState<string>('all');
 
-  // Processar dados
-  const pipelineStages = stages
-    .filter(stage => stage.pipeline_id === pipelineId)
-    .sort((a, b) => a.ordem - b.ordem);
-
-  // Mostrar loading enquanto busca o pipeline
-  if (pipelineLoading || !currentPipeline) {
-    return <EnhancedLoading loading={true}><></></EnhancedLoading>;
-  }
-
-  // ✅ SOLUÇÃO 1: Processamento direto sem useMemo (permite re-renders automáticos)
-  const allEntries = leadPipelineEntries
-    .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId)
-    .map(entry => {
-      const lead = leads.find(l => l.id === entry.lead_id);
-      return lead ? { ...entry, lead } : null;
-    })
-    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
-    // Aplicar filtros
-    .filter(entry => {
-      // Filtro de busca por nome
-      if (searchTerm && !entry.lead.nome.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return false;
-      }
-      
-      // Filtro de closer
-      if (filterCloser !== 'all' && entry.lead.closer !== filterCloser) {
-        return false;
-      }
-      
-      // Filtro de score
-      if (filterScore !== 'all' && entry.lead.lead_score_classification !== filterScore) {
-        return false;
-      }
-      
-      // Filtro de saúde
-      if (filterHealth !== 'all' && entry.saude_etapa !== filterHealth) {
-        return false;
-      }
-      
-      return true;
-    });
-
-  // Obter closers únicos para o filtro
-  const closers = Array.from(new Set(leads.map(l => l.closer).filter(Boolean)));
-
-  // ✅ SOLUÇÃO 2: Forçar refetch explícito no banco de dados
+  // ✅ TODOS OS useCallback ANTES de qualquer return condicional
   const handleRefresh = useCallback(async () => {
     console.log('🔄 [Pipelines] Forçando refetch explícito');
     await Promise.all([
@@ -116,26 +70,30 @@ function PipelinesContent({ slug }: { slug: string }) {
       refetchLeads()
     ]);
     console.log('✅ [Pipelines] Refetch concluído');
-  }, [pipelineId]);
+  }, [pipelineId, entries, refetchLeads]);
 
   // Handler para avançar etapa via botão
   const handleAdvanceStage = useCallback(async (entryId: string) => {
-    console.log('📍 [Pipelines] handleAdvanceStage chamado:', entryId);
+    const entry = leadPipelineEntries
+      .filter(e => e.status_inscricao === 'Ativo' && e.pipeline_id === pipelineId)
+      .map(e => {
+        const lead = leads.find(l => l.id === e.lead_id);
+        return lead ? { ...e, lead } : null;
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== null)
+      .find(e => e.id === entryId);
+      
+    if (!entry) return;
     
-    const entry = allEntries.find(e => e.id === entryId);
-    if (!entry) {
-      console.error('❌ Entry não encontrada');
-      return;
-    }
+    const pipelineStages = stages
+      .filter(stage => stage.pipeline_id === pipelineId)
+      .sort((a, b) => a.ordem - b.ordem);
     
     const currentStageIndex = pipelineStages.findIndex(s => s.id === entry.etapa_atual_id);
     const currentStage = pipelineStages[currentStageIndex];
     const nextStage = pipelineStages[currentStageIndex + 1];
     
-    if (!currentStage || !nextStage) {
-      console.error('❌ Stages não encontrados');
-      return;
-    }
+    if (!currentStage || !nextStage) return;
     
     await moveLead({
       entry,
@@ -143,34 +101,32 @@ function PipelinesContent({ slug }: { slug: string }) {
       toStage: nextStage,
       checklistItems: [],
       currentEntriesInTargetStage: 0,
-      onSuccess: () => {
-        console.log('✅ [Pipelines] Avançou com sucesso');
-        handleRefresh();
-      }
+      onSuccess: handleRefresh
     });
-  }, [allEntries, pipelineStages, moveLead, handleRefresh]);
-
-  // Pipeline já foi carregado pelo useEffect acima (currentPipeline)
-  const activePipelines = pipelines.filter(p => p.ativo);
+  }, [leadPipelineEntries, pipelineId, leads, stages, moveLead, handleRefresh]);
 
   // Handler para regredir etapa via botão
   const handleRegressStage = useCallback(async (entryId: string) => {
-    console.log('📍 [Pipelines] handleRegressStage chamado:', entryId);
+    const entry = leadPipelineEntries
+      .filter(e => e.status_inscricao === 'Ativo' && e.pipeline_id === pipelineId)
+      .map(e => {
+        const lead = leads.find(l => l.id === e.lead_id);
+        return lead ? { ...e, lead } : null;
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== null)
+      .find(e => e.id === entryId);
+      
+    if (!entry) return;
     
-    const entry = allEntries.find(e => e.id === entryId);
-    if (!entry) {
-      console.error('❌ Entry não encontrada');
-      return;
-    }
+    const pipelineStages = stages
+      .filter(stage => stage.pipeline_id === pipelineId)
+      .sort((a, b) => a.ordem - b.ordem);
     
     const currentStageIndex = pipelineStages.findIndex(s => s.id === entry.etapa_atual_id);
     const currentStage = pipelineStages[currentStageIndex];
     const previousStage = pipelineStages[currentStageIndex - 1];
     
-    if (!currentStage || !previousStage) {
-      console.error('❌ Não há etapa anterior');
-      return;
-    }
+    if (!currentStage || !previousStage) return;
     
     await moveLead({
       entry,
@@ -178,12 +134,9 @@ function PipelinesContent({ slug }: { slug: string }) {
       toStage: previousStage,
       checklistItems: [],
       currentEntriesInTargetStage: 0,
-      onSuccess: () => {
-        console.log('✅ [Pipelines] Regrediu com sucesso');
-        handleRefresh();
-      }
+      onSuccess: handleRefresh
     });
-  }, [allEntries, pipelineStages, moveLead, handleRefresh]);
+  }, [leadPipelineEntries, pipelineId, leads, stages, moveLead, handleRefresh]);
 
   // Handler para abrir modal de pulo de etapas
   const handleJumpToStage = useCallback((entryId: string) => {
@@ -194,19 +147,25 @@ function PipelinesContent({ slug }: { slug: string }) {
   const handleConfirmJump = useCallback(async (targetStageId: string) => {
     if (!stageJumpDialogState.entryId) return;
     
+    const allEntries = leadPipelineEntries
+      .filter(e => e.status_inscricao === 'Ativo' && e.pipeline_id === pipelineId)
+      .map(e => {
+        const lead = leads.find(l => l.id === e.lead_id);
+        return lead ? { ...e, lead } : null;
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== null);
+    
     const entry = allEntries.find(e => e.id === stageJumpDialogState.entryId);
-    if (!entry) {
-      console.error('❌ Entry não encontrada');
-      return;
-    }
+    if (!entry) return;
+    
+    const pipelineStages = stages
+      .filter(stage => stage.pipeline_id === pipelineId)
+      .sort((a, b) => a.ordem - b.ordem);
     
     const fromStage = pipelineStages.find(s => s.id === entry.etapa_atual_id);
     const toStage = pipelineStages.find(s => s.id === targetStageId);
     
-    if (!fromStage || !toStage) {
-      console.error('❌ Stages não encontrados');
-      return;
-    }
+    if (!fromStage || !toStage) return;
     
     await moveLead({
       entry,
@@ -215,12 +174,11 @@ function PipelinesContent({ slug }: { slug: string }) {
       checklistItems: [],
       currentEntriesInTargetStage: allEntries.filter(e => e.etapa_atual_id === targetStageId).length,
       onSuccess: () => {
-        console.log('✅ [Pipelines] Pulou etapas com sucesso');
         setStageJumpDialogState({ open: false, entryId: null });
         handleRefresh();
       }
     });
-  }, [stageJumpDialogState.entryId, allEntries, pipelineStages, moveLead, handleRefresh]);
+  }, [stageJumpDialogState.entryId, leadPipelineEntries, pipelineId, leads, stages, moveLead, handleRefresh]);
 
   // Handler para abrir modal de edição
   const handleViewOrEditLead = useCallback((leadId: string) => {
@@ -229,21 +187,6 @@ function PipelinesContent({ slug }: { slug: string }) {
       setEditingLead(lead);
     }
   }, [leads]);
-
-  // Buscar agendamentos
-  useEffect(() => {
-    if (allEntries.length === 0) return;
-    
-    const leadIds = allEntries.map(entry => entry.lead_id);
-    fetchNextAppointments(leadIds);
-  }, [allEntries.length, fetchNextAppointments]);
-
-  // Salvar nome do pipeline no sessionStorage para breadcrumb
-  useEffect(() => {
-    if (currentPipeline) {
-      sessionStorage.setItem(`pipeline_${pipelineId}_name`, currentPipeline.nome);
-    }
-  }, [currentPipeline, pipelineId]);
 
   // Handlers para PipelineSelector
   const handleConfigurePipeline = useCallback(() => {
@@ -267,6 +210,57 @@ function PipelinesContent({ slug }: { slug: string }) {
     setFilterScore('all');
     setFilterHealth('all');
   }, []);
+
+  // ✅ PROCESSAMENTO DE DADOS (depois de todos os hooks)
+  const pipelineStages = stages
+    .filter(stage => stage.pipeline_id === pipelineId)
+    .sort((a, b) => a.ordem - b.ordem);
+
+  const allEntries = leadPipelineEntries
+    .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId)
+    .map(entry => {
+      const lead = leads.find(l => l.id === entry.lead_id);
+      return lead ? { ...entry, lead } : null;
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+    .filter(entry => {
+      if (searchTerm && !entry.lead.nome.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false;
+      }
+      if (filterCloser !== 'all' && entry.lead.closer !== filterCloser) {
+        return false;
+      }
+      if (filterScore !== 'all' && entry.lead.lead_score_classification !== filterScore) {
+        return false;
+      }
+      if (filterHealth !== 'all' && entry.saude_etapa !== filterHealth) {
+        return false;
+      }
+      return true;
+    });
+
+  const closers = Array.from(new Set(leads.map(l => l.closer).filter(Boolean)));
+  const activePipelines = pipelines.filter(p => p.ativo);
+
+  // Salvar nome do pipeline no sessionStorage para breadcrumb
+  useEffect(() => {
+    if (currentPipeline) {
+      sessionStorage.setItem(`pipeline_${pipelineId}_name`, currentPipeline.nome);
+    }
+  }, [currentPipeline, pipelineId]);
+
+  // Buscar agendamentos (useEffect que depende de allEntries)
+  useEffect(() => {
+    if (allEntries.length === 0) return;
+    
+    const leadIds = allEntries.map(entry => entry.lead_id);
+    fetchNextAppointments(leadIds);
+  }, [allEntries.length, fetchNextAppointments]);
+
+  // ✅ RETURNS CONDICIONAIS (depois de todos os hooks e processamento)
+  if (pipelineLoading || !currentPipeline) {
+    return <EnhancedLoading loading={true}><></></EnhancedLoading>;
+  }
 
   if (!currentPipeline) {
     return (
