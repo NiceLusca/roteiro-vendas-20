@@ -70,7 +70,7 @@ function PipelinesContent({ slug }: { slug: string }) {
       refetchLeads()
     ]);
     console.log('✅ [Pipelines] Refetch concluído');
-  }, [pipelineId, entries, refetchLeads]);
+  }, [pipelineId, entries.refetch, refetchLeads]);
 
   // Handler para avançar etapa via botão
   const handleAdvanceStage = useCallback(async (entryId: string) => {
@@ -212,32 +212,38 @@ function PipelinesContent({ slug }: { slug: string }) {
   }, []);
 
   // ✅ PROCESSAMENTO DE DADOS (depois de todos os hooks)
-  const pipelineStages = stages
-    .filter(stage => stage.pipeline_id === pipelineId)
-    .sort((a, b) => a.ordem - b.ordem);
+  const pipelineStages = useMemo(() => 
+    stages
+      .filter(stage => stage.pipeline_id === pipelineId)
+      .sort((a, b) => a.ordem - b.ordem),
+    [stages, pipelineId]
+  );
 
-  const allEntries = leadPipelineEntries
-    .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId)
-    .map(entry => {
-      const lead = leads.find(l => l.id === entry.lead_id);
-      return lead ? { ...entry, lead } : null;
-    })
-    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
-    .filter(entry => {
-      if (searchTerm && !entry.lead.nome.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return false;
-      }
-      if (filterCloser !== 'all' && entry.lead.closer !== filterCloser) {
-        return false;
-      }
-      if (filterScore !== 'all' && entry.lead.lead_score_classification !== filterScore) {
-        return false;
-      }
-      if (filterHealth !== 'all' && entry.saude_etapa !== filterHealth) {
-        return false;
-      }
-      return true;
-    });
+  const allEntries = useMemo(() => 
+    leadPipelineEntries
+      .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId)
+      .map(entry => {
+        const lead = leads.find(l => l.id === entry.lead_id);
+        return lead ? { ...entry, lead } : null;
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+      .filter(entry => {
+        if (searchTerm && !entry.lead.nome.toLowerCase().includes(searchTerm.toLowerCase())) {
+          return false;
+        }
+        if (filterCloser !== 'all' && entry.lead.closer !== filterCloser) {
+          return false;
+        }
+        if (filterScore !== 'all' && entry.lead.lead_score_classification !== filterScore) {
+          return false;
+        }
+        if (filterHealth !== 'all' && entry.saude_etapa !== filterHealth) {
+          return false;
+        }
+        return true;
+      }),
+    [leadPipelineEntries, pipelineId, leads, searchTerm, filterCloser, filterScore, filterHealth]
+  );
 
   const closers = Array.from(new Set(leads.map(l => l.closer).filter(Boolean)));
   const activePipelines = pipelines.filter(p => p.ativo);
@@ -250,12 +256,12 @@ function PipelinesContent({ slug }: { slug: string }) {
   }, [currentPipeline, pipelineId]);
 
   // Buscar agendamentos (useEffect que depende de allEntries)
+  const leadIds = useMemo(() => allEntries.map(entry => entry.lead_id), [allEntries]);
+
   useEffect(() => {
-    if (allEntries.length === 0) return;
-    
-    const leadIds = allEntries.map(entry => entry.lead_id);
+    if (leadIds.length === 0) return;
     fetchNextAppointments(leadIds);
-  }, [allEntries.length, fetchNextAppointments]);
+  }, [leadIds, fetchNextAppointments]);
 
   // ✅ RETURNS CONDICIONAIS (depois de todos os hooks e processamento)
   if (pipelineLoading || !currentPipeline) {
@@ -276,23 +282,26 @@ function PipelinesContent({ slug }: { slug: string }) {
   }
 
   // Agrupar por stage
-  const stageEntries = pipelineStages.map((stage, index) => {
-    const entries = allEntries.filter(entry => entry.etapa_atual_id === stage.id);
-    const wipExceeded = stage.wip_limit ? entries.length > stage.wip_limit : false;
-    const nextStage = index < pipelineStages.length - 1 ? pipelineStages[index + 1] : null;
+  const stageEntries = useMemo(() => 
+    pipelineStages.map((stage, index) => {
+      const entries = allEntries.filter(entry => entry.etapa_atual_id === stage.id);
+      const wipExceeded = stage.wip_limit ? entries.length > stage.wip_limit : false;
+      const nextStage = index < pipelineStages.length - 1 ? pipelineStages[index + 1] : null;
 
-    const entriesWithAppointments = entries.map(entry => ({
-      ...entry,
-      nextAppointment: getNextAppointmentForLead(entry.lead_id)
-    }));
+      const entriesWithAppointments = entries.map(entry => ({
+        ...entry,
+        nextAppointment: getNextAppointmentForLead(entry.lead_id)
+      }));
 
-    return {
-      stage,
-      nextStage,
-      entries: entriesWithAppointments,
-      wipExceeded
-    };
-  });
+      return {
+        stage,
+        nextStage,
+        entries: entriesWithAppointments,
+        wipExceeded
+      };
+    }),
+    [pipelineStages, allEntries, getNextAppointmentForLead]
+  );
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
@@ -397,7 +406,7 @@ function PipelinesContent({ slug }: { slug: string }) {
       {/* Área de Scroll APENAS para o Kanban */}
       <div className="flex-1 overflow-x-auto overflow-y-auto px-6 pt-6 pb-6">
         <KanbanBoard
-          key={`kanban-${pipelineId}-${allEntries.length}-${Date.now()}`}
+          key={`kanban-${pipelineId}-${allEntries.length}`}
           selectedPipelineId={pipelineId}
           stageEntries={stageEntries}
           onViewLead={handleViewOrEditLead}
