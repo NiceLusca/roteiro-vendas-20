@@ -23,21 +23,31 @@ function PipelinesContent({ slug }: { slug: string }) {
   const navigate = useNavigate();
   const { pipelines, getPipelineBySlug } = useSupabasePipelines();
   const [currentPipeline, setCurrentPipeline] = useState<any>(null);
+  const [pipelineLoading, setPipelineLoading] = useState(true);
   
   // Buscar pipeline por slug
   useEffect(() => {
     const loadPipeline = async () => {
+      setPipelineLoading(true);
       const pipeline = await getPipelineBySlug(slug);
       setCurrentPipeline(pipeline);
+      setPipelineLoading(false);
+      
+      // Se pipeline não existe, redirecionar para seletor
+      if (!pipeline) {
+        navigate('/pipelines/select', { replace: true });
+      }
     };
     loadPipeline();
-  }, [slug, getPipelineBySlug]);
+  }, [slug, getPipelineBySlug, navigate]);
 
   const pipelineId = currentPipeline?.id;
+  
+  // Só buscar dados se temos um pipelineId válido
   const { leads, refetch: refetchLeads } = useSupabaseLeads();
-  const entries = useSupabaseLeadPipelineEntries(pipelineId);
+  const entries = useSupabaseLeadPipelineEntries(pipelineId || '');
   const leadPipelineEntries = entries.entries;
-  const { stages } = useSupabasePipelineStages(pipelineId);
+  const { stages } = useSupabasePipelineStages(pipelineId || '');
   const { fetchNextAppointments, getNextAppointmentForLead } = useKanbanAppointments();
   const { moveLead } = useLeadMovement();
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -56,6 +66,11 @@ function PipelinesContent({ slug }: { slug: string }) {
   const pipelineStages = stages
     .filter(stage => stage.pipeline_id === pipelineId)
     .sort((a, b) => a.ordem - b.ordem);
+
+  // Mostrar loading enquanto busca o pipeline
+  if (pipelineLoading || !currentPipeline) {
+    return <EnhancedLoading loading={true}><></></EnhancedLoading>;
+  }
 
   // ✅ SOLUÇÃO 1: Processamento direto sem useMemo (permite re-renders automáticos)
   const allEntries = leadPipelineEntries
@@ -434,14 +449,18 @@ export default function Pipelines() {
   const navigate = useNavigate();
   const { pipelines, loading } = useSupabasePipelines();
 
-  const activePipelines = pipelines.filter(p => p.ativo);
+  // Memoizar activePipelines para evitar re-renders infinitos
+  const activePipelines = useMemo(() => 
+    pipelines.filter(p => p.ativo), 
+    [pipelines]
+  );
 
   // Redirecionar para seleção se necessário
   useEffect(() => {
     if (!loading && !slug && activePipelines.length > 0) {
       navigate('/pipelines/select', { replace: true });
     }
-  }, [loading, slug, activePipelines, navigate]);
+  }, [loading, slug, activePipelines.length, navigate]); // Usar length ao invés do array
 
   if (loading) {
     return <EnhancedLoading loading={true}><></></EnhancedLoading>;
