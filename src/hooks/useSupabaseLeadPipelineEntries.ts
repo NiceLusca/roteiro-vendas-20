@@ -114,8 +114,25 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
 
       console.log('✅ Leads carregados com deep clone:', processedEntries.length);
       
-      // ✅ SEMPRE forçar novo array (sem if/else)
-      setEntries([...processedEntries as any]);
+      // ✅ Comparação profunda para evitar updates desnecessários
+      setEntries(prevEntries => {
+        if (prevEntries.length === processedEntries.length) {
+          const areEqual = prevEntries.every((prevEntry, index) => {
+            const newEntry = processedEntries[index];
+            return prevEntry.id === newEntry.id &&
+                   prevEntry.etapa_atual_id === newEntry.etapa_atual_id &&
+                   prevEntry.updated_at === newEntry.updated_at &&
+                   prevEntry.saude_etapa === newEntry.saude_etapa;
+          });
+          
+          if (areEqual) {
+            console.log('⏭️ Dados idênticos, mantendo referência anterior');
+            return prevEntries; // ✅ Manter referência anterior
+          }
+        }
+        console.log('✅ Dados diferentes, atualizando entries');
+        return processedEntries as any;
+      });
     } catch (error) {
       console.error('Erro ao buscar entries do pipeline:', error);
     } finally {
@@ -396,9 +413,9 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
           
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
-            console.log('🔄 Executando refetch após debounce (500ms)');
+            console.log('🔄 Executando refetch após debounce (1000ms)');
             fetchEntries(pipelineId, true);
-          }, 500);
+          }, 1000); // ✅ 1 segundo para evitar múltiplos triggers
         }
       )
       .subscribe();

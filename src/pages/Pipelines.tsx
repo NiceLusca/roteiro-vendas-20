@@ -261,29 +261,23 @@ function PipelinesContent({ slug }: { slug: string }) {
     [pipelines]
   );
 
-  const leadIds = useMemo(() => 
-    allEntries.map(entry => entry.lead_id), 
-    [allEntries]
-  );
+  const leadIds = useMemo(() => {
+    const ids = allEntries.map(entry => entry.lead_id);
+    // ✅ Ordenar para comparação estável
+    return ids.sort();
+  }, [allEntries]);
 
   const stageEntries = useMemo(() => {
-    // Capturar a função uma vez no início do useMemo
-    const getAppointment = getNextAppointmentForLead;
-    
     return pipelineStages.map((stage, index) => {
       const entries = allEntries.filter(entry => entry.etapa_atual_id === stage.id);
       const wipExceeded = stage.wip_limit ? entries.length > stage.wip_limit : false;
       const nextStage = index < pipelineStages.length - 1 ? pipelineStages[index + 1] : null;
 
-      const entriesWithAppointments = entries.map(entry => ({
-        ...entry,
-        nextAppointment: getAppointment(entry.lead_id)
-      }));
-
+      // ✅ NÃO adicionar appointments aqui - KanbanCard vai buscar diretamente
       return {
         stage,
         nextStage,
-        entries: entriesWithAppointments,
+        entries, // ✅ Sem nextAppointment
         wipExceeded
       };
     });
