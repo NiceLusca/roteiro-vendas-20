@@ -388,7 +388,7 @@ function PipelinesContent({ slug }: { slug: string }) {
       {/* Área de Scroll APENAS para o Kanban */}
       <div className="flex-1 overflow-x-auto overflow-y-auto px-6 pt-6 pb-6">
         <KanbanBoard
-          key={`kanban-${pipelineId}-${allEntries.length}-${Date.now()}`}
+          key={`kanban-${pipelineId}`}
           selectedPipelineId={pipelineId}
           stageEntries={stageEntries}
           onViewLead={handleViewOrEditLead}
