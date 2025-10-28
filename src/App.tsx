@@ -162,8 +162,8 @@ function AppContent() {
 
 function App() {
   return (
-    <HelmetProvider>
-      <GlobalErrorBoundary>
+    <GlobalErrorBoundary>
+      <HelmetProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <CRMProviderWrapper>
@@ -178,8 +178,8 @@ function App() {
             </CRMProviderWrapper>
           </AuthProvider>
         </QueryClientProvider>
-      </GlobalErrorBoundary>
-    </HelmetProvider>
+      </HelmetProvider>
+    </GlobalErrorBoundary>
   );
 }
 
