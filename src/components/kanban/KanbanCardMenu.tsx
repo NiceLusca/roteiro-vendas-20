@@ -50,13 +50,15 @@ export const KanbanCardMenu = memo(function KanbanCardMenu({
         <Button
           size="sm"
           variant="ghost"
-          className="h-6 w-6 p-0 hover:bg-muted"
+          className="h-6 w-6 p-0 hover:bg-muted z-10 relative"
           onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onDragStart={(e) => e.preventDefault()}
         >
           <MoreVertical className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48 bg-popover">
+      <DropdownMenuContent align="end" className="w-48 bg-popover z-[100]">
         <DropdownMenuItem
           onClick={(e) => {
             e.stopPropagation();
