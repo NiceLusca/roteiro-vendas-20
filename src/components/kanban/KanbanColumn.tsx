@@ -92,7 +92,25 @@ export const KanbanColumn = memo(function KanbanColumn({
 
   const sortedEntries = useMemo(() => {
     return [...entries].sort((a, b) => {
-      // Ordenar por data de entrada na etapa (crescente - cards mais antigos primeiro, novos no final)
+      const scoreA = a.lead?.lead_score ?? null;
+      const scoreB = b.lead?.lead_score ?? null;
+      
+      // 1️⃣ Se ambos têm score: ordenar por score (decrescente - maior primeiro)
+      if (scoreA !== null && scoreB !== null) {
+        return scoreB - scoreA;
+      }
+      
+      // 2️⃣ Se apenas A tem score: A vem primeiro
+      if (scoreA !== null && scoreB === null) {
+        return -1;
+      }
+      
+      // 3️⃣ Se apenas B tem score: B vem primeiro
+      if (scoreA === null && scoreB !== null) {
+        return 1;
+      }
+      
+      // 4️⃣ Se nenhum tem score: ordenar por data (mais antigos primeiro)
       const dateA = new Date(a.data_entrada_etapa || a.created_at).getTime();
       const dateB = new Date(b.data_entrada_etapa || b.created_at).getTime();
       return dateA - dateB;
