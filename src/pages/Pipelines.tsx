@@ -221,7 +221,7 @@ function PipelinesContent({ slug }: { slug: string }) {
     
     const leadIds = allEntries.map(entry => entry.lead_id);
     fetchNextAppointments(leadIds);
-  }, [allEntries.length, fetchNextAppointments]);
+  }, [allEntries.length]); // ✅ SOLUÇÃO 2: Removido fetchNextAppointments das dependências
 
   // Salvar nome do pipeline no sessionStorage para breadcrumb
   useEffect(() => {

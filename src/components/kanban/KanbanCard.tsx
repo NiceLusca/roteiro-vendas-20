@@ -40,6 +40,7 @@ interface KanbanCardProps {
   onDragEnd?: () => void;
 }
 
+// ✅ SOLUÇÃO 3: Custom comparator para evitar re-renders desnecessários
 export const KanbanCard = memo(function KanbanCard({
   entry,
   lead,
@@ -232,5 +233,17 @@ export const KanbanCard = memo(function KanbanCard({
         )}
       </CardContent>
     </Card>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparator - só re-renderiza se houver mudanças relevantes
+  return (
+    prevProps.entry.id === nextProps.entry.id &&
+    prevProps.entry.updated_at === nextProps.entry.updated_at &&
+    prevProps.lead?.id === nextProps.lead?.id &&
+    prevProps.lead?.nome === nextProps.lead?.nome &&
+    prevProps.stage.id === nextProps.stage.id &&
+    prevProps.checklistComplete === nextProps.checklistComplete &&
+    prevProps.isDragging === nextProps.isDragging &&
+    prevProps.nextAppointment?.id === nextProps.nextAppointment?.id
   );
 });

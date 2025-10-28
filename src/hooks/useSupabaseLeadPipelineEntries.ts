@@ -369,32 +369,32 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
           const newRecord = payload.new as any;
           const oldRecord = payload.old as any;
           
-          // ✅ SOLUÇÃO 5: Logging completo para debug realtime
-          console.log('🔔 [REALTIME DEBUG] Evento completo:', {
-            eventType: payload.eventType,
-            leadId: newRecord?.lead_id || oldRecord?.lead_id,
-            etapaAtual: newRecord?.etapa_atual_id,
-            etapaAnterior: oldRecord?.etapa_atual_id,
-            mudouEtapa: newRecord?.etapa_atual_id !== oldRecord?.etapa_atual_id,
-            pipelineId: newRecord?.pipeline_id || oldRecord?.pipeline_id,
-            statusInscricao: newRecord?.status_inscricao,
-            timestamp: new Date().toISOString(),
-            payload: payload
-          });
+          console.log('🔔 [REALTIME DEBUG] Evento:', payload.eventType);
           
-          // ✅ FASE 2: Filtro inteligente - só reagir ao pipeline atual
           const recordPipelineId = newRecord?.pipeline_id || oldRecord?.pipeline_id;
           if (pipelineId && recordPipelineId !== pipelineId) {
-            console.log('⏭️ Ignorando evento de outro pipeline:', recordPipelineId);
+            console.log('⏭️ Ignorando evento de outro pipeline');
             return;
           }
           
-          // ✅ FASE 2: Debounce reduzido de 300ms para 50ms
+          // ✅ SOLUÇÃO 5: Só refetch se realmente necessário
+          const shouldRefetch = 
+            payload.eventType === 'INSERT' || 
+            payload.eventType === 'DELETE' ||
+            (payload.eventType === 'UPDATE' && 
+             newRecord?.etapa_atual_id !== oldRecord?.etapa_atual_id);
+          
+          if (!shouldRefetch) {
+            console.log('⏭️ Ignorando update que não afeta Kanban');
+            return;
+          }
+          
+          // ✅ SOLUÇÃO 1: Debounce aumentado de 50ms para 500ms
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
-            console.log('🔄 Executando refetch após debounce (50ms)');
+            console.log('🔄 Executando refetch após debounce (500ms)');
             fetchEntries(pipelineId, true);
-          }, 50);
+          }, 500);
         }
       )
       .subscribe();

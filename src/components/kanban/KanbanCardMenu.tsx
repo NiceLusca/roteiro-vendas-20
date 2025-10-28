@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,8 +44,11 @@ export const KanbanCardMenu = memo(function KanbanCardMenu({
   onCreateAppointment,
   onRegisterInteraction,
 }: KanbanCardMenuProps) {
+  // ✅ SOLUÇÃO 4: Controle manual do estado para evitar fechamento inesperado
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           size="sm"
