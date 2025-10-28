@@ -62,6 +62,8 @@ export function useKanbanAppointments() {
   useEffect(() => {
     if (!user) return;
 
+    let debounceTimer: NodeJS.Timeout;
+
     const channel = supabase
       .channel('appointments-changes')
       .on(
@@ -71,15 +73,27 @@ export function useKanbanAppointments() {
           schema: 'public',
           table: 'appointments'
         },
-        () => {
-          // Quando há mudanças, precisamos saber quais leads atualizar
-          // Por simplicidade, vamos limpar o cache e deixar o componente pai requisitar novamente
-          setAppointments({});
+        (payload) => {
+          // ✅ SOLUÇÃO 1: Só invalidar o lead afetado, não todos
+          const affectedLeadId = (payload.new as any)?.lead_id || (payload.old as any)?.lead_id;
+          
+          if (affectedLeadId) {
+            // ✅ SOLUÇÃO 5: Debounce de 300ms
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+              setAppointments(prev => {
+                const updated = { ...prev };
+                delete updated[affectedLeadId];
+                return updated;
+              });
+            }, 300);
+          }
         }
       )
       .subscribe();
 
     return () => {
+      clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [user]);

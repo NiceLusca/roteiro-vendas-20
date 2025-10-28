@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useState, useRef, useEffect } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,9 +46,26 @@ export const KanbanCardMenu = memo(function KanbanCardMenu({
 }: KanbanCardMenuProps) {
   // ✅ SOLUÇÃO 4: Controle manual do estado para evitar fechamento inesperado
   const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // ✅ SOLUÇÃO 2: Prevent close on parent re-render
+  useEffect(() => {
+    if (isOpen) {
+      const handleBeforeUnload = (e: Event) => {
+        e.preventDefault();
+      };
+      
+      dropdownRef.current?.addEventListener('beforeunload', handleBeforeUnload);
+      
+      return () => {
+        dropdownRef.current?.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }
+  }, [isOpen]);
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+    <div ref={dropdownRef}>
+      <DropdownMenu open={isOpen} onOpenChange={setIsOpen} modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           size="sm"
@@ -153,5 +170,6 @@ export const KanbanCardMenu = memo(function KanbanCardMenu({
         )}
       </DropdownMenuContent>
     </DropdownMenu>
+    </div>
   );
 });

@@ -244,6 +244,9 @@ export const KanbanCard = memo(function KanbanCard({
     prevProps.stage.id === nextProps.stage.id &&
     prevProps.checklistComplete === nextProps.checklistComplete &&
     prevProps.isDragging === nextProps.isDragging &&
-    prevProps.nextAppointment?.id === nextProps.nextAppointment?.id
+    // ✅ SOLUÇÃO 3: Comparação profunda de nextAppointment
+    prevProps.nextAppointment?.id === nextProps.nextAppointment?.id &&
+    prevProps.nextAppointment?.start_at === nextProps.nextAppointment?.start_at &&
+    prevProps.nextAppointment?.status === nextProps.nextAppointment?.status
   );
 });
