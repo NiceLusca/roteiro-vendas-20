@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const stageSchema = z.object({
+  pipeline_id: z.string().uuid(),
   nome: z.string().min(1, 'Nome é obrigatório'),
   ordem: z.number().min(1),
   prazo_em_dias: z.number().min(1),
@@ -34,6 +35,7 @@ export function StageForm({ stage, onSave, onCancel }: StageFormProps) {
   const form = useForm<StageFormData>({
     resolver: zodResolver(stageSchema),
     defaultValues: {
+      pipeline_id: stage?.pipeline_id || '',
       nome: stage?.nome || '',
       ordem: stage?.ordem || 1,
       prazo_em_dias: stage?.prazo_em_dias || 3,
@@ -50,6 +52,14 @@ export function StageForm({ stage, onSave, onCancel }: StageFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSave)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="pipeline_id"
+          render={({ field }) => (
+            <input type="hidden" {...field} />
+          )}
+        />
+        
         <FormField
           control={form.control}
           name="nome"
