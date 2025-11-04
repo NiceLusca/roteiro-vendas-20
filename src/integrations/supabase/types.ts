@@ -659,6 +659,7 @@ export type Database = {
           created_at: string | null
           criterios_avanco: Json | null
           duracao_minutos: number | null
+          entrada_criteria: Json | null
           gerar_agendamento_auto: boolean | null
           horarios_preferenciais: Json | null
           id: string
@@ -682,6 +683,7 @@ export type Database = {
           created_at?: string | null
           criterios_avanco?: Json | null
           duracao_minutos?: number | null
+          entrada_criteria?: Json | null
           gerar_agendamento_auto?: boolean | null
           horarios_preferenciais?: Json | null
           id?: string
@@ -705,6 +707,7 @@ export type Database = {
           created_at?: string | null
           criterios_avanco?: Json | null
           duracao_minutos?: number | null
+          entrada_criteria?: Json | null
           gerar_agendamento_auto?: boolean | null
           horarios_preferenciais?: Json | null
           id?: string
@@ -1002,18 +1005,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      decode_html_entities: {
-        Args: { input_text: string }
-        Returns: string
-      }
-      fix_utf8_encoding: {
-        Args: { input_text: string }
-        Returns: string
-      }
-      generate_slug: {
-        Args: { input_text: string }
-        Returns: string
-      }
+      decode_html_entities: { Args: { input_text: string }; Returns: string }
+      fix_utf8_encoding: { Args: { input_text: string }; Returns: string }
+      generate_slug: { Args: { input_text: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
