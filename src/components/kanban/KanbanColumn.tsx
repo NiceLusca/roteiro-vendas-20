@@ -6,6 +6,7 @@ import { KanbanCard } from './KanbanCard';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { logger } from '@/utils/logger';
 
 interface KanbanColumnProps {
   stage: PipelineStage;
@@ -72,14 +73,14 @@ export const KanbanColumn = memo(function KanbanColumn({
       const { entryId, fromStageId } = data;
 
       if (fromStageId === stage.id) {
-        console.log('⚠️ Mesma etapa, ignorando drop');
         return;
       }
 
-      console.log('📍 Drop recebido:', { entryId, toStageId: stage.id });
       await onDropLead?.(entryId, stage.id);
     } catch (error) {
-      console.error('❌ Erro ao processar drop:', error);
+      logger.error('Erro ao processar drop', error as Error, {
+        feature: 'kanban-column'
+      });
     }
   };
 

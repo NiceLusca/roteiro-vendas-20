@@ -3,6 +3,7 @@ import { KanbanColumn } from './KanbanColumn';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { useSupabaseChecklistItems } from '@/hooks/useSupabaseChecklistItems';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
+import { logger } from '@/utils/logger';
 
 interface KanbanBoardProps {
   selectedPipelineId: string;
@@ -52,10 +53,13 @@ export function KanbanBoard({
   const { checklistItems } = useSupabaseChecklistItems();
 
   const handleDropLead = useCallback(async (entryId: string, toStageId: string) => {
-    console.log('📍 [KanbanBoard] handleDropLead:', { entryId, toStageId });
+    logger.debug('handleDropLead', {
+      feature: 'kanban',
+      metadata: { entryId, toStageId }
+    });
 
     if (isMoving) {
-      console.log('⚠️ [KanbanBoard] Já existe uma movimentação em andamento');
+      logger.debug('Movimentação já em andamento', { feature: 'kanban' });
       return;
     }
 
@@ -64,7 +68,7 @@ export function KanbanBoard({
       .find(e => e.id === entryId);
 
     if (!entry) {
-      console.error('❌ Entry não encontrada');
+      logger.error('Entry não encontrada', undefined, { feature: 'kanban' });
       return;
     }
 
@@ -74,12 +78,11 @@ export function KanbanBoard({
     const toStageEntry = stageEntries.find(s => s.stage.id === toStageId);
 
     if (!fromStageEntry || !toStageEntry) {
-      console.error('❌ Stages não encontrados');
+      logger.error('Stages não encontrados', undefined, { feature: 'kanban' });
       return;
     }
 
     if (fromStageEntry.stage.id === toStageId) {
-      console.log('⚠️ [KanbanBoard] Mesma etapa, ignorando');
       return;
     }
 
@@ -87,8 +90,6 @@ export function KanbanBoard({
     const stageChecklistItems = checklistItems.filter(
       item => item.etapa_id === fromStageEntry.stage.id
     );
-
-    console.log('🔄 [KanbanBoard] Executando movimentação');
 
     // Executar movimentação
     await moveLead({
@@ -98,7 +99,6 @@ export function KanbanBoard({
       checklistItems: stageChecklistItems,
       currentEntriesInTargetStage: toStageEntry.entries.length,
       onSuccess: () => {
-        console.log('✅ Movimentação completa');
         onRefresh?.();
       },
       onError: () => {

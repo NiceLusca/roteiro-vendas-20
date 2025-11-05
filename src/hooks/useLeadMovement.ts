@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContextSecure';
 import { useAudit } from '@/contexts/AuditContext';
 import { LeadMovementValidator } from '@/lib/leadMovementValidator';
+import { logger } from '@/utils/logger';
 import { LeadPipelineEntry, PipelineStage, StageChecklistItem } from '@/types/crm';
 
 interface MoveLeadParams {
@@ -43,16 +44,17 @@ export function useLeadMovement() {
     onSuccess,
     onError
   }: MoveLeadParams): Promise<MoveResult> => {
-    console.log('🚀 [useLeadMovement] Iniciando movimentação:', {
-      entryId: entry.id,
-      from: fromStage.nome,
-      to: toStage.nome
+    logger.debug('Iniciando movimentação', {
+      feature: 'lead-movement',
+      metadata: { entryId: entry.id, from: fromStage.nome, to: toStage.nome }
     });
 
     // Validação 1: Usuário autenticado
     if (!user) {
       const error = 'Usuário não autenticado';
-      console.error('❌ [useLeadMovement]', error);
+      logger.error('Usuário não autenticado na movimentação', undefined, {
+        feature: 'lead-movement'
+      });
       toast({
         title: 'Erro de autenticação',
         description: error,
@@ -63,7 +65,10 @@ export function useLeadMovement() {
 
     // Validação 2: Não mover para mesma etapa
     if (fromStage.id === toStage.id) {
-      console.log('⚠️ [useLeadMovement] Mesma etapa, cancelando');
+      logger.debug('Mesma etapa, cancelando movimentação', {
+        feature: 'lead-movement',
+        metadata: { stageId: fromStage.id }
+      });
       return { success: false, message: 'Lead já está nesta etapa' };
     }
 
@@ -78,7 +83,10 @@ export function useLeadMovement() {
 
     if (!validation.canMove) {
       const errorMsg = validation.blockers.join('\n');
-      console.log('⛔ [useLeadMovement] Validação bloqueou:', validation.blockers);
+      logger.warn('Validação bloqueou movimentação', {
+        feature: 'lead-movement',
+        metadata: { blockers: validation.blockers }
+      });
       
       toast({
         title: 'Movimentação bloqueada',
@@ -92,7 +100,10 @@ export function useLeadMovement() {
 
     // Mostrar warnings se houver
     if (validation.warnings.length > 0) {
-      console.log('⚠️ [useLeadMovement] Warnings:', validation.warnings);
+      logger.warn('Warnings na movimentação', {
+        feature: 'lead-movement',
+        metadata: { warnings: validation.warnings }
+      });
     }
 
     try {
@@ -106,10 +117,9 @@ export function useLeadMovement() {
         updated_at: new Date().toISOString()
       };
 
-      console.log('💾 [useLeadMovement] Executando update no banco:', {
-        entryId: entry.id,
-        fromStage: fromStage.nome,
-        toStage: toStage.nome
+      logger.debug('Executando update no banco', {
+        feature: 'lead-movement',
+        metadata: { entryId: entry.id, fromStage: fromStage.nome, toStage: toStage.nome }
       });
 
       // Update direto no Supabase
@@ -128,7 +138,10 @@ export function useLeadMovement() {
         throw new Error('Nenhum dado retornado do banco após update');
       }
 
-      console.log('✅ [useLeadMovement] Update confirmado:', data.id);
+      logger.info('Update confirmado', {
+        feature: 'lead-movement',
+        metadata: { entryId: data.id }
+      });
 
       // Log de auditoria
       logChange({
@@ -152,12 +165,18 @@ export function useLeadMovement() {
       // Notificar sucesso após API confirmar
       onSuccess?.();
 
-      console.log('✅ [useLeadMovement] Sucesso total');
+      logger.info('Movimentação concluída com sucesso', {
+        feature: 'lead-movement',
+        metadata: { entryId: entry.id, toStage: toStage.nome }
+      });
 
       return { success: true, message: successMsg };
 
     } catch (error) {
-      console.error('❌ [useLeadMovement] Erro no update:', error);
+      logger.error('Erro no update', error as Error, {
+        feature: 'lead-movement',
+        metadata: { entryId: entry.id }
+      });
       
       // Notificar componente pai sobre erro
       onError?.();

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContextSecure';
+import { logger } from '@/utils/logger';
 
 interface PipelineStage {
   id: string;
@@ -40,7 +41,6 @@ export function useSupabasePipelineStages(pipelineId?: string) {
       
       // Validação: Não fazer query se pipeline ID for vazio
       if (queryPipelineId && queryPipelineId.trim() === '') {
-        console.warn('⚠️ Pipeline ID vazio, pulando fetch de stages');
         setLoading(false);
         setStages([]);
         return;
@@ -182,11 +182,12 @@ export function useSupabasePipelineStages(pipelineId?: string) {
     if (!user) return false;
 
     try {
-      console.log('🔄 Batch updating stages:', stagesToUpdate);
+      logger.debug('Batch updating stages', {
+        feature: 'pipeline-stages',
+        metadata: { count: stagesToUpdate.length }
+      });
 
       // Phase 1: Set temporary high order values to avoid UNIQUE constraint conflicts
-      // Use ordem + 10000 as temporary value
-      console.log('Phase 1: Setting temporary orders...');
       const tempUpdates = stagesToUpdate.map(({ id }, index) =>
         supabase
           .from('pipeline_stages')
@@ -198,12 +199,13 @@ export function useSupabasePipelineStages(pipelineId?: string) {
       
       if (tempResults.some(result => result.error)) {
         const errors = tempResults.filter(r => r.error).map(r => r.error);
-        console.error('❌ Errors in phase 1:', errors);
+        logger.error('Errors in phase 1', errors[0] as any, {
+          feature: 'pipeline-stages'
+        });
         throw new Error('Failed to set temporary orders');
       }
 
       // Phase 2: Set final order values
-      console.log('Phase 2: Setting final orders...');
       const finalUpdates = stagesToUpdate.map(({ id, ordem }) =>
         supabase
           .from('pipeline_stages')
@@ -215,7 +217,9 @@ export function useSupabasePipelineStages(pipelineId?: string) {
       
       if (finalResults.some(result => result.error)) {
         const errors = finalResults.filter(r => r.error).map(r => r.error);
-        console.error('❌ Errors in phase 2:', errors);
+        logger.error('Errors in phase 2', errors[0] as any, {
+          feature: 'pipeline-stages'
+        });
         toast({
           title: "Erro ao reordenar etapas",
           description: "Algumas etapas não foram atualizadas",

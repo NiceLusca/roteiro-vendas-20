@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContextSecure';
+import { logger } from '@/utils/logger';
 
 interface PipelineMetrics {
   totalLeads: number;
@@ -59,7 +60,6 @@ export function useSupabasePipelineAnalytics(pipelineId?: string, dateRange?: { 
     
     // Validação: Não fazer query se pipeline ID for vazio
     if (pipelineId && pipelineId.trim() === '') {
-      console.warn('⚠️ Pipeline ID vazio, pulando fetch de métricas');
       return;
     }
 

@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { useAutomationEngine } from './useAutomationEngine';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/utils/logger';
 
 interface PipelineAutomationConfig {
   autoAdvancement: boolean;
@@ -30,7 +31,6 @@ export function usePipelineAutomation(pipelineId: string) {
     if (!config.slaEnforcement) return;
     
     if (!pipelineId || pipelineId.trim() === '') {
-      console.warn('⚠️ Pipeline ID vazio, pulando monitoramento SLA');
       return;
     }
 
@@ -145,7 +145,6 @@ export function usePipelineAutomation(pipelineId: string) {
     if (!config.inactivityAlerts) return;
     
     if (!pipelineId || pipelineId.trim() === '') {
-      console.warn('⚠️ Pipeline ID vazio, pulando monitoramento inatividade');
       return;
     }
 
@@ -185,7 +184,9 @@ export function usePipelineAutomation(pipelineId: string) {
   useEffect(() => {
     // TEMPORARIAMENTE DESABILITADO - estava causando interferência com queries principais
     // TODO: Reimplementar em worker separado ou via Edge Function
-    console.log('⚠️ Monitoramento automático desabilitado temporariamente');
+    logger.warn('Monitoramento automático desabilitado temporariamente', {
+      feature: 'pipeline-automation'
+    });
     return;
     
     const interval = setInterval(() => {

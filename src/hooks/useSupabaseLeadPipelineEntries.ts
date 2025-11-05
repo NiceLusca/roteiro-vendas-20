@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContextSecure';
+import { logger } from '@/utils/logger';
 
 interface LeadPipelineEntry {
   id: string;
@@ -32,10 +33,9 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     // ✅ Permitir buscar TODAS as entries quando pipelineId for undefined
     const effectivePipelineId = targetPipelineId || pipelineId;
     
-    console.log('🔍 fetchEntries chamado:', { 
-      effectivePipelineId, 
-      forceUpdate,
-      timestamp: Date.now() 
+    logger.debug('fetchEntries chamado', {
+      feature: 'lead-pipeline-entries',
+      metadata: { effectivePipelineId, forceUpdate }
     });
     
     try {
@@ -73,16 +73,19 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
-      console.log('🔍 fetchEntries resultado:', {
-        totalEntries: data?.length || 0,
-        pipelineId: effectivePipelineId,
-        statusFiltrado: 'Ativo',
-        primeiroEntry: data?.[0] || null,
-        error: error || null
+      logger.debug('fetchEntries resultado', {
+        feature: 'lead-pipeline-entries',
+        metadata: {
+          totalEntries: data?.length || 0,
+          pipelineId: effectivePipelineId,
+          statusFiltrado: 'Ativo'
+        }
       });
 
       if (error) {
-        console.error('❌ Erro ao buscar entries do pipeline:', error);
+        logger.error('Erro ao buscar entries', error as any, {
+          feature: 'lead-pipeline-entries'
+        });
         toast({
           title: "Erro ao carregar dados",
           description: error.message,
@@ -114,12 +117,17 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         _fetchedAt: Date.now()
       }));
 
-      console.log('✅ Leads carregados com deep clone:', processedEntries.length);
+      logger.info('Leads carregados', {
+        feature: 'lead-pipeline-entries',
+        metadata: { count: processedEntries.length }
+      });
       
       // ✅ SEMPRE forçar novo array (sem if/else)
       setEntries([...processedEntries as any]);
     } catch (error) {
-      console.error('Erro ao buscar entries do pipeline:', error);
+      logger.error('Erro ao buscar entries', error as Error, {
+        feature: 'lead-pipeline-entries'
+      });
     } finally {
       setLoading(false);
     }
@@ -127,11 +135,15 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
 
   // Create new pipeline entry
   const createEntry = async (entryData: Partial<LeadPipelineEntry>) => {
-    console.log('🔵 createEntry CHAMADO com:', entryData);
-    console.log('🔵 User atual:', user?.id);
+    logger.debug('createEntry chamado', {
+      feature: 'lead-pipeline-entries',
+      metadata: entryData
+    });
 
     if (!user) {
-      console.error('❌ SEM USUÁRIO AUTENTICADO');
+      logger.error('Sem usuário autenticado', undefined, {
+        feature: 'lead-pipeline-entries'
+      });
       toast({
         title: "Erro de autenticação",
         description: "Você precisa estar autenticado para criar entradas no pipeline",
@@ -142,10 +154,13 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
 
     // Validar campos obrigatórios
     if (!entryData.lead_id || !entryData.pipeline_id || !entryData.etapa_atual_id) {
-      console.error('❌ Campos obrigatórios faltando:', {
-        lead_id: entryData.lead_id,
-        pipeline_id: entryData.pipeline_id,
-        etapa_atual_id: entryData.etapa_atual_id
+      logger.error('Campos obrigatórios faltando', undefined, {
+        feature: 'lead-pipeline-entries',
+        metadata: {
+          lead_id: entryData.lead_id,
+          pipeline_id: entryData.pipeline_id,
+          etapa_atual_id: entryData.etapa_atual_id
+        }
       });
       toast({
         title: "Erro de validação",
@@ -169,7 +184,10 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         ...(entryData.nota_etapa && { nota_etapa: entryData.nota_etapa })
       };
 
-      console.log('📝 EXECUTANDO INSERT com dados:', JSON.stringify(insertData, null, 2));
+      logger.debug('Executando INSERT', {
+        feature: 'lead-pipeline-entries',
+        metadata: insertData
+      });
 
       const { data, error } = await supabase
         .from('lead_pipeline_entries')
@@ -177,14 +195,13 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         .select()
         .maybeSingle();
 
-      console.log('🔵 Resultado do INSERT:', { data, error });
-
       if (error) {
-        console.error('❌ ERRO SUPABASE ao criar entry:', {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code
+        logger.error('Erro ao criar entry', error as any, {
+          feature: 'lead-pipeline-entries',
+          metadata: {
+            message: error.message,
+            code: error.code
+          }
         });
         toast({
           title: "Erro ao inscrever lead",
@@ -195,7 +212,9 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
       }
 
       if (!data) {
-        console.error('❌ Entry não foi criado - sem dados retornados');
+        logger.error('Entry não criado', undefined, {
+          feature: 'lead-pipeline-entries'
+        });
         toast({
           title: "Erro",
           description: "Entrada não foi criada, mas sem erro retornado",
@@ -204,7 +223,10 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         return null;
       }
 
-      console.log('✅✅✅ Entry criado COM SUCESSO:', data);
+      logger.info('Entry criado com sucesso', {
+        feature: 'lead-pipeline-entries',
+        metadata: { entryId: data.id }
+      });
 
       toast({
         title: "✅ Lead inscrito no pipeline",
@@ -214,7 +236,9 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
       await fetchEntries();
       return data;
     } catch (error) {
-      console.error('❌ EXCEÇÃO JAVASCRIPT ao criar entry:', error);
+      logger.error('Exceção ao criar entry', error as Error, {
+        feature: 'lead-pipeline-entries'
+      });
       toast({
         title: "Erro inesperado",
         description: error instanceof Error ? error.message : 'Erro desconhecido',
@@ -241,7 +265,9 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         .eq('id', entryId);
 
       if (error) {
-        console.error('Erro ao arquivar entry:', error);
+        logger.error('Erro ao arquivar entry', error as any, {
+          feature: 'lead-pipeline-entries'
+        });
         toast({
           title: "Erro ao arquivar",
           description: error.message,
@@ -258,7 +284,9 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
       fetchEntries();
       return true;
     } catch (error) {
-      console.error('Erro ao arquivar entry:', error);
+      logger.error('Erro ao arquivar entry', error as Error, {
+        feature: 'lead-pipeline-entries'
+      });
       return false;
     }
   };
@@ -305,7 +333,9 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
 
       return false;
     } catch (error) {
-      console.error('Erro ao transferir:', error);
+      logger.error('Erro ao transferir', error as Error, {
+        feature: 'lead-pipeline-entries'
+      });
       toast({
         title: "Erro na transferência",
         description: "Não foi possível transferir o lead",
@@ -369,11 +399,13 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
           const newRecord = payload.new as any;
           const oldRecord = payload.old as any;
           
-          console.log('🔔 [REALTIME DEBUG] Evento:', payload.eventType);
+          logger.debug('Realtime event', {
+            feature: 'lead-pipeline-entries',
+            metadata: { eventType: payload.eventType }
+          });
           
           const recordPipelineId = newRecord?.pipeline_id || oldRecord?.pipeline_id;
           if (pipelineId && recordPipelineId !== pipelineId) {
-            console.log('⏭️ Ignorando evento de outro pipeline');
             return;
           }
           
@@ -385,14 +417,12 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
              newRecord?.etapa_atual_id !== oldRecord?.etapa_atual_id);
           
           if (!shouldRefetch) {
-            console.log('⏭️ Ignorando update que não afeta Kanban');
             return;
           }
           
           // ✅ SOLUÇÃO 1: Debounce aumentado de 50ms para 500ms
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
-            console.log('🔄 Executando refetch após debounce (500ms)');
             fetchEntries(pipelineId, true);
           }, 500);
         }
@@ -417,10 +447,9 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     updateHealthStatus,
     refetch: (explicitPipelineId?: string) => {
       const targetId = explicitPipelineId || pipelineId;
-      console.log('🔄 refetch() FORÇADO:', { 
-        explicitPipelineId, 
-        hookPipelineId: pipelineId, 
-        targetId 
+      logger.debug('refetch forçado', {
+        feature: 'lead-pipeline-entries',
+        metadata: { explicitPipelineId, hookPipelineId: pipelineId, targetId }
       });
       return fetchEntries(targetId, true); // ✅ Força re-render
     }

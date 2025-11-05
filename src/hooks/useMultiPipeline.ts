@@ -4,6 +4,7 @@ import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
 import { useAudit } from '@/contexts/AuditContext';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/utils/logger';
 
 // Hook for managing multi-pipeline functionality
 export function useMultiPipeline() {
@@ -44,7 +45,10 @@ export function useMultiPipeline() {
   }, [transferToPipeline, logChange]);
 
   const inscribePipeline = useCallback(async (leadId: string, pipelineId: string, stageId: string) => {
-    console.log('🟢 inscribePipeline CHAMADO:', { leadId, pipelineId, stageId });
+    logger.debug('inscribePipeline chamado', {
+      feature: 'multi-pipeline',
+      metadata: { leadId, pipelineId, stageId }
+    });
     
     try {
       // Check in database if already inscribed (more reliable than local state for bulk imports)
@@ -57,14 +61,10 @@ export function useMultiPipeline() {
         .eq('status_inscricao', 'Ativo')
         .maybeSingle();
 
-      console.log('🔍 Verificação de entrada existente:', { existingEntries, checkError });
-
       if (existingEntries) {
-        console.log('⚠️ Lead já inscrito - pulando');
+        logger.debug('Lead já inscrito', { feature: 'multi-pipeline' });
         return;
       }
-
-      console.log('🟢 Chamando createEntry...');
       
       // Create new entry
       const newEntry = await createEntry({
@@ -73,10 +73,11 @@ export function useMultiPipeline() {
         etapa_atual_id: stageId
       });
 
-      console.log('🟢 Resultado do createEntry:', newEntry);
-
       if (newEntry) {
-        console.log('✅ Entry criado, logando mudança...');
+        logger.info('Entry criado', {
+          feature: 'multi-pipeline',
+          metadata: { entryId: newEntry.id }
+        });
         logChange({
           entidade: 'LeadPipelineEntry',
           entidade_id: newEntry.id,
@@ -89,11 +90,15 @@ export function useMultiPipeline() {
           ator: 'Sistema (Inscrição)'
         });
       } else {
-        console.error('❌ createEntry retornou null');
+        logger.error('createEntry retornou null', undefined, {
+          feature: 'multi-pipeline'
+        });
         throw new Error('Falha ao criar entrada no pipeline');
       }
     } catch (error) {
-      console.error('❌ ERRO em inscribePipeline:', error);
+      logger.error('Erro em inscribePipeline', error as Error, {
+        feature: 'multi-pipeline'
+      });
       throw error; // Re-throw to be handled by caller
     }
   }, [createEntry, logChange]);
