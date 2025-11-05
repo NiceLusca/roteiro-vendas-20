@@ -2,6 +2,7 @@ import { createContext, useContext, ReactNode } from 'react';
 import { AuditLog } from '@/types/crm';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/utils/logger';
 
 interface AuditContextType {
   logChange: (params: {
@@ -42,7 +43,7 @@ export function AuditProvider({ children }: { children: ReactNode }) {
         });
 
       if (error) {
-        console.error('Erro ao salvar log de auditoria:', error);
+        logger.error('Erro ao salvar log de auditoria', error, { feature: 'audit', metadata: { entidade, entidade_id } });
         return;
       }
       
@@ -55,7 +56,7 @@ export function AuditProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (error) {
-      console.error('Erro ao fazer log de auditoria:', error);
+      logger.error('Erro ao fazer log de auditoria', error as Error, { feature: 'audit' });
     }
   };
 
@@ -69,7 +70,7 @@ export function AuditProvider({ children }: { children: ReactNode }) {
         .order('timestamp', { ascending: false });
 
       if (error) {
-        console.error('Erro ao buscar logs de auditoria:', error);
+        logger.error('Erro ao buscar logs de auditoria', error, { feature: 'audit', metadata: { entidade, entidade_id } });
         return [];
       }
 
@@ -79,7 +80,7 @@ export function AuditProvider({ children }: { children: ReactNode }) {
         alteracao: log.alteracao as Array<{ campo: string; de: any; para: any }>
       })) || [];
     } catch (error) {
-      console.error('Erro ao buscar logs de auditoria:', error);
+      logger.error('Erro ao buscar logs de auditoria', error as Error, { feature: 'audit' });
       return [];
     }
   };

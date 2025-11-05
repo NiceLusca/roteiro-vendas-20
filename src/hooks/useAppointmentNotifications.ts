@@ -7,6 +7,7 @@ import {
   showBrowserNotification,
   type AppointmentNotification 
 } from '@/utils/appointmentNotifier';
+import { logger } from '@/utils/logger';
 
 interface NotificationSettings {
   enabled: boolean;
@@ -39,7 +40,7 @@ export function useAppointmentNotifications() {
   // Solicitar permissão
   const requestPermission = useCallback(async () => {
     if (!('Notification' in window)) {
-      console.warn('Browser não suporta notificações');
+      logger.warn('Browser não suporta notificações', { feature: 'appointment-notifications' });
       return false;
     }
 
@@ -107,7 +108,7 @@ export function useAppointmentNotifications() {
         }
       }
     } catch (error) {
-      console.error('Erro ao verificar agendamentos:', error);
+      logger.error('Erro ao verificar agendamentos', error as Error, { feature: 'appointment-notifications' });
     }
   }, [user, settings, permission, isQuietHours]);
 

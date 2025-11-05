@@ -77,7 +77,7 @@ export function useSupabasePipelineStages(pipelineId?: string) {
       const { data, error } = await query.order('ordem', { ascending: true });
 
       if (error) {
-        console.error('Erro ao buscar etapas:', error);
+        logger.error('Erro ao buscar etapas', error, { feature: 'pipeline-stages', metadata: { pipelineId: queryPipelineId } });
         toast({
           title: "Erro ao carregar etapas",
           description: error.message,
@@ -88,7 +88,7 @@ export function useSupabasePipelineStages(pipelineId?: string) {
 
       setStages((data as PipelineStage[]) || []);
     } catch (error) {
-      console.error('Erro ao buscar etapas:', error);
+      logger.error('Erro ao buscar etapas', error as Error, { feature: 'pipeline-stages' });
     } finally {
       setLoading(false);
     }
@@ -136,7 +136,7 @@ export function useSupabasePipelineStages(pipelineId?: string) {
       }
 
       if (result.error) {
-        console.error('Erro ao salvar etapa:', result.error);
+        logger.error('Erro ao salvar etapa', result.error, { feature: 'pipeline-stages', metadata: { isUpdate, stageId: stageData.id } });
         toast({
           title: `Erro ao ${isUpdate ? 'atualizar' : 'criar'} etapa`,
           description: result.error.message,
@@ -152,7 +152,7 @@ export function useSupabasePipelineStages(pipelineId?: string) {
       
       return result.data;
     } catch (error) {
-      console.error('Erro ao salvar etapa:', error);
+      logger.error('Erro ao salvar etapa', error as Error, { feature: 'pipeline-stages' });
       return null;
     }
   };
@@ -168,7 +168,7 @@ export function useSupabasePipelineStages(pipelineId?: string) {
         .eq('id', stageId);
 
       if (error) {
-        console.error('Erro ao excluir etapa:', error);
+        logger.error('Erro ao excluir etapa', error, { feature: 'pipeline-stages', metadata: { stageId } });
         toast({
           title: "Erro ao excluir etapa",
           description: error.message,
@@ -185,7 +185,7 @@ export function useSupabasePipelineStages(pipelineId?: string) {
       fetchStages();
       return true;
     } catch (error) {
-      console.error('Erro ao excluir etapa:', error);
+      logger.error('Erro ao excluir etapa', error as Error, { feature: 'pipeline-stages' });
       return false;
     }
   };
@@ -251,7 +251,7 @@ export function useSupabasePipelineStages(pipelineId?: string) {
         return false;
       }
 
-      console.log('✅ All stages updated successfully');
+      logger.info('All stages updated successfully', { feature: 'pipeline-stages', metadata: { count: stagesToUpdate.length } });
       toast({
         title: "Ordem atualizada com sucesso",
         description: "As etapas foram reordenadas"
@@ -259,7 +259,7 @@ export function useSupabasePipelineStages(pipelineId?: string) {
 
       return true;
     } catch (error) {
-      console.error('❌ Error in batch update:', error);
+      logger.error('Error in batch update', error as Error, { feature: 'pipeline-stages' });
       toast({
         title: "Erro ao reordenar etapas",
         description: "Ocorreu um erro inesperado",

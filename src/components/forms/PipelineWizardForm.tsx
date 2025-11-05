@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, ChevronRight, ChevronLeft, Plus, Trash2, CheckCircle2, ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { logger } from '@/utils/logger';
 
 // Schema para dados básicos do pipeline
 const basicDataSchema = z.object({
@@ -145,7 +146,7 @@ export function PipelineWizardForm({ onSave, onCancel }: PipelineWizardFormProps
       
       await onSave(complexData);
     } catch (error) {
-      console.error('Erro ao criar pipeline:', error);
+      logger.error('Erro ao criar pipeline', error as Error, { feature: 'pipeline-wizard' });
     } finally {
       setIsSaving(false);
     }

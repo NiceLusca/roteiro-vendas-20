@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { StageAdvancementCriteria, LeadCriteriaState } from '@/types/advancedCriteria';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/utils/logger';
 
 export function useAdvancedCriteria(stageId?: string) {
   const [criteria, setCriteria] = useState<StageAdvancementCriteria[]>([]);
@@ -22,7 +23,7 @@ export function useAdvancedCriteria(stageId?: string) {
       if (error) throw error;
       setCriteria((data || []) as StageAdvancementCriteria[]);
     } catch (error) {
-      console.error('Error fetching criteria:', error);
+      logger.error('Error fetching criteria', error as Error, { feature: 'advanced-criteria', metadata: { stageId } });
       toast({
         title: "Erro ao carregar critérios",
         description: "Não foi possível carregar os critérios da etapa.",
@@ -51,7 +52,7 @@ export function useAdvancedCriteria(stageId?: string) {
       
       return data;
     } catch (error) {
-      console.error('Error creating criteria:', error);
+      logger.error('Error creating criteria', error as Error, { feature: 'advanced-criteria' });
       toast({
         title: "Erro ao criar critério",
         description: "Não foi possível criar o critério.",
@@ -78,7 +79,7 @@ export function useAdvancedCriteria(stageId?: string) {
       
       return true;
     } catch (error) {
-      console.error('Error updating criteria:', error);
+      logger.error('Error updating criteria', error as Error, { feature: 'advanced-criteria', metadata: { id } });
       toast({
         title: "Erro ao atualizar critério",
         description: "Não foi possível atualizar o critério.",
@@ -105,7 +106,7 @@ export function useAdvancedCriteria(stageId?: string) {
       
       return true;
     } catch (error) {
-      console.error('Error deleting criteria:', error);
+      logger.error('Error deleting criteria', error as Error, { feature: 'advanced-criteria', metadata: { id } });
       toast({
         title: "Erro ao remover critério",
         description: "Não foi possível remover o critério.",
@@ -147,7 +148,7 @@ export function useLeadCriteriaState(leadId?: string, stageId?: string) {
       if (error) throw error;
       setCriteriaStates((data || []) as LeadCriteriaState[]);
     } catch (error) {
-      console.error('Error fetching criteria states:', error);
+      logger.error('Error fetching criteria states', error as Error, { feature: 'advanced-criteria', metadata: { leadId, stageId } });
     } finally {
       setLoading(false);
     }
@@ -188,7 +189,7 @@ export function useLeadCriteriaState(leadId?: string, stageId?: string) {
       
       return data;
     } catch (error) {
-      console.error('Error updating criteria state:', error);
+      logger.error('Error updating criteria state', error as Error, { feature: 'advanced-criteria', metadata: { leadId, stageId, criterioId } });
       toast({
         title: "Erro ao atualizar status do critério",
         description: "Não foi possível atualizar o status do critério.",

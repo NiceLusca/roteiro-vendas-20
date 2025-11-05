@@ -2,6 +2,7 @@ import { createContext, useContext, ReactNode } from 'react';
 import { AuditLog } from '@/types/crm';
 import { useAudit } from './AuditContext';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/utils/logger';
 
 interface AllLogsAuditContextType {
   getAllLogs: () => Promise<AuditLog[]>;
@@ -21,7 +22,7 @@ export function AllLogsAuditProvider({ children }: { children: ReactNode }) {
         .order('timestamp', { ascending: false });
 
       if (error) {
-        console.error('Erro ao buscar todos os logs:', error);
+        logger.error('Erro ao buscar todos os logs', error, { feature: 'audit-all-logs' });
         return [];
       }
 
@@ -34,7 +35,7 @@ export function AllLogsAuditProvider({ children }: { children: ReactNode }) {
         timestamp: new Date(log.timestamp)
       })) || [];
     } catch (error) {
-      console.error('Erro ao buscar logs:', error);
+      logger.error('Erro ao buscar logs', error as Error, { feature: 'audit-all-logs' });
       return [];
     }
   };

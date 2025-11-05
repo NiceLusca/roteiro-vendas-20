@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from '@/utils/logger';
 
 interface AuthContextType {
   user: User | null;
@@ -48,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           p_severity: 'info'
         });
       } catch (error) {
-        console.error('Erro ao registrar evento de segurança:', error);
+        logger.error('Erro ao registrar evento de segurança', error as Error, { feature: 'auth', metadata: { eventType, userId } });
       }
     }, 0);
   };
@@ -87,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(SESSION_CACHE_KEY);
       }
     } catch (error) {
-      console.error('Error caching session:', error);
+      logger.error('Error caching session', error as Error, { feature: 'auth' });
     }
   };
 

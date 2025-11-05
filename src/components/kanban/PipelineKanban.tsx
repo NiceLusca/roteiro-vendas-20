@@ -98,18 +98,18 @@ export function PipelineKanban() {
   };
 
   const handleCreateAppointment = (leadId: string) => {
-    // Open appointment modal - handled by parent component
-    console.info('Create appointment for lead:', leadId);
+    // Placeholder for appointment creation
+    // This should be handled by parent component
   };
 
   const handleAdvanceStage = (entryId: string) => {
-    // Advance stage - handled by parent component
-    console.info('Advance stage for entry:', entryId);
+    // Placeholder for stage advancement
+    // This should be handled by parent component
   };
 
   const handleRegisterInteraction = (leadId: string) => {
-    // Open interaction modal - handled by parent component
-    console.info('Register interaction for lead:', leadId);
+    // Placeholder for interaction registration
+    // This should be handled by parent component
   };
 
   const clearFilters = () => {

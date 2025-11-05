@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Lead, Deal, Order } from '@/types/crm';
+import { logger } from '@/utils/logger';
 
 interface AnalyticsMetrics {
   totalLeads: number;
@@ -155,7 +156,7 @@ export function useAdvancedAnalytics(dateRange?: { start: Date; end: Date }) {
       setForecast(forecastData);
 
     } catch (err) {
-      console.error('Error fetching analytics:', err);
+      logger.error('Error fetching analytics', err as Error, { feature: 'advanced-analytics' });
       setError(err instanceof Error ? err.message : 'Erro ao carregar analytics');
     } finally {
       setLoading(false);

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { formatWhatsApp } from '@/utils/formatters';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 import { cn } from '@/lib/utils';
 import { CLOSERS, getCloserColor, getCloserDotColor } from '@/utils/closerColors';
 
@@ -73,7 +74,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
         onOpenChange(false);
       }
     } catch (error) {
-      console.error('Erro ao salvar lead:', error);
+      logger.error('Erro ao salvar lead', error as Error, { feature: 'lead-edit', metadata: { leadId: lead.id } });
       toast.error('Erro ao atualizar lead');
     } finally {
       setSaving(false);

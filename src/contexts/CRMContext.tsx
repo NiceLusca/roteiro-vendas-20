@@ -5,6 +5,7 @@ import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/utils/logger';
 
 // Context
 interface CRMContextType {
@@ -63,7 +64,7 @@ export function CRMProvider({ children }: CRMProviderProps) {
       }
       return null;
     } catch (error) {
-      console.error('Error creating lead:', error);
+      logger.error('Error creating lead', error as Error, { feature: 'crm-context' });
       toast({
         title: 'Erro ao criar lead',
         description: 'Ocorreu um erro ao criar o lead. Tente novamente.',
@@ -83,7 +84,7 @@ export function CRMProvider({ children }: CRMProviderProps) {
       }
       return null;
     } catch (error) {
-      console.error('Error updating lead:', error);
+      logger.error('Error updating lead', error as Error, { feature: 'crm-context', metadata: { leadId } });
       toast({
         title: 'Erro ao atualizar lead',
         description: 'Ocorreu um erro ao atualizar o lead. Tente novamente.',
@@ -138,7 +139,7 @@ export function CRMProvider({ children }: CRMProviderProps) {
       });
       return true;
     } catch (error) {
-      console.error('Error inscribing lead:', error);
+      logger.error('Error inscribing lead', error as Error, { feature: 'crm-context', metadata: { leadId, pipelineId, stageId } });
       toast({
         title: 'Erro ao inscrever lead',
         description: 'Ocorreu um erro ao inscrever o lead no pipeline.',
@@ -192,7 +193,7 @@ export function CRMProvider({ children }: CRMProviderProps) {
       });
       return true;
     } catch (error) {
-      console.error('Error transferring lead:', error);
+      logger.error('Error transferring lead', error as Error, { feature: 'crm-context', metadata: { entryId, newPipelineId, newStageId } });
       toast({
         title: 'Erro na transferência',
         description: 'Ocorreu um erro ao transferir o lead.',
@@ -222,7 +223,7 @@ export function CRMProvider({ children }: CRMProviderProps) {
       });
       return true;
     } catch (error) {
-      console.error('Error advancing stage:', error);
+      logger.error('Error advancing stage', error as Error, { feature: 'crm-context', metadata: { entryId, newStageId } });
       toast({
         title: 'Erro ao avançar etapa',
         description: 'Ocorreu um erro ao mover o lead para a próxima etapa.',
@@ -249,7 +250,7 @@ export function CRMProvider({ children }: CRMProviderProps) {
       });
       return true;
     } catch (error) {
-      console.error('Error archiving entry:', error);
+      logger.error('Error archiving entry', error as Error, { feature: 'crm-context', metadata: { entryId } });
       toast({
         title: 'Erro ao arquivar',
         description: 'Ocorreu um erro ao arquivar o lead.',

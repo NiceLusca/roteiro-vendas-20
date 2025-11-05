@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
 import { generateSlug } from '@/lib/utils';
+import { logger } from '@/utils/logger';
 
 // Schema de validação - apenas campos que existem na tabela pipelines
 const pipelineSchema = z.object({
@@ -57,7 +58,7 @@ export function SimplePipelineForm({ pipeline, onSave, onCancel }: SimplePipelin
     try {
       await onSave(data);
     } catch (error) {
-      console.error('Erro ao salvar pipeline:', error);
+      logger.error('Erro ao salvar pipeline', error as Error, { feature: 'simple-pipeline-form' });
     } finally {
       setIsSaving(false);
     }

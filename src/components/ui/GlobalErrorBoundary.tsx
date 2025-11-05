@@ -2,6 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { logger } from '@/utils/logger';
 
 interface Props {
   children: ReactNode;
@@ -23,17 +24,12 @@ class GlobalErrorBoundary extends React.Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Global error caught:', error, errorInfo);
-    
-    // In production, you might want to send this to an error reporting service
-    if (process.env.NODE_ENV === 'production') {
-      // Send to error reporting service like Sentry
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
+    logger.error('Global error caught', error, { 
+      feature: 'error-boundary',
+      metadata: {
         componentStack: errorInfo.componentStack
-      });
-    }
+      }
+    });
     
     this.setState({ errorInfo });
   }
