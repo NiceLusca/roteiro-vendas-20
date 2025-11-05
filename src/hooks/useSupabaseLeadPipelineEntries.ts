@@ -497,11 +497,86 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     await fetchEntries(pipelineId, false, true);
   };
 
+  // Busca server-side com .ilike()
+  const searchLeads = async (searchTerm: string, targetPipelineId: string) => {
+    if (!searchTerm || searchTerm.length < 2) {
+      // Se busca vazia, buscar todos sem paginação
+      return fetchEntries(targetPipelineId, true, false, true);
+    }
+    
+    setLoading(true);
+    logger.debug('Busca server-side iniciada', {
+      feature: 'lead-pipeline-entries',
+      metadata: { searchTerm, targetPipelineId }
+    });
+    
+    try {
+      const { data, error } = await supabase
+        .from('lead_pipeline_entries')
+        .select(`
+          *,
+          leads!fk_lead_pipeline_entries_lead(
+            id, nome, email, whatsapp, status_geral,
+            closer, lead_score, lead_score_classification,
+            valor_lead, user_id, created_at, updated_at
+          ),
+          pipeline_stages!fk_lead_pipeline_entries_stage(nome, ordem, pipeline_id)
+        `)
+        .eq('status_inscricao', 'Ativo')
+        .eq('pipeline_id', targetPipelineId)
+        .ilike('leads.nome', `%${searchTerm}%`)
+        .order('data_entrada_etapa', { ascending: false });
+      
+      if (error) {
+        logger.error('Erro na busca server-side', error as any);
+        toast({
+          title: "Erro ao buscar leads",
+          description: error.message,
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+      
+      const processedEntries = (data || []).map((entry: any) => ({
+        id: entry.id,
+        lead_id: entry.lead_id,
+        pipeline_id: entry.pipeline_id,
+        etapa_atual_id: entry.etapa_atual_id,
+        status_inscricao: entry.status_inscricao,
+        data_entrada_etapa: entry.data_entrada_etapa,
+        data_prevista_proxima_etapa: entry.data_prevista_proxima_etapa,
+        nota_etapa: entry.nota_etapa,
+        saude_etapa: entry.saude_etapa || 'Verde',
+        tempo_em_etapa_dias: 0,
+        dias_em_atraso: 0,
+        created_at: entry.created_at,
+        updated_at: entry.updated_at,
+        leads: entry.leads ? { ...entry.leads } : null,
+        pipeline_stages: entry.pipeline_stages ? { ...entry.pipeline_stages } : null,
+        _fetchedAt: Date.now()
+      }));
+      
+      setEntries(processedEntries as any);
+      setHasMore(false);
+      setLoading(false);
+      
+      logger.info('Busca server-side concluída', {
+        feature: 'lead-pipeline-entries',
+        metadata: { resultados: processedEntries.length, termo: searchTerm }
+      });
+    } catch (error) {
+      logger.error('Erro na busca server-side', error as Error);
+      setLoading(false);
+    }
+  };
+
   return {
     entries,
     loading,
     hasMore,
     loadMore,
+    searchLeads,
     createEntry,
     archiveEntry,
     transferToPipeline,

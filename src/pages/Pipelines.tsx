@@ -55,6 +55,21 @@ function PipelinesContent({ slug }: { slug: string }) {
   
   // Estados para busca e filtros
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Busca server-side com debounce
+  useEffect(() => {
+    if (!pipelineId) return;
+
+    if (searchTerm && searchTerm.length >= 2) {
+      const timer = setTimeout(() => {
+        entries.searchLeads?.(searchTerm, pipelineId);
+      }, 300);
+      return () => clearTimeout(timer);
+    } else if (!searchTerm) {
+      // Sem busca, carregar todos
+      entries.refetch(pipelineId, true);
+    }
+  }, [searchTerm, pipelineId]);
   const [filterCloser, setFilterCloser] = useState<string>('all');
   const [filterScore, setFilterScore] = useState<string>('all');
   const [filterHealth, setFilterHealth] = useState<string>('all');
@@ -72,13 +87,8 @@ function PipelinesContent({ slug }: { slug: string }) {
       ...entry,
       lead: entry.leads  // Usar dados do JOIN
     }))
-    // Aplicar filtros
+    // Aplicar filtros client-side (busca já é server-side)
     .filter(entry => {
-      // Filtro de busca por nome
-      if (searchTerm && !entry.leads?.nome?.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return false;
-      }
-      
       // Filtro de closer
       if (filterCloser !== 'all' && entry.leads?.closer !== filterCloser) {
         return false;
@@ -110,7 +120,7 @@ function PipelinesContent({ slug }: { slug: string }) {
       feature: 'pipelines',
       metadata: { pipelineId }
     });
-    await entries.refetch(pipelineId);
+    await entries.refetch(pipelineId, true); // Sempre buscar sem paginação
     logger.debug('Refetch concluído', {
       feature: 'pipelines'
     });
