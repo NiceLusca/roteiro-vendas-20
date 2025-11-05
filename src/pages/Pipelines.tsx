@@ -6,7 +6,8 @@ import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { useKanbanAppointments } from '@/hooks/useKanbanAppointments';
-import { EnhancedLoading } from '@/components/ui/enhanced-loading';
+import { EnhancedLoading, SmartSkeleton } from '@/components/ui/enhanced-loading';
+import { KanbanSkeleton } from '@/components/ui/loading-skeleton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -444,7 +445,11 @@ export default function Pipelines() {
   }, [loading, slug, activePipelines, navigate]);
 
   if (loading) {
-    return <EnhancedLoading loading={true}><></></EnhancedLoading>;
+    return (
+      <div className="flex-1 overflow-hidden p-6">
+        <KanbanSkeleton />
+      </div>
+    );
   }
 
   if (!slug) {

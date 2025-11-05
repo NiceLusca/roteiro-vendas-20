@@ -74,6 +74,7 @@ export const KanbanCardMenu = memo(function KanbanCardMenu({
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
           onDragStart={(e) => e.preventDefault()}
+          aria-label="Abrir menu de ações do lead"
         >
           <MoreVertical className="h-4 w-4" />
         </Button>

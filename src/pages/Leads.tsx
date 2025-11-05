@@ -366,14 +366,31 @@ function LeadsContent() {
 
   if (leadsLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Leads</h1>
+            <p className="text-muted-foreground">Carregando leads...</p>
+          </div>
+        </div>
+        <SkeletonLeadsList count={5} />
+      </div>
+    );
+  }
+  
+  // Show empty state with skeleton when no leads
+  const shouldShowSkeleton = leadsLoading || (leads.length === 0 && currentPage === 1);
+  
+  if (shouldShowSkeleton && leads.length === 0) {
+    return (
+      <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Leads</h1>
             <p className="text-muted-foreground">Carregando leads...</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" disabled className="gap-2">
+            <Button variant="outline" disabled className="gap-2" aria-label="Upload de leads em massa">
               <Upload className="h-4 w-4" />
               Importar Planilha
             </Button>
@@ -411,11 +428,20 @@ function LeadsContent() {
             onDeleteAction={handleOpenBulkDeleteDialog}
             disabled={bulkActionsLoading}
           />
-          <Button variant="outline" onClick={() => setShowBulkUploadDialog(true)} className="gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowBulkUploadDialog(true)} 
+            className="gap-2"
+            aria-label="Importar planilha de leads"
+          >
             <Upload className="h-4 w-4" />
             Importar Planilha
           </Button>
-          <Button onClick={handleCreateLead} className="gap-2">
+          <Button 
+            onClick={handleCreateLead} 
+            className="gap-2"
+            aria-label="Criar novo lead"
+          >
             <Plus className="h-4 w-4" />
             Novo Lead
           </Button>
@@ -589,16 +615,34 @@ function LeadsContent() {
 
                     {/* Ações */}
                     <div className="flex items-center gap-2 ml-4">
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        aria-label={`Ver detalhes de ${lead.nome}`}
+                      >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleEditLead(lead)}>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleEditLead(lead)}
+                        aria-label={`Editar ${lead.nome}`}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleInscribeLead(lead)}>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => handleInscribeLead(lead)}
+                        aria-label={`Inscrever ${lead.nome} em pipeline`}
+                      >
                         <GitBranch className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        aria-label={`Enviar mensagem para ${lead.nome}`}
+                      >
                         <MessageCircle className="h-4 w-4" />
                       </Button>
                     </div>
@@ -617,11 +661,12 @@ function LeadsContent() {
               size="sm"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1 || leadsLoading}
+              aria-label="Página anterior"
             >
               Anterior
             </Button>
             
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1" role="navigation" aria-label="Paginação">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 let pageNum;
                 if (totalPages <= 5) {
@@ -642,6 +687,8 @@ function LeadsContent() {
                     onClick={() => setCurrentPage(pageNum)}
                     disabled={leadsLoading}
                     className="w-10"
+                    aria-label={`Ir para página ${pageNum}`}
+                    aria-current={currentPage === pageNum ? 'page' : undefined}
                   >
                     {pageNum}
                   </Button>
@@ -654,6 +701,7 @@ function LeadsContent() {
               size="sm"
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages || leadsLoading}
+              aria-label="Próxima página"
             >
               Próxima
             </Button>

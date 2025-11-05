@@ -54,6 +54,7 @@ export function EnhancedKanbanActions({
             e.stopPropagation();
             onOpenChecklist?.();
           }}
+          aria-label="Abrir checklist da etapa"
         >
           <CheckSquare className="h-3 w-3" />
         </Button>
@@ -69,6 +70,7 @@ export function EnhancedKanbanActions({
             e.stopPropagation();
             onRegressStage?.();
           }}
+          aria-label="Regredir para etapa anterior"
         >
           <ArrowLeft className="h-3 w-3" />
         </Button>
@@ -89,6 +91,7 @@ export function EnhancedKanbanActions({
             onAdvanceStage?.();
           }}
           disabled={checklistValidation && !checklistValidation.canAdvance}
+          aria-label="Avançar para próxima etapa"
         >
           <ArrowRight className="h-3 w-3" />
         </Button>
@@ -104,6 +107,7 @@ export function EnhancedKanbanActions({
             e.stopPropagation();
             onTransferPipeline?.();
           }}
+          aria-label="Transferir para outro pipeline"
         >
           <GitBranch className="h-3 w-3" />
         </Button>
@@ -127,6 +131,7 @@ export function EnhancedKanbanActions({
               e.stopPropagation();
               onCreateAppointment?.();
             }}
+            aria-label={nextAppointment ? "Ver agendamento existente" : "Criar novo agendamento"}
           >
             {nextAppointment ? (
               <CalendarCheck className="h-3 w-3" />
@@ -148,6 +153,7 @@ export function EnhancedKanbanActions({
               e.stopPropagation();
               onRegisterInteraction?.();
             }}
+            aria-label="Registrar nova interação"
           >
             <MessageCircle className="h-3 w-3" />
           </Button>
