@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Filter, Search, RotateCcw } from 'lucide-react';
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
 import { StageJumpDialog } from '@/components/pipeline/StageJumpDialog';
@@ -46,30 +46,39 @@ function PipelinesContent({ slug }: { slug: string }) {
     entryId: string | null;
   }>({ open: false, entryId: null });
   
-  // Carregar todas as entries sem paginação quando pipeline está definido
+  // Estados para busca e filtros
+  const [searchTerm, setSearchTerm] = useState('');
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Carregar entries inicial sem paginação
   useEffect(() => {
     if (pipelineId) {
       entries.refetch(pipelineId, true);
     }
   }, [pipelineId]);
-  
-  // Estados para busca e filtros
-  const [searchTerm, setSearchTerm] = useState('');
 
-  // Busca server-side com debounce
-  useEffect(() => {
+  // Handler de busca com debounce manual
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchTerm(value);
+    
     if (!pipelineId) return;
 
-    if (searchTerm && searchTerm.length >= 2) {
-      const timer = setTimeout(() => {
-        entries.searchLeads?.(searchTerm, pipelineId);
-      }, 300);
-      return () => clearTimeout(timer);
-    } else if (!searchTerm) {
-      // Sem busca, carregar todos
-      entries.refetch(pipelineId, true);
+    // Limpar timeout anterior
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
-  }, [searchTerm, pipelineId]);
+
+    // Se busca vazia, carregar todos imediatamente
+    if (!value || value.length < 2) {
+      entries.refetch(pipelineId, true);
+      return;
+    }
+
+    // Debounce de 300ms para busca server-side
+    searchTimeoutRef.current = setTimeout(() => {
+      entries.searchLeads?.(value, pipelineId);
+    }, 300);
+  }, [pipelineId, entries]);
   const [filterCloser, setFilterCloser] = useState<string>('all');
   const [filterScore, setFilterScore] = useState<string>('all');
   const [filterHealth, setFilterHealth] = useState<string>('all');
@@ -337,7 +346,7 @@ function PipelinesContent({ slug }: { slug: string }) {
                   <Input
                     placeholder="Buscar por nome do lead..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="flex-1"
                   />
                 </div>

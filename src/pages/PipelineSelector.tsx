@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { EnhancedLoading } from '@/components/ui/enhanced-loading';
 import { ArrowRight, Target, Layers, AlertCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function PipelineSelector() {
@@ -14,7 +14,8 @@ export default function PipelineSelector() {
   const [pipelineMetrics, setPipelineMetrics] = useState<Record<string, { totalLeads: number; leadsAtrasados: number }>>({});
   const [metricsLoading, setMetricsLoading] = useState(true);
 
-  const activePipelines = pipelines.filter(p => p.ativo);
+  // Usar useMemo para evitar recriação do array em cada render
+  const activePipelines = useMemo(() => pipelines.filter(p => p.ativo), [pipelines]);
 
   // Se houver apenas 1 pipeline, redirecionar automaticamente
   useEffect(() => {
