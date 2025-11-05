@@ -3,7 +3,6 @@ import { logger } from '@/utils/logger';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
-import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { useKanbanAppointments } from '@/hooks/useKanbanAppointments';
@@ -36,7 +35,6 @@ function PipelinesContent({ slug }: { slug: string }) {
   }, [slug, getPipelineBySlug]);
 
   const pipelineId = currentPipeline?.id;
-  const { leads, refetch: refetchLeads } = useSupabaseLeads();
   const entries = useSupabaseLeadPipelineEntries(pipelineId);
   const leadPipelineEntries = entries.entries;
   const { stages } = useSupabasePipelineStages(pipelineId);
@@ -59,28 +57,28 @@ function PipelinesContent({ slug }: { slug: string }) {
     .filter(stage => stage.pipeline_id === pipelineId)
     .sort((a, b) => a.ordem - b.ordem);
 
-  // ✅ SOLUÇÃO 1: Processamento direto sem useMemo (permite re-renders automáticos)
+  // ✅ Usar dados do JOIN: entry.leads já contém os dados do lead
   const allEntries = leadPipelineEntries
     .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId)
-    .map(entry => {
-      const lead = leads.find(l => l.id === entry.lead_id);
-      return lead ? { ...entry, lead } : null;
-    })
-    .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+    .filter(entry => entry.leads !== null)  // Verificar se JOIN trouxe dados
+    .map(entry => ({
+      ...entry,
+      lead: entry.leads  // Usar dados do JOIN
+    }))
     // Aplicar filtros
     .filter(entry => {
       // Filtro de busca por nome
-      if (searchTerm && !entry.lead.nome.toLowerCase().includes(searchTerm.toLowerCase())) {
+      if (searchTerm && !entry.leads?.nome?.toLowerCase().includes(searchTerm.toLowerCase())) {
         return false;
       }
       
       // Filtro de closer
-      if (filterCloser !== 'all' && entry.lead.closer !== filterCloser) {
+      if (filterCloser !== 'all' && entry.leads?.closer !== filterCloser) {
         return false;
       }
       
       // Filtro de score
-      if (filterScore !== 'all' && entry.lead.lead_score_classification !== filterScore) {
+      if (filterScore !== 'all' && entry.leads?.lead_score_classification !== filterScore) {
         return false;
       }
       
@@ -93,18 +91,19 @@ function PipelinesContent({ slug }: { slug: string }) {
     });
 
   // Obter closers únicos para o filtro
-  const closers = Array.from(new Set(leads.map(l => l.closer).filter(Boolean)));
+  const closers = Array.from(new Set(
+    allEntries
+      .map(e => e.leads?.closer)
+      .filter(Boolean)
+  ));
 
-  // ✅ SOLUÇÃO 2: Forçar refetch explícito no banco de dados
+  // ✅ Forçar refetch explícito no banco de dados
   const handleRefresh = useCallback(async () => {
     logger.debug('Forçando refetch explícito', {
       feature: 'pipelines',
       metadata: { pipelineId }
     });
-    await Promise.all([
-      entries.refetch(pipelineId),
-      refetchLeads()
-    ]);
+    await entries.refetch(pipelineId);
     logger.debug('Refetch concluído', {
       feature: 'pipelines'
     });
@@ -216,11 +215,11 @@ function PipelinesContent({ slug }: { slug: string }) {
 
   // Handler para abrir modal de edição
   const handleViewOrEditLead = useCallback((leadId: string) => {
-    const lead = leads.find(l => l.id === leadId);
-    if (lead) {
-      setEditingLead(lead);
+    const entry = allEntries.find(e => e.lead_id === leadId);
+    if (entry?.leads) {
+      setEditingLead(entry.leads as any);
     }
-  }, [leads]);
+  }, [allEntries]);
 
   // Buscar agendamentos
   useEffect(() => {
@@ -287,7 +286,7 @@ function PipelinesContent({ slug }: { slug: string }) {
     return {
       stage,
       nextStage,
-      entries: entriesWithAppointments,
+      entries: entriesWithAppointments as any,
       wipExceeded
     };
   });
@@ -419,7 +418,7 @@ function PipelinesContent({ slug }: { slug: string }) {
       <StageJumpDialog
         open={stageJumpDialogState.open}
         onOpenChange={(open) => setStageJumpDialogState({ open, entryId: null })}
-        entry={allEntries.find(e => e.id === stageJumpDialogState.entryId)}
+        entry={allEntries.find(e => e.id === stageJumpDialogState.entryId) as any}
         currentStage={pipelineStages.find(s => 
           s.id === allEntries.find(e => e.id === stageJumpDialogState.entryId)?.etapa_atual_id
         )}

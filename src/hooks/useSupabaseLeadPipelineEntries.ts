@@ -18,6 +18,25 @@ interface LeadPipelineEntry {
   saude_etapa: 'Verde' | 'Amarelo' | 'Vermelho';
   created_at: string;
   updated_at: string;
+  leads?: {
+    id: string;
+    nome: string;
+    email: string | null;
+    whatsapp: string | null;
+    status_geral: string | null;
+    closer: string | null;
+    lead_score: number | null;
+    lead_score_classification: string | null;
+    valor_lead: number | null;
+    user_id: string | null;
+    created_at: string;
+    updated_at: string;
+  } | null;
+  pipeline_stages?: {
+    nome: string;
+    ordem: number;
+    pipeline_id: string;
+  } | null;
 }
 
 export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
@@ -72,7 +91,9 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
             lead_score,
             lead_score_classification,
             valor_lead,
-            user_id
+            user_id,
+            created_at,
+            updated_at
           ),
           pipeline_stages!fk_lead_pipeline_entries_stage(nome, ordem, pipeline_id)
         `)
