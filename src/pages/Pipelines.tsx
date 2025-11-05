@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { logger } from '@/utils/logger';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
@@ -96,12 +97,17 @@ function PipelinesContent({ slug }: { slug: string }) {
 
   // ✅ SOLUÇÃO 2: Forçar refetch explícito no banco de dados
   const handleRefresh = useCallback(async () => {
-    console.log('🔄 [Pipelines] Forçando refetch explícito');
+    logger.debug('Forçando refetch explícito', {
+      feature: 'pipelines',
+      metadata: { pipelineId }
+    });
     await Promise.all([
       entries.refetch(pipelineId),
       refetchLeads()
     ]);
-    console.log('✅ [Pipelines] Refetch concluído');
+    logger.debug('Refetch concluído', {
+      feature: 'pipelines'
+    });
   }, [pipelineId]);
 
   // Handler para avançar etapa via botão

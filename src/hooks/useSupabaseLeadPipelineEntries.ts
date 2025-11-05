@@ -131,10 +131,10 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
       if (append) {
         setEntries(prev => [...prev, ...processedEntries as any]);
         setPage(prev => prev + 1);
-      } else {
-        setEntries([...processedEntries as any]);
-        setPage(1);
-      }
+    } else {
+      setEntries([...processedEntries as any]);
+      setPage(0);
+    }
     } catch (error) {
       logger.error('Erro ao buscar entries', error as Error, {
         feature: 'lead-pipeline-entries'
@@ -386,8 +386,9 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchEntries();
+    if (user && !loading) {
+      setPage(0);
+      fetchEntries(pipelineId, false, false);
     }
   }, [user, pipelineId]);
 
@@ -475,6 +476,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         metadata: { explicitPipelineId, hookPipelineId: pipelineId, targetId }
       });
       setPage(0);
+      setEntries([]);
       return fetchEntries(targetId, true, false);
     }
   };
