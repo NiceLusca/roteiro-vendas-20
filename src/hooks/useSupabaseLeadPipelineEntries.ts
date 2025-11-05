@@ -50,8 +50,8 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
   
   const ITEMS_PER_PAGE = 100;
 
-  // Fetch lead pipeline entries com paginação
-  const fetchEntries = async (targetPipelineId?: string, forceUpdate = false, append = false) => {
+  // Fetch lead pipeline entries com paginação opcional
+  const fetchEntries = async (targetPipelineId?: string, forceUpdate = false, append = false, noPagination = false) => {
     if (!user) return;
     
     const effectivePipelineId = targetPipelineId || pipelineId;
@@ -98,8 +98,12 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
           pipeline_stages!fk_lead_pipeline_entries_stage(nome, ordem, pipeline_id)
         `)
         .eq('status_inscricao', 'Ativo')
-        .order('data_entrada_etapa', { ascending: false })
-        .range(offset, offset + ITEMS_PER_PAGE - 1);
+        .order('data_entrada_etapa', { ascending: false });
+      
+      // Aplicar paginação apenas se noPagination = false
+      if (!noPagination) {
+        query = query.range(offset, offset + ITEMS_PER_PAGE - 1);
+      }
 
       if (effectivePipelineId && effectivePipelineId.trim() !== '') {
         query = query.eq('pipeline_id', effectivePipelineId);
@@ -422,7 +426,9 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     if (user) {
       setEntries([]);
       setPage(0);
-      fetchEntries(pipelineId, false, false);
+      // Se há pipelineId, buscar sem paginação
+      const shouldPaginate = !pipelineId;
+      fetchEntries(pipelineId, false, false, !shouldPaginate);
     }
   }, [user, pipelineId]);
 
@@ -503,15 +509,15 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     getEntriesByStage, 
     getOverdueEntries,
     updateHealthStatus,
-    refetch: (explicitPipelineId?: string) => {
+    refetch: (explicitPipelineId?: string, noPagination?: boolean) => {
       const targetId = explicitPipelineId || pipelineId;
       logger.debug('refetch forçado', {
         feature: 'lead-pipeline-entries',
-        metadata: { explicitPipelineId, hookPipelineId: pipelineId, targetId }
+        metadata: { explicitPipelineId, hookPipelineId: pipelineId, targetId, noPagination }
       });
       setPage(0);
       setEntries([]);
-      return fetchEntries(targetId, true, false);
+      return fetchEntries(targetId, true, false, noPagination || false);
     }
   };
 }

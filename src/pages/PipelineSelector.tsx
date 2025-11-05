@@ -1,17 +1,18 @@
 import { useNavigate } from 'react-router-dom';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
-import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { EnhancedLoading } from '@/components/ui/enhanced-loading';
 import { ArrowRight, Target, Layers, AlertCircle } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function PipelineSelector() {
   const navigate = useNavigate();
   const { pipelines, loading: pipelinesLoading } = useSupabasePipelines();
-  const { entries, loading: entriesLoading } = useSupabaseLeadPipelineEntries(undefined);
+  const [pipelineMetrics, setPipelineMetrics] = useState<Record<string, { totalLeads: number; leadsAtrasados: number }>>({});
+  const [metricsLoading, setMetricsLoading] = useState(true);
 
   const activePipelines = pipelines.filter(p => p.ativo);
 
@@ -22,21 +23,52 @@ export default function PipelineSelector() {
     }
   }, [pipelinesLoading, activePipelines, navigate]);
 
-  if (pipelinesLoading || entriesLoading) {
+  // Buscar métricas de todos os pipelines sem paginação
+  useEffect(() => {
+    const fetchPipelineMetrics = async () => {
+      if (!activePipelines.length) {
+        setMetricsLoading(false);
+        return;
+      }
+      
+      setMetricsLoading(true);
+      
+      // Buscar TODAS as entries sem paginação, apenas campos necessários
+      const { data: entries, error } = await supabase
+        .from('lead_pipeline_entries')
+        .select('pipeline_id, saude_etapa')
+        .eq('status_inscricao', 'Ativo');
+      
+      if (error) {
+        console.error('Erro ao buscar métricas:', error);
+        setMetricsLoading(false);
+        return;
+      }
+      
+      // Calcular métricas por pipeline
+      const metrics: Record<string, { totalLeads: number; leadsAtrasados: number }> = {};
+      
+      activePipelines.forEach(pipeline => {
+        const pipelineEntries = entries?.filter(e => e.pipeline_id === pipeline.id) || [];
+        metrics[pipeline.id] = {
+          totalLeads: pipelineEntries.length,
+          leadsAtrasados: pipelineEntries.filter(e => e.saude_etapa === 'Vermelho').length
+        };
+      });
+      
+      setPipelineMetrics(metrics);
+      setMetricsLoading(false);
+    };
+    
+    fetchPipelineMetrics();
+  }, [activePipelines]);
+
+  if (pipelinesLoading || metricsLoading) {
     return <EnhancedLoading loading={true}><></></EnhancedLoading>;
   }
 
   const getPipelineMetrics = (pipelineId: string) => {
-    const pipelineEntries = entries.filter(
-      e => e.pipeline_id === pipelineId && (e.status_inscricao === 'Ativo' || e.status_inscricao === 'ativo')
-    );
-    
-    const totalLeads = pipelineEntries.length;
-    const leadsAtrasados = pipelineEntries.filter(
-      e => e.saude_etapa === 'Vermelho'
-    ).length;
-
-    return { totalLeads, leadsAtrasados };
+    return pipelineMetrics[pipelineId] || { totalLeads: 0, leadsAtrasados: 0 };
   };
 
   return (

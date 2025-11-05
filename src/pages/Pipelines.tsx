@@ -46,6 +46,13 @@ function PipelinesContent({ slug }: { slug: string }) {
     entryId: string | null;
   }>({ open: false, entryId: null });
   
+  // Carregar todas as entries sem paginação quando pipeline está definido
+  useEffect(() => {
+    if (pipelineId) {
+      entries.refetch(pipelineId, true);
+    }
+  }, [pipelineId]);
+  
   // Estados para busca e filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCloser, setFilterCloser] = useState<string>('all');
