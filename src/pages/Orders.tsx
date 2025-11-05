@@ -328,8 +328,9 @@ function OrdersContent() {
           open={!!refundDialogOrder}
           onOpenChange={() => setRefundDialogOrder(null)}
           order={refundDialogOrder}
-          onConfirm={(refund) => {
-            // TODO: Implement refund logic
+          onConfirm={async (refund) => {
+            // Update order status to refunded
+            await saveOrder({ ...refundDialogOrder, status_pagamento: 'reembolsado' });
             setRefundDialogOrder(null);
           }}
         />

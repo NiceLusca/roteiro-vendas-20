@@ -131,9 +131,9 @@ export default function Deals() {
               <DialogTitle>Nova Negociação</DialogTitle>
             </DialogHeader>
             <DealForm
-              onSave={() => {
+              onSave={(dealData) => {
+                saveDeal(dealData);
                 setIsCreateDialogOpen(false);
-                // TODO: Implement save logic
               }}
               onCancel={() => setIsCreateDialogOpen(false)}
             />
@@ -323,13 +323,9 @@ export default function Deals() {
           open={!!lossDialogDeal}
           onOpenChange={() => setLossDialogDeal(null)}
           dealId={lossDialogDeal.id}
-          onConfirm={(lossReason: Omit<DealLostReason, 'id' | 'timestamp'>) => {
-            // Update deal status and save loss reason
-            saveDeal({ ...lossDialogDeal, status: 'Perdida' });
-            // TODO: Save loss reason to database
-            if (process.env.NODE_ENV === 'development') {
-              console.log('Deal lost reason:', lossReason);
-            }
+          onConfirm={async (lossReason: Omit<DealLostReason, 'id' | 'timestamp'>) => {
+            // Update deal status
+            await saveDeal({ ...lossDialogDeal, status: 'Perdida', motivo_perda: lossReason.motivo });
             setLossDialogDeal(null);
           }}
         />

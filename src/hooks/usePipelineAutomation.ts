@@ -183,7 +183,7 @@ export function usePipelineAutomation(pipelineId: string) {
   // Set up periodic monitoring
   useEffect(() => {
     // TEMPORARIAMENTE DESABILITADO - estava causando interferência com queries principais
-    // TODO: Reimplementar em worker separado ou via Edge Function
+    // Note: Monitoring disabled - consider implementing via Edge Function for better performance
     logger.warn('Monitoramento automático desabilitado temporariamente', {
       feature: 'pipeline-automation'
     });

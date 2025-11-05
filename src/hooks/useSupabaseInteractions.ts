@@ -35,7 +35,7 @@ export function useSupabaseInteractions() {
         lead_id: interaction.lead_id,
         canal: interaction.canal,
         descricao: interaction.descricao,
-        autor: 'Sistema', // TODO: get from user
+        autor: user?.email || 'Sistema',
         timestamp: new Date(interaction.data_hora)
       })) || []);
     } catch (error) {

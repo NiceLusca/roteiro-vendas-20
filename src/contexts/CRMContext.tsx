@@ -33,9 +33,6 @@ interface CRMContextType {
   archiveLeadEntry: (entryId: string, reason?: string) => Promise<boolean>;
   
   // Helper functions
-  getLeadsByPipeline: (pipelineId: string) => Lead[];
-  getEntriesByPipeline: (pipelineId: string) => LeadPipelineEntry[];
-  getEntriesByLead: (leadId: string) => LeadPipelineEntry[];
   getStagesByPipeline: (pipelineId: string) => PipelineStage[];
   refetchAll: () => Promise<void>;
 }
@@ -262,24 +259,11 @@ export function CRMProvider({ children }: CRMProviderProps) {
     }
   };
 
-  // Helper functions
-  const getLeadsByPipeline = (pipelineId: string): Lead[] => {
-    // This now returns empty array - components should fetch entries directly
-    console.warn('getLeadsByPipeline is deprecated - fetch entries directly in components');
-    return [];
-  };
-
-  const getEntriesByPipeline = (pipelineId: string): LeadPipelineEntry[] => {
-    // This now returns empty array - components should fetch entries directly
-    console.warn('getEntriesByPipeline is deprecated - fetch entries directly in components');
-    return [];
-  };
-
-  const getEntriesByLead = (leadId: string): LeadPipelineEntry[] => {
-    // This now returns empty array - components should fetch entries directly
-    console.warn('getEntriesByLead is deprecated - fetch entries directly in components');
-    return [];
-  };
+  // Helper function for stages (kept for backwards compatibility)
+  // Deprecated helper functions removed - use direct Supabase hooks instead:
+  // - getLeadsByPipeline → use useSupabaseLeadPipelineEntries
+  // - getEntriesByPipeline → use useSupabaseLeadPipelineEntries
+  // - getEntriesByLead → use useSupabaseLeadPipelineEntries
 
   const getStagesByPipeline = (pipelineId: string): PipelineStage[] => {
     return stages.filter(stage => stage.pipeline_id === pipelineId);
@@ -310,9 +294,6 @@ export function CRMProvider({ children }: CRMProviderProps) {
     transferLeadBetweenPipelines,
     advanceLeadStage,
     archiveLeadEntry,
-    getLeadsByPipeline,
-    getEntriesByPipeline,
-    getEntriesByLead,
     getStagesByPipeline,
     refetchAll,
   };
