@@ -23,6 +23,7 @@ interface LeadPipelineEntry {
 export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
   const [entries, setEntries] = useState<LeadPipelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
   const { toast } = useToast();
@@ -37,8 +38,8 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     const effectivePipelineId = targetPipelineId || pipelineId;
     const offset = append ? page * ITEMS_PER_PAGE : 0;
     
-    // ✅ Guard interno: prevenir chamadas duplicadas
-    if (loading && !forceUpdate) {
+    // ✅ Guard interno: prevenir chamadas duplicadas usando flag dedicada
+    if (isFetching && !forceUpdate) {
       logger.debug('Fetch já em progresso, ignorando chamada duplicada', {
         feature: 'lead-pipeline-entries'
       });
@@ -51,6 +52,8 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     });
     
     try {
+      setIsFetching(true);
+      
       if (!append) {
         setLoading(true);
       }
@@ -148,6 +151,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         feature: 'lead-pipeline-entries'
       });
     } finally {
+      setIsFetching(false);
       setLoading(false);
     }
   };
