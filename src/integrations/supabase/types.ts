@@ -1002,7 +1002,33 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      mv_pipeline_metrics: {
+        Row: {
+          etapa_atual_id: string | null
+          leads_atencao: number | null
+          leads_atrasados: number | null
+          leads_ok: number | null
+          pipeline_id: string | null
+          tempo_medio_dias: number | null
+          total_leads: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_lead_pipeline_entries_pipeline"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_lead_pipeline_entries_stage"
+            columns: ["etapa_atual_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       decode_html_entities: { Args: { input_text: string }; Returns: string }
@@ -1027,6 +1053,7 @@ export type Database = {
         }
         Returns: string
       }
+      refresh_pipeline_metrics: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

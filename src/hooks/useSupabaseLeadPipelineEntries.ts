@@ -23,23 +23,29 @@ interface LeadPipelineEntry {
 export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
   const [entries, setEntries] = useState<LeadPipelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
   const { toast } = useToast();
   const { user } = useAuth();
+  
+  const ITEMS_PER_PAGE = 100;
 
-  // Fetch lead pipeline entries
-  const fetchEntries = async (targetPipelineId?: string, forceUpdate = false) => {
+  // Fetch lead pipeline entries com paginação
+  const fetchEntries = async (targetPipelineId?: string, forceUpdate = false, append = false) => {
     if (!user) return;
     
-    // ✅ Permitir buscar TODAS as entries quando pipelineId for undefined
     const effectivePipelineId = targetPipelineId || pipelineId;
+    const offset = append ? page * ITEMS_PER_PAGE : 0;
     
     logger.debug('fetchEntries chamado', {
       feature: 'lead-pipeline-entries',
-      metadata: { effectivePipelineId, forceUpdate }
+      metadata: { effectivePipelineId, forceUpdate, append, offset }
     });
     
     try {
-      setLoading(true);
+      if (!append) {
+        setLoading(true);
+      }
       
       let query = supabase
         .from('lead_pipeline_entries')
@@ -59,19 +65,15 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
           ),
           pipeline_stages!fk_lead_pipeline_entries_stage(nome, ordem, pipeline_id)
         `)
-        .eq('status_inscricao', 'Ativo');
+        .eq('status_inscricao', 'Ativo')
+        .order('data_entrada_etapa', { ascending: false })
+        .range(offset, offset + ITEMS_PER_PAGE - 1);
 
-      // ✅ Só filtrar por pipeline se um ID específico for fornecido
       if (effectivePipelineId && effectivePipelineId.trim() !== '') {
         query = query.eq('pipeline_id', effectivePipelineId);
       }
 
-      // ✅ Adicionar timestamp na query para quebrar cache HTTP
-      if (forceUpdate) {
-        query = query.limit(9999); // Força query diferente do cache
-      }
-
-      const { data, error } = await query.order('created_at', { ascending: false });
+      const { data, error } = await query;
 
       logger.debug('fetchEntries resultado', {
         feature: 'lead-pipeline-entries',
@@ -119,11 +121,20 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
 
       logger.info('Leads carregados', {
         feature: 'lead-pipeline-entries',
-        metadata: { count: processedEntries.length }
+        metadata: { count: processedEntries.length, append, offset }
       });
       
-      // ✅ SEMPRE forçar novo array (sem if/else)
-      setEntries([...processedEntries as any]);
+      // Verificar se há mais páginas
+      setHasMore(processedEntries.length === ITEMS_PER_PAGE);
+      
+      // Append ou replace entries
+      if (append) {
+        setEntries(prev => [...prev, ...processedEntries as any]);
+        setPage(prev => prev + 1);
+      } else {
+        setEntries([...processedEntries as any]);
+        setPage(1);
+      }
     } catch (error) {
       logger.error('Erro ao buscar entries', error as Error, {
         feature: 'lead-pipeline-entries'
@@ -380,20 +391,27 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     }
   }, [user, pipelineId]);
 
-  // Real-time updates com debounce
+  // Real-time updates com debounce e filtros
   useEffect(() => {
     if (!user) return;
 
     let debounceTimer: NodeJS.Timeout;
 
+    // ✅ OTIMIZAÇÃO: Filtrar realtime por pipeline_id
+    const channelFilter = pipelineId 
+      ? `lead_pipeline_entries:pipeline_id=eq.${pipelineId}`
+      : 'lead_pipeline_entries_changes';
+
     const channel = supabase
-      .channel('lead_pipeline_entries_changes')
+      .channel(channelFilter)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'lead_pipeline_entries'
+          table: 'lead_pipeline_entries',
+          // ✅ Filtro server-side no realtime
+          ...(pipelineId ? { filter: `pipeline_id=eq.${pipelineId}` } : {})
         },
         (payload) => {
           const newRecord = payload.new as any;
@@ -404,12 +422,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
             metadata: { eventType: payload.eventType }
           });
           
-          const recordPipelineId = newRecord?.pipeline_id || oldRecord?.pipeline_id;
-          if (pipelineId && recordPipelineId !== pipelineId) {
-            return;
-          }
-          
-          // ✅ SOLUÇÃO 5: Só refetch se realmente necessário
+          // Só refetch se realmente necessário
           const shouldRefetch = 
             payload.eventType === 'INSERT' || 
             payload.eventType === 'DELETE' ||
@@ -420,11 +433,13 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
             return;
           }
           
-          // ✅ SOLUÇÃO 1: Debounce aumentado de 50ms para 500ms
+          // ✅ Debounce aumentado para 2000ms (2s)
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
-            fetchEntries(pipelineId, true);
-          }, 500);
+            // Resetar paginação ao receber updates
+            setPage(0);
+            fetchEntries(pipelineId, true, false);
+          }, 2000);
         }
       )
       .subscribe();
@@ -435,9 +450,17 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     };
   }, [user, pipelineId]);
 
+  // Load more function para infinite scroll
+  const loadMore = async () => {
+    if (!hasMore || loading) return;
+    await fetchEntries(pipelineId, false, true);
+  };
+
   return {
     entries,
     loading,
+    hasMore,
+    loadMore,
     createEntry,
     archiveEntry,
     transferToPipeline,
@@ -451,7 +474,8 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         feature: 'lead-pipeline-entries',
         metadata: { explicitPipelineId, hookPipelineId: pipelineId, targetId }
       });
-      return fetchEntries(targetId, true); // ✅ Força re-render
+      setPage(0);
+      return fetchEntries(targetId, true, false);
     }
   };
 }

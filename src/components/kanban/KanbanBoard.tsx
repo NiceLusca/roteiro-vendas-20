@@ -46,8 +46,11 @@ export function KanbanBoard({
   onRegisterInteraction,
   onOpenChecklist,
   onRegressStage,
-  onTransferPipeline
-}: KanbanBoardProps) {
+  onTransferPipeline,
+  hasMore,
+  onLoadMore,
+  loadingMore
+}: KanbanBoardProps & { hasMore?: boolean; onLoadMore?: () => void; loadingMore?: boolean }) {
   const [draggingEntryId, setDraggingEntryId] = useState<string | null>(null);
   const { moveLead, isMoving } = useLeadMovement();
   const { checklistItems } = useSupabaseChecklistItems();
@@ -116,6 +119,9 @@ export function KanbanBoard({
           nextStage={nextStage}
           entries={entries}
           wipExceeded={wipExceeded}
+          hasMore={hasMore}
+          onLoadMore={onLoadMore}
+          loadingMore={loadingMore}
           checklistItems={checklistItems}
           onAddLead={onAddLead}
           onViewLead={onViewLead}

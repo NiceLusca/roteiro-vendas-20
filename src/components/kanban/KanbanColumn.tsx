@@ -3,8 +3,9 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { KanbanCard } from './KanbanCard';
+import { VirtualScroll } from '@/components/ui/virtual-list';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
-import { Plus, AlertTriangle } from 'lucide-react';
+import { Plus, AlertTriangle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
 
@@ -13,6 +14,9 @@ interface KanbanColumnProps {
   nextStage?: PipelineStage | null;
   entries: Array<LeadPipelineEntry & { lead: Lead }>;
   wipExceeded: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  loadingMore?: boolean;
   
   checklistItems?: Array<{ id: string; etapa_id: string; obrigatorio: boolean }>;
   onAddLead?: (stageId: string) => void;
@@ -35,6 +39,9 @@ export const KanbanColumn = memo(function KanbanColumn({
   nextStage,
   entries,
   wipExceeded,
+  hasMore = false,
+  onLoadMore,
+  loadingMore = false,
   
   checklistItems = [],
   onAddLead,
@@ -52,6 +59,10 @@ export const KanbanColumn = memo(function KanbanColumn({
   onDragEnd
 }: KanbanColumnProps) {
   const [isOver, setIsOver] = useState(false);
+  
+  const CARD_HEIGHT = 140; // Altura estimada de cada card
+  const COLUMN_HEIGHT = 600; // Altura da coluna
+  const VIRTUALIZATION_THRESHOLD = 50; // Virtualizar se > 50 leads
 
   // HTML5 Native Drop Handlers
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -130,6 +141,42 @@ export const KanbanColumn = memo(function KanbanColumn({
 
   const stageClass = useMemo(() => getStageColorClass(stage.nome), [stage.nome, getStageColorClass]);
 
+  // Render function para VirtualScroll
+  const renderCard = useCallback((entry: typeof sortedEntries[0], index: number, style: React.CSSProperties) => {
+    const stageChecklistItems = checklistItems.filter(
+      item => item.etapa_id === stage.id
+    );
+    const requiredItems = stageChecklistItems.filter(item => item.obrigatorio);
+    const checklistComplete = requiredItems.length === 0;
+    
+    return (
+      <div key={entry.id} style={style} className="pb-3">
+        <KanbanCard
+          entry={entry}
+          lead={entry.lead}
+          stage={stage}
+          nextStage={nextStage}
+          checklistComplete={checklistComplete}
+          onViewLead={() => onViewLead?.(entry.lead.id)}
+          onEditLead={() => onEditLead?.(entry.lead.id)}
+          onCreateAppointment={() => onCreateAppointment?.(entry.lead.id)}
+          onAdvanceStage={() => onAdvanceStage?.(entry.id)}
+          onJumpToStage={() => onJumpToStage?.(entry.id)}
+          onRegisterInteraction={() => onRegisterInteraction?.(entry.lead.id)}
+          onOpenChecklist={() => onOpenChecklist?.(entry.id)}
+          onRegressStage={() => onRegressStage?.(entry.id)}
+          onTransferPipeline={() => onTransferPipeline?.(entry.lead.id)}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+        />
+      </div>
+    );
+  }, [stage, nextStage, checklistItems, onViewLead, onEditLead, onCreateAppointment, 
+      onAdvanceStage, onJumpToStage, onRegisterInteraction, onOpenChecklist, 
+      onRegressStage, onTransferPipeline, onDragStart, onDragEnd]);
+
+  const shouldVirtualize = sortedEntries.length > VIRTUALIZATION_THRESHOLD;
+
   return (
     <div 
       onDragOver={handleDragOver}
@@ -174,44 +221,76 @@ export const KanbanColumn = memo(function KanbanColumn({
         </CardHeader>
       </Card>
 
-      <div className="flex-1 space-y-3">
+      {/* Content com virtualização condicional */}
+      <div className="flex-1 overflow-y-auto">
         {sortedEntries.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-sm text-muted-foreground">
               Nenhum lead nesta etapa
             </p>
           </div>
+        ) : shouldVirtualize ? (
+          <VirtualScroll
+            items={sortedEntries}
+            height={COLUMN_HEIGHT}
+            itemHeight={CARD_HEIGHT}
+            renderItem={renderCard}
+            onEndReached={onLoadMore}
+            endReachedThreshold={0.8}
+          />
         ) : (
-           sortedEntries.map((entry) => {
-            // Verificar se o checklist está completo
-            const stageChecklistItems = checklistItems.filter(
-              item => item.etapa_id === stage.id
-            );
-            const requiredItems = stageChecklistItems.filter(item => item.obrigatorio);
-            const checklistComplete = requiredItems.length === 0; // Por enquanto, assumimos completo
+          <div className="space-y-3">
+            {sortedEntries.map((entry) => {
+              const stageChecklistItems = checklistItems.filter(
+                item => item.etapa_id === stage.id
+              );
+              const requiredItems = stageChecklistItems.filter(item => item.obrigatorio);
+              const checklistComplete = requiredItems.length === 0;
+              
+              return (
+                <KanbanCard
+                  key={entry.id}
+                  entry={entry}
+                  lead={entry.lead}
+                  stage={stage}
+                  nextStage={nextStage}
+                  checklistComplete={checklistComplete}
+                  onViewLead={() => onViewLead?.(entry.lead.id)}
+                  onEditLead={() => onEditLead?.(entry.lead.id)}
+                  onCreateAppointment={() => onCreateAppointment?.(entry.lead.id)}
+                  onAdvanceStage={() => onAdvanceStage?.(entry.id)}
+                  onJumpToStage={() => onJumpToStage?.(entry.id)}
+                  onRegisterInteraction={() => onRegisterInteraction?.(entry.lead.id)}
+                  onOpenChecklist={() => onOpenChecklist?.(entry.id)}
+                  onRegressStage={() => onRegressStage?.(entry.id)}
+                  onTransferPipeline={() => onTransferPipeline?.(entry.lead.id)}
+                  onDragStart={onDragStart}
+                  onDragEnd={onDragEnd}
+                />
+              );
+            })}
             
-            return (
-              <KanbanCard
-                key={entry.id}
-                entry={entry}
-                lead={entry.lead}
-                stage={stage}
-                nextStage={nextStage}
-                checklistComplete={checklistComplete}
-                onViewLead={() => onViewLead?.(entry.lead.id)}
-                onEditLead={() => onEditLead?.(entry.lead.id)}
-                onCreateAppointment={() => onCreateAppointment?.(entry.lead.id)}
-                onAdvanceStage={() => onAdvanceStage?.(entry.id)}
-                onJumpToStage={() => onJumpToStage?.(entry.id)}
-                onRegisterInteraction={() => onRegisterInteraction?.(entry.lead.id)}
-                onOpenChecklist={() => onOpenChecklist?.(entry.id)}
-                onRegressStage={() => onRegressStage?.(entry.id)}
-                onTransferPipeline={() => onTransferPipeline?.(entry.lead.id)}
-                onDragStart={onDragStart}
-                onDragEnd={onDragEnd}
-              />
-            );
-          })
+            {/* Load More Button */}
+            {hasMore && (
+              <div className="flex justify-center py-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onLoadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Carregando...
+                    </>
+                  ) : (
+                    'Carregar mais'
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
