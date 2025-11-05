@@ -37,6 +37,14 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     const effectivePipelineId = targetPipelineId || pipelineId;
     const offset = append ? page * ITEMS_PER_PAGE : 0;
     
+    // ✅ Guard interno: prevenir chamadas duplicadas
+    if (loading && !forceUpdate) {
+      logger.debug('Fetch já em progresso, ignorando chamada duplicada', {
+        feature: 'lead-pipeline-entries'
+      });
+      return;
+    }
+
     logger.debug('fetchEntries chamado', {
       feature: 'lead-pipeline-entries',
       metadata: { effectivePipelineId, forceUpdate, append, offset }
@@ -386,7 +394,8 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
   };
 
   useEffect(() => {
-    if (user && !loading) {
+    if (user) {
+      setEntries([]);
       setPage(0);
       fetchEntries(pipelineId, false, false);
     }
