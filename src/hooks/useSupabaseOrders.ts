@@ -19,7 +19,18 @@ export function useSupabaseOrders() {
       
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
-        .select('*')
+        .select(`
+          id,
+          lead_id,
+          deal_id,
+          valor_total,
+          status_pagamento,
+          data_pedido,
+          data_venda,
+          closer,
+          created_at,
+          updated_at
+        `)
         .order('created_at', { ascending: false });
 
       if (ordersError) {
@@ -34,7 +45,15 @@ export function useSupabaseOrders() {
 
       const { data: itemsData, error: itemsError } = await supabase
         .from('order_items')
-        .select('*')
+        .select(`
+          id,
+          pedido_id,
+          produto_id,
+          quantidade,
+          preco_unitario,
+          recorrencia,
+          created_at
+        `)
         .order('created_at', { ascending: false });
 
       if (itemsError) {

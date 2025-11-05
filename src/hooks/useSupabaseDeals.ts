@@ -28,7 +28,17 @@ export function useSupabaseDeals() {
       setLoading(true);
       const { data, error } = await supabase
         .from('deals')
-        .select('*')
+        .select(`
+          id,
+          lead_id,
+          produto_id,
+          valor_proposto,
+          status,
+          data_fechamento,
+          motivo_perda,
+          created_at,
+          updated_at
+        `)
         .order('created_at', { ascending: false });
 
       if (error) {

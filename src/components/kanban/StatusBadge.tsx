@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -7,7 +8,7 @@ interface StatusBadgeProps {
   animated?: boolean;
 }
 
-export function StatusBadge({ status, size = 'md', animated = false }: StatusBadgeProps) {
+export const StatusBadge = memo(function StatusBadge({ status, size = 'md', animated = false }: StatusBadgeProps) {
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'Verde':
@@ -64,4 +65,4 @@ export function StatusBadge({ status, size = 'md', animated = false }: StatusBad
       {status}
     </Badge>
   );
-}
+});

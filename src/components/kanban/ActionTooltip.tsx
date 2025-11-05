@@ -1,5 +1,5 @@
+import { memo, ReactNode } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ReactNode } from 'react';
 
 interface ActionTooltipProps {
   children: ReactNode;
@@ -8,7 +8,7 @@ interface ActionTooltipProps {
   blockReason?: string;
 }
 
-export function ActionTooltip({ children, content, blocked, blockReason }: ActionTooltipProps) {
+export const ActionTooltip = memo(function ActionTooltip({ children, content, blocked, blockReason }: ActionTooltipProps) {
   if (!blocked) {
     return (
       <TooltipProvider>
@@ -41,4 +41,4 @@ export function ActionTooltip({ children, content, blocked, blockReason }: Actio
       </Tooltip>
     </TooltipProvider>
   );
-}
+});

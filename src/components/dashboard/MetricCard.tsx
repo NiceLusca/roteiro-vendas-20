@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -31,7 +32,7 @@ const iconStyles = {
   danger: 'text-danger'
 };
 
-export function MetricCard({ 
+export const MetricCard = memo(function MetricCard({ 
   title, 
   value, 
   description, 
@@ -71,4 +72,4 @@ export function MetricCard({
       </CardContent>
     </Card>
   );
-}
+});

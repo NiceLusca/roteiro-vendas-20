@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -131,21 +131,20 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
     }
   }, [lead]);
 
-  const handleInputChange = (field: keyof Lead, value: any) => {
+  const handleInputChange = useCallback((field: keyof Lead, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
-    // Limpar erro do campo
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
-  };
+  }, [errors]);
 
-  const handleWhatsAppChange = (value: string) => {
+  const handleWhatsAppChange = useCallback((value: string) => {
     const normalized = normalizeWhatsApp(value);
     handleInputChange('whatsapp', normalized);
-  };
+  }, [handleInputChange]);
 
-  const validate = (): boolean => {
+  const validate = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.nome?.trim()) {
@@ -155,22 +154,18 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
     if (!formData.whatsapp?.trim()) {
       newErrors.whatsapp = 'WhatsApp é obrigatório';
     } else {
-      // Remove tudo exceto dígitos para validar
       const digits = formData.whatsapp.replace(/\D/g, '');
       
-      // Deve ter 13 dígitos (55 + DDD + número) ou 11 (sem código do país)
       if (digits.length !== 13 && digits.length !== 11) {
         newErrors.whatsapp = 'WhatsApp deve ter formato válido (+55DDDNÚMERO)';
       } else if (digits.length === 13 && !digits.startsWith('55')) {
         newErrors.whatsapp = 'WhatsApp deve começar com +55';
       } else if (digits.length === 11) {
-        // Validar DDD brasileiro (11-99)
         const ddd = parseInt(digits.substring(0, 2));
         if (ddd < 11 || ddd > 99) {
           newErrors.whatsapp = 'DDD inválido';
         }
       } else if (digits.length === 13) {
-        // Validar DDD brasileiro (11-99) após o código do país
         const ddd = parseInt(digits.substring(2, 4));
         if (ddd < 11 || ddd > 99) {
           newErrors.whatsapp = 'DDD inválido';
@@ -184,9 +179,9 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [formData]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validate()) {
@@ -202,17 +197,17 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
     };
 
     onSubmit(finalData, selectedTagIds);
-  };
+  }, [formData, score, classification, lead?.id, selectedTagIds, onSubmit, validate]);
 
-  const handleToggleTag = (tagId: string) => {
+  const handleToggleTag = useCallback((tagId: string) => {
     setSelectedTagIds(prev => 
       prev.includes(tagId) 
         ? prev.filter(id => id !== tagId)
         : [...prev, tagId]
     );
-  };
+  }, []);
 
-  const handleCreateNewTag = async () => {
+  const handleCreateNewTag = useCallback(async () => {
     if (newTagName.trim()) {
       const newTag = await createTag(newTagName.trim());
       if (newTag) {
@@ -220,7 +215,7 @@ export function LeadForm({ lead, onSubmit, onCancel, loading = false }: LeadForm
         setNewTagName('');
       }
     }
-  };
+  }, [newTagName, createTag]);
 
   const selectedTags = tags.filter(tag => selectedTagIds.includes(tag.id));
 

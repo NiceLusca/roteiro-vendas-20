@@ -35,7 +35,30 @@ export function useSupabasePipelineStages(pipelineId?: string) {
       setLoading(true);
       let query = supabase
         .from('pipeline_stages')
-        .select('*');
+        .select(`
+          id,
+          pipeline_id,
+          nome,
+          ordem,
+          prazo_em_dias,
+          proximo_passo_tipo,
+          proximo_passo_label,
+          proximo_passo_template,
+          gerar_agendamento_auto,
+          tipo_agendamento,
+          template_agendamento,
+          duracao_minutos,
+          horarios_preferenciais,
+          wip_limit,
+          sla_horas,
+          entrada_criteria,
+          saida_criteria,
+          criterios_avanco,
+          closer_padrao,
+          ativo,
+          created_at,
+          updated_at
+        `);
       
       const queryPipelineId = targetPipelineId || pipelineId;
       

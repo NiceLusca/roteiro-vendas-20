@@ -19,7 +19,15 @@ export function useSupabaseProducts() {
       setLoading(true);
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          id,
+          nome,
+          descricao,
+          preco,
+          ativo,
+          created_at,
+          updated_at
+        `)
         .order('created_at', { ascending: false });
 
       if (error) {

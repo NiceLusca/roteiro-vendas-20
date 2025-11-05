@@ -67,7 +67,17 @@ export function useSupabasePipelines() {
       setLoading(true);
       const { data, error } = await supabase
         .from('pipelines')
-        .select('*')
+        .select(`
+          id,
+          nome,
+          slug,
+          descricao,
+          objetivo,
+          ativo,
+          primary_pipeline,
+          created_at,
+          updated_at
+        `)
         .order('created_at', { ascending: false });
 
       if (error) {

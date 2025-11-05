@@ -18,7 +18,20 @@ export function useSupabaseAppointments() {
       setLoading(true);
       const { data, error } = await supabase
         .from('appointments')
-        .select('*')
+        .select(`
+          id,
+          lead_id,
+          titulo,
+          data_hora,
+          start_at,
+          end_at,
+          duracao_minutos,
+          status,
+          resultado_sessao,
+          notas,
+          created_at,
+          updated_at
+        `)
         .order('start_at', { ascending: true });
 
       if (error) {
