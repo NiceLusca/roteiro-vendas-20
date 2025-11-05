@@ -60,7 +60,7 @@ export const KanbanColumn = memo(function KanbanColumn({
 }: KanbanColumnProps) {
   const [isOver, setIsOver] = useState(false);
   
-  const CARD_HEIGHT = 140; // Altura estimada de cada card
+  const CARD_HEIGHT = 165; // Altura real do card (~153px) + espaçamento pb-3 (12px)
   const COLUMN_HEIGHT = 600; // Altura da coluna
   const VIRTUALIZATION_THRESHOLD = 50; // Virtualizar se > 50 leads
 
