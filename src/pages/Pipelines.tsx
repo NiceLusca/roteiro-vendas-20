@@ -27,6 +27,7 @@ function PipelinesContent({ slug }: { slug: string }) {
   const [loadingPipeline, setLoadingPipeline] = useState(true);
   
   // Buscar pipeline por slug
+  // Nota: getPipelineBySlug não está nas dependências para evitar loops de renderização
   useEffect(() => {
     const loadPipeline = async () => {
       setLoadingPipeline(true);
@@ -35,7 +36,8 @@ function PipelinesContent({ slug }: { slug: string }) {
       setLoadingPipeline(false);
     };
     loadPipeline();
-  }, [slug, getPipelineBySlug]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
 
   const pipelineId = currentPipeline?.id;
   const entries = useSupabaseLeadPipelineEntries(pipelineId);
