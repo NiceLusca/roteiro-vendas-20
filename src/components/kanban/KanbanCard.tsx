@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Lead, LeadPipelineEntry, PipelineStage } from '@/types/crm';
 import { formatWhatsApp } from '@/utils/formatters';
-import { Phone, ArrowRight, AlertCircle } from 'lucide-react';
+import { Phone, ArrowRight, AlertCircle, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { KanbanCardMenu } from './KanbanCardMenu';
 import { AppointmentBadge } from '@/components/notifications/AppointmentBadge';
@@ -62,6 +62,7 @@ export const KanbanCard = memo(function KanbanCard({
   onDragEnd
 }: KanbanCardProps) {
   const [isLocalDragging, setIsLocalDragging] = useState(false);
+  const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
 
   // Early return if lead is not loaded yet
   if (!lead) {
@@ -93,6 +94,15 @@ export const KanbanCard = memo(function KanbanCard({
     setIsLocalDragging(false);
     onDragEnd?.();
   };
+
+  const handleCopyWhatsApp = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Copia o número limpo (apenas dígitos)
+    const cleanNumber = lead.whatsapp?.replace(/\D/g, '') || '';
+    navigator.clipboard.writeText(cleanNumber);
+    setCopiedWhatsApp(true);
+    setTimeout(() => setCopiedWhatsApp(false), 2000);
+  }, [lead.whatsapp]);
 
   const getStageColorClass = useCallback((stageName: string): string => {
     const normalized = stageName.toLowerCase();
@@ -176,10 +186,27 @@ export const KanbanCard = memo(function KanbanCard({
           </div>
         </div>
 
-        {/* Telefone */}
+        {/* Telefone com copiar */}
         <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
           <Phone className="h-3 w-3 flex-shrink-0" />
-          <span className="truncate">{formatWhatsApp(lead.whatsapp)}</span>
+          <span className="truncate flex-1">{formatWhatsApp(lead.whatsapp)}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0 hover:bg-primary/10 flex-shrink-0"
+            onClick={handleCopyWhatsApp}
+            title={copiedWhatsApp ? "Copiado!" : "Copiar WhatsApp"}
+          >
+            <Copy className={cn(
+              "h-3 w-3 transition-colors",
+              copiedWhatsApp ? "text-success" : "text-muted-foreground hover:text-primary"
+            )} />
+          </Button>
+          {copiedWhatsApp && (
+            <span className="text-[10px] text-success font-medium animate-in fade-in slide-in-from-left-1 flex-shrink-0">
+              Copiado!
+            </span>
+          )}
         </div>
 
         {/* Próximo Agendamento */}
