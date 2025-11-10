@@ -24,12 +24,15 @@ function PipelinesContent({ slug }: { slug: string }) {
   const navigate = useNavigate();
   const { pipelines, getPipelineBySlug } = useSupabasePipelines();
   const [currentPipeline, setCurrentPipeline] = useState<any>(null);
+  const [loadingPipeline, setLoadingPipeline] = useState(true);
   
   // Buscar pipeline por slug
   useEffect(() => {
     const loadPipeline = async () => {
+      setLoadingPipeline(true);
       const pipeline = await getPipelineBySlug(slug);
       setCurrentPipeline(pipeline);
+      setLoadingPipeline(false);
     };
     loadPipeline();
   }, [slug, getPipelineBySlug]);
@@ -285,6 +288,16 @@ function PipelinesContent({ slug }: { slug: string }) {
     setFilterHealth('all');
   }, []);
 
+  // Mostrar skeleton enquanto carrega
+  if (loadingPipeline) {
+    return (
+      <div className="flex-1 overflow-hidden p-6">
+        <KanbanSkeleton />
+      </div>
+    );
+  }
+
+  // Mostrar erro apenas se realmente não encontrou
   if (!currentPipeline) {
     return (
       <div className="flex items-center justify-center h-screen">
