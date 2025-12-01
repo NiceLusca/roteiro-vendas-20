@@ -162,7 +162,7 @@ export const KanbanCard = memo(function KanbanCard({
     
     return {
       status: 'on-track' as const,
-      label: `${daysInStage}/${prazo}d`,
+      label: `${diasRestantes}d restante${diasRestantes > 1 ? 's' : ''}`,
       color: 'bg-muted text-muted-foreground',
       ringClass: '',
       pulse: false,
