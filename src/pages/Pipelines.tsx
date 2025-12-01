@@ -290,6 +290,15 @@ function PipelinesContent({ slug }: { slug: string }) {
     setFilterHealth('all');
   }, []);
 
+  // Handler para adicionar lead em uma etapa específica
+  const handleAddLead = useCallback((stageId: string) => {
+    logger.debug('Abrindo diálogo para adicionar lead', {
+      feature: 'pipelines',
+      metadata: { stageId, pipelineId }
+    });
+    navigate(`/leads?pipeline=${pipelineId}&stage=${stageId}&action=create`);
+  }, [navigate, pipelineId]);
+
   // Mostrar skeleton enquanto carrega
   if (loadingPipeline) {
     return (
@@ -438,6 +447,7 @@ function PipelinesContent({ slug }: { slug: string }) {
           key={`kanban-${pipelineId}`}
           selectedPipelineId={pipelineId}
           stageEntries={stageEntries}
+          onAddLead={handleAddLead}
           onViewLead={handleViewOrEditLead}
           onEditLead={handleViewOrEditLead}
           onAdvanceStage={handleAdvanceStage}
