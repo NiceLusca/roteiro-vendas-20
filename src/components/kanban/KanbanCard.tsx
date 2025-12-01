@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Lead, LeadPipelineEntry, PipelineStage } from '@/types/crm';
 import { formatWhatsApp } from '@/utils/formatters';
-import { Phone, ArrowRight, AlertCircle, Copy } from 'lucide-react';
+import { Phone, ArrowRight, AlertCircle, Copy, AlertTriangle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { KanbanCardMenu } from './KanbanCardMenu';
 import { AppointmentBadge } from '@/components/notifications/AppointmentBadge';
@@ -121,6 +121,55 @@ export const KanbanCard = memo(function KanbanCard({
     return Math.floor((Date.now() - new Date(entry.data_entrada_etapa).getTime()) / (1000 * 60 * 60 * 24));
   }, [entry.data_entrada_etapa]);
 
+  // Cálculo de urgência baseado no SLA (prazo_em_dias)
+  const slaStatus = useMemo(() => {
+    const prazo = stage.prazo_em_dias || 7; // Default 7 dias se não configurado
+    const diasRestantes = prazo - daysInStage;
+    
+    if (diasRestantes < 0) {
+      return {
+        status: 'overdue' as const,
+        label: `${Math.abs(diasRestantes)}d atrasado`,
+        color: 'bg-destructive text-destructive-foreground',
+        ringClass: 'ring-2 ring-destructive/70 ring-offset-1 ring-offset-background',
+        pulse: true,
+        icon: AlertTriangle
+      };
+    }
+    
+    if (diasRestantes === 0) {
+      return {
+        status: 'due-today' as const,
+        label: 'Vence hoje!',
+        color: 'bg-orange-500 text-white',
+        ringClass: 'ring-2 ring-orange-500/70 ring-offset-1 ring-offset-background',
+        pulse: true,
+        icon: Clock
+      };
+    }
+    
+    // Próximo do limite: 30% do prazo restante ou menos
+    if (diasRestantes <= Math.ceil(prazo * 0.3)) {
+      return {
+        status: 'warning' as const,
+        label: `${diasRestantes}d restante${diasRestantes > 1 ? 's' : ''}`,
+        color: 'bg-yellow-500/90 text-yellow-950',
+        ringClass: '',
+        pulse: false,
+        icon: Clock
+      };
+    }
+    
+    return {
+      status: 'on-track' as const,
+      label: `${daysInStage}/${prazo}d`,
+      color: 'bg-muted text-muted-foreground',
+      ringClass: '',
+      pulse: false,
+      icon: null
+    };
+  }, [daysInStage, stage.prazo_em_dias]);
+
 
   return (
     <Card 
@@ -131,7 +180,9 @@ export const KanbanCard = memo(function KanbanCard({
         "kanban-card kanban-card-stage group cursor-grab active:cursor-grabbing border-l-4",
         stageClass,
         lead.closer && "border-r-4",
-        (isLocalDragging || isDragging) && "opacity-50 rotate-1 scale-105 shadow-xl z-50"
+        (isLocalDragging || isDragging) && "opacity-50 rotate-1 scale-105 shadow-xl z-50",
+        // Ring de urgência para atrasados e vencendo hoje
+        slaStatus.ringClass
       )}
       style={{
         ...(lead.closer && {
@@ -220,11 +271,22 @@ export const KanbanCard = memo(function KanbanCard({
           </div>
         )}
 
-        {/* Próximo passo em 1 linha */}
+        {/* SLA Badge com alertas visuais */}
         <div className="flex items-center justify-between text-xs mb-3 py-1.5 px-2 bg-muted/30 rounded">
           <span className="text-muted-foreground truncate">
-            {stage.proximo_passo_tipo} • {daysInStage}d
+            {stage.proximo_passo_tipo}
           </span>
+          <Badge 
+            variant="outline" 
+            className={cn(
+              "text-[10px] font-semibold px-1.5 py-0 h-5 border-0",
+              slaStatus.color,
+              slaStatus.pulse && "animate-pulse"
+            )}
+          >
+            {slaStatus.icon && <slaStatus.icon className="w-3 h-3 mr-1" />}
+            {slaStatus.label}
+          </Badge>
         </div>
 
         {/* Botão de Avançar */}
