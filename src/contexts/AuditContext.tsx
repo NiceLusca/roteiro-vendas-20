@@ -12,6 +12,7 @@ interface AuditContextType {
     ator?: string;
   }) => Promise<void>;
   getAuditLogs: (entidade: string, entidade_id: string) => Promise<AuditLog[]>;
+  getAllLogs: () => Promise<AuditLog[]>;
 }
 
 const AuditContext = createContext<AuditContextType | undefined>(undefined);
@@ -85,8 +86,34 @@ export function AuditProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const getAllLogs = async (): Promise<AuditLog[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('timestamp', { ascending: false });
+
+      if (error) {
+        logger.error('Erro ao buscar todos os logs', error, { feature: 'audit-all-logs' });
+        return [];
+      }
+
+      return data?.map(log => ({
+        id: log.id,
+        entidade: log.entidade,
+        entidade_id: log.entidade_id,
+        ator: log.ator,
+        alteracao: (log.alteracao as any) || [],
+        timestamp: new Date(log.timestamp)
+      })) || [];
+    } catch (error) {
+      logger.error('Erro ao buscar logs', error as Error, { feature: 'audit-all-logs' });
+      return [];
+    }
+  };
+
   return (
-    <AuditContext.Provider value={{ logChange, getAuditLogs }}>
+    <AuditContext.Provider value={{ logChange, getAuditLogs, getAllLogs }}>
       {children}
     </AuditContext.Provider>
   );

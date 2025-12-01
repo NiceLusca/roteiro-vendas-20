@@ -1,7 +1,6 @@
 import React from 'react';
 import { CRMProvider } from './CRMContext';
 import { AuditProvider } from './AuditContext';
-import { AllLogsAuditProvider } from './AllLogsAuditContext';
 
 /**
  * Wrapper for pages that need CRM functionality
@@ -12,9 +11,7 @@ export function CRMProviderWrapper({ children }: { children: React.ReactNode }) 
   return (
     <CRMProvider>
       <AuditProvider>
-        <AllLogsAuditProvider>
-          {children}
-        </AllLogsAuditProvider>
+        {children}
       </AuditProvider>
     </CRMProvider>
   );
