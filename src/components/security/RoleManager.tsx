@@ -3,9 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, Shield, Settings, Trash2 } from 'lucide-react';
+import { Users, Shield, Settings, Trash2, Pencil } from 'lucide-react';
 
 interface UserRole {
   id: string;
@@ -16,8 +19,10 @@ interface UserRole {
 
 interface Profile {
   id: string;
-  email: string;
-  full_name: string;
+  user_id: string;
+  email: string | null;
+  full_name: string | null;
+  nome: string | null;
 }
 
 interface UserWithRoles {
@@ -29,6 +34,9 @@ export function RoleManager() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRole, setSelectedRole] = useState<'admin' | 'moderator' | 'user'>('user');
+  const [editingUser, setEditingUser] = useState<Profile | null>(null);
+  const [editName, setEditName] = useState('');
+  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   const fetchUsersAndRoles = async () => {
@@ -38,7 +46,7 @@ export function RoleManager() {
       // Buscar perfis de usuário
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('*');
+        .select('id, user_id, email, full_name, nome');
 
       if (profilesError) throw profilesError;
 
@@ -49,10 +57,10 @@ export function RoleManager() {
 
       if (rolesError) throw rolesError;
 
-      // Combinar dados
+      // Combinar dados - CORRIGIDO: usar user_id em vez de id
       const usersWithRoles: UserWithRoles[] = (profiles || []).map(profile => ({
         profile,
-        roles: (roles || []).filter(role => role.user_id === profile.id)
+        roles: (roles || []).filter(role => role.user_id === profile.user_id)
       }));
 
       setUsers(usersWithRoles);
@@ -70,9 +78,9 @@ export function RoleManager() {
 
   const assignRole = async (userId: string, role: 'admin' | 'moderator' | 'user') => {
     try {
-      // Verificar se o usuário já tem esse role
+      // Verificar se o usuário já tem esse role - CORRIGIDO: usar user_id
       const existingRole = users
-        .find(u => u.profile.id === userId)
+        .find(u => u.profile.user_id === userId)
         ?.roles.find(r => r.role === role);
 
       if (existingRole) {
@@ -134,11 +142,56 @@ export function RoleManager() {
     }
   };
 
+  const openEditDialog = (profile: Profile) => {
+    setEditingUser(profile);
+    setEditName(profile.nome || profile.full_name || '');
+  };
+
+  const closeEditDialog = () => {
+    setEditingUser(null);
+    setEditName('');
+  };
+
+  const updateProfile = async () => {
+    if (!editingUser) return;
+
+    try {
+      setSaving(true);
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          nome: editName,
+          full_name: editName 
+        })
+        .eq('user_id', editingUser.user_id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Perfil atualizado com sucesso"
+      });
+
+      closeEditDialog();
+      fetchUsersAndRoles();
+    } catch (error) {
+      console.error('Erro ao atualizar perfil:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o perfil",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case 'admin':
         return "destructive";
-      case 'manager':
+      case 'moderator':
         return "default";
       case 'user':
         return "secondary";
@@ -163,6 +216,10 @@ export function RoleManager() {
       user: 'Acesso básico às funcionalidades do sistema'
     };
     return descriptions[role as keyof typeof descriptions] || '';
+  };
+
+  const getDisplayName = (profile: Profile) => {
+    return profile.nome || profile.full_name || 'Nome não definido';
   };
 
   useEffect(() => {
@@ -249,16 +306,27 @@ export function RoleManager() {
           ) : (
             <div className="space-y-4">
               {users.map((user) => (
-                <div key={user.profile.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div key={user.profile.user_id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg gap-4">
                   <div className="flex-1">
-                    <div className="font-medium">{user.profile.full_name || 'Nome não definido'}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{getDisplayName(user.profile)}</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => openEditDialog(user.profile)}
+                        className="h-6 w-6 p-0"
+                        title="Editar usuário"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                    </div>
                     <div className="text-sm text-muted-foreground">{user.profile.email}</div>
-                    <div className="flex gap-2 mt-2">
+                    <div className="flex gap-2 mt-2 flex-wrap">
                       {user.roles.length === 0 ? (
                         <Badge variant="outline">Sem permissões</Badge>
                       ) : (
                         user.roles.map((role) => (
-                          <div key={role.id} className="flex items-center gap-2">
+                          <div key={role.id} className="flex items-center gap-1">
                             <Badge variant={getRoleBadgeVariant(role.role)}>
                               {getRoleLabel(role.role)}
                             </Badge>
@@ -267,6 +335,7 @@ export function RoleManager() {
                               variant="ghost"
                               onClick={() => removeRole(role.id)}
                               className="h-6 w-6 p-0"
+                              title="Remover permissão"
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -277,7 +346,7 @@ export function RoleManager() {
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Select value={selectedRole} onValueChange={(value: any) => setSelectedRole(value)}>
+                    <Select value={selectedRole} onValueChange={(value: 'admin' | 'moderator' | 'user') => setSelectedRole(value)}>
                       <SelectTrigger className="w-32">
                         <SelectValue />
                       </SelectTrigger>
@@ -288,7 +357,7 @@ export function RoleManager() {
                       </SelectContent>
                     </Select>
                     <Button
-                      onClick={() => assignRole(user.profile.id, selectedRole)}
+                      onClick={() => assignRole(user.profile.user_id, selectedRole)}
                       size="sm"
                     >
                       Atribuir
@@ -300,6 +369,51 @@ export function RoleManager() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de Edição de Usuário */}
+      <Dialog open={!!editingUser} onOpenChange={(open) => !open && closeEditDialog()}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Usuário</DialogTitle>
+            <DialogDescription>
+              Atualize as informações do usuário
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Nome</Label>
+              <Input
+                id="edit-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Nome do usuário"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                value={editingUser?.email || ''}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">
+                O email não pode ser alterado por segurança
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeEditDialog}>
+              Cancelar
+            </Button>
+            <Button onClick={updateProfile} disabled={saving}>
+              {saving ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
