@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, Shield, Settings, Trash2, Pencil } from 'lucide-react';
+import { Users, Shield, Settings, Pencil } from 'lucide-react';
 
 interface UserRole {
   id: string;
@@ -33,16 +32,10 @@ interface UserWithRoles {
 export function RoleManager() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRoles, setSelectedRoles] = useState<Record<string, 'admin' | 'moderator' | 'user'>>({});
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [editName, setEditName] = useState('');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-
-  const getSelectedRole = (userId: string) => selectedRoles[userId] || 'user';
-  const setSelectedRole = (userId: string, role: 'admin' | 'moderator' | 'user') => {
-    setSelectedRoles(prev => ({ ...prev, [userId]: role }));
-  };
 
   const fetchUsersAndRoles = async () => {
     try {
@@ -81,70 +74,46 @@ export function RoleManager() {
     }
   };
 
-  const assignRole = async (userId: string, role: 'admin' | 'moderator' | 'user') => {
+  const changeUserRole = async (userId: string, newRole: 'admin' | 'moderator' | 'user') => {
     try {
-      // Verificar se o usuário já tem esse role - CORRIGIDO: usar user_id
-      const existingRole = users
-        .find(u => u.profile.user_id === userId)
-        ?.roles.find(r => r.role === role);
+      // Remove todos os roles existentes do usuário
+      const { error: deleteError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
 
-      if (existingRole) {
-        toast({
-          title: "Aviso",
-          description: "O usuário já possui esta permissão",
-          variant: "destructive"
-        });
-        return;
-      }
+      if (deleteError) throw deleteError;
 
-      const { error } = await supabase
+      // Insere o novo role
+      const { error: insertError } = await supabase
         .from('user_roles')
         .insert({
           user_id: userId,
-          role: role
+          role: newRole
         });
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
       toast({
         title: "Sucesso",
-        description: "Permissão atribuída com sucesso"
+        description: `Permissão alterada para ${getRoleLabel(newRole)}`
       });
 
       fetchUsersAndRoles();
     } catch (error) {
-      console.error('Erro ao atribuir role:', error);
+      console.error('Erro ao alterar role:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível atribuir a permissão",
+        description: "Não foi possível alterar a permissão",
         variant: "destructive"
       });
     }
   };
 
-  const removeRole = async (roleId: string) => {
-    try {
-      const { error } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('id', roleId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Permissão removida com sucesso"
-      });
-
-      fetchUsersAndRoles();
-    } catch (error) {
-      console.error('Erro ao remover role:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível remover a permissão",
-        variant: "destructive"
-      });
-    }
+  const getCurrentRole = (user: UserWithRoles): 'admin' | 'moderator' | 'user' => {
+    if (user.roles.find(r => r.role === 'admin')) return 'admin';
+    if (user.roles.find(r => r.role === 'moderator')) return 'moderator';
+    return 'user';
   };
 
   const openEditDialog = (profile: Profile) => {
@@ -326,53 +295,23 @@ export function RoleManager() {
                       </Button>
                     </div>
                     <div className="text-sm text-muted-foreground">{user.profile.email}</div>
-                    <div className="flex gap-2 mt-2 flex-wrap">
-                      {user.roles.length === 0 ? (
-                        <Badge variant="outline">Sem permissões</Badge>
-                      ) : (
-                        user.roles.map((role) => (
-                          <div key={role.id} className="flex items-center gap-1">
-                            <Badge variant={getRoleBadgeVariant(role.role)}>
-                              {getRoleLabel(role.role)}
-                            </Badge>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => removeRole(role.id)}
-                              className="h-6 w-6 p-0"
-                              title="Remover permissão"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))
-                      )}
-                    </div>
                   </div>
                   
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Adicionar permissão:</span>
-                    <div className="flex items-center gap-2">
-                      <Select 
-                        value={getSelectedRole(user.profile.user_id)} 
-                        onValueChange={(value: 'admin' | 'moderator' | 'user') => setSelectedRole(user.profile.user_id, value)}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="user">Usuário</SelectItem>
-                          <SelectItem value="moderator">Moderador</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        onClick={() => assignRole(user.profile.user_id, getSelectedRole(user.profile.user_id))}
-                        size="sm"
-                      >
-                        Atribuir
-                      </Button>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Permissão:</span>
+                    <Select 
+                      value={getCurrentRole(user)} 
+                      onValueChange={(value: 'admin' | 'moderator' | 'user') => changeUserRole(user.profile.user_id, value)}
+                    >
+                      <SelectTrigger className="w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">Usuário</SelectItem>
+                        <SelectItem value="moderator">Moderador</SelectItem>
+                        <SelectItem value="admin">Administrador</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               ))}
