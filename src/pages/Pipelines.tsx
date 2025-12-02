@@ -381,7 +381,7 @@ function PipelinesContent({ slug }: { slug: string }) {
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
       {/* Header Fixo - PipelineSelector + Filtros */}
       <div className="sticky top-0 z-[5] bg-background border-b">
-        <div className="px-6 pt-4 pb-4 space-y-4 max-w-full overflow-x-hidden">
+        <div className="px-4 sm:px-6 pt-4 pb-4 space-y-4 max-w-full">
           <PipelineSelector
             pipelines={activePipelines}
             selectedPipelineId={pipelineId}
@@ -391,20 +391,20 @@ function PipelinesContent({ slug }: { slug: string }) {
           />
         
           {/* Busca e Filtros */}
-          <Card className="overflow-x-hidden">
-            <CardHeader>
+          <Card>
+            <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Filter className="h-4 w-4" />
                 Buscar e Filtrar Leads
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-4 flex-wrap max-w-full">
-                {/* Busca */}
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <Search className="h-4 w-4 text-muted-foreground" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-3">
+                {/* Busca - sempre largura total em mobile */}
+                <div className="flex items-center gap-2 col-span-full lg:flex-1 lg:min-w-[200px]">
+                  <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <Input
-                    placeholder="Buscar por nome do lead..."
+                    placeholder="Buscar por nome..."
                     value={searchTerm}
                     onChange={(e) => handleSearchChange(e.target.value)}
                     className="flex-1"
@@ -413,11 +413,11 @@ function PipelinesContent({ slug }: { slug: string }) {
 
                 {/* Filtro Closer */}
                 <Select value={filterCloser} onValueChange={setFilterCloser}>
-                  <SelectTrigger className="w-32 sm:w-40">
+                  <SelectTrigger className="w-full lg:w-36">
                     <SelectValue placeholder="Closer" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos os closers</SelectItem>
+                    <SelectItem value="all">Todos closers</SelectItem>
                     {closers.map((closer, index) => (
                       <SelectItem key={closer || index} value={closer as string}>
                         {closer as string}
@@ -428,7 +428,7 @@ function PipelinesContent({ slug }: { slug: string }) {
 
                 {/* Filtro Score */}
                 <Select value={filterScore} onValueChange={setFilterScore}>
-                  <SelectTrigger className="w-28 sm:w-32">
+                  <SelectTrigger className="w-full lg:w-28">
                     <SelectValue placeholder="Score" />
                   </SelectTrigger>
                   <SelectContent>
@@ -441,7 +441,7 @@ function PipelinesContent({ slug }: { slug: string }) {
 
                 {/* Filtro Saúde */}
                 <Select value={filterHealth} onValueChange={setFilterHealth}>
-                  <SelectTrigger className="w-28 sm:w-32">
+                  <SelectTrigger className="w-full lg:w-28">
                     <SelectValue placeholder="Saúde" />
                   </SelectTrigger>
                   <SelectContent>
@@ -454,7 +454,7 @@ function PipelinesContent({ slug }: { slug: string }) {
 
                 {/* Filtro Responsável */}
                 <Select value={filterResponsible} onValueChange={setFilterResponsible}>
-                  <SelectTrigger className="w-32 sm:w-44">
+                  <SelectTrigger className="w-full lg:w-40">
                     <SelectValue placeholder="Responsável" />
                   </SelectTrigger>
                   <SelectContent>
@@ -467,13 +467,13 @@ function PipelinesContent({ slug }: { slug: string }) {
                   </SelectContent>
                 </Select>
 
-                {/* Limpar filtros */}
+                {/* Limpar filtros - largura total em mobile */}
                 {(searchTerm || filterCloser !== 'all' || filterScore !== 'all' || filterHealth !== 'all' || filterResponsible !== 'all') && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={clearFilters}
-                    className="ml-auto"
+                    className="col-span-full sm:col-span-1 lg:col-auto"
                   >
                     <RotateCcw className="h-4 w-4 mr-2" />
                     Limpar Filtros
@@ -493,7 +493,7 @@ function PipelinesContent({ slug }: { slug: string }) {
       </div>
 
       {/* Área de Scroll APENAS para o Kanban */}
-      <div className="flex-1 overflow-x-auto overflow-y-auto px-6 pt-6 pb-6">
+      <div className="flex-1 overflow-x-auto overflow-y-auto px-4 sm:px-6 pt-6 pb-6">
         <KanbanBoard
           key={`kanban-${pipelineId}`}
           selectedPipelineId={pipelineId}
