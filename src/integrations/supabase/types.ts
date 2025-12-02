@@ -427,6 +427,102 @@ export type Database = {
           },
         ]
       }
+      lead_responsibility_history: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          lead_id: string
+          notes: string | null
+          performed_by: string | null
+          performed_by_name: string | null
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          lead_id: string
+          notes?: string | null
+          performed_by?: string | null
+          performed_by_name?: string | null
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          lead_id?: string
+          notes?: string | null
+          performed_by?: string | null
+          performed_by_name?: string | null
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_responsibility_history_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_responsibles: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          created_at: string | null
+          id: string
+          is_primary: boolean | null
+          lead_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          lead_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+          lead_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_responsibles_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "lead_responsibles_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_responsibles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       lead_tag_assignments: {
         Row: {
           created_at: string | null

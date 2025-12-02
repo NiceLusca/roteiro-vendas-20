@@ -5,29 +5,29 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Lead } from '@/types/crm';
 import { useLeadNotes } from '@/hooks/useLeadNotes';
 import { useLeadAttachments } from '@/hooks/useLeadAttachments';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useLeadResponsibles } from '@/hooks/useLeadResponsibles';
+import { ResponsibleSelector } from '@/components/leads/ResponsibleSelector';
 import { 
   User, 
   Mail, 
   Phone, 
-  MessageSquare, 
   Paperclip, 
   Upload, 
   Download, 
   Trash2,
   Send,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Users
 } from 'lucide-react';
 import { formatWhatsApp } from '@/utils/formatters';
 import { toast } from 'sonner';
 import { logger } from '@/utils/logger';
-import { cn } from '@/lib/utils';
-import { CLOSERS, getCloserColor, getCloserDotColor } from '@/utils/closerColors';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LeadEditDialogProps {
   open: boolean;
@@ -41,12 +41,28 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
     nome: lead.nome,
     whatsapp: lead.whatsapp || '',
     email: lead.email || '',
-    segmento: lead.segmento || '',
-    closer: lead.closer || ''
+    segmento: lead.segmento || ''
   });
   const [newNote, setNewNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [pasteEnabled, setPasteEnabled] = useState(false);
+  const [currentUserName, setCurrentUserName] = useState<string>('');
+
+  // Buscar nome do usuário atual para o histórico
+  useEffect(() => {
+    const fetchUserName = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('nome, full_name')
+          .eq('user_id', user.id)
+          .single();
+        setCurrentUserName(profile?.nome || profile?.full_name || 'Usuário');
+      }
+    };
+    fetchUserName();
+  }, []);
 
   const { notes, loading: notesLoading, addNote } = useLeadNotes(lead.id);
   const { 
@@ -58,6 +74,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
     downloadAttachment 
   } = useLeadAttachments(lead.id);
   const { saveLead } = useSupabaseLeads();
+  const { responsibles, history } = useLeadResponsibles(lead.id);
 
   const handleSave = async () => {
     try {
@@ -147,8 +164,16 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
         </DialogHeader>
 
         <Tabs defaultValue="info" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="info">Informações</TabsTrigger>
+            <TabsTrigger value="responsibles">
+              Responsáveis
+              {responsibles.length > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {responsibles.length}
+                </Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="comments">
               Comentários
               {notes.length > 0 && (
@@ -216,33 +241,6 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="closer">Closer Responsável</Label>
-              <Select
-                value={formData.closer}
-                onValueChange={(value) => setFormData({ ...formData, closer: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecionar closer" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CLOSERS.map((closer) => (
-                    <SelectItem key={closer} value={closer}>
-                      <div className="flex items-center gap-2">
-                        <div className={cn('w-3 h-3 rounded-full', getCloserDotColor(closer))} />
-                        {closer}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {formData.closer && (
-                <Badge className={cn('mt-2', getCloserColor(formData.closer))}>
-                  Atribuído a: {formData.closer}
-                </Badge>
-              )}
-            </div>
-
             <div className="flex justify-end gap-2 pt-4 border-t">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
@@ -250,6 +248,49 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
               <Button onClick={handleSave} disabled={saving}>
                 {saving ? 'Salvando...' : 'Salvar Alterações'}
               </Button>
+            </div>
+          </TabsContent>
+
+          {/* Tab de Responsáveis */}
+          <TabsContent value="responsibles" className="space-y-4 mt-4">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Users className="h-4 w-4" />
+                <span>Gerencie os responsáveis por este lead</span>
+              </div>
+              
+              <ResponsibleSelector 
+                leadId={lead.id} 
+                performerName={currentUserName}
+              />
+              
+              {/* Histórico de responsabilidade */}
+              {history.length > 0 && (
+                <div className="mt-6 pt-4 border-t">
+                  <h4 className="text-sm font-medium mb-3">Histórico de Atribuições</h4>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {history.map((entry) => (
+                      <div key={entry.id} className="text-xs text-muted-foreground flex items-center gap-2">
+                        <span className="text-foreground/70">
+                          {new Date(entry.created_at).toLocaleString('pt-BR')}
+                        </span>
+                        <span>•</span>
+                        <span>
+                          {entry.action === 'assigned' && `${entry.user_name} foi atribuído`}
+                          {entry.action === 'removed' && `${entry.user_name} foi removido`}
+                          {entry.action === 'primary_changed' && `${entry.user_name} tornou-se responsável principal`}
+                        </span>
+                        {entry.performed_by_name && (
+                          <>
+                            <span>por</span>
+                            <span className="font-medium">{entry.performed_by_name}</span>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </TabsContent>
 
