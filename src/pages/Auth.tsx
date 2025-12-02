@@ -11,6 +11,7 @@ export function Auth() {
   const { user, signIn, signUp, resetPassword, loading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
@@ -30,7 +31,7 @@ export function Auth() {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await signUp(email, password);
+    await signUp(email, password, fullName || undefined);
     setIsSubmitting(false);
   };
 
@@ -175,6 +176,16 @@ export function Auth() {
               
               <TabsContent value="register">
                 <form onSubmit={handleSignUp} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="register-name">Nome completo</Label>
+                    <Input
+                      id="register-name"
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Seu nome"
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="register-email">Email</Label>
                     <Input
