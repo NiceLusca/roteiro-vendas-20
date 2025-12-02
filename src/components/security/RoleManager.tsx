@@ -33,11 +33,16 @@ interface UserWithRoles {
 export function RoleManager() {
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRole, setSelectedRole] = useState<'admin' | 'moderator' | 'user'>('user');
+  const [selectedRoles, setSelectedRoles] = useState<Record<string, 'admin' | 'moderator' | 'user'>>({});
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [editName, setEditName] = useState('');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+
+  const getSelectedRole = (userId: string) => selectedRoles[userId] || 'user';
+  const setSelectedRole = (userId: string, role: 'admin' | 'moderator' | 'user') => {
+    setSelectedRoles(prev => ({ ...prev, [userId]: role }));
+  };
 
   const fetchUsersAndRoles = async () => {
     try {
@@ -345,23 +350,29 @@ export function RoleManager() {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <Select value={selectedRole} onValueChange={(value: 'admin' | 'moderator' | 'user') => setSelectedRole(value)}>
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="user">Usuário</SelectItem>
-                        <SelectItem value="moderator">Moderador</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      onClick={() => assignRole(user.profile.user_id, selectedRole)}
-                      size="sm"
-                    >
-                      Atribuir
-                    </Button>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">Adicionar permissão:</span>
+                    <div className="flex items-center gap-2">
+                      <Select 
+                        value={getSelectedRole(user.profile.user_id)} 
+                        onValueChange={(value: 'admin' | 'moderator' | 'user') => setSelectedRole(user.profile.user_id, value)}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="user">Usuário</SelectItem>
+                          <SelectItem value="moderator">Moderador</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        onClick={() => assignRole(user.profile.user_id, getSelectedRole(user.profile.user_id))}
+                        size="sm"
+                      >
+                        Atribuir
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
