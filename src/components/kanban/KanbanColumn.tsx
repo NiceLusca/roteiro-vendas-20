@@ -205,6 +205,8 @@ export const KanbanColumn = memo(function KanbanColumn({
                   stage={stage}
                   nextStage={nextStage}
                   checklistComplete={checklistComplete}
+                  nextAppointment={(entry as any).nextAppointment}
+                  responsibles={(entry as any).responsibles || []}
                   onViewLead={() => onViewLead?.(entry.lead.id)}
                   onEditLead={() => onEditLead?.(entry.lead.id)}
                   onCreateAppointment={() => onCreateAppointment?.(entry.lead.id)}

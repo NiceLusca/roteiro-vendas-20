@@ -6,6 +6,7 @@ import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { useKanbanAppointments } from '@/hooks/useKanbanAppointments';
+import { useMultipleLeadResponsibles } from '@/hooks/useLeadResponsibles';
 import { EnhancedLoading, SmartSkeleton } from '@/components/ui/enhanced-loading';
 import { KanbanSkeleton } from '@/components/ui/loading-skeleton';
 import { Button } from '@/components/ui/button';
@@ -260,6 +261,10 @@ function PipelinesContent({ slug }: { slug: string }) {
     fetchNextAppointments(leadIds);
   }, [allEntries.length]); // ✅ SOLUÇÃO 2: Removido fetchNextAppointments das dependências
 
+  // Buscar responsáveis de todos os leads
+  const leadIds = useMemo(() => allEntries.map(entry => entry.lead_id), [allEntries]);
+  const { data: responsiblesMap = {} } = useMultipleLeadResponsibles(leadIds);
+
   // Salvar nome do pipeline no sessionStorage para breadcrumb
   useEffect(() => {
     if (currentPipeline) {
@@ -330,7 +335,8 @@ function PipelinesContent({ slug }: { slug: string }) {
 
     const entriesWithAppointments = entries.map(entry => ({
       ...entry,
-      nextAppointment: getNextAppointmentForLead(entry.lead_id)
+      nextAppointment: getNextAppointmentForLead(entry.lead_id),
+      responsibles: responsiblesMap[entry.lead_id] || []
     }));
 
     return {

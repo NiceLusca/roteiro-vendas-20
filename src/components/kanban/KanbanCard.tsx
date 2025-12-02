@@ -8,7 +8,8 @@ import { Phone, ArrowRight, AlertCircle, Copy, AlertTriangle, Clock } from 'luci
 import { cn } from '@/lib/utils';
 import { KanbanCardMenu } from './KanbanCardMenu';
 import { AppointmentBadge } from '@/components/notifications/AppointmentBadge';
-import { getCloserColor, getCloserBorderColor } from '@/utils/closerColors';
+import { ResponsibleAvatars } from '@/components/leads/ResponsibleAvatars';
+import type { LeadResponsible } from '@/hooks/useLeadResponsibles';
 
 interface AppointmentInfo {
   id: string;
@@ -26,6 +27,7 @@ interface KanbanCardProps {
   nextStage?: PipelineStage | null;
   checklistComplete?: boolean;
   nextAppointment?: AppointmentInfo | null;
+  responsibles?: LeadResponsible[];
   isDragging?: boolean;
   onViewLead?: () => void;
   onEditLead?: () => void;
@@ -48,6 +50,7 @@ export const KanbanCard = memo(function KanbanCard({
   nextStage,
   checklistComplete = true,
   nextAppointment,
+  responsibles = [],
   isDragging = false,
   onViewLead,
   onEditLead,
@@ -179,16 +182,10 @@ export const KanbanCard = memo(function KanbanCard({
       className={cn(
         "kanban-card kanban-card-stage group cursor-grab active:cursor-grabbing border-l-4",
         stageClass,
-        lead.closer && "border-r-4",
         (isLocalDragging || isDragging) && "opacity-50 rotate-1 scale-105 shadow-xl z-50",
         // Ring de urgência para atrasados e vencendo hoje
         slaStatus.ringClass
       )}
-      style={{
-        ...(lead.closer && {
-          borderRightColor: getCloserBorderColor(lead.closer)
-        })
-      }}
     >
       <CardContent className="p-3">
         {/* Header compacto com menu */}
@@ -211,11 +208,6 @@ export const KanbanCard = memo(function KanbanCard({
             <Badge variant="secondary" className="bg-primary/10 text-primary font-bold text-xs px-2">
               {lead.lead_score}
             </Badge>
-            {lead.closer && (
-              <Badge className={cn('text-xs px-2 py-0.5 font-semibold', getCloserColor(lead.closer))}>
-                {lead.closer}
-              </Badge>
-            )}
             <div 
               className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto"
               onMouseDown={(e) => e.stopPropagation()}
@@ -235,6 +227,11 @@ export const KanbanCard = memo(function KanbanCard({
               />
             </div>
           </div>
+        </div>
+
+        {/* Responsáveis */}
+        <div className="flex items-center justify-between mb-2">
+          <ResponsibleAvatars responsibles={responsibles} maxDisplay={3} size="sm" />
         </div>
 
         {/* Telefone com copiar */}
@@ -333,6 +330,8 @@ export const KanbanCard = memo(function KanbanCard({
     prevProps.stage.id === nextProps.stage.id &&
     prevProps.checklistComplete === nextProps.checklistComplete &&
     prevProps.isDragging === nextProps.isDragging &&
+    // Comparação de responsáveis
+    prevProps.responsibles?.length === nextProps.responsibles?.length &&
     // ✅ SOLUÇÃO 3: Comparação profunda de nextAppointment
     prevProps.nextAppointment?.id === nextProps.nextAppointment?.id &&
     prevProps.nextAppointment?.start_at === nextProps.nextAppointment?.start_at &&
