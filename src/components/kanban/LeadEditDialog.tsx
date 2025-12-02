@@ -25,6 +25,7 @@ import {
   Users
 } from 'lucide-react';
 import { formatWhatsApp } from '@/utils/formatters';
+import { linkifyText } from '@/utils/linkify';
 import { toast } from 'sonner';
 import { logger } from '@/utils/logger';
 import { supabase } from '@/integrations/supabase/client';
@@ -334,7 +335,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
                         {new Date(note.created_at).toLocaleString('pt-BR')}
                       </span>
                     </div>
-                    <p className="text-sm">{note.note_text}</p>
+                    <p className="text-sm whitespace-pre-wrap">{linkifyText(note.note_text)}</p>
                   </div>
                 ))
               )}
