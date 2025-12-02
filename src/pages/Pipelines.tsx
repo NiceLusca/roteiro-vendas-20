@@ -88,11 +88,35 @@ function PipelinesContent({ slug }: { slug: string }) {
   const [filterCloser, setFilterCloser] = useState<string>('all');
   const [filterScore, setFilterScore] = useState<string>('all');
   const [filterHealth, setFilterHealth] = useState<string>('all');
+  const [filterResponsible, setFilterResponsible] = useState<string>('all');
 
   // Processar dados
   const pipelineStages = stages
     .filter(stage => stage.pipeline_id === pipelineId)
     .sort((a, b) => a.ordem - b.ordem);
+
+  // Buscar responsáveis de todos os leads (antes do filtro de responsável)
+  const baseLeadIds = useMemo(() => 
+    leadPipelineEntries
+      .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId && entry.leads !== null)
+      .map(entry => entry.lead_id),
+    [leadPipelineEntries, pipelineId]
+  );
+  const { data: responsiblesMap = {} } = useMultipleLeadResponsibles(baseLeadIds);
+
+  // Obter responsáveis únicos para o filtro
+  const uniqueResponsibles = useMemo(() => {
+    const responsibleSet = new Map<string, { user_id: string; display_name: string }>();
+    Object.values(responsiblesMap).flat().forEach(r => {
+      if (r.user_id && !responsibleSet.has(r.user_id)) {
+        responsibleSet.set(r.user_id, { 
+          user_id: r.user_id, 
+          display_name: r.profile?.full_name || r.profile?.nome || r.profile?.email || 'Sem nome' 
+        });
+      }
+    });
+    return Array.from(responsibleSet.values());
+  }, [responsiblesMap]);
 
   // ✅ Usar dados do JOIN: entry.leads já contém os dados do lead
   const allEntries = leadPipelineEntries
@@ -117,6 +141,15 @@ function PipelinesContent({ slug }: { slug: string }) {
       // Filtro de saúde
       if (filterHealth !== 'all' && entry.saude_etapa !== filterHealth) {
         return false;
+      }
+      
+      // Filtro de responsável
+      if (filterResponsible !== 'all') {
+        const leadResponsibles = responsiblesMap[entry.lead_id] || [];
+        const hasResponsible = leadResponsibles.some(r => r.user_id === filterResponsible);
+        if (!hasResponsible) {
+          return false;
+        }
       }
       
       return true;
@@ -261,10 +294,6 @@ function PipelinesContent({ slug }: { slug: string }) {
     fetchNextAppointments(leadIds);
   }, [allEntries.length]); // ✅ SOLUÇÃO 2: Removido fetchNextAppointments das dependências
 
-  // Buscar responsáveis de todos os leads
-  const leadIds = useMemo(() => allEntries.map(entry => entry.lead_id), [allEntries]);
-  const { data: responsiblesMap = {} } = useMultipleLeadResponsibles(leadIds);
-
   // Salvar nome do pipeline no sessionStorage para breadcrumb
   useEffect(() => {
     if (currentPipeline) {
@@ -293,6 +322,7 @@ function PipelinesContent({ slug }: { slug: string }) {
     setFilterCloser('all');
     setFilterScore('all');
     setFilterHealth('all');
+    setFilterResponsible('all');
   }, []);
 
   // Handler para adicionar lead em uma etapa específica
@@ -422,8 +452,23 @@ function PipelinesContent({ slug }: { slug: string }) {
                   </SelectContent>
                 </Select>
 
+                {/* Filtro Responsável */}
+                <Select value={filterResponsible} onValueChange={setFilterResponsible}>
+                  <SelectTrigger className="w-32 sm:w-44">
+                    <SelectValue placeholder="Responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos responsáveis</SelectItem>
+                    {uniqueResponsibles.map((resp) => (
+                      <SelectItem key={resp.user_id} value={resp.user_id}>
+                        {resp.display_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 {/* Limpar filtros */}
-                {(searchTerm || filterCloser !== 'all' || filterScore !== 'all' || filterHealth !== 'all') && (
+                {(searchTerm || filterCloser !== 'all' || filterScore !== 'all' || filterHealth !== 'all' || filterResponsible !== 'all') && (
                   <Button
                     variant="outline"
                     size="sm"
