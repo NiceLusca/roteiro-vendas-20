@@ -125,10 +125,8 @@ export function CRMProvider({ children }: CRMProviderProps) {
           etapa_atual_id: stageId,
           status_inscricao: 'Ativo',
           data_entrada_etapa: new Date().toISOString(),
-          tempo_em_etapa_dias: 0,
-          dias_em_atraso: 0,
-          saude_etapa: 'Verde',
-          checklist_state: {}
+          data_inscricao: new Date().toISOString(),
+          saude_etapa: 'Verde'
         }]);
 
       if (error) throw error;
@@ -179,10 +177,8 @@ export function CRMProvider({ children }: CRMProviderProps) {
           etapa_atual_id: newStageId,
           status_inscricao: 'Ativo',
           data_entrada_etapa: new Date().toISOString(),
-          tempo_em_etapa_dias: 0,
-          dias_em_atraso: 0,
-          saude_etapa: 'Verde',
-          checklist_state: {}
+          data_inscricao: new Date().toISOString(),
+          saude_etapa: 'Verde'
         }]);
 
       if (createError) throw createError;
