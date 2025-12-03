@@ -88,7 +88,8 @@ function LeadsContent() {
     leads, 
     totalCount,
     totalPages,
-    isLoading: leadsLoading, 
+    isLoading: leadsLoading,
+    isFetching: leadsFetching,
     saveLead, 
     savingLead,
     refetch
@@ -384,7 +385,8 @@ function LeadsContent() {
     );
   }
 
-  if (leadsLoading) {
+  // Show skeleton only on initial load when there are no leads yet
+  if (leadsLoading && leads.length === 0) {
     return (
       <div className="space-y-6 p-6">
         <div className="flex items-center justify-between">
@@ -393,35 +395,6 @@ function LeadsContent() {
             <p className="text-muted-foreground">Carregando leads...</p>
           </div>
         </div>
-        <SkeletonLeadsList count={5} />
-      </div>
-    );
-  }
-  
-  // Show empty state with skeleton when no leads
-  const shouldShowSkeleton = leadsLoading || (leads.length === 0 && currentPage === 1);
-  
-  if (shouldShowSkeleton && leads.length === 0) {
-    return (
-      <div className="space-y-6 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Leads</h1>
-            <p className="text-muted-foreground">Carregando leads...</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" disabled className="gap-2" aria-label="Upload de leads em massa">
-              <Upload className="h-4 w-4" />
-              Importar Planilha
-            </Button>
-            <Button disabled className="gap-2">
-              <Plus className="h-4 w-4" />
-              Novo Lead
-            </Button>
-          </div>
-        </div>
-        
-        {/* Skeleton loading */}
         <SkeletonLeadsList count={5} />
       </div>
     );
@@ -479,7 +452,7 @@ function LeadsContent() {
         <CardContent>
           <div className="flex items-center gap-4 flex-wrap">
             {/* Busca */}
-            <div className="flex items-center gap-2 min-w-64">
+            <div className="flex items-center gap-2 min-w-64 relative">
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nome, email ou WhatsApp..."
@@ -487,6 +460,9 @@ function LeadsContent() {
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="flex-1"
               />
+              {leadsFetching && (
+                <Loader2 className="h-4 w-4 animate-spin absolute right-3 text-muted-foreground" />
+              )}
             </div>
 
             {/* Filtro Status */}
