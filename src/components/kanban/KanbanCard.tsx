@@ -119,16 +119,16 @@ export const KanbanCard = memo(function KanbanCard({
 
   const stageClass = useMemo(() => getStageColorClass(stage.nome), [stage.nome, getStageColorClass]);
 
-  const daysInStage = useMemo(() => {
-    if (!entry.data_entrada_etapa) return 0;
-    return Math.floor((Date.now() - new Date(entry.data_entrada_etapa).getTime()) / (1000 * 60 * 60 * 24));
-  }, [entry.data_entrada_etapa]);
+  // Cálculo direto sem memoização para garantir atualização diária
+  const daysInStage = entry.data_entrada_etapa 
+    ? Math.floor((Date.now() - new Date(entry.data_entrada_etapa).getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
 
   // Cálculo de urgência baseado no SLA (prazo_em_dias)
-  const slaStatus = useMemo(() => {
-    const prazo = stage.prazo_em_dias || 7; // Default 7 dias se não configurado
-    const diasRestantes = prazo - daysInStage;
-    
+  const prazo = stage.prazo_em_dias || 7;
+  const diasRestantes = prazo - daysInStage;
+  
+  const slaStatus = (() => {
     if (diasRestantes < 0) {
       return {
         status: 'overdue' as const,
@@ -151,7 +151,6 @@ export const KanbanCard = memo(function KanbanCard({
       };
     }
     
-    // Próximo do limite: 30% do prazo restante ou menos
     if (diasRestantes <= Math.ceil(prazo * 0.3)) {
       return {
         status: 'warning' as const,
@@ -171,7 +170,7 @@ export const KanbanCard = memo(function KanbanCard({
       pulse: false,
       icon: null
     };
-  }, [daysInStage, stage.prazo_em_dias]);
+  })();
 
 
   return (
