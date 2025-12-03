@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/crm';
 import { useToast } from '@/hooks/use-toast';
@@ -24,6 +24,7 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
   const {
     data: leadsData,
     isLoading,
+    isFetching,
     error,
     refetch
   } = useQuery({
@@ -139,6 +140,7 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
     enabled: !!user,
     staleTime: 30000, // Cache for 30 seconds
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    placeholderData: keepPreviousData, // Keep previous data while fetching new
   });
 
   // Mutation for saving leads
@@ -224,6 +226,7 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
     totalPages: leadsData?.totalPages || 0,
     currentPage: page,
     isLoading,
+    isFetching,
     error,
     saveLead: saveMutation.mutate,
     savingLead: saveMutation.isPending,
