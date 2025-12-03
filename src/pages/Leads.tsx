@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -42,7 +42,8 @@ function LeadsContent() {
   const { inscribeLeadToPipeline } = useCRM();
   const [showForm, setShowForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | undefined>();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterScore, setFilterScore] = useState<string>('all');
   const [filterTag, setFilterTag] = useState<string>('all');
@@ -63,6 +64,25 @@ function LeadsContent() {
   const [loadingPipelines, setLoadingPipelines] = useState(false);
   const [pipelineEntries, setPipelineEntries] = useState<any[]>([]);
   
+  // Debounce search input
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+      setCurrentPage(1); // Reset to first page on search
+    }, 400);
+    
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [searchInput]);
+
   // Use optimized hook with React Query
   const { 
     leads, 
@@ -74,7 +94,7 @@ function LeadsContent() {
     refetch
   } = useOptimizedLeads({
     page: currentPage,
-    searchTerm,
+    searchTerm: debouncedSearch,
     filterStatus,
     filterScore,
     filterTag
@@ -240,7 +260,7 @@ function LeadsContent() {
   const handleOpenBulkTagDialog = useCallback(async () => {
     try {
       const ids = await getFilteredLeadIds({
-        searchTerm,
+        searchTerm: debouncedSearch,
         filterStatus,
         filterScore,
         filterTag
@@ -251,12 +271,12 @@ function LeadsContent() {
     } catch (error) {
       console.error('Error getting filtered leads:', error);
     }
-  }, [searchTerm, filterStatus, filterScore, filterTag, leads, getFilteredLeadIds]);
+  }, [debouncedSearch, filterStatus, filterScore, filterTag, leads, getFilteredLeadIds]);
 
   const handleOpenBulkDeleteDialog = useCallback(async () => {
     try {
       const ids = await getFilteredLeadIds({
-        searchTerm,
+        searchTerm: debouncedSearch,
         filterStatus,
         filterScore,
         filterTag
@@ -267,7 +287,7 @@ function LeadsContent() {
     } catch (error) {
       console.error('Error getting filtered leads:', error);
     }
-  }, [searchTerm, filterStatus, filterScore, filterTag, leads, getFilteredLeadIds]);
+  }, [debouncedSearch, filterStatus, filterScore, filterTag, leads, getFilteredLeadIds]);
 
   const handleBulkAddTags = useCallback(async (tagIds: string[]) => {
     await addTagsToLeads(filteredLeadIds, tagIds);
@@ -293,7 +313,7 @@ function LeadsContent() {
   const handleOpenBulkPipelineDialog = useCallback(async () => {
     try {
       const ids = await getFilteredLeadIds({
-        searchTerm,
+        searchTerm: debouncedSearch,
         filterStatus,
         filterScore,
         filterTag
@@ -304,12 +324,12 @@ function LeadsContent() {
     } catch (error) {
       console.error('Error getting filtered leads:', error);
     }
-  }, [searchTerm, filterStatus, filterScore, filterTag, leads, getFilteredLeadIds]);
+  }, [debouncedSearch, filterStatus, filterScore, filterTag, leads, getFilteredLeadIds]);
 
   const handleOpenBulkScoreDialog = useCallback(async () => {
     try {
       const ids = await getFilteredLeadIds({
-        searchTerm,
+        searchTerm: debouncedSearch,
         filterStatus,
         filterScore,
         filterTag
@@ -319,7 +339,7 @@ function LeadsContent() {
     } catch (error) {
       console.error('Error getting filtered leads:', error);
     }
-  }, [searchTerm, filterStatus, filterScore, filterTag, getFilteredLeadIds]);
+  }, [debouncedSearch, filterStatus, filterScore, filterTag, getFilteredLeadIds]);
 
   const handleBulkInscribePipeline = useCallback(async (pipelineId: string, stageId: string, skipExisting: boolean) => {
     await bulkInscribePipeline(filteredLeadIds, pipelineId, stageId, skipExisting);
@@ -463,8 +483,8 @@ function LeadsContent() {
               <Search className="h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nome, email ou WhatsApp..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 className="flex-1"
               />
             </div>
