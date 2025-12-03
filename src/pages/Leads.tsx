@@ -18,7 +18,7 @@ import { useOptimizedLeads } from '@/hooks/useOptimizedLeads';
 import { useLeadTags } from '@/hooks/useLeadTags';
 import { useBulkLeadActions } from '@/hooks/useBulkLeadActions';
 import { useToast } from '@/hooks/use-toast';
-import { CRMProviderWrapper } from '@/contexts/CRMProviderWrapper';
+
 import { useCRM } from '@/contexts/CRMContext';
 import { Lead } from '@/types/crm';
 import { formatWhatsApp, formatDateTime } from '@/utils/formatters';
@@ -809,9 +809,5 @@ function LeadsContent() {
 }
 
 export default function Leads() {
-  return (
-    <CRMProviderWrapper>
-      <LeadsContent />
-    </CRMProviderWrapper>
-  );
+  return <LeadsContent />;
 }
