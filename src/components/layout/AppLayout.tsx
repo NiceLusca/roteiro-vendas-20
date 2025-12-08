@@ -2,10 +2,12 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { Outlet } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Plus, Bell, User, Search, Command } from 'lucide-react';
+import { Plus, User, Search, Command } from 'lucide-react';
 import { BreadcrumbNavigation } from '@/components/ui/breadcrumb-navigation';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { KeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help';
+import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import { useSLANotifications } from '@/hooks/useSLANotifications';
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContextSecure';
@@ -16,6 +18,9 @@ export function AppLayout() {
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Initialize SLA notifications monitoring
+  useSLANotifications();
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -161,10 +166,7 @@ export function AppLayout() {
               </Button>
               
               {/* Notifications */}
-              <Button variant="ghost" size="sm" className="relative">
-                <Bell className="h-4 w-4" />
-                <span className="absolute -top-1 -right-1 h-2 w-2 bg-destructive rounded-full" />
-              </Button>
+              <NotificationCenter />
               
               {/* User Menu */}
               <Button variant="ghost" size="sm" className="gap-2">
