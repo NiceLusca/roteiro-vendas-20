@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { logger } from '@/utils/logger';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
@@ -23,6 +23,7 @@ import { Lead } from '@/types/crm';
 // Componente que usa hooks do CRM (já está dentro do CRMProviderWrapper do App.tsx)
 function PipelinesContent({ slug }: { slug: string }) {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { pipelines, getPipelineBySlug } = useSupabasePipelines();
   const [currentPipeline, setCurrentPipeline] = useState<any>(null);
   const [loadingPipeline, setLoadingPipeline] = useState(true);
@@ -52,20 +53,44 @@ function PipelinesContent({ slug }: { slug: string }) {
     entryId: string | null;
   }>({ open: false, entryId: null });
   
-  // Estados para busca e filtros
-  const [searchTerm, setSearchTerm] = useState('');
+  // Ler filtros da URL (persistência)
+  const searchTerm = searchParams.get('search') || '';
+  const filterCloser = searchParams.get('closer') || 'all';
+  const filterScore = searchParams.get('score') || 'all';
+  const filterHealth = searchParams.get('health') || 'all';
+  const filterResponsible = searchParams.get('responsible') || 'all';
+
+  // Função para atualizar filtros na URL
+  const updateFilter = useCallback((key: string, value: string) => {
+    setSearchParams(prev => {
+      const newParams = new URLSearchParams(prev);
+      if (value === 'all' || value === '') {
+        newParams.delete(key);
+      } else {
+        newParams.set(key, value);
+      }
+      return newParams;
+    });
+  }, [setSearchParams]);
+
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Carregar entries inicial sem paginação
   useEffect(() => {
     if (pipelineId) {
-      entries.refetch(pipelineId, true);
+      // Se há termo de busca na URL, executar busca
+      if (searchTerm && searchTerm.length >= 2) {
+        entries.searchLeads?.(searchTerm, pipelineId);
+      } else {
+        entries.refetch(pipelineId, true);
+      }
     }
-  }, [pipelineId]);
+  }, [pipelineId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handler de busca com debounce manual
   const handleSearchChange = useCallback((value: string) => {
-    setSearchTerm(value);
+    // Atualizar URL imediatamente para feedback visual
+    updateFilter('search', value);
     
     if (!pipelineId) return;
 
@@ -84,11 +109,7 @@ function PipelinesContent({ slug }: { slug: string }) {
     searchTimeoutRef.current = setTimeout(() => {
       entries.searchLeads?.(value, pipelineId);
     }, 300);
-  }, [pipelineId, entries]);
-  const [filterCloser, setFilterCloser] = useState<string>('all');
-  const [filterScore, setFilterScore] = useState<string>('all');
-  const [filterHealth, setFilterHealth] = useState<string>('all');
-  const [filterResponsible, setFilterResponsible] = useState<string>('all');
+  }, [pipelineId, entries, updateFilter]);
 
   // Processar dados
   const pipelineStages = stages
@@ -313,17 +334,16 @@ function PipelinesContent({ slug }: { slug: string }) {
   const handlePipelineChange = useCallback((newPipelineId: string) => {
     const selectedPipeline = pipelines.find(p => p.id === newPipelineId);
     if (selectedPipeline) {
-      navigate(`/pipelines/${selectedPipeline.slug}`);
+      // Preservar query params atuais ao navegar
+      const currentParams = searchParams.toString();
+      const queryString = currentParams ? `?${currentParams}` : '';
+      navigate(`/pipelines/${selectedPipeline.slug}${queryString}`);
     }
-  }, [navigate, pipelines]);
+  }, [navigate, pipelines, searchParams]);
 
   const clearFilters = useCallback(() => {
-    setSearchTerm('');
-    setFilterCloser('all');
-    setFilterScore('all');
-    setFilterHealth('all');
-    setFilterResponsible('all');
-  }, []);
+    setSearchParams(new URLSearchParams());
+  }, [setSearchParams]);
 
   // Handler para adicionar lead em uma etapa específica
   const handleAddLead = useCallback((stageId: string) => {
@@ -412,7 +432,7 @@ function PipelinesContent({ slug }: { slug: string }) {
                 </div>
 
                 {/* Filtro Closer */}
-                <Select value={filterCloser} onValueChange={setFilterCloser}>
+                <Select value={filterCloser} onValueChange={(v) => updateFilter('closer', v)}>
                   <SelectTrigger className="w-full lg:w-36">
                     <SelectValue placeholder="Closer" />
                   </SelectTrigger>
@@ -427,7 +447,7 @@ function PipelinesContent({ slug }: { slug: string }) {
                 </Select>
 
                 {/* Filtro Score */}
-                <Select value={filterScore} onValueChange={setFilterScore}>
+                <Select value={filterScore} onValueChange={(v) => updateFilter('score', v)}>
                   <SelectTrigger className="w-full lg:w-28">
                     <SelectValue placeholder="Score" />
                   </SelectTrigger>
@@ -440,7 +460,7 @@ function PipelinesContent({ slug }: { slug: string }) {
                 </Select>
 
                 {/* Filtro Saúde */}
-                <Select value={filterHealth} onValueChange={setFilterHealth}>
+                <Select value={filterHealth} onValueChange={(v) => updateFilter('health', v)}>
                   <SelectTrigger className="w-full lg:w-28">
                     <SelectValue placeholder="Saúde" />
                   </SelectTrigger>
@@ -453,7 +473,7 @@ function PipelinesContent({ slug }: { slug: string }) {
                 </Select>
 
                 {/* Filtro Responsável */}
-                <Select value={filterResponsible} onValueChange={setFilterResponsible}>
+                <Select value={filterResponsible} onValueChange={(v) => updateFilter('responsible', v)}>
                   <SelectTrigger className="w-full lg:w-40">
                     <SelectValue placeholder="Responsável" />
                   </SelectTrigger>
