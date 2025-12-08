@@ -58,7 +58,7 @@ function PipelinesContent({ slug }: { slug: string }) {
   const filterCloser = searchParams.get('closer') || 'all';
   const filterScore = searchParams.get('score') || 'all';
   const filterHealth = searchParams.get('health') || 'all';
-  const filterResponsible = searchParams.get('responsible') || 'all';
+  const filterResponsibleName = searchParams.get('responsible') || 'all';
 
   // Função para atualizar filtros na URL
   const updateFilter = useCallback((key: string, value: string) => {
@@ -139,6 +139,13 @@ function PipelinesContent({ slug }: { slug: string }) {
     return Array.from(responsibleSet.values());
   }, [responsiblesMap]);
 
+  // Converter nome do responsável da URL para user_id
+  const filterResponsibleId = useMemo(() => {
+    if (filterResponsibleName === 'all') return 'all';
+    const found = uniqueResponsibles.find(r => r.display_name === filterResponsibleName);
+    return found?.user_id || 'all';
+  }, [filterResponsibleName, uniqueResponsibles]);
+
   // ✅ Usar dados do JOIN: entry.leads já contém os dados do lead
   const allEntries = leadPipelineEntries
     .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId)
@@ -164,10 +171,10 @@ function PipelinesContent({ slug }: { slug: string }) {
         return false;
       }
       
-      // Filtro de responsável
-      if (filterResponsible !== 'all') {
+      // Filtro de responsável (usando ID convertido do nome)
+      if (filterResponsibleId !== 'all') {
         const leadResponsibles = responsiblesMap[entry.lead_id] || [];
-        const hasResponsible = leadResponsibles.some(r => r.user_id === filterResponsible);
+        const hasResponsible = leadResponsibles.some(r => r.user_id === filterResponsibleId);
         if (!hasResponsible) {
           return false;
         }
@@ -472,15 +479,15 @@ function PipelinesContent({ slug }: { slug: string }) {
                   </SelectContent>
                 </Select>
 
-                {/* Filtro Responsável */}
-                <Select value={filterResponsible} onValueChange={(v) => updateFilter('responsible', v)}>
+                {/* Filtro Responsável - usa nome na URL para legibilidade */}
+                <Select value={filterResponsibleName} onValueChange={(v) => updateFilter('responsible', v)}>
                   <SelectTrigger className="w-full lg:w-40">
                     <SelectValue placeholder="Responsável" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos responsáveis</SelectItem>
                     {uniqueResponsibles.map((resp) => (
-                      <SelectItem key={resp.user_id} value={resp.user_id}>
+                      <SelectItem key={resp.user_id} value={resp.display_name}>
                         {resp.display_name}
                       </SelectItem>
                     ))}
@@ -488,7 +495,7 @@ function PipelinesContent({ slug }: { slug: string }) {
                 </Select>
 
                 {/* Limpar filtros - largura total em mobile */}
-                {(searchTerm || filterCloser !== 'all' || filterScore !== 'all' || filterHealth !== 'all' || filterResponsible !== 'all') && (
+                {(searchTerm || filterCloser !== 'all' || filterScore !== 'all' || filterHealth !== 'all' || filterResponsibleName !== 'all') && (
                   <Button
                     variant="outline"
                     size="sm"
