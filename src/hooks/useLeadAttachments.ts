@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useLeadActivityLog } from './useLeadActivityLog';
 
 export interface LeadAttachment {
   id: string;
@@ -19,6 +20,7 @@ export function useLeadAttachments(leadId?: string) {
   const [attachments, setAttachments] = useState<LeadAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const { logActivity } = useLeadActivityLog();
 
   const fetchAttachments = async () => {
     if (!leadId) return;
@@ -95,6 +97,7 @@ export function useLeadAttachments(leadId?: string) {
       const randomString = Math.random().toString(36).substring(7);
       const fileName = `${timestamp}_${randomString}.${fileExt}`;
       const filePath = `${leadId}/${fileName}`;
+      const displayName = originalName || file.name;
 
       // 1. Upload do arquivo para o storage
       const { error: uploadError } = await supabase
@@ -113,7 +116,7 @@ export function useLeadAttachments(leadId?: string) {
         .insert({
           lead_id: leadId,
           file_path: filePath,
-          file_name: originalName || file.name,
+          file_name: displayName,
           file_size: file.size,
           file_type: file.type,
           uploaded_by: user.id
@@ -125,6 +128,17 @@ export function useLeadAttachments(leadId?: string) {
         throw metadataError;
       }
 
+      // Registrar atividade
+      await logActivity({
+        leadId,
+        activityType: 'attachment_added',
+        details: {
+          file_name: displayName,
+          file_size: file.size,
+          file_type: file.type
+        }
+      });
+
       toast.success('Arquivo enviado com sucesso');
       await fetchAttachments();
     } catch (error) {
@@ -135,7 +149,7 @@ export function useLeadAttachments(leadId?: string) {
     }
   };
 
-  const deleteAttachment = async (attachmentId: string, filePath: string) => {
+  const deleteAttachment = async (attachmentId: string, filePath: string, fileName?: string) => {
     if (!leadId) return;
 
     try {
@@ -156,6 +170,15 @@ export function useLeadAttachments(leadId?: string) {
       if (storageError) {
         console.error('Erro ao deletar arquivo do storage:', storageError);
       }
+
+      // Registrar atividade
+      await logActivity({
+        leadId,
+        activityType: 'attachment_deleted',
+        details: {
+          file_name: fileName || filePath.split('/').pop() || 'arquivo'
+        }
+      });
 
       toast.success('Arquivo removido');
       await fetchAttachments();

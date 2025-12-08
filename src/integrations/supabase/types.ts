@@ -219,6 +219,54 @@ export type Database = {
           },
         ]
       }
+      lead_activity_log: {
+        Row: {
+          activity_type: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          lead_id: string
+          performed_by: string | null
+          performed_by_name: string | null
+          pipeline_entry_id: string | null
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          lead_id: string
+          performed_by?: string | null
+          performed_by_name?: string | null
+          pipeline_entry_id?: string | null
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          lead_id?: string
+          performed_by?: string | null
+          performed_by_name?: string | null
+          pipeline_entry_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_activity_log_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_activity_log_pipeline_entry_id_fkey"
+            columns: ["pipeline_entry_id"]
+            isOneToOne: false
+            referencedRelation: "lead_pipeline_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_attachments_metadata: {
         Row: {
           created_at: string | null
