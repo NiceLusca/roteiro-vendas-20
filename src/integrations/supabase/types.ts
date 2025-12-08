@@ -649,6 +649,113 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_settings: {
+        Row: {
+          appointment_reminders: boolean | null
+          automation_updates: boolean | null
+          browser_notifications: boolean | null
+          created_at: string | null
+          id: string
+          inactivity_alerts: boolean | null
+          quiet_hours_enabled: boolean | null
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          sla_breaches: boolean | null
+          sound_enabled: boolean | null
+          stage_timeouts: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          appointment_reminders?: boolean | null
+          automation_updates?: boolean | null
+          browser_notifications?: boolean | null
+          created_at?: string | null
+          id?: string
+          inactivity_alerts?: boolean | null
+          quiet_hours_enabled?: boolean | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          sla_breaches?: boolean | null
+          sound_enabled?: boolean | null
+          stage_timeouts?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          appointment_reminders?: boolean | null
+          automation_updates?: boolean | null
+          browser_notifications?: boolean | null
+          created_at?: string | null
+          id?: string
+          inactivity_alerts?: boolean | null
+          quiet_hours_enabled?: boolean | null
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          sla_breaches?: boolean | null
+          sound_enabled?: boolean | null
+          stage_timeouts?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string | null
+          dismissed: boolean | null
+          id: string
+          lead_id: string | null
+          lead_name: string | null
+          message: string
+          priority: string
+          read: boolean | null
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string | null
+          dismissed?: boolean | null
+          id?: string
+          lead_id?: string | null
+          lead_name?: string | null
+          message: string
+          priority?: string
+          read?: boolean | null
+          title: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string | null
+          dismissed?: boolean | null
+          id?: string
+          lead_id?: string | null
+          lead_name?: string | null
+          message?: string
+          priority?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string | null

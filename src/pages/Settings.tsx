@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,9 +7,18 @@ import { Settings as SettingsIcon, Users, Workflow, Package, Database, Zap, Bell
 import { PipelineManager } from '@/components/settings/PipelineManager';
 import { ProductManager } from '@/components/settings/ProductManager';
 import { WorkflowOrchestrator } from '@/components/pipeline/WorkflowOrchestrator';
-import { NotificationSystem } from '@/components/pipeline/NotificationSystem';
+import { NotificationSettingsCard } from '@/components/notifications/NotificationSettingsCard';
 
 export default function Settings() {
+  const [searchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'pipelines');
+
+  useEffect(() => {
+    if (tabFromUrl) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [tabFromUrl]);
 
   const renderDataTab = () => (
     <div className="space-y-6">
@@ -161,7 +171,7 @@ export default function Settings() {
         <p className="text-muted-foreground">Configure pipelines, produtos e preferências do sistema</p>
       </div>
 
-      <Tabs defaultValue="pipelines" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="pipelines">Pipelines</TabsTrigger>
           <TabsTrigger value="products">Produtos</TabsTrigger>
@@ -184,7 +194,7 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="notifications">
-          <NotificationSystem />
+          <NotificationSettingsCard />
         </TabsContent>
 
         <TabsContent value="general">
