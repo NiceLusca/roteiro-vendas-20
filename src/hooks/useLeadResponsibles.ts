@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useLeadActivityLog } from './useLeadActivityLog';
 
 export interface LeadResponsible {
   id: string;
@@ -39,6 +40,7 @@ export interface UserProfile {
 
 export const useLeadResponsibles = (leadId?: string) => {
   const queryClient = useQueryClient();
+  const { logActivity } = useLeadActivityLog();
 
   // Buscar responsáveis de um lead específico
   const { data: responsibles = [], isLoading: loadingResponsibles } = useQuery({
@@ -148,6 +150,17 @@ export const useLeadResponsibles = (leadId?: string) => {
           performed_by: user?.id,
           performed_by_name: performedByName || 'Sistema',
         });
+
+      // Registrar atividade no log
+      await logActivity({
+        leadId,
+        activityType: 'responsible_added',
+        details: {
+          responsible_name: userName,
+          responsible_id: userId,
+          is_primary: isPrimary
+        }
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lead-responsibles', leadId] });
@@ -197,6 +210,16 @@ export const useLeadResponsibles = (leadId?: string) => {
           performed_by: user?.id,
           performed_by_name: performedByName || 'Sistema',
         });
+
+      // Registrar atividade no log
+      await logActivity({
+        leadId,
+        activityType: 'responsible_removed',
+        details: {
+          responsible_name: userName,
+          responsible_id: userId
+        }
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lead-responsibles', leadId] });

@@ -6,6 +6,7 @@ import { useAudit } from '@/contexts/AuditContext';
 import { LeadMovementValidator } from '@/lib/leadMovementValidator';
 import { logger } from '@/utils/logger';
 import { LeadPipelineEntry, PipelineStage, StageChecklistItem } from '@/types/crm';
+import { useLeadActivityLog } from './useLeadActivityLog';
 
 interface MoveLeadParams {
   entry: LeadPipelineEntry;
@@ -34,6 +35,7 @@ export function useLeadMovement() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { logChange } = useAudit();
+  const { logActivity } = useLeadActivityLog();
 
   const moveLead = useCallback(async ({
     entry,
@@ -154,6 +156,20 @@ export function useLeadMovement() {
         ator: `${user.email} (Sistema de Movimentação)`
       });
 
+      // Registrar atividade no log
+      await logActivity({
+        leadId: entry.lead_id,
+        pipelineEntryId: entry.id,
+        activityType: 'stage_change',
+        details: {
+          from_stage: fromStage.nome,
+          from_stage_id: fromStage.id,
+          to_stage: toStage.nome,
+          to_stage_id: toStage.id,
+          pipeline_id: entry.pipeline_id
+        }
+      });
+
       // Feedback de sucesso
       const successMsg = `Lead movido para "${toStage.nome}"`;
       toast({
@@ -205,7 +221,7 @@ export function useLeadMovement() {
     } finally {
       setIsMoving(false);
     }
-  }, [user, toast, logChange]);
+  }, [user, toast, logChange, logActivity]);
 
   return {
     moveLead,

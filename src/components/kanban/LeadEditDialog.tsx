@@ -11,7 +11,9 @@ import { useLeadNotes } from '@/hooks/useLeadNotes';
 import { useLeadAttachments } from '@/hooks/useLeadAttachments';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useLeadResponsibles } from '@/hooks/useLeadResponsibles';
+import { useLeadActivityLog } from '@/hooks/useLeadActivityLog';
 import { ResponsibleSelector } from '@/components/leads/ResponsibleSelector';
+import { LeadActivityTimeline } from '@/components/timeline/LeadActivityTimeline';
 import { 
   User, 
   Mail, 
@@ -22,7 +24,8 @@ import {
   Trash2,
   Send,
   Image as ImageIcon,
-  Users
+  Users,
+  History
 } from 'lucide-react';
 import { formatWhatsApp } from '@/utils/formatters';
 import { linkifyText } from '@/utils/linkify';
@@ -76,6 +79,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
   } = useLeadAttachments(lead.id);
   const { saveLead } = useSupabaseLeads();
   const { responsibles, history } = useLeadResponsibles(lead.id);
+  const { activities } = useLeadActivityLog(lead.id);
 
   const handleSave = async () => {
     try {
@@ -165,7 +169,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
         </DialogHeader>
 
         <Tabs defaultValue="info" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="info">Informações</TabsTrigger>
             <TabsTrigger value="responsibles">
               Responsáveis
@@ -188,6 +192,15 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
               {attachments.length > 0 && (
                 <Badge variant="secondary" className="ml-2">
                   {attachments.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              <History className="h-4 w-4 mr-1" />
+              Histórico
+              {activities.length > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {activities.length}
                 </Badge>
               )}
             </TabsTrigger>
@@ -433,6 +446,11 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
                 ))
               )}
             </div>
+          </TabsContent>
+
+          {/* Tab de Histórico */}
+          <TabsContent value="history" className="mt-4">
+            <LeadActivityTimeline leadId={lead.id} maxHeight="400px" />
           </TabsContent>
         </Tabs>
       </DialogContent>

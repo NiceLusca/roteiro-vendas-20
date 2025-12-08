@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextSecure';
 import { toast } from 'sonner';
+import { useLeadActivityLog } from './useLeadActivityLog';
 
 export interface LeadNote {
   id: string;
@@ -18,6 +19,7 @@ export function useLeadNotes(leadId?: string) {
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
+  const { logActivity } = useLeadActivityLog();
 
   const fetchNotes = async () => {
     if (!leadId) return;
@@ -73,6 +75,16 @@ export function useLeadNotes(leadId?: string) {
         .single();
 
       if (error) throw error;
+
+      // Registrar atividade
+      await logActivity({
+        leadId,
+        activityType: 'note_added',
+        details: {
+          note_preview: noteText.substring(0, 100),
+          note_id: data.id
+        }
+      });
 
       toast.success('Comentário adicionado');
       await fetchNotes();
