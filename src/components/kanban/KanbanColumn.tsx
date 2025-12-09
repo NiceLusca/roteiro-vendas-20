@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { KanbanCard } from './KanbanCard';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
-import { Plus, AlertTriangle, Loader2 } from 'lucide-react';
+import { Plus, AlertTriangle, Loader2, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
 
@@ -31,6 +31,11 @@ interface KanbanColumnProps {
   onDropLead?: (entryId: string, toStageId: string) => void;
   onDragStart?: (entryId: string) => void;
   onDragEnd?: () => void;
+  // Drag de colunas
+  onColumnDragStart?: (stageId: string) => void;
+  onColumnDragEnd?: () => void;
+  onColumnDrop?: (stageId: string, targetStageId: string) => void;
+  isColumnDragging?: boolean;
 }
 
 export const KanbanColumn = memo(function KanbanColumn({
@@ -55,11 +60,18 @@ export const KanbanColumn = memo(function KanbanColumn({
   onTransferPipeline,
   onDropLead,
   onDragStart,
-  onDragEnd
+  onDragEnd,
+  // Drag de colunas
+  onColumnDragStart,
+  onColumnDragEnd,
+  onColumnDrop,
+  isColumnDragging = false
 }: KanbanColumnProps) {
   const [isOver, setIsOver] = useState(false);
+  const [isColumnOver, setIsColumnOver] = useState(false);
+  const [isDraggingColumn, setIsDraggingColumn] = useState(false);
 
-  // HTML5 Native Drop Handlers
+  // HTML5 Native Drop Handlers para cards
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault(); // CRUCIAL para permitir drop
     e.dataTransfer.dropEffect = 'move';
@@ -83,8 +95,9 @@ export const KanbanColumn = memo(function KanbanColumn({
       }
 
       await onDropLead?.(entryId, stage.id);
-    } catch (error) {
-      logger.error('Erro ao processar drop', error as Error, {
+    } catch {
+      // Pode ser drop de coluna, não de card - ignorar
+      logger.debug('Drop não é de card, possivelmente coluna', {
         feature: 'kanban-column'
       });
     }
@@ -136,6 +149,56 @@ export const KanbanColumn = memo(function KanbanColumn({
 
   const stageClass = useMemo(() => getStageColorClass(stage.nome), [stage.nome, getStageColorClass]);
 
+  // Handlers para arrastar colunas pelo header
+  const handleColumnDragStart = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    setIsDraggingColumn(true);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('column/json', JSON.stringify({
+      stageId: stage.id,
+      stageName: stage.nome,
+      ordem: stage.ordem
+    }));
+    onColumnDragStart?.(stage.id);
+  }, [stage.id, stage.nome, stage.ordem, onColumnDragStart]);
+
+  const handleColumnDragEnd = useCallback(() => {
+    setIsDraggingColumn(false);
+    onColumnDragEnd?.();
+  }, [onColumnDragEnd]);
+
+  const handleColumnDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
+    // Só aceita se for drop de coluna
+    if (e.dataTransfer.types.includes('column/json')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      setIsColumnOver(true);
+    }
+  }, []);
+
+  const handleColumnDragLeave = useCallback(() => {
+    setIsColumnOver(false);
+  }, []);
+
+  const handleColumnDrop = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsColumnOver(false);
+
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('column/json'));
+      const { stageId: fromStageId } = data;
+
+      if (fromStageId === stage.id) {
+        return;
+      }
+
+      onColumnDrop?.(fromStageId, stage.id);
+    } catch {
+      // Não é drop de coluna
+    }
+  }, [stage.id, onColumnDrop]);
+
   return (
     <div 
       onDragOver={handleDragOver}
@@ -143,20 +206,36 @@ export const KanbanColumn = memo(function KanbanColumn({
       onDrop={handleDrop}
       className={cn(
         "flex flex-col w-56 min-w-56 flex-shrink-0 transition-all duration-200",
-        isOver && "ring-2 ring-primary/50 bg-primary/5 scale-[1.01]"
+        isOver && "ring-2 ring-primary/50 bg-primary/5 scale-[1.01]",
+        isDraggingColumn && "opacity-50 scale-95",
+        isColumnOver && "ring-2 ring-accent/70 bg-accent/10"
       )}
     >
-      {/* Header da Coluna */}
-      <Card className={cn('mb-4 kanban-column-header', stageClass, wipExceeded && 'border-warning')}>
-        <CardHeader className="pb-2 px-2 md:px-2 lg:px-3">
+      {/* Header da Coluna - Arrastável */}
+      <Card 
+        className={cn('mb-4 kanban-column-header', stageClass, wipExceeded && 'border-warning')}
+        draggable={true}
+        onDragStart={handleColumnDragStart}
+        onDragEnd={handleColumnDragEnd}
+        onDragOver={handleColumnDragOver}
+        onDragLeave={handleColumnDragLeave}
+        onDrop={handleColumnDrop}
+      >
+        <CardHeader className="pb-2 px-2 md:px-2 lg:px-3 cursor-grab active:cursor-grabbing">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-bold">
-              {stage.nome}
-            </CardTitle>
+            <div className="flex items-center gap-1.5">
+              <GripVertical className="h-4 w-4 text-muted-foreground/50" />
+              <CardTitle className="text-base font-bold">
+                {stage.nome}
+              </CardTitle>
+            </div>
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => onAddLead?.(stage.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddLead?.(stage.id);
+              }}
               className="h-6 w-6 p-0"
               title="Adicionar lead nesta etapa"
             >
