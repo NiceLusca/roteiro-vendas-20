@@ -94,12 +94,47 @@ export function useSupabasePipelineStages(pipelineId?: string) {
     }
   };
 
-  // Save stage (create or update)
+  // Save stage (create or update) with automatic reordering
   const saveStage = async (stageData: Partial<PipelineStage> & { id?: string }) => {
     if (!user) return null;
 
     try {
       const isUpdate = !!stageData.id;
+      const pipelineId = stageData.pipeline_id;
+      const newOrdem = stageData.ordem;
+
+      // Check for order conflict and reorder if necessary
+      if (pipelineId && newOrdem !== undefined) {
+        const conflictingStages = stages.filter(
+          s => s.pipeline_id === pipelineId && 
+               s.ordem >= newOrdem && 
+               s.id !== stageData.id
+        ).sort((a, b) => a.ordem - b.ordem);
+
+        if (conflictingStages.length > 0) {
+          // Reorder conflicting stages using two-phase update
+          const stagesToUpdate = conflictingStages.map((s, index) => ({
+            id: s.id,
+            ordem: newOrdem + index + 1
+          }));
+
+          // Phase 1: Set temporary high order values
+          for (const { id } of stagesToUpdate) {
+            await supabase
+              .from('pipeline_stages')
+              .update({ ordem: 10000 + Math.random() * 1000, updated_at: new Date().toISOString() })
+              .eq('id', id);
+          }
+
+          // Phase 2: Set final order values
+          for (const { id, ordem } of stagesToUpdate) {
+            await supabase
+              .from('pipeline_stages')
+              .update({ ordem, updated_at: new Date().toISOString() })
+              .eq('id', id);
+          }
+        }
+      }
       
       const payload: any = {};
       
@@ -149,6 +184,9 @@ export function useSupabasePipelineStages(pipelineId?: string) {
         title: `Etapa ${isUpdate ? 'atualizada' : 'criada'} com sucesso`,
         description: `Etapa ${result.data.nome} foi ${isUpdate ? 'atualizada' : 'criada'}`
       });
+      
+      // Refresh stages to get updated order
+      fetchStages();
       
       return result.data;
     } catch (error) {
