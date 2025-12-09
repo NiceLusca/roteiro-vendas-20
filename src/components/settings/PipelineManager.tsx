@@ -462,7 +462,6 @@ export function PipelineManager() {
           </DialogHeader>
           <StageForm
             stage={selectedStage}
-            existingStages={selectedStage?.pipeline_id ? getPipelineStages(selectedStage.pipeline_id).map(s => ({ id: s.id!, ordem: s.ordem })) : []}
             onSave={async (data) => {
               const result = await saveStage({ ...data, id: selectedStage?.id });
               if (result) {
