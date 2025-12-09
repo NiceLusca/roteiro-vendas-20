@@ -15,9 +15,17 @@ export function GlobalKeyboardShortcuts() {
         return;
       }
 
-      // Navigation shortcuts
+      // Navigation shortcuts - only for number keys
       if (event.altKey && !event.ctrlKey && !event.metaKey) {
         const key = event.key;
+        
+        // Only handle number keys, let other Alt combinations pass through
+        // (e.g., Alt+C for Ç on Mac keyboards)
+        const navigationKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
+        if (!navigationKeys.includes(key)) {
+          return;
+        }
+        
         event.preventDefault();
         
         switch (key) {
@@ -50,8 +58,6 @@ export function GlobalKeyboardShortcuts() {
             break;
           case '0':
             navigate('/help');
-            break;
-          default:
             break;
         }
       }
