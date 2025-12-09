@@ -111,10 +111,10 @@ function PipelinesContent({ slug }: { slug: string }) {
     }, 300);
   }, [pipelineId, entries, updateFilter]);
 
-  // Processar dados
+  // Processar dados com ordenação determinística
   const pipelineStages = stages
     .filter(stage => stage.pipeline_id === pipelineId)
-    .sort((a, b) => a.ordem - b.ordem);
+    .sort((a, b) => a.ordem - b.ordem || a.id.localeCompare(b.id));
 
   // Buscar responsáveis de todos os leads (antes do filtro de responsável)
   const baseLeadIds = useMemo(() => 
