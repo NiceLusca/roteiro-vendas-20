@@ -25,7 +25,10 @@ import {
   Send,
   Image as ImageIcon,
   Users,
-  History
+  History,
+  Pencil,
+  X,
+  Check
 } from 'lucide-react';
 import { formatWhatsApp } from '@/utils/formatters';
 import { linkifyText } from '@/utils/linkify';
@@ -51,6 +54,8 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
   const [saving, setSaving] = useState(false);
   const [pasteEnabled, setPasteEnabled] = useState(false);
   const [currentUserName, setCurrentUserName] = useState<string>('');
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState('');
 
   // Buscar nome do usuário atual para o histórico
   useEffect(() => {
@@ -68,7 +73,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
     fetchUserName();
   }, []);
 
-  const { notes, loading: notesLoading, addNote } = useLeadNotes(lead.id);
+  const { notes, loading: notesLoading, addNote, updateNote, deleteNote } = useLeadNotes(lead.id);
   const { 
     attachments, 
     loading: attachmentsLoading, 
@@ -108,6 +113,30 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
     
     await addNote(newNote);
     setNewNote('');
+  };
+
+  const handleStartEdit = (noteId: string, noteText: string) => {
+    setEditingNoteId(noteId);
+    setEditingNoteText(noteText);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingNoteId(null);
+    setEditingNoteText('');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingNoteId || !editingNoteText.trim()) return;
+    
+    await updateNote(editingNoteId, editingNoteText);
+    setEditingNoteId(null);
+    setEditingNoteText('');
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (confirm('Tem certeza que deseja apagar este comentário?')) {
+      await deleteNote(noteId);
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -344,11 +373,64 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
                       <span className="text-xs font-semibold text-primary">
                         {note.user_name || 'Usuário'}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(note.created_at).toLocaleString('pt-BR')}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(note.created_at).toLocaleString('pt-BR')}
+                        </span>
+                        {editingNoteId !== note.id && (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleStartEdit(note.id, note.note_text)}
+                              title="Editar"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive hover:text-destructive"
+                              onClick={() => handleDeleteNote(note.id)}
+                              title="Apagar"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-sm whitespace-pre-wrap">{linkifyText(note.note_text)}</p>
+                    {editingNoteId === note.id ? (
+                      <div className="space-y-2">
+                        <Textarea
+                          value={editingNoteText}
+                          onChange={(e) => setEditingNoteText(e.target.value)}
+                          rows={3}
+                          autoFocus
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleCancelEdit}
+                          >
+                            <X className="h-4 w-4 mr-1" />
+                            Cancelar
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={handleSaveEdit}
+                            disabled={!editingNoteText.trim()}
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Salvar
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap">{linkifyText(note.note_text)}</p>
+                    )}
                   </div>
                 ))
               )}
