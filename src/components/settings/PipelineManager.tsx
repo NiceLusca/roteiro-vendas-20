@@ -115,7 +115,9 @@ export function PipelineManager() {
   };
 
   const getPipelineStages = (pipelineId: string) => {
-    return stages.filter(stage => stage.pipeline_id === pipelineId);
+    return stages
+      .filter(stage => stage.pipeline_id === pipelineId)
+      .sort((a, b) => a.ordem - b.ordem || a.id.localeCompare(b.id));
   };
 
   const getStageChecklistCount = (stageId: string) => {
@@ -460,6 +462,7 @@ export function PipelineManager() {
           </DialogHeader>
           <StageForm
             stage={selectedStage}
+            existingStages={selectedStage?.pipeline_id ? getPipelineStages(selectedStage.pipeline_id).map(s => ({ id: s.id!, ordem: s.ordem })) : []}
             onSave={async (data) => {
               const result = await saveStage({ ...data, id: selectedStage?.id });
               if (result) {

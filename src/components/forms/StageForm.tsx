@@ -26,12 +26,18 @@ const stageSchema = z.object({
 type StageFormData = z.infer<typeof stageSchema>;
 
 interface StageFormProps {
-  stage?: Partial<StageFormData> | null;
+  stage?: Partial<StageFormData> & { id?: string } | null;
+  existingStages?: Array<{ id: string; ordem: number }>;
   onSave: (data: StageFormData) => void;
   onCancel: () => void;
 }
 
-export function StageForm({ stage, onSave, onCancel }: StageFormProps) {
+export function StageForm({ stage, existingStages = [], onSave, onCancel }: StageFormProps) {
+  // Validar duplicidade de ordem
+  const hasOrderConflict = (ordem: number) => {
+    return existingStages.some(s => s.ordem === ordem && s.id !== stage?.id);
+  };
+
   const form = useForm<StageFormData>({
     resolver: zodResolver(stageSchema),
     defaultValues: {
@@ -78,20 +84,29 @@ export function StageForm({ stage, onSave, onCancel }: StageFormProps) {
           <FormField
             control={form.control}
             name="ordem"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Ordem *</FormLabel>
-                <FormControl>
-                  <Input 
-                    {...field} 
-                    type="number" 
-                    min="1"
-                    onChange={(e) => field.onChange(Number(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+            render={({ field }) => {
+              const orderConflict = hasOrderConflict(field.value);
+              return (
+                <FormItem>
+                  <FormLabel>Ordem *</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      type="number" 
+                      min="1"
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      className={orderConflict ? 'border-amber-500 focus-visible:ring-amber-500' : ''}
+                    />
+                  </FormControl>
+                  {orderConflict && (
+                    <p className="text-sm text-amber-600">
+                      Ordem já utilizada. Ao salvar, as outras etapas serão reordenadas automaticamente.
+                    </p>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
 
           <FormField
