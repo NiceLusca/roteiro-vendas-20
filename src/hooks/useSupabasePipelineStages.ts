@@ -100,38 +100,40 @@ export function useSupabasePipelineStages(pipelineId?: string) {
 
     try {
       const isUpdate = !!stageData.id;
-      const pipelineId = stageData.pipeline_id;
+      const targetPipelineId = stageData.pipeline_id;
       const newOrdem = stageData.ordem;
 
       // Check for order conflict and reorder if necessary
-      if (pipelineId && newOrdem !== undefined) {
-        const conflictingStages = stages.filter(
-          s => s.pipeline_id === pipelineId && 
-               s.ordem >= newOrdem && 
-               s.id !== stageData.id
-        ).sort((a, b) => a.ordem - b.ordem);
+      if (targetPipelineId && newOrdem !== undefined) {
+        // Fetch fresh data from database to avoid stale state issues
+        const { data: currentStages } = await supabase
+          .from('pipeline_stages')
+          .select('id, ordem')
+          .eq('pipeline_id', targetPipelineId)
+          .order('ordem', { ascending: true });
 
-        if (conflictingStages.length > 0) {
-          // Reorder conflicting stages using two-phase update
-          const stagesToUpdate = conflictingStages.map((s, index) => ({
-            id: s.id,
-            ordem: newOrdem + index + 1
-          }));
+        if (currentStages) {
+          // Find stages that need to be moved (same or higher order, excluding current stage)
+          const conflictingStages = currentStages.filter(
+            s => s.ordem >= newOrdem && s.id !== stageData.id
+          );
 
-          // Phase 1: Set temporary high order values
-          for (const { id } of stagesToUpdate) {
-            await supabase
-              .from('pipeline_stages')
-              .update({ ordem: 10000 + Math.random() * 1000, updated_at: new Date().toISOString() })
-              .eq('id', id);
-          }
+          if (conflictingStages.length > 0) {
+            // Phase 1: Move all conflicting stages to temporary high values
+            for (let i = 0; i < conflictingStages.length; i++) {
+              await supabase
+                .from('pipeline_stages')
+                .update({ ordem: 10000 + i, updated_at: new Date().toISOString() })
+                .eq('id', conflictingStages[i].id);
+            }
 
-          // Phase 2: Set final order values
-          for (const { id, ordem } of stagesToUpdate) {
-            await supabase
-              .from('pipeline_stages')
-              .update({ ordem, updated_at: new Date().toISOString() })
-              .eq('id', id);
+            // Phase 2: Set final order values (push each by 1)
+            for (let i = 0; i < conflictingStages.length; i++) {
+              await supabase
+                .from('pipeline_stages')
+                .update({ ordem: newOrdem + i + 1, updated_at: new Date().toISOString() })
+                .eq('id', conflictingStages[i].id);
+            }
           }
         }
       }
