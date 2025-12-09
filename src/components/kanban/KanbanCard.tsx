@@ -173,13 +173,20 @@ export const KanbanCard = memo(function KanbanCard({
   })();
 
 
+  const handleCardClick = useCallback(() => {
+    // Não abre se estava arrastando
+    if (isLocalDragging) return;
+    onEditLead?.();
+  }, [isLocalDragging, onEditLead]);
+
   return (
     <Card 
       draggable={true}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onClick={handleCardClick}
       className={cn(
-        "kanban-card kanban-card-stage group cursor-grab active:cursor-grabbing border-l-4",
+        "kanban-card kanban-card-stage group cursor-pointer active:cursor-grabbing border-l-4",
         stageClass,
         (isLocalDragging || isDragging) && "opacity-50 rotate-1 scale-105 shadow-xl z-50",
         // Ring de urgência para atrasados e vencendo hoje
@@ -189,13 +196,7 @@ export const KanbanCard = memo(function KanbanCard({
       <CardContent className="p-3">
         {/* Header compacto com menu */}
         <div className="flex items-start justify-between mb-2">
-          <div 
-            className="flex-1 min-w-0 cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEditLead?.();
-            }}
-          >
+          <div className="flex-1 min-w-0">
             <h4 className="font-semibold text-base text-foreground truncate mb-0.5">
               {lead.nome}
             </h4>
