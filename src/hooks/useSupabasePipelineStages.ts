@@ -292,10 +292,9 @@ export function useSupabasePipelineStages(pipelineId?: string) {
       }
 
       logger.info('All stages updated successfully', { feature: 'pipeline-stages', metadata: { count: stagesToUpdate.length } });
-      toast({
-        title: "Ordem atualizada com sucesso",
-        description: "As etapas foram reordenadas"
-      });
+      
+      // Refresh stages to reflect new order immediately
+      await fetchStages();
 
       return true;
     } catch (error) {
