@@ -1,11 +1,11 @@
-import { createContext, useContext, ReactNode } from 'react';
-import { Lead, Pipeline, PipelineStage, LeadPipelineEntry } from '@/types/crm';
-import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
-import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
-import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
-import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
-import { useToast } from '@/hooks/use-toast';
-import { logger } from '@/utils/logger';
+import { createContext, useContext, ReactNode } from "react";
+import { Lead, Pipeline, PipelineStage, LeadPipelineEntry } from "@/types/crm";
+import { useSupabaseLeads } from "@/hooks/useSupabaseLeads";
+import { useSupabasePipelines } from "@/hooks/useSupabasePipelines";
+import { useSupabaseLeadPipelineEntries } from "@/hooks/useSupabaseLeadPipelineEntries";
+import { useSupabasePipelineStages } from "@/hooks/useSupabasePipelineStages";
+import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/utils/logger";
 
 // Context
 interface CRMContextType {

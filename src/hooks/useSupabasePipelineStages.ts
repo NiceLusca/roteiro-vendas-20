@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContextSecure';
-import { logger } from '@/utils/logger';
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContextSecure";
+import { logger } from "@/utils/logger";
 
 interface PipelineStage {
   id: string;
