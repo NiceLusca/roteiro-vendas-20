@@ -552,10 +552,8 @@ function PipelinesContent({ slug }: { slug: string }) {
           s.id === allEntries.find(e => e.id === stageJumpDialogState.entryId)?.etapa_atual_id
         )}
         availableStages={pipelineStages.filter(s => {
-          const currentStageOrder = pipelineStages.find(ps => 
-            ps.id === allEntries.find(e => e.id === stageJumpDialogState.entryId)?.etapa_atual_id
-          )?.ordem ?? 0;
-          return s.ordem > currentStageOrder;
+          const currentStageId = allEntries.find(e => e.id === stageJumpDialogState.entryId)?.etapa_atual_id;
+          return s.id !== currentStageId;
         })}
         onConfirm={handleConfirmJump}
       />

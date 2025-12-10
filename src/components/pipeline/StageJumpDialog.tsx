@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { FastForward } from 'lucide-react';
+import { ArrowRightLeft } from 'lucide-react';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
 
 interface StageJumpDialogProps {
@@ -47,7 +47,7 @@ export function StageJumpDialog({
       await onConfirm(selectedStageId);
       onOpenChange(false);
     } catch (error) {
-      console.error('Erro ao avançar etapa:', error);
+      console.error('Erro ao transferir etapa:', error);
     } finally {
       setIsLoading(false);
     }
@@ -55,13 +55,16 @@ export function StageJumpDialog({
 
   if (!entry || !currentStage) return null;
 
+  // Ordenar etapas por ordem
+  const sortedStages = [...availableStages].sort((a, b) => a.ordem - b.ordem);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FastForward className="h-5 w-5" />
-            Avançar para Etapa
+            <ArrowRightLeft className="h-5 w-5" />
+            Transferir para Etapa
           </DialogTitle>
           <DialogDescription className="space-y-1">
             <div><strong>Lead:</strong> {entry.lead.nome}</div>
@@ -70,30 +73,36 @@ export function StageJumpDialog({
         </DialogHeader>
 
         <div className="py-4">
-          {availableStages.length === 0 ? (
+          {sortedStages.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Não há etapas disponíveis para avançar
+              Não há outras etapas disponíveis
             </p>
           ) : (
             <RadioGroup value={selectedStageId} onValueChange={setSelectedStageId}>
               <div className="space-y-2">
-                {availableStages.map((stage, index) => (
-                  <div
-                    key={stage.id}
-                    className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <RadioGroupItem value={stage.id} id={stage.id} />
-                    <Label
-                      htmlFor={stage.id}
-                      className="flex-1 cursor-pointer"
+                {sortedStages.map((stage) => {
+                  const isBackward = stage.ordem < currentStage.ordem;
+                  const isForward = stage.ordem > currentStage.ordem;
+                  
+                  return (
+                    <div
+                      key={stage.id}
+                      className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                     >
-                      <div className="font-semibold">{stage.nome}</div>
-                      <div className="text-xs text-muted-foreground">
-                        Pular {index + 1} etapa{index > 0 ? 's' : ''}
-                      </div>
-                    </Label>
-                  </div>
-                ))}
+                      <RadioGroupItem value={stage.id} id={stage.id} />
+                      <Label
+                        htmlFor={stage.id}
+                        className="flex-1 cursor-pointer"
+                      >
+                        <div className="font-semibold">{stage.nome}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {isBackward && 'Voltar etapa'}
+                          {isForward && 'Avançar etapa'}
+                        </div>
+                      </Label>
+                    </div>
+                  );
+                })}
               </div>
             </RadioGroup>
           )}
@@ -111,7 +120,7 @@ export function StageJumpDialog({
             onClick={handleConfirm}
             disabled={!selectedStageId || isLoading}
           >
-            {isLoading ? 'Avançando...' : 'Avançar'}
+            {isLoading ? 'Transferindo...' : 'Transferir'}
           </Button>
         </DialogFooter>
       </DialogContent>
