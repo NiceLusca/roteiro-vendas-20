@@ -16,7 +16,7 @@ import {
   GitBranch,
   Calendar,
   MessageCircle,
-  FastForward,
+  ArrowRightLeft,
 } from 'lucide-react';
 
 interface KanbanCardMenuProps {
@@ -130,8 +130,8 @@ export const KanbanCardMenu = memo(function KanbanCardMenu({
                 onJumpToStage?.();
               }}
             >
-              <FastForward className="h-4 w-4 mr-2" />
-              Pular para Etapa...
+              <ArrowRightLeft className="h-4 w-4 mr-2" />
+              Transferir para Etapa...
             </DropdownMenuItem>
           </>
         )}
