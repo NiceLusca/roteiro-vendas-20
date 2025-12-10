@@ -72,7 +72,7 @@ export function StageJumpDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
+        <div className="py-4 max-h-[60vh] overflow-y-auto">
           {sortedStages.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">
               Não há outras etapas disponíveis
