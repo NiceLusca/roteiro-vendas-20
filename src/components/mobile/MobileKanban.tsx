@@ -114,11 +114,6 @@ export function MobileKanban({ pipelineId }: MobileKanbanProps) {
                 </Card>
               </div>
             ))}
-            {stageEntries.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Nenhum lead nesta etapa</p>
-              </div>
-            )}
           </div>
         </ScrollArea>
       </div>

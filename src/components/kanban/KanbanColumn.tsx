@@ -261,13 +261,7 @@ export const KanbanColumn = memo(function KanbanColumn({
 
       {/* Content com scroll nativo */}
       <div className="flex-1 overflow-y-auto">
-        {sortedEntries.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-sm text-muted-foreground">
-              Nenhum lead nesta etapa
-            </p>
-          </div>
-        ) : (
+        {sortedEntries.length > 0 && (
           <div className="space-y-3">
             {sortedEntries.map((entry) => {
               const stageChecklistItems = checklistItems.filter(
