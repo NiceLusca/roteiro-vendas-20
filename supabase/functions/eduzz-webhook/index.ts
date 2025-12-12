@@ -9,8 +9,20 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-// Pipeline slug to enroll buyers
-const TARGET_PIPELINE_SLUG = 'mentoria-society';
+// Product ID → Pipeline slug mapping
+// Each product can be mapped to a specific pipeline
+const PRODUCT_PIPELINE_MAP: Record<number, string> = {
+  // Mentoria Society products
+  2922489: 'mentoria-society', // Mentoria Society – Aplicação2 – GAB
+  2921900: 'mentoria-society', // Mentoria Society – Aplicação – GAB
+  2921896: 'mentoria-society', // Mentoria Society – GAB
+  2917974: 'mentoria-society', // Mentoria Society – Aplicação – REC
+  2908090: 'mentoria-society', // Mentoria Society – Aplicação
+  2893797: 'mentoria-society', // Mentoria Society
+  
+  // Future products can be added here:
+  // 1234567: 'outro-pipeline',
+};
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -37,6 +49,23 @@ serve(async (req) => {
       );
     }
 
+    // Extract product_cod and validate against allowed products
+    const productCod = data.product_cod;
+    const targetPipelineSlug = PRODUCT_PIPELINE_MAP[productCod];
+
+    if (!targetPipelineSlug) {
+      console.log(`Ignoring webhook: product_cod ${productCod} (${data.product_name}) not mapped to any pipeline`);
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: `Ignored: product ${productCod} not configured for any pipeline` 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Product ${productCod} (${data.product_name}) mapped to pipeline: ${targetPipelineSlug}`);
+
     // Extract customer data (using cus_ fields)
     const customerName = data.cus_name?.trim() || 'Nome não informado';
     const customerEmail = data.cus_email?.trim()?.toLowerCase() || null;
@@ -50,8 +79,10 @@ serve(async (req) => {
       email: customerEmail,
       phone: customerPhone,
       product: productName,
+      productCod,
       value: transValue,
-      transCod
+      transCod,
+      targetPipeline: targetPipelineSlug
     });
 
     // Search for existing lead by whatsapp OR email
@@ -147,17 +178,17 @@ serve(async (req) => {
       console.log('New lead created:', leadId);
     }
 
-    // Get target pipeline
+    // Get target pipeline based on product mapping
     const { data: pipeline, error: pipelineError } = await supabase
       .from('pipelines')
       .select('id, nome')
-      .eq('slug', TARGET_PIPELINE_SLUG)
+      .eq('slug', targetPipelineSlug)
       .eq('ativo', true)
       .maybeSingle();
 
     if (pipelineError || !pipeline) {
-      console.error('Pipeline not found:', TARGET_PIPELINE_SLUG, pipelineError);
-      throw new Error(`Pipeline "${TARGET_PIPELINE_SLUG}" not found`);
+      console.error('Pipeline not found:', targetPipelineSlug, pipelineError);
+      throw new Error(`Pipeline "${targetPipelineSlug}" not found`);
     }
 
     console.log('Target pipeline:', pipeline.id, pipeline.nome);
