@@ -541,6 +541,16 @@ function PipelinesContent({ slug }: { slug: string }) {
           onOpenChange={(open) => !open && setEditingLead(null)}
           lead={editingLead}
           onUpdate={handleRefresh}
+          currentStageName={pipelineStages.find(s => 
+            s.id === allEntries.find(e => e.lead_id === editingLead.id)?.etapa_atual_id
+          )?.nome}
+          onJumpToStage={() => {
+            const entry = allEntries.find(e => e.lead_id === editingLead.id);
+            if (entry) {
+              setEditingLead(null); // Fechar dialog de edição primeiro
+              handleJumpToStage(entry.id);
+            }
+          }}
         />
       )}
 

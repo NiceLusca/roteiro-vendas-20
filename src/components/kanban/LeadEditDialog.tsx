@@ -28,7 +28,8 @@ import {
   History,
   Pencil,
   X,
-  Check
+  Check,
+  ArrowRightLeft
 } from 'lucide-react';
 import { formatWhatsApp } from '@/utils/formatters';
 import { linkifyText } from '@/utils/linkify';
@@ -41,9 +42,12 @@ interface LeadEditDialogProps {
   onOpenChange: (open: boolean) => void;
   lead: Lead;
   onUpdate?: () => void;
+  // Props para transferência de etapa
+  currentStageName?: string;
+  onJumpToStage?: () => void;
 }
 
-export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditDialogProps) {
+export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStageName, onJumpToStage }: LeadEditDialogProps) {
   const [formData, setFormData] = useState({
     nome: lead.nome,
     whatsapp: lead.whatsapp || '',
@@ -339,6 +343,29 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate }: LeadEditD
 
           {/* Tab de Comentários */}
           <TabsContent value="comments" className="space-y-4 mt-4">
+            {/* Botão de transferir etapa */}
+            {onJumpToStage && (
+              <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <ArrowRightLeft className="h-4 w-4 text-primary" />
+                    <div>
+                      <p className="text-sm font-medium">Etapa atual: {currentStageName || 'Não definida'}</p>
+                      <p className="text-xs text-muted-foreground">Transferir para outra etapa do pipeline</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={onJumpToStage}
+                    className="shrink-0"
+                  >
+                    Transferir Etapa
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Adicionar Comentário</Label>
               <div className="flex gap-2">
