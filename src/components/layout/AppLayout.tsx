@@ -1,6 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Plus, User, Search, Command } from 'lucide-react';
 import { BreadcrumbNavigation } from '@/components/ui/breadcrumb-navigation';
@@ -8,10 +8,9 @@ import { CommandPalette } from '@/components/ui/command-palette';
 import { KeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
 import { useSLANotifications } from '@/hooks/useSLANotifications';
-
+import { GlobalKeyboardShortcuts } from '@/components/help/GlobalKeyboardShortcuts';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContextSecure';
-import { useNavigate } from 'react-router-dom';
 
 export function AppLayout() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -187,6 +186,7 @@ export function AppLayout() {
         </div>
 
         {/* Global Components */}
+        <GlobalKeyboardShortcuts />
         <CommandPalette 
           open={commandPaletteOpen} 
           onOpenChange={setCommandPaletteOpen} 
