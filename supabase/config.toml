@@ -1,1 +1,4 @@
-project_id = "vowcctjqbwndmdxfuqjd"
+project_id = "szuqdfakikbotidnxxvw"
+
+[functions.eduzz-webhook]
+verify_jwt = false
