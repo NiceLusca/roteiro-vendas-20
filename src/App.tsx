@@ -10,7 +10,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { GlobalErrorBoundary } from "@/components/ui/GlobalErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContextSecure";
 import { useAuth } from "@/contexts/AuthContextSecure";
-import { GlobalKeyboardShortcuts } from "@/components/help/GlobalKeyboardShortcuts";
+
 import Index from "./pages/Index";
 import Pipelines from "./pages/Pipelines";
 import PipelineSelector from "./pages/PipelineSelector";
@@ -82,7 +82,6 @@ function NotificationHandler() {
 function AppContent() {
   return (
     <>
-      <GlobalKeyboardShortcuts />
       <EnhancedInstallPrompt />
       <InstallBanner />
       <NotificationHandler />
