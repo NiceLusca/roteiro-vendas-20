@@ -424,13 +424,13 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
 
   useEffect(() => {
     if (user) {
-      setEntries([]);
+      // Não limpar entries - manter dados visíveis enquanto busca novos
       setPage(0);
       // Se há pipelineId, buscar sem paginação
       const shouldPaginate = !pipelineId;
       fetchEntries(pipelineId, false, false, !shouldPaginate);
     }
-  }, [user, pipelineId]);
+  }, [pipelineId]); // Removido 'user' das dependências para evitar reset ao mudar de aba
 
   // Real-time updates com debounce e filtros
   useEffect(() => {
@@ -591,7 +591,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         metadata: { explicitPipelineId, hookPipelineId: pipelineId, targetId, noPagination }
       });
       setPage(0);
-      setEntries([]);
+      // Não limpar entries - manter dados visíveis enquanto busca novos
       return fetchEntries(targetId, true, false, noPagination || false);
     }
   };

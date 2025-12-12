@@ -106,7 +106,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (event, session) => {
         // CRITICAL: Only synchronous operations here to prevent deadlock
         setSession(session);
-        setUser(session?.user ?? null);
+        // Only update user if ID actually changed to preserve reference
+        const newUser = session?.user ?? null;
+        setUser(prev => {
+          if (prev?.id === newUser?.id) return prev;
+          return newUser;
+        });
         setLoading(false);
         
         // Cache the session
@@ -124,7 +129,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // THEN check for existing session (this validates the cache)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setUser(session?.user ?? null);
+      // Only update user if ID actually changed to preserve reference
+      const newUser = session?.user ?? null;
+      setUser(prev => {
+        if (prev?.id === newUser?.id) return prev;
+        return newUser;
+      });
       setLoading(false);
       cacheSession(session);
     });
