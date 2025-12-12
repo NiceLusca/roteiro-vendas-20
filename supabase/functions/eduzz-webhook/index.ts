@@ -9,19 +9,18 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-// Product ID → Pipeline slug mapping
-// Each product can be mapped to a specific pipeline
-const PRODUCT_PIPELINE_MAP: Record<number, string> = {
+// Product ID → Pipeline slug mapping (string keys for new format)
+const PRODUCT_PIPELINE_MAP: Record<string, string> = {
   // Mentoria Society products
-  2922489: 'mentoria-society', // Mentoria Society – Aplicação2 – GAB
-  2921900: 'mentoria-society', // Mentoria Society – Aplicação – GAB
-  2921896: 'mentoria-society', // Mentoria Society – GAB
-  2917974: 'mentoria-society', // Mentoria Society – Aplicação – REC
-  2908090: 'mentoria-society', // Mentoria Society – Aplicação
-  2893797: 'mentoria-society', // Mentoria Society
+  '2922489': 'mentoria-society', // Mentoria Society – Aplicação2 – GAB
+  '2921900': 'mentoria-society', // Mentoria Society – Aplicação – GAB
+  '2921896': 'mentoria-society', // Mentoria Society – GAB
+  '2917974': 'mentoria-society', // Mentoria Society – Aplicação – REC
+  '2908090': 'mentoria-society', // Mentoria Society – Aplicação
+  '2893797': 'mentoria-society', // Mentoria Society
   
   // Future products can be added here:
-  // 1234567: 'outro-pipeline',
+  // '1234567': 'outro-pipeline',
 };
 
 serve(async (req) => {
@@ -37,49 +36,66 @@ serve(async (req) => {
     
     console.log('Webhook received:', JSON.stringify(payload, null, 2));
 
-    // Handle array payload (n8n sends array)
-    const data = Array.isArray(payload) ? payload[0]?.body || payload[0] : payload.body || payload;
+    // Parse new Eduzz format: { id, event, data: { ... } }
+    // Handle array payload (n8n sends array with body wrapper)
+    const rawPayload = Array.isArray(payload) ? payload[0]?.body || payload[0] : payload.body || payload;
+    
+    const event = rawPayload.event;
+    const data = rawPayload.data;
 
-    // Validate trans_status === 3 (approved payment)
-    if (data.trans_status !== 3) {
-      console.log(`Ignoring webhook: trans_status = ${data.trans_status} (not approved)`);
+    // Validate payment is approved (new format uses event or data.status)
+    if (event !== 'myeduzz.invoice_paid' && data?.status !== 'paid') {
+      console.log(`Ignoring webhook: event=${event}, status=${data?.status} (not approved payment)`);
       return new Response(
         JSON.stringify({ success: true, message: 'Ignored: payment not approved' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Extract product_cod and validate against allowed products
-    const productCod = data.product_cod;
-    const targetPipelineSlug = PRODUCT_PIPELINE_MAP[productCod];
+    // Iterate over items[] to find first product mapped to a pipeline
+    const items = data?.items || [];
+    let matchedProduct = null;
+    let targetPipelineSlug: string | null = null;
 
-    if (!targetPipelineSlug) {
-      console.log(`Ignoring webhook: product_cod ${productCod} (${data.product_name}) not mapped to any pipeline`);
+    for (const item of items) {
+      const productId = String(item.productId);
+      if (PRODUCT_PIPELINE_MAP[productId]) {
+        matchedProduct = item;
+        targetPipelineSlug = PRODUCT_PIPELINE_MAP[productId];
+        console.log(`Matched product: ${productId} (${item.name}) → pipeline: ${targetPipelineSlug}`);
+        break;
+      }
+    }
+
+    if (!targetPipelineSlug || !matchedProduct) {
+      const productIds = items.map((i: any) => i.productId).join(', ');
+      console.log(`Ignoring webhook: no products in items[] match configured pipelines. Products: [${productIds}]`);
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: `Ignored: product ${productCod} not configured for any pipeline` 
+          message: `Ignored: products [${productIds}] not configured for any pipeline` 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Product ${productCod} (${data.product_name}) mapped to pipeline: ${targetPipelineSlug}`);
-
-    // Extract customer data (using cus_ fields)
-    const customerName = data.cus_name?.trim() || 'Nome não informado';
-    const customerEmail = data.cus_email?.trim()?.toLowerCase() || null;
-    const customerPhone = data.cus_cel?.replace(/\D/g, '') || null; // Clean phone number
-    const productName = data.product_name || null;
-    const transValue = parseFloat(data.trans_value) || null;
-    const transCod = data.trans_cod?.toString() || null;
+    // Extract buyer data from data.buyer
+    const buyer = data?.buyer || {};
+    const customerName = buyer.name?.trim() || 'Nome não informado';
+    const customerEmail = buyer.email?.trim()?.toLowerCase() || null;
+    const customerPhone = (buyer.cellphone || buyer.phone || '').replace(/\D/g, '') || null;
+    
+    // Extract transaction details
+    const productName = matchedProduct.name || 'Produto Eduzz';
+    const transValue = data?.price?.value || data?.price?.paid?.value || null;
+    const transCod = data?.transaction?.id || rawPayload.id || null;
 
     console.log('Customer data extracted:', {
       name: customerName,
       email: customerEmail,
       phone: customerPhone,
       product: productName,
-      productCod,
+      productId: matchedProduct.productId,
       value: transValue,
       transCod,
       targetPipeline: targetPipelineSlug
@@ -91,7 +107,7 @@ serve(async (req) => {
     if (customerPhone) {
       const { data: leadByPhone } = await supabase
         .from('leads')
-        .select('id, nome, email, whatsapp')
+        .select('id, nome, email, whatsapp, observacoes')
         .eq('whatsapp', customerPhone)
         .maybeSingle();
       
@@ -104,7 +120,7 @@ serve(async (req) => {
     if (!existingLead && customerEmail) {
       const { data: leadByEmail } = await supabase
         .from('leads')
-        .select('id, nome, email, whatsapp')
+        .select('id, nome, email, whatsapp, observacoes')
         .eq('email', customerEmail)
         .maybeSingle();
       
@@ -157,7 +173,7 @@ serve(async (req) => {
         nome: customerName,
         email: customerEmail,
         whatsapp: customerPhone,
-        origem: productName || 'Eduzz',
+        origem: productName,
         valor_lead: transValue,
         status_geral: 'lead',
         observacoes: `[COMPRA] ${new Date().toISOString().split('T')[0]} - ${productName} - R$ ${transValue?.toFixed(2) || '0.00'} - Trans: ${transCod}`,
@@ -267,6 +283,7 @@ serve(async (req) => {
           stage_name: firstStage.nome,
           source: 'eduzz_webhook',
           product: productName,
+          product_id: matchedProduct.productId,
           trans_cod: transCod,
           value: transValue
         }
