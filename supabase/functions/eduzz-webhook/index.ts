@@ -256,7 +256,7 @@ serve(async (req) => {
         lead_id: leadId,
         pipeline_id: pipeline.id,
         etapa_atual_id: firstStage.id,
-        status_inscricao: 'ativo',
+        status_inscricao: 'Ativo',
         data_inscricao: now,
         data_entrada_etapa: now,
         saude_etapa: 'Verde',
