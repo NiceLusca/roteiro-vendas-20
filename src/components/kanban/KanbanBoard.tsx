@@ -4,6 +4,7 @@ import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { useSupabaseChecklistItems } from '@/hooks/useSupabaseChecklistItems';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
+import { LeadTag } from '@/types/bulkImport';
 import { logger } from '@/utils/logger';
 import { useToast } from '@/hooks/use-toast';
 
@@ -15,7 +16,9 @@ interface KanbanBoardProps {
     entries: Array<LeadPipelineEntry & { lead: Lead }>;
     wipExceeded: boolean;
   }>;
+  tagsMap?: Record<string, LeadTag[]>;
   onRefresh?: () => void;
+  onTagsChange?: () => void;
   onAddLead?: (stageId: string) => void;
   onViewLead?: (leadId: string) => void;
   onEditLead?: (leadId: string) => void;
@@ -38,7 +41,9 @@ interface KanbanBoardProps {
 export function KanbanBoard({
   selectedPipelineId,
   stageEntries,
+  tagsMap = {},
   onRefresh,
+  onTagsChange,
   onAddLead,
   onViewLead,
   onEditLead,
@@ -165,6 +170,7 @@ export function KanbanBoard({
           stage={stage}
           nextStage={nextStage}
           entries={entries}
+          tagsMap={tagsMap}
           wipExceeded={wipExceeded}
           hasMore={hasMore}
           onLoadMore={onLoadMore}
@@ -183,6 +189,7 @@ export function KanbanBoard({
           onDropLead={handleDropLead}
           onDragStart={(entryId) => setDraggingEntryId(entryId)}
           onDragEnd={() => setDraggingEntryId(null)}
+          onTagsChange={onTagsChange}
           // Drag de colunas
           onColumnDragStart={(stageId) => setDraggingColumnId(stageId)}
           onColumnDragEnd={() => setDraggingColumnId(null)}

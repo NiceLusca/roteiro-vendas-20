@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { KanbanCard } from './KanbanCard';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
+import { LeadTag } from '@/types/bulkImport';
 import { Plus, AlertTriangle, Loader2, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
@@ -12,6 +13,7 @@ interface KanbanColumnProps {
   stage: PipelineStage;
   nextStage?: PipelineStage | null;
   entries: Array<LeadPipelineEntry & { lead: Lead }>;
+  tagsMap?: Record<string, LeadTag[]>;
   wipExceeded: boolean;
   hasMore?: boolean;
   onLoadMore?: () => void;
@@ -31,6 +33,7 @@ interface KanbanColumnProps {
   onDropLead?: (entryId: string, toStageId: string) => void;
   onDragStart?: (entryId: string) => void;
   onDragEnd?: () => void;
+  onTagsChange?: () => void;
   // Drag de colunas
   onColumnDragStart?: (stageId: string) => void;
   onColumnDragEnd?: () => void;
@@ -42,6 +45,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   stage,
   nextStage,
   entries,
+  tagsMap = {},
   wipExceeded,
   hasMore = false,
   onLoadMore,
@@ -61,6 +65,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   onDropLead,
   onDragStart,
   onDragEnd,
+  onTagsChange,
   // Drag de colunas
   onColumnDragStart,
   onColumnDragEnd,
@@ -280,6 +285,7 @@ export const KanbanColumn = memo(function KanbanColumn({
                   checklistComplete={checklistComplete}
                   nextAppointment={(entry as any).nextAppointment}
                   responsibles={(entry as any).responsibles || []}
+                  tags={tagsMap[entry.lead_id] || []}
                   onViewLead={() => onViewLead?.(entry.lead.id)}
                   onEditLead={() => onEditLead?.(entry.lead.id)}
                   onCreateAppointment={() => onCreateAppointment?.(entry.lead.id)}
@@ -291,6 +297,7 @@ export const KanbanColumn = memo(function KanbanColumn({
                   onTransferPipeline={() => onTransferPipeline?.(entry.lead.id)}
                   onDragStart={onDragStart}
                   onDragEnd={onDragEnd}
+                  onTagsChange={onTagsChange}
                 />
               );
             })}
