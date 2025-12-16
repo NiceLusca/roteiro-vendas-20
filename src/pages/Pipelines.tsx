@@ -432,138 +432,130 @@ function PipelinesContent({ slug }: { slug: string }) {
   });
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-      {/* Sidebar de Filtros - Esquerda */}
-      <div className="w-64 min-w-64 flex-shrink-0 border-r bg-card overflow-y-auto">
-        <div className="p-4 space-y-4">
+    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+      {/* Barra de Filtros - Topo */}
+      <div className="flex-shrink-0 border-b bg-card px-4 py-3">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Seletor de Pipeline */}
-          <div className="space-y-2">
-            <PipelineSelector
-              pipelines={activePipelines}
-              selectedPipelineId={pipelineId}
-              onPipelineChange={handlePipelineChange}
-              onConfigurePipeline={handleConfigurePipeline}
-              onCreatePipeline={handleCreatePipeline}
+          <PipelineSelector
+            pipelines={activePipelines}
+            selectedPipelineId={pipelineId}
+            onPipelineChange={handlePipelineChange}
+            onConfigurePipeline={handleConfigurePipeline}
+            onCreatePipeline={handleCreatePipeline}
+          />
+
+          <div className="h-6 w-px bg-border" />
+
+          {/* Busca */}
+          <div className="relative w-48">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome..."
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-8 h-9"
             />
           </div>
 
-          {/* Filtros */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <Filter className="h-4 w-4" />
-              Filtros
-            </div>
+          {/* Filtro Closer */}
+          <Select value={filterCloser} onValueChange={(v) => updateFilter('closer', v)}>
+            <SelectTrigger className="w-36 h-9">
+              <SelectValue placeholder="Closer" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="all">Todos closers</SelectItem>
+              {closers.map((closer, index) => (
+                <SelectItem key={closer || index} value={closer as string}>
+                  {closer as string}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-            {/* Busca */}
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome..."
-                value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-8"
-              />
-            </div>
+          {/* Filtro Score */}
+          <Select value={filterScore} onValueChange={(v) => updateFilter('score', v)}>
+            <SelectTrigger className="w-32 h-9">
+              <SelectValue placeholder="Score" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="all">Todos scores</SelectItem>
+              <SelectItem value="Alto">Alto</SelectItem>
+              <SelectItem value="Médio">Médio</SelectItem>
+              <SelectItem value="Baixo">Baixo</SelectItem>
+            </SelectContent>
+          </Select>
 
-            {/* Filtro Closer */}
-            <Select value={filterCloser} onValueChange={(v) => updateFilter('closer', v)}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Closer" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                <SelectItem value="all">Todos closers</SelectItem>
-                {closers.map((closer, index) => (
-                  <SelectItem key={closer || index} value={closer as string}>
-                    {closer as string}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Filtro Saúde */}
+          <Select value={filterHealth} onValueChange={(v) => updateFilter('health', v)}>
+            <SelectTrigger className="w-32 h-9">
+              <SelectValue placeholder="Saúde" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="all">Todas saúdes</SelectItem>
+              <SelectItem value="Verde">Verde</SelectItem>
+              <SelectItem value="Amarelo">Amarelo</SelectItem>
+              <SelectItem value="Vermelho">Vermelho</SelectItem>
+            </SelectContent>
+          </Select>
 
-            {/* Filtro Score */}
-            <Select value={filterScore} onValueChange={(v) => updateFilter('score', v)}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Score" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                <SelectItem value="all">Todos scores</SelectItem>
-                <SelectItem value="Alto">Alto</SelectItem>
-                <SelectItem value="Médio">Médio</SelectItem>
-                <SelectItem value="Baixo">Baixo</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Filtro Responsável */}
+          <Select value={filterResponsibleName} onValueChange={(v) => updateFilter('responsible', v)}>
+            <SelectTrigger className="w-40 h-9">
+              <SelectValue placeholder="Responsável" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="all">Todos responsáveis</SelectItem>
+              {uniqueResponsibles.map((resp) => (
+                <SelectItem key={resp.user_id} value={resp.display_name}>
+                  {resp.display_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-            {/* Filtro Saúde */}
-            <Select value={filterHealth} onValueChange={(v) => updateFilter('health', v)}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Saúde" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                <SelectItem value="all">Todas saúdes</SelectItem>
-                <SelectItem value="Verde">Verde</SelectItem>
-                <SelectItem value="Amarelo">Amarelo</SelectItem>
-                <SelectItem value="Vermelho">Vermelho</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Filtro Tag */}
+          <Select value={filterTagName} onValueChange={(v) => updateFilter('tag', v)}>
+            <SelectTrigger className="w-32 h-9">
+              <SelectValue placeholder="Tag" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="all">Todas tags</SelectItem>
+              {availableTags.map((tag) => (
+                <SelectItem key={tag.id} value={tag.nome}>
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-2 h-2 rounded-full" 
+                      style={{ backgroundColor: tag.cor || '#3b82f6' }}
+                    />
+                    {tag.nome}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-            {/* Filtro Responsável */}
-            <Select value={filterResponsibleName} onValueChange={(v) => updateFilter('responsible', v)}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Responsável" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                <SelectItem value="all">Todos responsáveis</SelectItem>
-                {uniqueResponsibles.map((resp) => (
-                  <SelectItem key={resp.user_id} value={resp.display_name}>
-                    {resp.display_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Limpar filtros */}
+          {(searchTerm || filterCloser !== 'all' || filterScore !== 'all' || filterHealth !== 'all' || filterResponsibleName !== 'all' || filterTagName !== 'all') && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearFilters}
+              className="h-9"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Limpar
+            </Button>
+          )}
 
-            {/* Filtro Tag */}
-            <Select value={filterTagName} onValueChange={(v) => updateFilter('tag', v)}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Tag" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                <SelectItem value="all">Todas tags</SelectItem>
-                {availableTags.map((tag) => (
-                  <SelectItem key={tag.id} value={tag.nome}>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-2 h-2 rounded-full" 
-                        style={{ backgroundColor: tag.cor || '#3b82f6' }}
-                      />
-                      {tag.nome}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Limpar filtros */}
-            {(searchTerm || filterCloser !== 'all' || filterScore !== 'all' || filterHealth !== 'all' || filterResponsibleName !== 'all' || filterTagName !== 'all') && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearFilters}
-                className="w-full"
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Limpar Filtros
-              </Button>
-            )}
-
-            {/* Contador de resultados */}
-            <p className="text-xs text-muted-foreground pt-2 border-t">
-              {allEntries.length} lead{allEntries.length !== 1 ? 's' : ''} {searchTerm ? 'encontrado' : 'no pipeline'}{allEntries.length !== 1 ? 's' : ''}
-            </p>
-          </div>
+          {/* Contador de resultados */}
+          <span className="text-xs text-muted-foreground ml-auto">
+            {allEntries.length} lead{allEntries.length !== 1 ? 's' : ''}
+          </span>
         </div>
       </div>
 
-      {/* Área principal do Kanban - Direita */}
+      {/* Área principal do Kanban */}
       <div className="flex-1 overflow-x-auto overflow-y-auto p-4">
         <KanbanBoard
           key={`kanban-${pipelineId}`}
@@ -593,7 +585,7 @@ function PipelinesContent({ slug }: { slug: string }) {
           onJumpToStage={() => {
             const entry = allEntries.find(e => e.lead_id === editingLead.id);
             if (entry) {
-              setEditingLead(null); // Fechar dialog de edição primeiro
+              setEditingLead(null);
               handleJumpToStage(entry.id);
             }
           }}
