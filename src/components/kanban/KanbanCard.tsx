@@ -9,7 +9,9 @@ import { cn } from '@/lib/utils';
 import { KanbanCardMenu } from './KanbanCardMenu';
 import { AppointmentBadge } from '@/components/notifications/AppointmentBadge';
 import { ResponsibleAvatars } from '@/components/leads/ResponsibleAvatars';
+import { TagPopover } from './TagPopover';
 import type { LeadResponsible } from '@/hooks/useLeadResponsibles';
+import type { LeadTag } from '@/types/bulkImport';
 
 interface AppointmentInfo {
   id: string;
@@ -28,6 +30,7 @@ interface KanbanCardProps {
   checklistComplete?: boolean;
   nextAppointment?: AppointmentInfo | null;
   responsibles?: LeadResponsible[];
+  tags?: LeadTag[];
   isDragging?: boolean;
   onViewLead?: () => void;
   onEditLead?: () => void;
@@ -40,6 +43,7 @@ interface KanbanCardProps {
   onTransferPipeline?: () => void;
   onDragStart?: (entryId: string) => void;
   onDragEnd?: () => void;
+  onTagsChange?: () => void;
 }
 
 // ✅ SOLUÇÃO 3: Custom comparator para evitar re-renders desnecessários
@@ -51,6 +55,7 @@ export const KanbanCard = memo(function KanbanCard({
   checklistComplete = true,
   nextAppointment,
   responsibles = [],
+  tags = [],
   isDragging = false,
   onViewLead,
   onEditLead,
@@ -62,7 +67,8 @@ export const KanbanCard = memo(function KanbanCard({
   onRegressStage,
   onTransferPipeline,
   onDragStart,
-  onDragEnd
+  onDragEnd,
+  onTagsChange
 }: KanbanCardProps) {
   const [isLocalDragging, setIsLocalDragging] = useState(false);
   const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
@@ -229,10 +235,40 @@ export const KanbanCard = memo(function KanbanCard({
           </div>
         </div>
 
-        {/* Responsáveis */}
+        {/* Responsáveis e Tags */}
         <div className="flex items-center justify-between mb-2">
           <ResponsibleAvatars responsibles={responsibles} maxDisplay={3} size="sm" />
+          <div 
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <TagPopover 
+              leadId={lead.id} 
+              currentTags={tags} 
+              onTagsChange={onTagsChange}
+            />
+          </div>
         </div>
+
+        {/* Tags do Lead */}
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {tags.slice(0, 3).map((tag) => (
+              <Badge 
+                key={tag.id}
+                style={{ backgroundColor: tag.cor || '#3b82f6', color: 'white' }}
+                className="text-[10px] px-1.5 py-0 h-4"
+              >
+                {tag.nome}
+              </Badge>
+            ))}
+            {tags.length > 3 && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                +{tags.length - 3}
+              </Badge>
+            )}
+          </div>
+        )}
 
         {/* Telefone com copiar */}
         <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
@@ -332,6 +368,9 @@ export const KanbanCard = memo(function KanbanCard({
     prevProps.isDragging === nextProps.isDragging &&
     // Comparação de responsáveis
     prevProps.responsibles?.length === nextProps.responsibles?.length &&
+    // Comparação de tags
+    prevProps.tags?.length === nextProps.tags?.length &&
+    prevProps.tags?.[0]?.id === nextProps.tags?.[0]?.id &&
     // ✅ SOLUÇÃO 3: Comparação profunda de nextAppointment
     prevProps.nextAppointment?.id === nextProps.nextAppointment?.id &&
     prevProps.nextAppointment?.start_at === nextProps.nextAppointment?.start_at &&

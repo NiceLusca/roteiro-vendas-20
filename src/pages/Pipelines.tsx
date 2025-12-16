@@ -7,9 +7,12 @@ import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineE
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { useKanbanAppointments } from '@/hooks/useKanbanAppointments';
 import { useMultipleLeadResponsibles } from '@/hooks/useLeadResponsibles';
+import { useLeadTags } from '@/hooks/useLeadTags';
+import { useMultipleLeadTags } from '@/hooks/useLeadTagsBulk';
 import { EnhancedLoading, SmartSkeleton } from '@/components/ui/enhanced-loading';
 import { KanbanSkeleton } from '@/components/ui/loading-skeleton';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -59,6 +62,10 @@ function PipelinesContent({ slug }: { slug: string }) {
   const filterScore = searchParams.get('score') || 'all';
   const filterHealth = searchParams.get('health') || 'all';
   const filterResponsibleName = searchParams.get('responsible') || 'all';
+  const filterTagName = searchParams.get('tag') || 'all';
+
+  // Buscar todas as tags disponíveis
+  const { tags: availableTags, refetch: refetchTags } = useLeadTags();
 
   // Função para atualizar filtros na URL
   const updateFilter = useCallback((key: string, value: string) => {
@@ -124,6 +131,12 @@ function PipelinesContent({ slug }: { slug: string }) {
     [leadPipelineEntries, pipelineId]
   );
   const { data: responsiblesMap = {} } = useMultipleLeadResponsibles(baseLeadIds);
+  const { data: tagsMap = {}, refetch: refetchTagsMap } = useMultipleLeadTags(baseLeadIds);
+
+  // Handler para atualizar tags
+  const handleTagsChange = useCallback(() => {
+    refetchTagsMap();
+  }, [refetchTagsMap]);
 
   // Obter responsáveis únicos para o filtro
   const uniqueResponsibles = useMemo(() => {
@@ -145,6 +158,13 @@ function PipelinesContent({ slug }: { slug: string }) {
     const found = uniqueResponsibles.find(r => r.display_name === filterResponsibleName);
     return found?.user_id || 'all';
   }, [filterResponsibleName, uniqueResponsibles]);
+
+  // Converter nome da tag da URL para tag_id
+  const filterTagId = useMemo(() => {
+    if (filterTagName === 'all') return 'all';
+    const found = availableTags.find(t => t.nome === filterTagName);
+    return found?.id || 'all';
+  }, [filterTagName, availableTags]);
 
   // ✅ Usar dados do JOIN: entry.leads já contém os dados do lead
   const allEntries = leadPipelineEntries
@@ -176,6 +196,15 @@ function PipelinesContent({ slug }: { slug: string }) {
         const leadResponsibles = responsiblesMap[entry.lead_id] || [];
         const hasResponsible = leadResponsibles.some(r => r.user_id === filterResponsibleId);
         if (!hasResponsible) {
+          return false;
+        }
+      }
+
+      // Filtro de tag
+      if (filterTagId !== 'all') {
+        const leadTags = tagsMap[entry.lead_id] || [];
+        const hasTag = leadTags.some(t => t.id === filterTagId);
+        if (!hasTag) {
           return false;
         }
       }
@@ -494,8 +523,29 @@ function PipelinesContent({ slug }: { slug: string }) {
                   </SelectContent>
                 </Select>
 
+                {/* Filtro Tag */}
+                <Select value={filterTagName} onValueChange={(v) => updateFilter('tag', v)}>
+                  <SelectTrigger className="w-full lg:w-32">
+                    <SelectValue placeholder="Tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas tags</SelectItem>
+                    {availableTags.map((tag) => (
+                      <SelectItem key={tag.id} value={tag.nome}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-2 h-2 rounded-full" 
+                            style={{ backgroundColor: tag.cor || '#3b82f6' }}
+                          />
+                          {tag.nome}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 {/* Limpar filtros - largura total em mobile */}
-                {(searchTerm || filterCloser !== 'all' || filterScore !== 'all' || filterHealth !== 'all' || filterResponsibleName !== 'all') && (
+                {(searchTerm || filterCloser !== 'all' || filterScore !== 'all' || filterHealth !== 'all' || filterResponsibleName !== 'all' || filterTagName !== 'all') && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -525,6 +575,8 @@ function PipelinesContent({ slug }: { slug: string }) {
           key={`kanban-${pipelineId}`}
           selectedPipelineId={pipelineId}
           stageEntries={stageEntries}
+          tagsMap={tagsMap}
+          onTagsChange={handleTagsChange}
           onAddLead={handleAddLead}
           onViewLead={handleViewOrEditLead}
           onEditLead={handleViewOrEditLead}
