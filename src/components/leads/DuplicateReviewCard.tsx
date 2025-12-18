@@ -11,7 +11,8 @@ import {
   ArrowRight, 
   Trash2, 
   X, 
-  Merge 
+  Merge,
+  GitBranch
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -83,6 +84,25 @@ export const DuplicateReviewCard = memo(function DuplicateReviewCard({
           </div>
         )}
       </div>
+
+      {/* Pipelines */}
+      {lead.pipelines && lead.pipelines.length > 0 ? (
+        <div className="flex items-start gap-2 text-sm">
+          <GitBranch className="h-3.5 w-3.5 mt-0.5 text-muted-foreground flex-shrink-0" />
+          <div className="flex flex-wrap gap-1">
+            {lead.pipelines.map((p, idx) => (
+              <Badge key={idx} variant="outline" className="text-xs bg-primary/5">
+                {p.pipeline_nome}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
+          <GitBranch className="h-3.5 w-3.5" />
+          <span>Sem pipeline</span>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-1.5">
         {lead.origem && (

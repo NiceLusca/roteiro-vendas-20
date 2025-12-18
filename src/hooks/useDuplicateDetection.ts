@@ -3,6 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 // Tipo parcial de Lead para detecção de duplicatas
+export interface LeadPipelineInfo {
+  pipeline_id: string;
+  pipeline_nome: string;
+}
+
 export interface DuplicateLead {
   id: string;
   nome: string;
@@ -13,6 +18,7 @@ export interface DuplicateLead {
   lead_score: number | null;
   segmento: string | null;
   status_geral: string | null;
+  pipelines: LeadPipelineInfo[];
 }
 
 export interface DuplicatePair {
@@ -30,13 +36,38 @@ export function useDuplicateDetection() {
   const detectDuplicates = useCallback(async () => {
     setLoading(true);
     try {
-      const { data: leads, error } = await supabase
+      // Buscar leads
+      const { data: leadsRaw, error } = await supabase
         .from('leads')
         .select('id, nome, email, whatsapp, origem, created_at, lead_score, segmento, status_geral')
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      if (!leads) return;
+      if (!leadsRaw) return;
+
+      // Buscar pipeline entries com nome do pipeline
+      const { data: pipelineEntries } = await supabase
+        .from('lead_pipeline_entries')
+        .select('lead_id, pipeline_id, pipelines(nome)')
+        .eq('status_inscricao', 'ativo');
+
+      // Mapear pipelines por lead_id
+      const pipelinesByLead = new Map<string, LeadPipelineInfo[]>();
+      pipelineEntries?.forEach(entry => {
+        const existing = pipelinesByLead.get(entry.lead_id) || [];
+        const pipelineData = entry.pipelines as { nome: string } | null;
+        existing.push({
+          pipeline_id: entry.pipeline_id,
+          pipeline_nome: pipelineData?.nome || 'Pipeline desconhecido'
+        });
+        pipelinesByLead.set(entry.lead_id, existing);
+      });
+
+      // Adicionar pipelines aos leads
+      const leads: DuplicateLead[] = leadsRaw.map(lead => ({
+        ...lead,
+        pipelines: pipelinesByLead.get(lead.id) || []
+      }));
 
       const pairs: DuplicatePair[] = [];
       const processedPairs = new Set<string>();
