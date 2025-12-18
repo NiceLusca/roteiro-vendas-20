@@ -76,9 +76,12 @@ export function useDuplicateDetection() {
       leads.forEach(lead => {
         if (lead.email) {
           const clean = lead.email.toLowerCase().trim();
-          const existing = byEmail.get(clean) || [];
-          existing.push(lead as DuplicateLead);
-          byEmail.set(clean, existing);
+          // Ignorar emails vazios ou inválidos após limpeza
+          if (clean.length > 0 && clean !== 'n/a') {
+            const existing = byEmail.get(clean) || [];
+            existing.push(lead as DuplicateLead);
+            byEmail.set(clean, existing);
+          }
         }
       });
 
