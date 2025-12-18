@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { ArrowLeft, Filter, Search, RotateCcw, LayoutGrid, Table } from 'lucide-react';
+import { ArrowLeft, Filter, Search, RotateCcw, LayoutGrid, Table as TableIcon } from 'lucide-react';
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { useMultiPipeline } from '@/hooks/useMultiPipeline';
@@ -474,6 +474,33 @@ function PipelinesContent({ slug }: { slug: string }) {
       {/* Barra de Filtros - Topo */}
       <div className="flex-shrink-0 border-b bg-card px-4 py-3">
         <div className="flex flex-wrap items-center gap-3">
+          {/* Toggle Kanban/Tabela - PRIMEIRO com destaque */}
+          <ToggleGroup 
+            type="single" 
+            value={viewMode} 
+            onValueChange={(v) => v && updateFilter('view', v)}
+            className="bg-muted rounded-lg p-1"
+          >
+            <ToggleGroupItem 
+              value="kanban" 
+              aria-label="Vista Kanban" 
+              className="h-8 px-3 gap-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span className="text-sm font-medium">Kanban</span>
+            </ToggleGroupItem>
+            <ToggleGroupItem 
+              value="table" 
+              aria-label="Vista Tabela" 
+              className="h-8 px-3 gap-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+              <TableIcon className="h-4 w-4" />
+              <span className="text-sm font-medium">Tabela</span>
+            </ToggleGroupItem>
+          </ToggleGroup>
+
+          <div className="h-6 w-px bg-border" />
+
           {/* Seletor de Pipeline */}
           <PipelineSelector
             pipelines={activePipelines}
@@ -572,21 +599,6 @@ function PipelinesContent({ slug }: { slug: string }) {
               ))}
             </SelectContent>
           </Select>
-
-          {/* Toggle Kanban/Tabela */}
-          <ToggleGroup 
-            type="single" 
-            value={viewMode} 
-            onValueChange={(v) => v && updateFilter('view', v)}
-            className="border rounded-md"
-          >
-            <ToggleGroupItem value="kanban" aria-label="Vista Kanban" className="h-9 px-2.5">
-              <LayoutGrid className="h-4 w-4" />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="table" aria-label="Vista Tabela" className="h-9 px-2.5">
-              <Table className="h-4 w-4" />
-            </ToggleGroupItem>
-          </ToggleGroup>
 
           {/* Limpar filtros */}
           {(searchTerm || filterCloser !== 'all' || filterScore !== 'all' || filterHealth !== 'all' || filterResponsibleName !== 'all' || filterTagName !== 'all') && (
