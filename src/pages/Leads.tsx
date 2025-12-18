@@ -419,444 +419,445 @@ function LeadsContent() {
     <GlobalErrorBoundary>
       <div className="p-6 h-full overflow-auto">
         <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Leads</h1>
-          <p className="text-muted-foreground">
-            Gerencie todos os seus leads e contatos
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <BulkActionsMenu
-            leadCount={totalCount}
-            onTagAction={handleOpenBulkTagDialog}
-            onPipelineAction={handleOpenBulkPipelineDialog}
-            onScoreAction={handleOpenBulkScoreDialog}
-            onDeleteAction={handleOpenBulkDeleteDialog}
-            disabled={bulkActionsLoading}
-          />
-          <Button 
-            variant="outline" 
-            onClick={() => setShowBulkUploadDialog(true)} 
-            className="gap-2"
-            aria-label="Importar planilha de leads"
-          >
-            <Upload className="h-4 w-4" />
-            Importar Planilha
-          </Button>
-          <Button 
-            onClick={handleCreateLead} 
-            className="gap-2"
-            aria-label="Criar novo lead"
-          >
-            <Plus className="h-4 w-4" />
-            Novo Lead
-          </Button>
-        </div>
-      </div>
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Leads</h1>
+              <p className="text-muted-foreground">
+                Gerencie todos os seus leads e contatos
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <BulkActionsMenu
+                leadCount={totalCount}
+                onTagAction={handleOpenBulkTagDialog}
+                onPipelineAction={handleOpenBulkPipelineDialog}
+                onScoreAction={handleOpenBulkScoreDialog}
+                onDeleteAction={handleOpenBulkDeleteDialog}
+                disabled={bulkActionsLoading}
+              />
+              <Button 
+                variant="outline" 
+                onClick={() => setShowBulkUploadDialog(true)} 
+                className="gap-2"
+                aria-label="Importar planilha de leads"
+              >
+                <Upload className="h-4 w-4" />
+                Importar Planilha
+              </Button>
+              <Button 
+                onClick={handleCreateLead} 
+                className="gap-2"
+                aria-label="Criar novo lead"
+              >
+                <Plus className="h-4 w-4" />
+                Novo Lead
+              </Button>
+            </div>
+          </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList>
-          <TabsTrigger value="all">Todos os Leads</TabsTrigger>
-          <TabsTrigger value="duplicates" className="gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            Possíveis Duplicatas
-            {duplicates.length > 0 && (
-              <Badge variant="destructive" className="ml-1 text-xs px-1.5 py-0 h-5">
-                {duplicates.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList>
+              <TabsTrigger value="all">Todos os Leads</TabsTrigger>
+              <TabsTrigger value="duplicates" className="gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Possíveis Duplicatas
+                {duplicates.length > 0 && (
+                  <Badge variant="destructive" className="ml-1 text-xs px-1.5 py-0 h-5">
+                    {duplicates.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
 
-        {/* Tab: Todos os Leads */}
-        <TabsContent value="all" className="mt-4 space-y-4">
+            {/* Tab: Todos os Leads */}
+            <TabsContent value="all" className="mt-4 space-y-4">
           {/* Filtros */}
           <Card>
             <CardHeader>
-            <Filter className="h-4 w-4" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4 flex-wrap">
-            {/* Busca */}
-            <div className="flex items-center gap-2 min-w-64 relative">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome, email ou WhatsApp..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="flex-1"
-              />
-              {leadsFetching && (
-                <Loader2 className="h-4 w-4 animate-spin absolute right-3 text-muted-foreground" />
-              )}
-            </div>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                Filtros
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4 flex-wrap">
+                {/* Busca */}
+                <div className="flex items-center gap-2 min-w-64 relative">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome, email ou WhatsApp..."
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    className="flex-1"
+                  />
+                  {leadsFetching && (
+                    <Loader2 className="h-4 w-4 animate-spin absolute right-3 text-muted-foreground" />
+                  )}
+                </div>
 
-            {/* Filtro Status */}
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os status</SelectItem>
-                <SelectItem value="Ativo">Ativo</SelectItem>
-                <SelectItem value="Cliente">Cliente</SelectItem>
-                <SelectItem value="Perdido">Perdido</SelectItem>
-                <SelectItem value="Inativo">Inativo</SelectItem>
-              </SelectContent>
-            </Select>
+                {/* Filtro Status */}
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os status</SelectItem>
+                    <SelectItem value="Ativo">Ativo</SelectItem>
+                    <SelectItem value="Cliente">Cliente</SelectItem>
+                    <SelectItem value="Perdido">Perdido</SelectItem>
+                    <SelectItem value="Inativo">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
 
-            {/* Filtro Score */}
-            <Select value={filterScore} onValueChange={setFilterScore}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Score" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="Alto">Alto</SelectItem>
-                <SelectItem value="Médio">Médio</SelectItem>
-                <SelectItem value="Baixo">Baixo</SelectItem>
-              </SelectContent>
-            </Select>
+                {/* Filtro Score */}
+                <Select value={filterScore} onValueChange={setFilterScore}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Score" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="Alto">Alto</SelectItem>
+                    <SelectItem value="Médio">Médio</SelectItem>
+                    <SelectItem value="Baixo">Baixo</SelectItem>
+                  </SelectContent>
+                </Select>
 
-            {/* Filtro Tag */}
-            <Select value={filterTag} onValueChange={setFilterTag}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Tag" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as tags</SelectItem>
-                {availableTags.map((tag) => (
-                  <SelectItem key={tag.id} value={tag.id}>
-                    <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full" 
-                        style={{ backgroundColor: tag.cor }}
-                      />
-                      {tag.nome}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                {/* Filtro Tag */}
+                <Select value={filterTag} onValueChange={setFilterTag}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as tags</SelectItem>
+                    {availableTags.map((tag) => (
+                      <SelectItem key={tag.id} value={tag.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: tag.cor }}
+                          />
+                          {tag.nome}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-            <div className="text-sm text-muted-foreground ml-auto">
-              Mostrando {filteredLeads.length} de {totalCount} leads
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Lista de Leads */}
-      <div className="space-y-4">
-        {filteredLeads.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">
-                Nenhum lead encontrado com os filtros aplicados
-              </p>
+                <div className="text-sm text-muted-foreground ml-auto">
+                  Mostrando {filteredLeads.length} de {totalCount} leads
+                </div>
+              </div>
             </CardContent>
           </Card>
-        ) : (
-          <div className="grid gap-4">
-            {filteredLeads.map((lead) => (
-              <Card key={lead.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      {/* Header do Lead */}
-                      <div className="flex items-center gap-3 mb-3 flex-wrap">
-                        <h3 className="font-semibold text-lg">{lead.nome}</h3>
-                        <Badge className={getScoreBadgeClass(lead.lead_score_classification)}>
-                          {lead.lead_score} ({lead.lead_score_classification})
-                        </Badge>
-                        <Badge className={getStatusColor(lead.status_geral)}>
-                          {lead.status_geral}
-                        </Badge>
-                        {/* Tags do Lead */}
-                        {(lead as any).tags?.map((tag: any) => (
-                          <Badge 
-                            key={tag.id} 
-                            variant="outline"
-                            className="gap-1"
-                            style={{ 
-                              borderColor: tag.cor,
-                              color: tag.cor
-                            }}
-                          >
-                            <div 
-                              className="w-2 h-2 rounded-full" 
-                              style={{ backgroundColor: tag.cor }}
-                            />
-                            {tag.nome}
-                          </Badge>
-                        ))}
-                      </div>
 
-                      {/* Informações do Lead */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Phone className="h-4 w-4" />
-                          <span>{formatWhatsApp(lead.whatsapp)}</span>
-                        </div>
-                        
-                        {lead.email && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Mail className="h-4 w-4" />
-                            <span className="truncate">{lead.email}</span>
-                          </div>
-                        )}
-                        
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <TrendingUp className="h-4 w-4" />
-                          <span>{lead.origem} • {lead.segmento}</span>
-                        </div>
-                      </div>
-
-                      {/* Detalhes adicionais */}
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        {lead.closer && (
-                          <span>Closer: {lead.closer}</span>
-                        )}
-                        <span>Criado: {formatDateTime(lead.created_at)}</span>
-                        {lead.objecao_principal && (
-                          <Badge variant="outline" className="text-xs">
-                            Objeção: {lead.objecao_principal}
-                          </Badge>
-                        )}
-                      </div>
-
-                      {/* Desejo na sessão */}
-                      {lead.desejo_na_sessao && (
-                        <div className="mt-3 p-3 bg-accent/50 rounded-md">
-                          <p className="text-sm text-foreground">
-                            <strong>Desejo:</strong> {lead.desejo_na_sessao}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Ações */}
-                    <div className="flex items-center gap-2 ml-4">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        aria-label={`Ver detalhes de ${lead.nome}`}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleEditLead(lead)}
-                        aria-label={`Editar ${lead.nome}`}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleInscribeLead(lead)}
-                        aria-label={`Inscrever ${lead.nome} em pipeline`}
-                      >
-                        <GitBranch className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        aria-label={`Enviar mensagem para ${lead.nome}`}
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+          {/* Lista de Leads */}
+          <div className="space-y-4">
+            {filteredLeads.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-muted-foreground">
+                    Nenhum lead encontrado com os filtros aplicados
+                  </p>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
+            ) : (
+              <div className="grid gap-4">
+                {filteredLeads.map((lead) => (
+                  <Card key={lead.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          {/* Header do Lead */}
+                          <div className="flex items-center gap-3 mb-3 flex-wrap">
+                            <h3 className="font-semibold text-lg">{lead.nome}</h3>
+                            <Badge className={getScoreBadgeClass(lead.lead_score_classification)}>
+                              {lead.lead_score} ({lead.lead_score_classification})
+                            </Badge>
+                            <Badge className={getStatusColor(lead.status_geral)}>
+                              {lead.status_geral}
+                            </Badge>
+                            {/* Tags do Lead */}
+                            {(lead as any).tags?.map((tag: any) => (
+                              <Badge 
+                                key={tag.id} 
+                                variant="outline"
+                                className="gap-1"
+                                style={{ 
+                                  borderColor: tag.cor,
+                                  color: tag.cor
+                                }}
+                              >
+                                <div 
+                                  className="w-2 h-2 rounded-full" 
+                                  style={{ backgroundColor: tag.cor }}
+                                />
+                                {tag.nome}
+                              </Badge>
+                            ))}
+                          </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center gap-2 mt-6">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1 || leadsLoading}
-              aria-label="Página anterior"
-            >
-              Anterior
-            </Button>
-            
-            <div className="flex items-center gap-1" role="navigation" aria-label="Paginação">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum;
-                if (totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i;
-                } else {
-                  pageNum = currentPage - 2 + i;
-                }
-                
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={currentPage === pageNum ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(pageNum)}
-                    disabled={leadsLoading}
-                    className="w-10"
-                    aria-label={`Ir para página ${pageNum}`}
-                    aria-current={currentPage === pageNum ? 'page' : undefined}
-                  >
-                    {pageNum}
-                  </Button>
-                );
-              })}
-            </div>
+                          {/* Informações do Lead */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Phone className="h-4 w-4" />
+                              <span>{formatWhatsApp(lead.whatsapp)}</span>
+                            </div>
+                            
+                            {lead.email && (
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Mail className="h-4 w-4" />
+                                <span className="truncate">{lead.email}</span>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <TrendingUp className="h-4 w-4" />
+                              <span>{lead.origem} • {lead.segmento}</span>
+                            </div>
+                          </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages || leadsLoading}
-              aria-label="Próxima página"
-            >
-              Próxima
-            </Button>
-            
-            <span className="text-sm text-muted-foreground ml-4">
-              Página {currentPage} de {totalPages}
-            </span>
-          </div>
-        )}
-      </div>
-        </TabsContent>
+                          {/* Detalhes adicionais */}
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            {lead.closer && (
+                              <span>Closer: {lead.closer}</span>
+                            )}
+                            <span>Criado: {formatDateTime(lead.created_at)}</span>
+                            {lead.objecao_principal && (
+                              <Badge variant="outline" className="text-xs">
+                                Objeção: {lead.objecao_principal}
+                              </Badge>
+                            )}
+                          </div>
 
-        {/* Tab: Possíveis Duplicatas */}
-        <TabsContent value="duplicates" className="mt-4 space-y-4">
-          {duplicatesLoading ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground">Analisando leads...</p>
-              </CardContent>
-            </Card>
-          ) : duplicates.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="font-semibold text-lg mb-2">Nenhuma duplicata encontrada</h3>
-                <p className="text-muted-foreground">
-                  Seus leads parecem estar únicos. Continue assim!
-                </p>
-                <Button 
-                  variant="outline" 
-                  onClick={detectDuplicates}
-                  className="mt-4"
-                >
-                  Verificar novamente
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  {duplicates.length} possíve{duplicates.length === 1 ? 'l' : 'is'} duplicata{duplicates.length === 1 ? '' : 's'} encontrada{duplicates.length === 1 ? '' : 's'}
-                </p>
-                <Button variant="outline" size="sm" onClick={detectDuplicates}>
-                  Atualizar análise
-                </Button>
+                          {/* Desejo na sessão */}
+                          {lead.desejo_na_sessao && (
+                            <div className="mt-3 p-3 bg-accent/50 rounded-md">
+                              <p className="text-sm text-foreground">
+                                <strong>Desejo:</strong> {lead.desejo_na_sessao}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Ações */}
+                        <div className="flex items-center gap-2 ml-4">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            aria-label={`Ver detalhes de ${lead.nome}`}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleEditLead(lead)}
+                            aria-label={`Editar ${lead.nome}`}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleInscribeLead(lead)}
+                            aria-label={`Inscrever ${lead.nome} em pipeline`}
+                          >
+                            <GitBranch className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            aria-label={`Enviar mensagem para ${lead.nome}`}
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-              {duplicates.map((pair, index) => (
-                <DuplicateReviewCard
-                  key={`${pair.lead1.id}-${pair.lead2.id}`}
-                  lead1={pair.lead1}
-                  lead2={pair.lead2}
-                  matchType={pair.matchType}
-                  confidence={pair.confidence}
-                  onMerge={mergeLeads}
-                  onKeepBoth={() => markAsNotDuplicate(pair.lead1.id, pair.lead2.id)}
-                  onDelete={deleteDuplicateLead}
-                />
-              ))}
-            </div>
-          )}
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1 || leadsLoading}
+                  aria-label="Página anterior"
+                >
+                  Anterior
+                </Button>
+                
+                <div className="flex items-center gap-1" role="navigation" aria-label="Paginação">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        disabled={leadsLoading}
+                        className="w-10"
+                        aria-label={`Ir para página ${pageNum}`}
+                        aria-current={currentPage === pageNum ? 'page' : undefined}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages || leadsLoading}
+                  aria-label="Próxima página"
+                >
+                  Próxima
+                </Button>
+                
+                <span className="text-sm text-muted-foreground ml-4">
+                  Página {currentPage} de {totalPages}
+                </span>
+              </div>
+            )}
+          </div>
         </TabsContent>
-      </Tabs>
 
-      {/* Dialog de Inscrição em Pipeline */}
-      {selectedLeadForInscription && showInscriptionDialog && (
-        <PipelineInscriptionDialog
-          open={showInscriptionDialog}
-          onOpenChange={setShowInscriptionDialog}
-          leadId={selectedLeadForInscription.id}
-          leadName={selectedLeadForInscription.nome}
-          activePipelineIds={pipelineEntries.map(e => e.pipeline_id)}
-          pipelines={pipelines}
-          stages={stages}
-          onConfirm={handleInscriptionConfirm}
-        />
-      )}
+            {/* Tab: Possíveis Duplicatas */}
+            <TabsContent value="duplicates" className="mt-4 space-y-4">
+              {duplicatesLoading ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">Analisando leads...</p>
+                  </CardContent>
+                </Card>
+              ) : duplicates.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="font-semibold text-lg mb-2">Nenhuma duplicata encontrada</h3>
+                    <p className="text-muted-foreground">
+                      Seus leads parecem estar únicos. Continue assim!
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      onClick={detectDuplicates}
+                      className="mt-4"
+                    >
+                      Verificar novamente
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      {duplicates.length} possíve{duplicates.length === 1 ? 'l' : 'is'} duplicata{duplicates.length === 1 ? '' : 's'} encontrada{duplicates.length === 1 ? '' : 's'}
+                    </p>
+                    <Button variant="outline" size="sm" onClick={detectDuplicates}>
+                      Atualizar análise
+                    </Button>
+                  </div>
+                  {duplicates.map((pair, index) => (
+                    <DuplicateReviewCard
+                      key={`${pair.lead1.id}-${pair.lead2.id}`}
+                      lead1={pair.lead1}
+                      lead2={pair.lead2}
+                      matchType={pair.matchType}
+                      confidence={pair.confidence}
+                      onMerge={mergeLeads}
+                      onKeepBoth={() => markAsNotDuplicate(pair.lead1.id, pair.lead2.id)}
+                      onDelete={deleteDuplicateLead}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
 
-      <LeadBulkUploadDialog
-        open={showBulkUploadDialog}
-        onOpenChange={setShowBulkUploadDialog}
-        onSuccess={() => {
-          refetch();
-          setCurrentPage(1);
-        }}
-      />
+          {/* Dialog de Inscrição em Pipeline */}
+          {selectedLeadForInscription && showInscriptionDialog && (
+            <PipelineInscriptionDialog
+              open={showInscriptionDialog}
+              onOpenChange={setShowInscriptionDialog}
+              leadId={selectedLeadForInscription.id}
+              leadName={selectedLeadForInscription.nome}
+              activePipelineIds={pipelineEntries.map(e => e.pipeline_id)}
+              pipelines={pipelines}
+              stages={stages}
+              onConfirm={handleInscriptionConfirm}
+            />
+          )}
 
-      <BulkTaggingDialog
-        open={showBulkTagDialog}
-        onOpenChange={setShowBulkTagDialog}
-        leadCount={filteredLeadIds.length}
-        availableTags={availableTags}
-        onAddTags={handleBulkAddTags}
-        onRemoveTags={handleBulkRemoveTags}
-        onReplaceTags={handleBulkReplaceTags}
-        isLoading={bulkActionsLoading}
-        progress={bulkActionsProgress}
-      />
+          <LeadBulkUploadDialog
+            open={showBulkUploadDialog}
+            onOpenChange={setShowBulkUploadDialog}
+            onSuccess={() => {
+              refetch();
+              setCurrentPage(1);
+            }}
+          />
 
-      <BulkDeleteDialog
-        open={showBulkDeleteDialog}
-        onOpenChange={setShowBulkDeleteDialog}
-        leadCount={filteredLeadIds.length}
-        previewLeads={previewLeads}
-        onConfirmDelete={handleBulkDelete}
-        isLoading={bulkActionsLoading}
-        progress={bulkActionsProgress}
-      />
+          <BulkTaggingDialog
+            open={showBulkTagDialog}
+            onOpenChange={setShowBulkTagDialog}
+            leadCount={filteredLeadIds.length}
+            availableTags={availableTags}
+            onAddTags={handleBulkAddTags}
+            onRemoveTags={handleBulkRemoveTags}
+            onReplaceTags={handleBulkReplaceTags}
+            isLoading={bulkActionsLoading}
+            progress={bulkActionsProgress}
+          />
 
-      <BulkPipelineInscriptionDialog
-        open={showBulkPipelineDialog}
-        onOpenChange={setShowBulkPipelineDialog}
-        leadIds={filteredLeadIds}
-        previewLeads={previewLeads}
-        onConfirm={handleBulkInscribePipeline}
-        isLoading={bulkActionsLoading}
-        progress={bulkActionsProgress}
-      />
+          <BulkDeleteDialog
+            open={showBulkDeleteDialog}
+            onOpenChange={setShowBulkDeleteDialog}
+            leadCount={filteredLeadIds.length}
+            previewLeads={previewLeads}
+            onConfirmDelete={handleBulkDelete}
+            isLoading={bulkActionsLoading}
+            progress={bulkActionsProgress}
+          />
 
-      <BulkScoreAdjustmentDialog
-        open={showBulkScoreDialog}
-        onOpenChange={setShowBulkScoreDialog}
-        leadIds={filteredLeadIds}
-        onConfirm={handleBulkAdjustScore}
-        isLoading={bulkActionsLoading}
-        progress={bulkActionsProgress}
-      />
+          <BulkPipelineInscriptionDialog
+            open={showBulkPipelineDialog}
+            onOpenChange={setShowBulkPipelineDialog}
+            leadIds={filteredLeadIds}
+            previewLeads={previewLeads}
+            onConfirm={handleBulkInscribePipeline}
+            isLoading={bulkActionsLoading}
+            progress={bulkActionsProgress}
+          />
+
+          <BulkScoreAdjustmentDialog
+            open={showBulkScoreDialog}
+            onOpenChange={setShowBulkScoreDialog}
+            leadIds={filteredLeadIds}
+            onConfirm={handleBulkAdjustScore}
+            isLoading={bulkActionsLoading}
+            progress={bulkActionsProgress}
+          />
         </div>
       </div>
     </GlobalErrorBoundary>
