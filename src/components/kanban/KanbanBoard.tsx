@@ -29,6 +29,7 @@ interface KanbanBoardProps {
   onOpenChecklist?: (entryId: string) => void;
   onRegressStage?: (entryId: string) => void;
   onTransferPipeline?: (leadId: string) => void;
+  onUnsubscribeFromPipeline?: (entryId: string, leadId: string) => void;
 }
 
 /**
@@ -54,6 +55,7 @@ export function KanbanBoard({
   onOpenChecklist,
   onRegressStage,
   onTransferPipeline,
+  onUnsubscribeFromPipeline,
   hasMore,
   onLoadMore,
   loadingMore
@@ -186,6 +188,7 @@ export function KanbanBoard({
           onOpenChecklist={onOpenChecklist}
           onRegressStage={onRegressStage}
           onTransferPipeline={onTransferPipeline}
+          onUnsubscribeFromPipeline={onUnsubscribeFromPipeline}
           onDropLead={handleDropLead}
           onDragStart={(entryId) => setDraggingEntryId(entryId)}
           onDragEnd={() => setDraggingEntryId(null)}

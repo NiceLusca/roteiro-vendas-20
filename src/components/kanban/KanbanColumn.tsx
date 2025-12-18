@@ -30,6 +30,7 @@ interface KanbanColumnProps {
   onOpenChecklist?: (entryId: string) => void;
   onRegressStage?: (entryId: string) => void;
   onTransferPipeline?: (leadId: string) => void;
+  onUnsubscribeFromPipeline?: (entryId: string, leadId: string) => void;
   onDropLead?: (entryId: string, toStageId: string) => void;
   onDragStart?: (entryId: string) => void;
   onDragEnd?: () => void;
@@ -62,6 +63,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   onOpenChecklist,
   onRegressStage,
   onTransferPipeline,
+  onUnsubscribeFromPipeline,
   onDropLead,
   onDragStart,
   onDragEnd,
@@ -295,6 +297,7 @@ export const KanbanColumn = memo(function KanbanColumn({
                   onOpenChecklist={() => onOpenChecklist?.(entry.id)}
                   onRegressStage={() => onRegressStage?.(entry.id)}
                   onTransferPipeline={() => onTransferPipeline?.(entry.lead.id)}
+                  onUnsubscribeFromPipeline={() => onUnsubscribeFromPipeline?.(entry.id, entry.lead.id)}
                   onDragStart={onDragStart}
                   onDragEnd={onDragEnd}
                   onTagsChange={onTagsChange}

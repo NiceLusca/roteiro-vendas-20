@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LeadForm } from '@/components/forms/LeadForm';
 import { PipelineInscriptionDialog } from '@/components/pipeline/PipelineInscriptionDialog';
 import { LeadBulkUploadDialog } from '@/components/leads/LeadBulkUploadDialog';
@@ -12,11 +13,13 @@ import { BulkTaggingDialog } from '@/components/leads/BulkTaggingDialog';
 import { BulkDeleteDialog } from '@/components/leads/BulkDeleteDialog';
 import { BulkPipelineInscriptionDialog } from '@/components/leads/BulkPipelineInscriptionDialog';
 import { BulkScoreAdjustmentDialog } from '@/components/leads/BulkScoreAdjustmentDialog';
+import { DuplicateReviewCard } from '@/components/leads/DuplicateReviewCard';
 import { GlobalErrorBoundary } from '@/components/ui/GlobalErrorBoundary';
 import { SkeletonLeadsList } from '@/components/ui/skeleton-card';
 import { useOptimizedLeads } from '@/hooks/useOptimizedLeads';
 import { useLeadTags } from '@/hooks/useLeadTags';
 import { useBulkLeadActions } from '@/hooks/useBulkLeadActions';
+import { useDuplicateDetection } from '@/hooks/useDuplicateDetection';
 import { useToast } from '@/hooks/use-toast';
 
 import { useCRM } from '@/contexts/CRMContext';
@@ -34,7 +37,8 @@ import {
   TrendingUp,
   GitBranch,
   Loader2,
-  Upload
+  Upload,
+  AlertTriangle
 } from 'lucide-react';
 
 function LeadsContent() {
@@ -57,12 +61,23 @@ function LeadsContent() {
   const [showBulkScoreDialog, setShowBulkScoreDialog] = useState(false);
   const [filteredLeadIds, setFilteredLeadIds] = useState<string[]>([]);
   const [previewLeads, setPreviewLeads] = useState<Lead[]>([]);
+  const [activeTab, setActiveTab] = useState('all');
   
   // Lazy load pipelines and stages only when needed
   const [pipelines, setPipelines] = useState<any[]>([]);
   const [stages, setStages] = useState<any[]>([]);
   const [loadingPipelines, setLoadingPipelines] = useState(false);
   const [pipelineEntries, setPipelineEntries] = useState<any[]>([]);
+  
+  // Hook de detecção de duplicatas
+  const {
+    duplicates,
+    loading: duplicatesLoading,
+    detectDuplicates,
+    mergeLeads,
+    markAsNotDuplicate,
+    deleteDuplicateLead
+  } = useDuplicateDetection();
   
   // Debounce search input
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -441,10 +456,26 @@ function LeadsContent() {
         </div>
       </div>
 
-      {/* Filtros */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList>
+          <TabsTrigger value="all">Todos os Leads</TabsTrigger>
+          <TabsTrigger value="duplicates" className="gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            Possíveis Duplicatas
+            {duplicates.length > 0 && (
+              <Badge variant="destructive" className="ml-1 text-xs px-1.5 py-0 h-5">
+                {duplicates.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Tab: Todos os Leads */}
+        <TabsContent value="all" className="mt-4 space-y-4">
+          {/* Filtros */}
+          <Card>
+            <CardHeader>
             <Filter className="h-4 w-4" />
             Filtros
           </CardTitle>
@@ -708,6 +739,60 @@ function LeadsContent() {
           </div>
         )}
       </div>
+        </TabsContent>
+
+        {/* Tab: Possíveis Duplicatas */}
+        <TabsContent value="duplicates" className="mt-4 space-y-4">
+          {duplicatesLoading ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">Analisando leads...</p>
+              </CardContent>
+            </Card>
+          ) : duplicates.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="font-semibold text-lg mb-2">Nenhuma duplicata encontrada</h3>
+                <p className="text-muted-foreground">
+                  Seus leads parecem estar únicos. Continue assim!
+                </p>
+                <Button 
+                  variant="outline" 
+                  onClick={detectDuplicates}
+                  className="mt-4"
+                >
+                  Verificar novamente
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  {duplicates.length} possíve{duplicates.length === 1 ? 'l' : 'is'} duplicata{duplicates.length === 1 ? '' : 's'} encontrada{duplicates.length === 1 ? '' : 's'}
+                </p>
+                <Button variant="outline" size="sm" onClick={detectDuplicates}>
+                  Atualizar análise
+                </Button>
+              </div>
+              {duplicates.map((pair, index) => (
+                <DuplicateReviewCard
+                  key={`${pair.lead1.id}-${pair.lead2.id}`}
+                  lead1={pair.lead1}
+                  lead2={pair.lead2}
+                  matchType={pair.matchType}
+                  confidence={pair.confidence}
+                  onMerge={mergeLeads}
+                  onKeepBoth={() => markAsNotDuplicate(pair.lead1.id, pair.lead2.id)}
+                  onDelete={deleteDuplicateLead}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* Dialog de Inscrição em Pipeline */}
       {selectedLeadForInscription && showInscriptionDialog && (
@@ -723,18 +808,15 @@ function LeadsContent() {
         />
       )}
 
-      {/* Dialog de Upload em Massa */}
       <LeadBulkUploadDialog
         open={showBulkUploadDialog}
         onOpenChange={setShowBulkUploadDialog}
         onSuccess={() => {
-          // Refetch leads após importação
           refetch();
           setCurrentPage(1);
         }}
       />
 
-      {/* Dialog de Tagueamento em Massa */}
       <BulkTaggingDialog
         open={showBulkTagDialog}
         onOpenChange={setShowBulkTagDialog}
@@ -747,7 +829,6 @@ function LeadsContent() {
         progress={bulkActionsProgress}
       />
 
-      {/* Dialog de Exclusão em Massa */}
       <BulkDeleteDialog
         open={showBulkDeleteDialog}
         onOpenChange={setShowBulkDeleteDialog}
@@ -758,7 +839,6 @@ function LeadsContent() {
         progress={bulkActionsProgress}
       />
 
-      {/* Dialog de Inscrição em Pipeline em Massa */}
       <BulkPipelineInscriptionDialog
         open={showBulkPipelineDialog}
         onOpenChange={setShowBulkPipelineDialog}
@@ -769,7 +849,6 @@ function LeadsContent() {
         progress={bulkActionsProgress}
       />
 
-      {/* Dialog de Ajuste de Score em Massa */}
       <BulkScoreAdjustmentDialog
         open={showBulkScoreDialog}
         onOpenChange={setShowBulkScoreDialog}

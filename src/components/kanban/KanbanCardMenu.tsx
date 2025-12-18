@@ -17,6 +17,7 @@ import {
   Calendar,
   MessageCircle,
   ArrowRightLeft,
+  UserMinus,
 } from 'lucide-react';
 
 interface KanbanCardMenuProps {
@@ -30,6 +31,7 @@ interface KanbanCardMenuProps {
   onTransferPipeline?: () => void;
   onCreateAppointment?: () => void;
   onRegisterInteraction?: () => void;
+  onUnsubscribeFromPipeline?: () => void;
 }
 
 export const KanbanCardMenu = memo(function KanbanCardMenu({
@@ -43,6 +45,7 @@ export const KanbanCardMenu = memo(function KanbanCardMenu({
   onTransferPipeline,
   onCreateAppointment,
   onRegisterInteraction,
+  onUnsubscribeFromPipeline,
 }: KanbanCardMenuProps) {
   // ✅ SOLUÇÃO 4: Controle manual do estado para evitar fechamento inesperado
   const [isOpen, setIsOpen] = useState(false);
@@ -146,6 +149,17 @@ export const KanbanCardMenu = memo(function KanbanCardMenu({
         >
           <GitBranch className="h-4 w-4 mr-2" />
           Transferir Pipeline
+        </DropdownMenuItem>
+        
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.stopPropagation();
+            onUnsubscribeFromPipeline?.();
+          }}
+          className="text-destructive focus:text-destructive"
+        >
+          <UserMinus className="h-4 w-4 mr-2" />
+          Descadastrar
         </DropdownMenuItem>
         
         <DropdownMenuItem
