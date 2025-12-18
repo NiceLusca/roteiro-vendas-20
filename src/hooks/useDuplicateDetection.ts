@@ -46,21 +46,31 @@ export function useDuplicateDetection() {
       if (!leadsRaw) return;
 
       // Buscar pipeline entries com nome do pipeline
-      const { data: pipelineEntries } = await supabase
+      const { data: pipelineEntries, error: pipelineError } = await supabase
         .from('lead_pipeline_entries')
-        .select('lead_id, pipeline_id, pipelines(nome)')
+        .select(`
+          lead_id, 
+          pipeline_id, 
+          pipelines:pipeline_id (nome)
+        `)
         .eq('status_inscricao', 'ativo');
+
+      if (pipelineError) {
+        console.error('Erro ao buscar pipeline entries:', pipelineError);
+      }
 
       // Mapear pipelines por lead_id
       const pipelinesByLead = new Map<string, LeadPipelineInfo[]>();
       pipelineEntries?.forEach(entry => {
         const existing = pipelinesByLead.get(entry.lead_id) || [];
         const pipelineData = entry.pipelines as { nome: string } | null;
-        existing.push({
-          pipeline_id: entry.pipeline_id,
-          pipeline_nome: pipelineData?.nome || 'Pipeline desconhecido'
-        });
-        pipelinesByLead.set(entry.lead_id, existing);
+        if (pipelineData?.nome) {
+          existing.push({
+            pipeline_id: entry.pipeline_id,
+            pipeline_nome: pipelineData.nome
+          });
+          pipelinesByLead.set(entry.lead_id, existing);
+        }
       });
 
       // Adicionar pipelines aos leads
