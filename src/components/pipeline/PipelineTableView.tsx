@@ -1,6 +1,5 @@
-import { useMemo } from 'react';
-import { format, differenceInDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { useMemo, useState } from 'react';
+import { differenceInDays } from 'date-fns';
 import { 
   Table, 
   TableBody, 
@@ -28,12 +27,18 @@ import {
   Phone,
   Mail,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown
 } from 'lucide-react';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
 import { LeadTag } from '@/types/bulkImport';
 import { ResponsibleAvatars } from '@/components/leads/ResponsibleAvatars';
 import { cn } from '@/lib/utils';
+
+type SortColumn = 'nome' | 'etapa' | 'dias' | 'sla' | 'saude' | 'score' | 'responsavel' | null;
+type SortDirection = 'asc' | 'desc';
 
 interface PipelineTableViewProps {
   stageEntries: Array<{
@@ -50,6 +55,43 @@ interface PipelineTableViewProps {
   onUnsubscribeFromPipeline?: (entryId: string, leadId: string) => void;
 }
 
+// Component for sortable table header
+function SortableHeader({ 
+  column, 
+  label, 
+  currentSort, 
+  currentDirection,
+  onSort 
+}: { 
+  column: SortColumn; 
+  label: string; 
+  currentSort: SortColumn;
+  currentDirection: SortDirection;
+  onSort: (column: SortColumn) => void;
+}) {
+  const isActive = currentSort === column;
+  
+  return (
+    <TableHead 
+      className="cursor-pointer hover:bg-muted/50 select-none transition-colors"
+      onClick={() => onSort(column)}
+    >
+      <div className="flex items-center gap-1.5">
+        <span>{label}</span>
+        {isActive ? (
+          currentDirection === 'asc' ? (
+            <ArrowUp className="h-3.5 w-3.5 text-primary" />
+          ) : (
+            <ArrowDown className="h-3.5 w-3.5 text-primary" />
+          )
+        ) : (
+          <ArrowUpDown className="h-3.5 w-3.5 opacity-30" />
+        )}
+      </div>
+    </TableHead>
+  );
+}
+
 export function PipelineTableView({
   stageEntries,
   tagsMap = {},
@@ -59,8 +101,22 @@ export function PipelineTableView({
   onJumpToStage,
   onUnsubscribeFromPipeline,
 }: PipelineTableViewProps) {
+  const [sortColumn, setSortColumn] = useState<SortColumn>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      // Toggle direction if same column
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New column, start with ascending
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
   // Flatten all entries with stage info
-  const allEntries = useMemo(() => {
+  const baseEntries = useMemo(() => {
     return stageEntries.flatMap(({ stage, entries }) =>
       entries.map(entry => ({
         ...entry,
@@ -71,14 +127,77 @@ export function PipelineTableView({
                     stage.ordem <= 6 ? 'bg-purple-500' : 
                     stage.ordem <= 10 ? 'bg-orange-500' : 'bg-green-500'
       }))
-    ).sort((a, b) => {
-      // Sort by stage order, then by days in stage (descending)
-      if (a.stageOrdem !== b.stageOrdem) return a.stageOrdem - b.stageOrdem;
-      const aDays = a.data_entrada_etapa ? differenceInDays(new Date(), new Date(a.data_entrada_etapa)) : 0;
-      const bDays = b.data_entrada_etapa ? differenceInDays(new Date(), new Date(b.data_entrada_etapa)) : 0;
-      return bDays - aDays;
-    });
+    );
   }, [stageEntries]);
+
+  // Apply sorting
+  const allEntries = useMemo(() => {
+    const entries = [...baseEntries];
+    
+    if (!sortColumn) {
+      // Default sort: by stage order, then by days in stage (descending)
+      return entries.sort((a, b) => {
+        if (a.stageOrdem !== b.stageOrdem) return a.stageOrdem - b.stageOrdem;
+        const aDays = a.data_entrada_etapa ? differenceInDays(new Date(), new Date(a.data_entrada_etapa)) : 0;
+        const bDays = b.data_entrada_etapa ? differenceInDays(new Date(), new Date(b.data_entrada_etapa)) : 0;
+        return bDays - aDays;
+      });
+    }
+
+    const direction = sortDirection === 'asc' ? 1 : -1;
+
+    return entries.sort((a, b) => {
+      switch (sortColumn) {
+        case 'nome':
+          return direction * (a.lead?.nome || '').localeCompare(b.lead?.nome || '');
+        
+        case 'etapa':
+          return direction * (a.stageOrdem - b.stageOrdem);
+        
+        case 'dias': {
+          const aDays = a.data_entrada_etapa ? differenceInDays(new Date(), new Date(a.data_entrada_etapa)) : 0;
+          const bDays = b.data_entrada_etapa ? differenceInDays(new Date(), new Date(b.data_entrada_etapa)) : 0;
+          return direction * (aDays - bDays);
+        }
+        
+        case 'sla': {
+          // Calculate remaining days (negative = overdue)
+          const aRemaining = a.stagePrazo && a.data_entrada_etapa 
+            ? a.stagePrazo - differenceInDays(new Date(), new Date(a.data_entrada_etapa))
+            : 999;
+          const bRemaining = b.stagePrazo && b.data_entrada_etapa 
+            ? b.stagePrazo - differenceInDays(new Date(), new Date(b.data_entrada_etapa))
+            : 999;
+          return direction * (aRemaining - bRemaining);
+        }
+        
+        case 'saude': {
+          // Order: Vermelho (1) > Amarelo (2) > Verde (3) > null (4)
+          const healthOrder = { 'Vermelho': 1, 'Amarelo': 2, 'Verde': 3 };
+          const aOrder = healthOrder[a.saude_etapa as keyof typeof healthOrder] || 4;
+          const bOrder = healthOrder[b.saude_etapa as keyof typeof healthOrder] || 4;
+          return direction * (aOrder - bOrder);
+        }
+        
+        case 'score': {
+          // Order: Alto (1) > Médio (2) > Baixo (3) > null (4)
+          const scoreOrder = { 'Alto': 1, 'Médio': 2, 'Baixo': 3 };
+          const aOrder = scoreOrder[a.lead?.lead_score_classification as keyof typeof scoreOrder] || 4;
+          const bOrder = scoreOrder[b.lead?.lead_score_classification as keyof typeof scoreOrder] || 4;
+          return direction * (aOrder - bOrder);
+        }
+        
+        case 'responsavel': {
+          const aName = a.responsibles?.[0]?.profile?.full_name || a.responsibles?.[0]?.profile?.nome || '';
+          const bName = b.responsibles?.[0]?.profile?.full_name || b.responsibles?.[0]?.profile?.nome || '';
+          return direction * aName.localeCompare(bName);
+        }
+        
+        default:
+          return 0;
+      }
+    });
+  }, [baseEntries, sortColumn, sortDirection]);
 
   const getHealthBadge = (health: string | null) => {
     switch (health) {
@@ -143,14 +262,56 @@ export function PipelineTableView({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[200px]">Lead</TableHead>
+            <SortableHeader 
+              column="nome" 
+              label="Lead" 
+              currentSort={sortColumn}
+              currentDirection={sortDirection}
+              onSort={handleSort}
+            />
             <TableHead>Contato</TableHead>
-            <TableHead>Etapa</TableHead>
-            <TableHead>Dias na Etapa</TableHead>
-            <TableHead>SLA</TableHead>
-            <TableHead>Saúde</TableHead>
-            <TableHead>Score</TableHead>
-            <TableHead>Responsáveis</TableHead>
+            <SortableHeader 
+              column="etapa" 
+              label="Etapa" 
+              currentSort={sortColumn}
+              currentDirection={sortDirection}
+              onSort={handleSort}
+            />
+            <SortableHeader 
+              column="dias" 
+              label="Dias na Etapa" 
+              currentSort={sortColumn}
+              currentDirection={sortDirection}
+              onSort={handleSort}
+            />
+            <SortableHeader 
+              column="sla" 
+              label="SLA" 
+              currentSort={sortColumn}
+              currentDirection={sortDirection}
+              onSort={handleSort}
+            />
+            <SortableHeader 
+              column="saude" 
+              label="Saúde" 
+              currentSort={sortColumn}
+              currentDirection={sortDirection}
+              onSort={handleSort}
+            />
+            <SortableHeader 
+              column="score" 
+              label="Score" 
+              currentSort={sortColumn}
+              currentDirection={sortDirection}
+              onSort={handleSort}
+            />
+            <SortableHeader 
+              column="responsavel" 
+              label="Responsável" 
+              currentSort={sortColumn}
+              currentDirection={sortDirection}
+              onSort={handleSort}
+            />
             <TableHead>Tags</TableHead>
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
