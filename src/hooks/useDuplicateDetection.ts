@@ -31,7 +31,32 @@ export interface DuplicatePair {
 export function useDuplicateDetection() {
   const [duplicates, setDuplicates] = useState<DuplicatePair[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
+
+  // Verificar se usuário é admin
+  const checkIsAdmin = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+      
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+        
+      return !!data;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Verificar admin ao montar
+  useEffect(() => {
+    checkIsAdmin().then(setIsAdmin);
+  }, [checkIsAdmin]);
 
   const detectDuplicates = useCallback(async () => {
     setLoading(true);
@@ -45,29 +70,41 @@ export function useDuplicateDetection() {
       if (error) throw error;
       if (!leadsRaw) return;
 
-      // Buscar pipeline entries com nome do pipeline
-      const { data: pipelineEntries, error: pipelineError } = await supabase
+      // Buscar pipeline entries separadamente (sem join para evitar problemas)
+      const { data: pipelineEntries, error: pipelineEntriesError } = await supabase
         .from('lead_pipeline_entries')
-        .select(`
-          lead_id, 
-          pipeline_id, 
-          pipelines:pipeline_id (nome)
-        `)
-        .ilike('status_inscricao', 'ativo');
+        .select('lead_id, pipeline_id, status_inscricao')
+        .or('status_inscricao.ilike.ativo,status_inscricao.ilike.Ativo');
 
-      if (pipelineError) {
-        console.error('Erro ao buscar pipeline entries:', pipelineError);
+      if (pipelineEntriesError) {
+        console.error('Erro ao buscar pipeline entries:', pipelineEntriesError);
       }
+
+      // Buscar todos os pipelines ativos
+      const { data: pipelines, error: pipelinesError } = await supabase
+        .from('pipelines')
+        .select('id, nome')
+        .eq('ativo', true);
+
+      if (pipelinesError) {
+        console.error('Erro ao buscar pipelines:', pipelinesError);
+      }
+
+      // Criar mapa de pipelines por ID
+      const pipelineMap = new Map<string, string>();
+      pipelines?.forEach(p => {
+        pipelineMap.set(p.id, p.nome);
+      });
 
       // Mapear pipelines por lead_id
       const pipelinesByLead = new Map<string, LeadPipelineInfo[]>();
       pipelineEntries?.forEach(entry => {
-        const existing = pipelinesByLead.get(entry.lead_id) || [];
-        const pipelineData = entry.pipelines as { nome: string } | null;
-        if (pipelineData?.nome) {
+        const pipelineNome = pipelineMap.get(entry.pipeline_id);
+        if (pipelineNome) {
+          const existing = pipelinesByLead.get(entry.lead_id) || [];
           existing.push({
             pipeline_id: entry.pipeline_id,
-            pipeline_nome: pipelineData.nome
+            pipeline_nome: pipelineNome
           });
           pipelinesByLead.set(entry.lead_id, existing);
         }
@@ -188,6 +225,17 @@ export function useDuplicateDetection() {
     deleteLeadId: string, 
     mergedData?: Partial<DuplicateLead>
   ) => {
+    // Verificar permissão admin
+    const hasPermission = await checkIsAdmin();
+    if (!hasPermission) {
+      toast({
+        title: 'Sem permissão',
+        description: 'Apenas administradores podem mesclar leads (requer exclusão)',
+        variant: 'destructive'
+      });
+      return false;
+    }
+
     try {
       // Primeiro, transferir pipeline entries do lead que será excluído
       await supabase
@@ -244,12 +292,23 @@ export function useDuplicateDetection() {
       }
 
       // Excluir lead duplicado
-      const { error } = await supabase
+      const { error, count } = await supabase
         .from('leads')
         .delete()
-        .eq('id', deleteLeadId);
+        .eq('id', deleteLeadId)
+        .select();
 
       if (error) throw error;
+      
+      // Verificar se realmente excluiu
+      if (count === 0) {
+        toast({
+          title: 'Erro na exclusão',
+          description: 'O lead não foi excluído. Verifique suas permissões.',
+          variant: 'destructive'
+        });
+        return false;
+      }
 
       // Remover par da lista local
       setDuplicates(prev => prev.filter(d => 
@@ -271,7 +330,7 @@ export function useDuplicateDetection() {
       });
       return false;
     }
-  }, [toast]);
+  }, [toast, checkIsAdmin]);
 
   // Marcar como não duplicados (apenas remove da lista local)
   const markAsNotDuplicate = useCallback((lead1Id: string, lead2Id: string) => {
@@ -287,13 +346,35 @@ export function useDuplicateDetection() {
 
   // Excluir um lead duplicado
   const deleteDuplicateLead = useCallback(async (leadId: string) => {
+    // Verificar permissão admin
+    const hasPermission = await checkIsAdmin();
+    if (!hasPermission) {
+      toast({
+        title: 'Sem permissão',
+        description: 'Apenas administradores podem excluir leads',
+        variant: 'destructive'
+      });
+      return false;
+    }
+
     try {
-      const { error } = await supabase
+      const { error, count } = await supabase
         .from('leads')
         .delete()
-        .eq('id', leadId);
+        .eq('id', leadId)
+        .select();
 
       if (error) throw error;
+      
+      // Verificar se realmente excluiu
+      if (count === 0) {
+        toast({
+          title: 'Erro na exclusão',
+          description: 'Nenhum lead foi excluído. Verifique se você tem permissão de administrador.',
+          variant: 'destructive'
+        });
+        return false;
+      }
 
       setDuplicates(prev => prev.filter(d => 
         d.lead1.id !== leadId && d.lead2.id !== leadId
@@ -314,6 +395,44 @@ export function useDuplicateDetection() {
       });
       return false;
     }
+  }, [toast, checkIsAdmin]);
+
+  // Descadastrar lead de todos os pipelines
+  const unsubscribeLead = useCallback(async (leadId: string) => {
+    try {
+      const { error } = await supabase
+        .from('lead_pipeline_entries')
+        .update({ status_inscricao: 'inativo' })
+        .eq('lead_id', leadId);
+
+      if (error) throw error;
+
+      // Atualizar o lead local para remover pipelines
+      setDuplicates(prev => prev.map(d => {
+        if (d.lead1.id === leadId) {
+          return { ...d, lead1: { ...d.lead1, pipelines: [] } };
+        }
+        if (d.lead2.id === leadId) {
+          return { ...d, lead2: { ...d.lead2, pipelines: [] } };
+        }
+        return d;
+      }));
+
+      toast({
+        title: 'Descadastrado',
+        description: 'O lead foi removido de todos os pipelines',
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao descadastrar lead:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível descadastrar o lead',
+        variant: 'destructive'
+      });
+      return false;
+    }
   }, [toast]);
 
   // Carregar duplicatas ao montar
@@ -324,9 +443,11 @@ export function useDuplicateDetection() {
   return {
     duplicates,
     loading,
+    isAdmin,
     detectDuplicates,
     mergeLeads,
     markAsNotDuplicate,
-    deleteDuplicateLead
+    deleteDuplicateLead,
+    unsubscribeLead
   };
 }

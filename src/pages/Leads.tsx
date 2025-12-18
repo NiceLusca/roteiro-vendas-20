@@ -74,10 +74,12 @@ function LeadsContent() {
   const {
     duplicates,
     loading: duplicatesLoading,
+    isAdmin,
     detectDuplicates,
     mergeLeads,
     markAsNotDuplicate,
-    deleteDuplicateLead
+    deleteDuplicateLead,
+    unsubscribeLead
   } = useDuplicateDetection();
   
   // Estado do dialog de mesclagem
@@ -800,6 +802,8 @@ function LeadsContent() {
                       onMerge={(keepId, deleteId) => handleOpenMergeDialog(pair.lead1, pair.lead2)}
                       onKeepBoth={() => markAsNotDuplicate(pair.lead1.id, pair.lead2.id)}
                       onDelete={deleteDuplicateLead}
+                      onUnsubscribe={unsubscribeLead}
+                      isAdmin={isAdmin}
                     />
                   ))}
                 </div>

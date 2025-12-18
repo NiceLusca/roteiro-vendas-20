@@ -12,9 +12,16 @@ import {
   Trash2, 
   X, 
   Merge,
-  GitBranch
+  GitBranch,
+  UserMinus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DuplicateReviewCardProps {
   lead1: DuplicateLead;
@@ -24,7 +31,9 @@ interface DuplicateReviewCardProps {
   onMerge: (keepId: string, deleteId: string) => void;
   onKeepBoth: () => void;
   onDelete: (leadId: string) => void;
+  onUnsubscribe?: (leadId: string) => void;
   loading?: boolean;
+  isAdmin?: boolean;
 }
 
 export const DuplicateReviewCard = memo(function DuplicateReviewCard({
@@ -35,7 +44,9 @@ export const DuplicateReviewCard = memo(function DuplicateReviewCard({
   onMerge,
   onKeepBoth,
   onDelete,
-  loading = false
+  onUnsubscribe,
+  loading = false,
+  isAdmin = false
 }: DuplicateReviewCardProps) {
   const getMatchLabel = () => {
     switch (matchType) {
@@ -124,24 +135,66 @@ export const DuplicateReviewCard = memo(function DuplicateReviewCard({
 
       {/* Ações individuais */}
       <div className="flex gap-2 pt-2">
-        <Button
-          size="sm"
-          variant="default"
-          onClick={() => onMerge(lead.id, lead === lead1 ? lead2.id : lead1.id)}
-          disabled={loading}
-          className="flex-1"
-        >
-          <Merge className="h-3.5 w-3.5 mr-1.5" />
-          Manter este
-        </Button>
-        <Button
-          size="sm"
-          variant="destructive"
-          onClick={() => onDelete(lead.id)}
-          disabled={loading}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex-1">
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => onMerge(lead.id, lead === lead1 ? lead2.id : lead1.id)}
+                  disabled={loading || !isAdmin}
+                  className="w-full"
+                >
+                  <Merge className="h-3.5 w-3.5 mr-1.5" />
+                  Manter este
+                </Button>
+              </div>
+            </TooltipTrigger>
+            {!isAdmin && (
+              <TooltipContent>
+                <p>Apenas administradores podem mesclar leads</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+
+          {/* Botão de descadastrar */}
+          {onUnsubscribe && lead.pipelines && lead.pipelines.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onUnsubscribe(lead.id)}
+                  disabled={loading}
+                >
+                  <UserMinus className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Descadastrar de todos os pipelines</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => onDelete(lead.id)}
+                disabled={loading || !isAdmin}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            {!isAdmin && (
+              <TooltipContent>
+                <p>Apenas administradores podem excluir leads</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );
