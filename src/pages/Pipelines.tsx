@@ -1,6 +1,7 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { logger } from '@/utils/logger';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
+import { PipelineTableView } from '@/components/pipeline/PipelineTableView';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
@@ -14,7 +15,8 @@ import { KanbanSkeleton } from '@/components/ui/loading-skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Filter, Search, RotateCcw } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { ArrowLeft, Filter, Search, RotateCcw, LayoutGrid, Table } from 'lucide-react';
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { useMultiPipeline } from '@/hooks/useMultiPipeline';
@@ -61,6 +63,9 @@ function PipelinesContent({ slug }: { slug: string }) {
     leadId: string | null;
     leadName: string;
   }>({ open: false, entryId: null, leadId: null, leadName: '' });
+  
+  // Estado da visualização (kanban ou tabela)
+  const viewMode = searchParams.get('view') || 'kanban';
   
   // Ler filtros da URL (persistência)
   const searchTerm = searchParams.get('search') || '';
@@ -568,6 +573,21 @@ function PipelinesContent({ slug }: { slug: string }) {
             </SelectContent>
           </Select>
 
+          {/* Toggle Kanban/Tabela */}
+          <ToggleGroup 
+            type="single" 
+            value={viewMode} 
+            onValueChange={(v) => v && updateFilter('view', v)}
+            className="border rounded-md"
+          >
+            <ToggleGroupItem value="kanban" aria-label="Vista Kanban" className="h-9 px-2.5">
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="table" aria-label="Vista Tabela" className="h-9 px-2.5">
+              <Table className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+
           {/* Limpar filtros */}
           {(searchTerm || filterCloser !== 'all' || filterScore !== 'all' || filterHealth !== 'all' || filterResponsibleName !== 'all' || filterTagName !== 'all') && (
             <Button
@@ -588,23 +608,35 @@ function PipelinesContent({ slug }: { slug: string }) {
         </div>
       </div>
 
-      {/* Área principal do Kanban */}
+      {/* Área principal - Kanban ou Tabela */}
       <div className="flex-1 overflow-x-auto overflow-y-auto p-4">
-        <KanbanBoard
-          key={`kanban-${pipelineId}`}
-          selectedPipelineId={pipelineId}
-          stageEntries={stageEntries}
-          tagsMap={tagsMap}
-          onTagsChange={handleTagsChange}
-          onAddLead={handleAddLead}
-          onViewLead={handleViewOrEditLead}
-          onEditLead={handleViewOrEditLead}
-          onAdvanceStage={handleAdvanceStage}
-          onJumpToStage={handleJumpToStage}
-          onRegressStage={handleRegressStage}
-          onUnsubscribeFromPipeline={handleUnsubscribeFromPipeline}
-          onRefresh={handleRefresh}
-        />
+        {viewMode === 'kanban' ? (
+          <KanbanBoard
+            key={`kanban-${pipelineId}`}
+            selectedPipelineId={pipelineId}
+            stageEntries={stageEntries}
+            tagsMap={tagsMap}
+            onTagsChange={handleTagsChange}
+            onAddLead={handleAddLead}
+            onViewLead={handleViewOrEditLead}
+            onEditLead={handleViewOrEditLead}
+            onAdvanceStage={handleAdvanceStage}
+            onJumpToStage={handleJumpToStage}
+            onRegressStage={handleRegressStage}
+            onUnsubscribeFromPipeline={handleUnsubscribeFromPipeline}
+            onRefresh={handleRefresh}
+          />
+        ) : (
+          <PipelineTableView
+            stageEntries={stageEntries}
+            tagsMap={tagsMap}
+            onViewLead={handleViewOrEditLead}
+            onAdvanceStage={handleAdvanceStage}
+            onRegressStage={handleRegressStage}
+            onJumpToStage={handleJumpToStage}
+            onUnsubscribeFromPipeline={handleUnsubscribeFromPipeline}
+          />
+        )}
       </div>
 
       {editingLead && (
