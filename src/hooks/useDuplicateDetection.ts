@@ -172,14 +172,13 @@ export function useDuplicateDetection() {
     }
   }, [toast]);
 
-  // Mesclar dois leads (mantém o mais antigo e atualiza com dados do mais novo)
-  const mergeLeads = useCallback(async (keepLeadId: string, deleteLeadId: string) => {
+  // Mesclar dois leads (mantém o mais antigo e atualiza com dados mesclados)
+  const mergeLeads = useCallback(async (
+    keepLeadId: string, 
+    deleteLeadId: string, 
+    mergedData?: Partial<DuplicateLead>
+  ) => {
     try {
-      const keepLead = duplicates.find(d => d.lead1.id === keepLeadId || d.lead2.id === keepLeadId);
-      const deleteLead = duplicates.find(d => d.lead1.id === deleteLeadId || d.lead2.id === deleteLeadId);
-      
-      if (!keepLead || !deleteLead) return false;
-
       // Primeiro, transferir pipeline entries do lead que será excluído
       await supabase
         .from('lead_pipeline_entries')
@@ -203,6 +202,36 @@ export function useDuplicateDetection() {
         .from('lead_notes')
         .update({ lead_id: keepLeadId })
         .eq('lead_id', deleteLeadId);
+
+      // Transferir responsáveis
+      await supabase
+        .from('lead_responsibles')
+        .update({ lead_id: keepLeadId })
+        .eq('lead_id', deleteLeadId);
+
+      // Transferir tags
+      await supabase
+        .from('lead_tag_assignments')
+        .update({ lead_id: keepLeadId })
+        .eq('lead_id', deleteLeadId);
+
+      // Se tiver dados mesclados, atualizar o lead mantido
+      if (mergedData) {
+        const updateData: Record<string, any> = {};
+        if (mergedData.nome) updateData.nome = mergedData.nome;
+        if (mergedData.email) updateData.email = mergedData.email;
+        if (mergedData.whatsapp) updateData.whatsapp = mergedData.whatsapp;
+        if (mergedData.origem) updateData.origem = mergedData.origem;
+        if (mergedData.segmento) updateData.segmento = mergedData.segmento;
+        if (mergedData.lead_score !== undefined) updateData.lead_score = mergedData.lead_score;
+
+        if (Object.keys(updateData).length > 0) {
+          await supabase
+            .from('leads')
+            .update(updateData)
+            .eq('id', keepLeadId);
+        }
+      }
 
       // Excluir lead duplicado
       const { error } = await supabase
@@ -232,7 +261,7 @@ export function useDuplicateDetection() {
       });
       return false;
     }
-  }, [duplicates, toast]);
+  }, [toast]);
 
   // Marcar como não duplicados (apenas remove da lista local)
   const markAsNotDuplicate = useCallback((lead1Id: string, lead2Id: string) => {

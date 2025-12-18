@@ -14,6 +14,7 @@ import { BulkDeleteDialog } from '@/components/leads/BulkDeleteDialog';
 import { BulkPipelineInscriptionDialog } from '@/components/leads/BulkPipelineInscriptionDialog';
 import { BulkScoreAdjustmentDialog } from '@/components/leads/BulkScoreAdjustmentDialog';
 import { DuplicateReviewCard } from '@/components/leads/DuplicateReviewCard';
+import { DuplicateMergeDialog } from '@/components/leads/DuplicateMergeDialog';
 import { GlobalErrorBoundary } from '@/components/ui/GlobalErrorBoundary';
 import { SkeletonLeadsList } from '@/components/ui/skeleton-card';
 import { useOptimizedLeads } from '@/hooks/useOptimizedLeads';
@@ -78,6 +79,17 @@ function LeadsContent() {
     markAsNotDuplicate,
     deleteDuplicateLead
   } = useDuplicateDetection();
+  
+  // Estado do dialog de mesclagem
+  const [mergeDialogState, setMergeDialogState] = useState<{
+    open: boolean;
+    lead1: any;
+    lead2: any;
+  }>({ open: false, lead1: null, lead2: null });
+  
+  const handleOpenMergeDialog = (lead1: any, lead2: any) => {
+    setMergeDialogState({ open: true, lead1, lead2 });
+  };
   
   // Debounce search input
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -785,7 +797,7 @@ function LeadsContent() {
                       lead2={pair.lead2}
                       matchType={pair.matchType}
                       confidence={pair.confidence}
-                      onMerge={mergeLeads}
+                      onMerge={(keepId, deleteId) => handleOpenMergeDialog(pair.lead1, pair.lead2)}
                       onKeepBoth={() => markAsNotDuplicate(pair.lead1.id, pair.lead2.id)}
                       onDelete={deleteDuplicateLead}
                     />
@@ -794,6 +806,17 @@ function LeadsContent() {
               )}
             </TabsContent>
           </Tabs>
+
+          {/* Dialog de Mesclagem de Duplicatas */}
+          {mergeDialogState.open && mergeDialogState.lead1 && mergeDialogState.lead2 && (
+            <DuplicateMergeDialog
+              open={mergeDialogState.open}
+              onOpenChange={(open) => setMergeDialogState(prev => ({ ...prev, open }))}
+              lead1={mergeDialogState.lead1}
+              lead2={mergeDialogState.lead2}
+              onMerge={mergeLeads}
+            />
+          )}
 
           {/* Dialog de Inscrição em Pipeline */}
           {selectedLeadForInscription && showInscriptionDialog && (
