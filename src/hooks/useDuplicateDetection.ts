@@ -53,7 +53,7 @@ export function useDuplicateDetection() {
           pipeline_id, 
           pipelines:pipeline_id (nome)
         `)
-        .eq('status_inscricao', 'ativo');
+        .ilike('status_inscricao', 'ativo');
 
       if (pipelineError) {
         console.error('Erro ao buscar pipeline entries:', pipelineError);
