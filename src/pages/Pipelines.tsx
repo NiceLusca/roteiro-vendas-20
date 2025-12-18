@@ -55,6 +55,12 @@ function PipelinesContent({ slug }: { slug: string }) {
     open: boolean;
     entryId: string | null;
   }>({ open: false, entryId: null });
+  const [unsubscribeDialogState, setUnsubscribeDialogState] = useState<{
+    open: boolean;
+    entryId: string | null;
+    leadId: string | null;
+    leadName: string;
+  }>({ open: false, entryId: null, leadId: null, leadName: '' });
   
   // Ler filtros da URL (persistência)
   const searchTerm = searchParams.get('search') || '';
@@ -343,6 +349,31 @@ function PipelinesContent({ slug }: { slug: string }) {
     }
   }, [allEntries]);
 
+  // Handler para abrir modal de descadastro
+  const handleUnsubscribeFromPipeline = useCallback((entryId: string, leadId: string) => {
+    const entry = allEntries.find(e => e.id === entryId);
+    const leadName = entry?.leads?.nome || 'Lead';
+    setUnsubscribeDialogState({ 
+      open: true, 
+      entryId, 
+      leadId,
+      leadName 
+    });
+  }, [allEntries]);
+
+  // Handler para confirmar descadastro
+  const handleConfirmUnsubscribe = useCallback(async (reason?: string) => {
+    if (!unsubscribeDialogState.entryId) return;
+    
+    try {
+      await entries.archiveEntry(unsubscribeDialogState.entryId);
+      setUnsubscribeDialogState({ open: false, entryId: null, leadId: null, leadName: '' });
+      handleRefresh();
+    } catch (error) {
+      console.error('Erro ao descadastrar lead:', error);
+    }
+  }, [unsubscribeDialogState.entryId, entries, handleRefresh]);
+
   // Buscar agendamentos
   useEffect(() => {
     if (allEntries.length === 0) return;
@@ -571,6 +602,7 @@ function PipelinesContent({ slug }: { slug: string }) {
           onAdvanceStage={handleAdvanceStage}
           onJumpToStage={handleJumpToStage}
           onRegressStage={handleRegressStage}
+          onUnsubscribeFromPipeline={handleUnsubscribeFromPipeline}
           onRefresh={handleRefresh}
         />
       </div>
@@ -606,6 +638,14 @@ function PipelinesContent({ slug }: { slug: string }) {
           return s.id !== currentStageId;
         })}
         onConfirm={handleConfirmJump}
+      />
+
+      <UnsubscribeConfirmDialog
+        open={unsubscribeDialogState.open}
+        onOpenChange={(open) => setUnsubscribeDialogState({ open, entryId: null, leadId: null, leadName: '' })}
+        leadName={unsubscribeDialogState.leadName}
+        pipelineName={currentPipeline?.nome || ''}
+        onConfirm={handleConfirmUnsubscribe}
       />
     </div>
   );
