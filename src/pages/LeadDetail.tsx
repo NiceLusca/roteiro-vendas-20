@@ -297,12 +297,6 @@ export default function LeadDetail() {
                         </div>
                       )}
 
-                      {entry.nota_etapa && (
-                        <div>
-                          <p className="text-sm font-medium mb-2">Notas da Etapa:</p>
-                          <p className="text-sm text-muted-foreground">{entry.nota_etapa}</p>
-                        </div>
-                      )}
 
                       <div className="flex flex-wrap gap-2">
                         <Button 

@@ -10,7 +10,6 @@ interface LeadPipelineEntry {
   pipeline_id: string;
   etapa_atual_id: string;
   status_inscricao: string;
-  nota_etapa?: string;
   data_entrada_etapa: string;
   data_prevista_proxima_etapa?: string;
   tempo_em_etapa_dias: number;
@@ -142,7 +141,6 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         status_inscricao: entry.status_inscricao,
         data_entrada_etapa: entry.data_entrada_etapa,
         data_prevista_proxima_etapa: entry.data_prevista_proxima_etapa,
-        nota_etapa: entry.nota_etapa,
         saude_etapa: entry.saude_etapa || 'Verde',
         tempo_em_etapa_dias: 0,
         dias_em_atraso: 0,
@@ -228,8 +226,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         etapa_atual_id: entryData.etapa_atual_id,
         status_inscricao: 'Ativo',
         data_entrada_etapa: isoTimestamp,
-        saude_etapa: 'Verde' as const,
-        ...(entryData.nota_etapa && { nota_etapa: entryData.nota_etapa })
+        saude_etapa: 'Verde' as const
       };
 
       logger.debug('Executando INSERT', {
@@ -307,8 +304,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         .from('lead_pipeline_entries')
         .update({
           status_inscricao: 'Arquivado',
-          updated_at: new Date().toISOString(),
-          nota_etapa: motivo || 'Arquivado pelo usuário'
+          updated_at: new Date().toISOString()
         })
         .eq('id', entryId);
 
@@ -367,8 +363,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
       const newEntry = await createEntry({
         lead_id: originalEntry.lead_id,
         pipeline_id: newPipelineId,
-        etapa_atual_id: newStageId,
-        nota_etapa: `Transferido de outro pipeline. Motivo: ${motivo}`
+        etapa_atual_id: newStageId
       });
 
       if (newEntry) {
@@ -546,7 +541,6 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         status_inscricao: entry.status_inscricao,
         data_entrada_etapa: entry.data_entrada_etapa,
         data_prevista_proxima_etapa: entry.data_prevista_proxima_etapa,
-        nota_etapa: entry.nota_etapa,
         saude_etapa: entry.saude_etapa || 'Verde',
         tempo_em_etapa_dias: 0,
         dias_em_atraso: 0,

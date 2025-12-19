@@ -25,7 +25,6 @@ interface OptimizedKanbanCardProps {
     dias_em_atraso: number;
     saude_etapa: 'Verde' | 'Amarelo' | 'Vermelho';
     data_entrada_etapa: Date;
-    nota_etapa?: string;
   };
   onViewLead: (leadId: string) => void;
   onCreateAppointment: (leadId: string, leadName: string) => void;
@@ -104,12 +103,6 @@ export const OptimizedKanbanCard = memo(function OptimizedKanbanCard({
               )}
             </div>
 
-            {/* Note */}
-            {entry.nota_etapa && (
-              <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
-                {entry.nota_etapa}
-              </p>
-            )}
 
             {/* Actions */}
             <div className="flex gap-1 pt-2">
