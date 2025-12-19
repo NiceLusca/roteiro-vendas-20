@@ -33,7 +33,6 @@ interface StageAdvancementDialogProps {
     etapa_atual_id: string;
     pipeline_id: string;
     checklist_state: Record<string, boolean>;
-    nota_etapa?: string;
     tempo_em_etapa_dias: number;
     dias_em_atraso: number;
     saude_etapa: string;
@@ -64,7 +63,7 @@ export function StageAdvancementDialog({
   onSuccess
 }: StageAdvancementDialogProps) {
   const [checklistState, setChecklistState] = useState(entry.checklist_state || {});
-  const [note, setNote] = useState(entry.nota_etapa || '');
+  const [note, setNote] = useState('');
   const [criteriaCompleted, setCriteriaCompleted] = useState(false);
   const [isAdvancing, setIsAdvancing] = useState(false);
 

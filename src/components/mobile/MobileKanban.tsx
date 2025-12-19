@@ -104,11 +104,6 @@ export function MobileKanban({ pipelineId }: MobileKanbanProps) {
                           {entry.leads.whatsapp}
                         </p>
                       )}
-                      {entry.nota_etapa && (
-                        <p className="text-xs text-muted-foreground line-clamp-2">
-                          {entry.nota_etapa}
-                        </p>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
