@@ -267,11 +267,11 @@ export function PipelineAccessManager() {
               <p>Nenhum pipeline ativo encontrado</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+            <div className="overflow-x-auto max-w-full border rounded-lg">
+              <Table className="min-w-max">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="sticky left-0 bg-background z-10 min-w-[200px]">
+                    <TableHead className="sticky left-0 bg-muted/50 backdrop-blur-sm z-20 min-w-[200px] border-r">
                       Usuário
                     </TableHead>
                     {activePipelines.map(pipeline => (
@@ -286,7 +286,7 @@ export function PipelineAccessManager() {
                 <TableBody>
                   {nonAdminProfiles.map(profile => (
                     <TableRow key={profile.user_id}>
-                      <TableCell className="sticky left-0 bg-background z-10 font-medium">
+                      <TableCell className="sticky left-0 bg-muted/30 backdrop-blur-sm z-10 font-medium border-r">
                         <div>
                           <div className="truncate max-w-[180px]" title={getDisplayName(profile)}>
                             {getDisplayName(profile)}
