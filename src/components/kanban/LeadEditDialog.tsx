@@ -57,6 +57,9 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
   const [newNote, setNewNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [pasteEnabled, setPasteEnabled] = useState(false);
+  const [commentPasteEnabled, setCommentPasteEnabled] = useState(false);
+  const [commentImages, setCommentImages] = useState<{ file: File; preview: string }[]>([]);
+  const [uploadingCommentImage, setUploadingCommentImage] = useState(false);
   const [currentUserName, setCurrentUserName] = useState<string>('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editingNoteText, setEditingNoteText] = useState('');
@@ -113,10 +116,80 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
   };
 
   const handleAddNote = async () => {
-    if (!newNote.trim()) return;
+    if (!newNote.trim() && commentImages.length === 0) return;
     
-    await addNote(newNote);
-    setNewNote('');
+    try {
+      setUploadingCommentImage(true);
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Usuário não autenticado');
+        return;
+      }
+      
+      // Upload images and get URLs
+      const imageUrls: string[] = [];
+      for (const img of commentImages) {
+        const fileExt = img.file.name.split('.').pop();
+        const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substring(7);
+        const fileName = `${timestamp}_${randomString}.${fileExt}`;
+        const filePath = `${lead.id}/${fileName}`;
+        
+        // Upload to storage
+        const { error: uploadError } = await supabase
+          .storage
+          .from('lead-attachments')
+          .upload(filePath, img.file);
+        
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          continue;
+        }
+        
+        // Save metadata
+        await supabase
+          .from('lead_attachments_metadata')
+          .insert({
+            lead_id: lead.id,
+            file_path: filePath,
+            file_name: img.file.name,
+            file_size: img.file.size,
+            file_type: img.file.type,
+            uploaded_by: user.id
+          });
+        
+        // Get signed URL
+        const { data: signedData } = await supabase.storage
+          .from('lead-attachments')
+          .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year
+        
+        if (signedData?.signedUrl) {
+          imageUrls.push(signedData.signedUrl);
+        }
+      }
+      
+      // Build note text with images
+      let noteText = newNote.trim();
+      if (imageUrls.length > 0) {
+        const imageMarkdown = imageUrls.map(url => `[📷 Imagem](${url})`).join('\n');
+        noteText = noteText ? `${noteText}\n\n${imageMarkdown}` : imageMarkdown;
+      }
+      
+      if (noteText) {
+        await addNote(noteText);
+      }
+      
+      // Clear state
+      setNewNote('');
+      commentImages.forEach(img => URL.revokeObjectURL(img.preview));
+      setCommentImages([]);
+    } catch (error) {
+      console.error('Error adding note with images:', error);
+      toast.error('Erro ao adicionar comentário');
+    } finally {
+      setUploadingCommentImage(false);
+    }
   };
 
   const handleStartEdit = (noteId: string, noteText: string) => {
@@ -186,6 +259,46 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
     document.addEventListener('paste', handlePaste);
     return () => document.removeEventListener('paste', handlePaste);
   }, [open, pasteEnabled, uploadAttachment]);
+
+  // Listener para Ctrl+V quando a aba de comentários estiver ativa
+  useEffect(() => {
+    if (!open || !commentPasteEnabled) return;
+
+    const handleCommentPaste = async (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        
+        if (item.type.indexOf('image') !== -1) {
+          e.preventDefault();
+          const blob = item.getAsFile();
+          
+          if (blob) {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const file = new File([blob], `comment-img-${timestamp}.png`, { type: 'image/png' });
+            const preview = URL.createObjectURL(blob);
+            
+            setCommentImages(prev => [...prev, { file, preview }]);
+            toast.success('Imagem adicionada ao comentário');
+          }
+        }
+      }
+    };
+
+    document.addEventListener('paste', handleCommentPaste);
+    return () => document.removeEventListener('paste', handleCommentPaste);
+  }, [open, commentPasteEnabled]);
+
+  const removeCommentImage = (index: number) => {
+    setCommentImages(prev => {
+      const newImages = [...prev];
+      URL.revokeObjectURL(newImages[index].preview);
+      newImages.splice(index, 1);
+      return newImages;
+    });
+  };
 
   const isImage = (filename: string) => {
     return /\.(jpg|jpeg|png|gif|webp)$/i.test(filename);
@@ -366,8 +479,23 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label>Adicionar Comentário</Label>
+            <div 
+              className="space-y-2"
+              onFocus={() => setCommentPasteEnabled(true)}
+              onBlur={(e) => {
+                // Only disable if focus is leaving the container entirely
+                if (!e.currentTarget.contains(e.relatedTarget)) {
+                  setCommentPasteEnabled(false);
+                }
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <Label>Adicionar Comentário</Label>
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <ImageIcon className="h-3 w-3" />
+                  Ctrl+V para colar imagem
+                </span>
+              </div>
               <div className="flex gap-2">
                 <Textarea
                   placeholder="Digite seu comentário..."
@@ -376,13 +504,43 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
                   rows={3}
                 />
               </div>
+              
+              {/* Preview das imagens coladas */}
+              {commentImages.length > 0 && (
+                <div className="flex flex-wrap gap-2 p-2 bg-muted/50 rounded-lg">
+                  {commentImages.map((img, index) => (
+                    <div key={index} className="relative group">
+                      <img 
+                        src={img.preview} 
+                        alt={`Preview ${index + 1}`}
+                        className="h-16 w-16 object-cover rounded border"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeCommentImage(index)}
+                        className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
               <Button 
                 onClick={handleAddNote} 
-                disabled={!newNote.trim()}
+                disabled={(!newNote.trim() && commentImages.length === 0) || uploadingCommentImage}
                 className="w-full"
               >
-                <Send className="h-4 w-4 mr-2" />
-                Adicionar Comentário
+                {uploadingCommentImage ? (
+                  <>Enviando...</>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Adicionar Comentário
+                    {commentImages.length > 0 && ` (${commentImages.length} imagem${commentImages.length > 1 ? 's' : ''})`}
+                  </>
+                )}
               </Button>
             </div>
 
