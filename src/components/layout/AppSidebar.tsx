@@ -249,6 +249,13 @@ export function AppSidebar() {
             {user.email}
           </div>
         )}
+        {!collapsed && (
+          <div className="mt-3 pt-3 border-t border-sidebar-border/50">
+            <span className="text-[10px] text-muted-foreground/60">
+              Powered by Oceano Azul
+            </span>
+          </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   );
