@@ -17,10 +17,12 @@ import { DuplicateReviewCard } from '@/components/leads/DuplicateReviewCard';
 import { DuplicateMergeDialog } from '@/components/leads/DuplicateMergeDialog';
 import { GlobalErrorBoundary } from '@/components/ui/GlobalErrorBoundary';
 import { SkeletonLeadsList } from '@/components/ui/skeleton-card';
+import { AccessDenied } from '@/components/access/AccessDenied';
 import { useOptimizedLeads } from '@/hooks/useOptimizedLeads';
 import { useLeadTags } from '@/hooks/useLeadTags';
 import { useBulkLeadActions } from '@/hooks/useBulkLeadActions';
 import { useDuplicateDetection } from '@/hooks/useDuplicateDetection';
+import { usePipelineAccess } from '@/hooks/usePipelineAccess';
 import { useToast } from '@/hooks/use-toast';
 
 import { useCRM } from '@/contexts/CRMContext';
@@ -892,5 +894,34 @@ function LeadsContent() {
 }
 
 export default function Leads() {
+  const { isAdmin, accessiblePipelineIds, loading: accessLoading } = usePipelineAccess();
+
+  // Se ainda está carregando, mostrar skeleton
+  if (accessLoading) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Leads</h1>
+            <p className="text-muted-foreground">Carregando...</p>
+          </div>
+        </div>
+        <SkeletonLeadsList count={5} />
+      </div>
+    );
+  }
+
+  // Se não é admin e não tem acesso a nenhum pipeline
+  if (!isAdmin && accessiblePipelineIds?.length === 0) {
+    return (
+      <AccessDenied 
+        title="Sem Acesso à Página de Leads"
+        message="Você precisa ter acesso a pelo menos um pipeline para visualizar leads. Solicite ao administrador para liberar seu acesso."
+        showBackButton={true}
+        backPath="/"
+      />
+    );
+  }
+
   return <LeadsContent />;
 }

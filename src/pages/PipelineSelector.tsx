@@ -1,9 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
+import { usePipelineAccess } from '@/hooks/usePipelineAccess';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { EnhancedLoading } from '@/components/ui/enhanced-loading';
+import { AccessDenied } from '@/components/access/AccessDenied';
 import { ArrowRight, Target, Layers, AlertCircle } from 'lucide-react';
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,11 +13,20 @@ import { supabase } from '@/integrations/supabase/client';
 export default function PipelineSelector() {
   const navigate = useNavigate();
   const { pipelines, loading: pipelinesLoading } = useSupabasePipelines();
+  const { isAdmin, accessiblePipelineIds, loading: accessLoading } = usePipelineAccess();
   const [pipelineMetrics, setPipelineMetrics] = useState<Record<string, { totalLeads: number; leadsAtrasados: number }>>({});
   const [metricsLoading, setMetricsLoading] = useState(true);
 
-  // Usar useMemo para evitar recriação do array em cada render
-  const activePipelines = useMemo(() => pipelines.filter(p => p.ativo), [pipelines]);
+  // Filtrar pipelines ativos que o usuário tem acesso
+  const activePipelines = useMemo(() => {
+    const active = pipelines.filter(p => p.ativo);
+    // Admins veem todos os pipelines
+    if (isAdmin || accessiblePipelineIds === null) {
+      return active;
+    }
+    // Usuários veem apenas pipelines com acesso
+    return active.filter(p => accessiblePipelineIds.includes(p.id));
+  }, [pipelines, isAdmin, accessiblePipelineIds]);
 
   // Se houver apenas 1 pipeline, redirecionar automaticamente
   useEffect(() => {
@@ -64,8 +75,20 @@ export default function PipelineSelector() {
     fetchPipelineMetrics();
   }, [activePipelines]);
 
-  if (pipelinesLoading || metricsLoading) {
+  if (pipelinesLoading || metricsLoading || accessLoading) {
     return <EnhancedLoading loading={true}><></></EnhancedLoading>;
+  }
+
+  // Se usuário não é admin e não tem acesso a nenhum pipeline
+  if (!isAdmin && accessiblePipelineIds?.length === 0) {
+    return (
+      <AccessDenied 
+        title="Sem Acesso a Pipelines"
+        message="Você ainda não tem acesso a nenhum pipeline. Solicite ao administrador para liberar seu acesso."
+        showBackButton={true}
+        backPath="/"
+      />
+    );
   }
 
   const getPipelineMetrics = (pipelineId: string) => {

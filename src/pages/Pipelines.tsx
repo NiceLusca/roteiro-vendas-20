@@ -3,6 +3,7 @@ import { logger } from '@/utils/logger';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { PipelineTableView } from '@/components/pipeline/PipelineTableView';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
+import { AccessDenied } from '@/components/access/AccessDenied';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
@@ -10,6 +11,7 @@ import { useKanbanAppointments } from '@/hooks/useKanbanAppointments';
 import { useMultipleLeadResponsibles } from '@/hooks/useLeadResponsibles';
 import { useLeadTags } from '@/hooks/useLeadTags';
 import { useMultipleLeadTags } from '@/hooks/useLeadTagsBulk';
+import { usePipelineAccess } from '@/hooks/usePipelineAccess';
 import { EnhancedLoading, SmartSkeleton } from '@/components/ui/enhanced-loading';
 import { KanbanSkeleton } from '@/components/ui/loading-skeleton';
 import { Button } from '@/components/ui/button';
@@ -30,21 +32,32 @@ function PipelinesContent({ slug }: { slug: string }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { pipelines, getPipelineBySlug } = useSupabasePipelines();
+  const { isAdmin, canAccessPipeline, canEditPipeline, getAccessLevel, loading: accessLoading } = usePipelineAccess();
   const [currentPipeline, setCurrentPipeline] = useState<any>(null);
   const [loadingPipeline, setLoadingPipeline] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
   
-  // Buscar pipeline por slug
-  // Nota: getPipelineBySlug não está nas dependências para evitar loops de renderização
+  // Verificar acesso ao pipeline carregado
   useEffect(() => {
     const loadPipeline = async () => {
       setLoadingPipeline(true);
+      setAccessDenied(false);
       const pipeline = await getPipelineBySlug(slug);
       setCurrentPipeline(pipeline);
+      
+      // Verificar acesso se não é admin e pipeline foi carregado
+      if (pipeline && !accessLoading && !isAdmin) {
+        const hasAccess = canAccessPipeline(pipeline.id);
+        if (!hasAccess) {
+          setAccessDenied(true);
+        }
+      }
+      
       setLoadingPipeline(false);
     };
     loadPipeline();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
+  }, [slug, accessLoading, isAdmin]);
 
   const pipelineId = currentPipeline?.id;
   const entries = useSupabaseLeadPipelineEntries(pipelineId);
@@ -427,11 +440,23 @@ function PipelinesContent({ slug }: { slug: string }) {
   }, [navigate, pipelineId]);
 
   // Mostrar skeleton enquanto carrega
-  if (loadingPipeline) {
+  if (loadingPipeline || accessLoading) {
     return (
       <div className="flex-1 overflow-hidden p-6">
         <KanbanSkeleton />
       </div>
+    );
+  }
+
+  // Verificar se acesso foi negado
+  if (accessDenied) {
+    return (
+      <AccessDenied 
+        title="Acesso Negado ao Pipeline"
+        message="Você não tem permissão para acessar este pipeline. Solicite ao administrador para liberar seu acesso."
+        showBackButton={true}
+        backPath="/pipelines/select"
+      />
     );
   }
 
@@ -448,6 +473,10 @@ function PipelinesContent({ slug }: { slug: string }) {
       </div>
     );
   }
+
+  // Determinar se usuário pode editar (para controlar ações no Kanban)
+  const canEdit = isAdmin || canEditPipeline(currentPipeline.id);
+  const accessLevel = getAccessLevel(currentPipeline.id);
 
   // Agrupar por stage
   const stageEntries = pipelineStages.map((stage, index) => {
