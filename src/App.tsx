@@ -10,6 +10,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { GlobalErrorBoundary } from "@/components/ui/GlobalErrorBoundary";
 import { AuthProvider } from "@/contexts/AuthContextSecure";
 import { useAuth } from "@/contexts/AuthContextSecure";
+import { AdminRoute } from "@/components/routes/AdminRoute";
 
 import Index from "./pages/Index";
 import Pipelines from "./pages/Pipelines";
@@ -128,19 +129,25 @@ function AppContent() {
             </Suspense>
           } />
           <Route path="settings" element={
-            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-              <Settings />
-            </Suspense>
+            <AdminRoute requireAdmin={false}>
+              <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+                <Settings />
+              </Suspense>
+            </AdminRoute>
           } />
           <Route path="security" element={
-            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-              <Security />
-            </Suspense>
+            <AdminRoute requireAdmin={true}>
+              <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+                <Security />
+              </Suspense>
+            </AdminRoute>
           } />
           <Route path="production" element={
-            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-              <Production />
-            </Suspense>
+            <AdminRoute requireAdmin={false}>
+              <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
+                <Production />
+              </Suspense>
+            </AdminRoute>
           } />
           <Route path="leads/:id" element={
             <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
