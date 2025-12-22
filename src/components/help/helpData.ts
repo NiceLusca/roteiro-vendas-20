@@ -5,6 +5,7 @@ import {
   Kanban,
   Paperclip,
   Keyboard,
+  Shield,
 } from 'lucide-react';
 
 export interface HelpItem {
@@ -497,6 +498,238 @@ export const helpSections: HelpSection[] = [
           </div>
         `,
         keywords: ['atalhos', 'teclado', 'produtividade', 'navegação', 'shortcuts'],
+      }
+    ]
+  },
+  {
+    id: 'security-access',
+    title: 'Segurança e Acessos',
+    description: 'Configure permissões e controle quem pode acessar cada pipeline',
+    icon: Shield,
+    difficulty: 'Intermediário',
+    estimatedTime: '20-30 minutos',
+    audience: 'Administradores',
+    items: [
+      {
+        id: 'access-overview',
+        title: 'Visão Geral de Permissões',
+        description: 'Entenda como funciona o sistema de permissões e acessos',
+        type: 'guide',
+        content: `
+          <h3>Sistema de Permissões do Lúmen CRM</h3>
+          
+          <h4>🔑 Conceitos Fundamentais</h4>
+          <p>O sistema de acesso opera em <strong>duas camadas</strong>:</p>
+          
+          <p><strong>1. Roles (Papéis Globais):</strong></p>
+          <ul>
+            <li><strong>Admin:</strong> Acesso total ao sistema, incluindo configurações e segurança</li>
+            <li><strong>Moderador:</strong> Acesso a configurações, mas não a segurança</li>
+            <li><strong>Usuário:</strong> Acesso operacional baseado em permissões de pipeline</li>
+          </ul>
+          
+          <p><strong>2. Acesso por Pipeline:</strong></p>
+          <ul>
+            <li>Cada usuário pode ter níveis diferentes de acesso para cada pipeline</li>
+            <li>Administradores têm acesso automático a todos os pipelines</li>
+            <li>Usuários sem acesso a nenhum pipeline verão "Acesso Negado"</li>
+          </ul>
+          
+          <div style="background: #e3f2fd; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <strong>💡 Importante:</strong> Novos usuários com role "Usuário" começam sem acesso a pipelines. Um administrador deve atribuir manualmente.
+          </div>
+        `,
+        keywords: ['permissões', 'roles', 'acesso', 'segurança', 'admin', 'usuário'],
+      },
+      {
+        id: 'pipeline-access-control',
+        title: 'Atribuindo Acesso a Pipelines',
+        description: 'Como configurar quem pode ver e editar cada pipeline',
+        type: 'tutorial',
+        content: `
+          <h3>Controle de Acesso por Pipeline</h3>
+          
+          <h4>📍 Onde Configurar</h4>
+          <p>Acesse: <strong>Segurança → Aba "Acessos"</strong></p>
+          <p><em>Apenas administradores têm acesso a esta área.</em></p>
+          
+          <h4>🎯 Passo a Passo</h4>
+          <ol>
+            <li>Acesse o menu <strong>Segurança</strong> na barra lateral</li>
+            <li>Clique na aba <strong>Acessos</strong></li>
+            <li>Localize o usuário na primeira coluna da matriz</li>
+            <li>Encontre o pipeline desejado nas colunas</li>
+            <li>Clique no dropdown e selecione o nível de acesso</li>
+            <li>A alteração é salva automaticamente</li>
+          </ol>
+          
+          <h4>🔐 Níveis de Acesso</h4>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr style="border-bottom: 1px solid #e0e0e0; background: #f5f5f5;">
+              <td style="padding: 12px; font-weight: bold;">Nível</td>
+              <td style="padding: 12px; font-weight: bold;">Permissões</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e0e0e0;">
+              <td style="padding: 12px;">🚫 Sem acesso</td>
+              <td style="padding: 12px;">Não pode ver o pipeline</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e0e0e0;">
+              <td style="padding: 12px;">👁️ Visualizar</td>
+              <td style="padding: 12px;">Pode ver pipeline e leads, mas não editar</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e0e0e0;">
+              <td style="padding: 12px;">✏️ Editar</td>
+              <td style="padding: 12px;">Pode editar leads e mover entre etapas</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e0e0e0;">
+              <td style="padding: 12px;">⚙️ Gerenciar</td>
+              <td style="padding: 12px;">Pode configurar etapas, SLAs e critérios</td>
+            </tr>
+          </table>
+          
+          <h4>⚠️ Pontos Importantes</h4>
+          <ul>
+            <li><strong>Administradores:</strong> Aparecem em seção separada pois têm acesso total automático</li>
+            <li><strong>Novos usuários:</strong> Começam sem acesso - configure manualmente</li>
+            <li><strong>Acesso Negado:</strong> Usuários sem pipelines verão mensagem explicativa</li>
+            <li><strong>Alterações imediatas:</strong> As mudanças entram em vigor instantaneamente</li>
+          </ul>
+          
+          <div style="background: #fff3cd; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <strong>⚠️ Atenção:</strong> Remover acesso de um usuário não afeta os leads que ele já trabalhou - apenas impede novos acessos.
+          </div>
+        `,
+        keywords: ['atribuir', 'acesso', 'pipeline', 'permissão', 'visualizar', 'editar', 'gerenciar'],
+        relatedLinks: [
+          { title: 'Entendendo Roles', url: '#roles-permissions' },
+          { title: 'Melhores Práticas', url: '#security-best-practices' }
+        ]
+      },
+      {
+        id: 'roles-permissions',
+        title: 'Entendendo Roles e Permissões',
+        description: 'Diferenças entre Admin, Moderador e Usuário',
+        type: 'reference',
+        content: `
+          <h3>Roles do Sistema</h3>
+          
+          <h4>👑 Administrador (Admin)</h4>
+          <p>Acesso completo ao sistema:</p>
+          <ul>
+            <li>✅ Todas as configurações do sistema</li>
+            <li>✅ Gerenciamento de usuários e roles</li>
+            <li>✅ Área de Segurança (Acessos, Logs, Eventos)</li>
+            <li>✅ Todos os pipelines automaticamente</li>
+            <li>✅ Todos os leads e dados</li>
+          </ul>
+          
+          <h4>🛡️ Moderador</h4>
+          <p>Acesso administrativo parcial:</p>
+          <ul>
+            <li>✅ Configurações gerais (Pipelines, Produtos)</li>
+            <li>❌ Área de Segurança</li>
+            <li>⚠️ Pipelines conforme permissões atribuídas</li>
+            <li>⚠️ Leads dos pipelines com acesso</li>
+          </ul>
+          
+          <h4>👤 Usuário</h4>
+          <p>Acesso operacional:</p>
+          <ul>
+            <li>❌ Configurações</li>
+            <li>❌ Área de Segurança</li>
+            <li>⚠️ Apenas pipelines com acesso atribuído</li>
+            <li>⚠️ Apenas leads dos pipelines acessíveis</li>
+          </ul>
+          
+          <h4>📊 Comparativo de Acessos</h4>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr style="border-bottom: 1px solid #e0e0e0; background: #f5f5f5;">
+              <td style="padding: 8px; font-weight: bold;">Área</td>
+              <td style="padding: 8px; font-weight: bold; text-align: center;">Admin</td>
+              <td style="padding: 8px; font-weight: bold; text-align: center;">Moderador</td>
+              <td style="padding: 8px; font-weight: bold; text-align: center;">Usuário</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e0e0e0;">
+              <td style="padding: 8px;">Dashboard</td>
+              <td style="padding: 8px; text-align: center;">✅</td>
+              <td style="padding: 8px; text-align: center;">✅</td>
+              <td style="padding: 8px; text-align: center;">✅</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e0e0e0;">
+              <td style="padding: 8px;">Pipelines</td>
+              <td style="padding: 8px; text-align: center;">Todos</td>
+              <td style="padding: 8px; text-align: center;">Atribuídos</td>
+              <td style="padding: 8px; text-align: center;">Atribuídos</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e0e0e0;">
+              <td style="padding: 8px;">Leads</td>
+              <td style="padding: 8px; text-align: center;">Todos</td>
+              <td style="padding: 8px; text-align: center;">Dos pipelines</td>
+              <td style="padding: 8px; text-align: center;">Dos pipelines</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e0e0e0;">
+              <td style="padding: 8px;">Configurações</td>
+              <td style="padding: 8px; text-align: center;">✅</td>
+              <td style="padding: 8px; text-align: center;">✅</td>
+              <td style="padding: 8px; text-align: center;">❌</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #e0e0e0;">
+              <td style="padding: 8px;">Segurança</td>
+              <td style="padding: 8px; text-align: center;">✅</td>
+              <td style="padding: 8px; text-align: center;">❌</td>
+              <td style="padding: 8px; text-align: center;">❌</td>
+            </tr>
+          </table>
+        `,
+        keywords: ['roles', 'admin', 'moderador', 'usuário', 'permissões', 'hierarquia'],
+      },
+      {
+        id: 'security-best-practices',
+        title: 'Melhores Práticas de Segurança',
+        description: 'Recomendações para manter seu CRM seguro',
+        type: 'guide',
+        content: `
+          <h3>Melhores Práticas de Segurança</h3>
+          
+          <h4>✅ Checklist de Configuração Inicial</h4>
+          <ul>
+            <li>☐ Revise todos os usuários com role Admin</li>
+            <li>☐ Atribua acessos de pipeline a cada usuário</li>
+            <li>☐ Configure o menor nível de acesso necessário</li>
+            <li>☐ Documente quem tem acesso a quê</li>
+          </ul>
+          
+          <h4>🔐 Princípio do Menor Privilégio</h4>
+          <p>Conceda apenas o acesso mínimo necessário:</p>
+          <ul>
+            <li>Use "Visualizar" para quem só precisa consultar</li>
+            <li>Use "Editar" para quem trabalha ativamente com leads</li>
+            <li>Use "Gerenciar" apenas para gestores de pipeline</li>
+            <li>Limite o número de Administradores</li>
+          </ul>
+          
+          <h4>📋 Revisão Periódica</h4>
+          <p>Agende revisões regulares:</p>
+          <ul>
+            <li>Revise acessos ao desligar funcionários</li>
+            <li>Audite permissões trimestralmente</li>
+            <li>Verifique logs de segurança mensalmente</li>
+            <li>Atualize acessos ao mudar funções</li>
+          </ul>
+          
+          <h4>⚠️ Erros Comuns a Evitar</h4>
+          <ul>
+            <li>❌ Dar acesso Admin a todos os gestores</li>
+            <li>❌ Esquecer de remover acesso de ex-funcionários</li>
+            <li>❌ Não configurar acesso para novos usuários</li>
+            <li>❌ Usar "Gerenciar" quando "Editar" é suficiente</li>
+          </ul>
+          
+          <div style="background: #e8f5e8; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <strong>💡 Dica:</strong> Mantenha uma planilha documentando quem tem acesso a cada pipeline e por quê. Isso facilita auditorias futuras.
+          </div>
+        `,
+        keywords: ['segurança', 'boas práticas', 'auditoria', 'privilégio', 'revisão'],
       }
     ]
   }
