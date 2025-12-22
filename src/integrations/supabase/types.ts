@@ -903,6 +903,41 @@ export type Database = {
           },
         ]
       }
+      pipeline_access: {
+        Row: {
+          access_level: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          pipeline_id: string
+          user_id: string
+        }
+        Insert: {
+          access_level?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          pipeline_id: string
+          user_id: string
+        }
+        Update: {
+          access_level?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          pipeline_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_access_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pipeline_stages: {
         Row: {
           ativo: boolean | null
@@ -1285,6 +1320,14 @@ export type Database = {
       decode_html_entities: { Args: { input_text: string }; Returns: string }
       fix_utf8_encoding: { Args: { input_text: string }; Returns: string }
       generate_slug: { Args: { input_text: string }; Returns: string }
+      get_pipeline_access_level: {
+        Args: { _pipeline_id: string; _user_id: string }
+        Returns: string
+      }
+      has_pipeline_access: {
+        Args: { _min_level?: string; _pipeline_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
