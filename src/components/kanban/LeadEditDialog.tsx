@@ -14,6 +14,7 @@ import { useLeadResponsibles } from '@/hooks/useLeadResponsibles';
 import { useLeadActivityLog } from '@/hooks/useLeadActivityLog';
 import { ResponsibleSelector } from '@/components/leads/ResponsibleSelector';
 import { LeadActivityTimeline } from '@/components/timeline/LeadActivityTimeline';
+import { NoteContent } from './NoteContent';
 import { 
   User, 
   Mail, 
@@ -127,8 +128,8 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
         return;
       }
       
-      // Upload images and get URLs
-      const imageUrls: string[] = [];
+      // Upload images and get file paths
+      const imagePaths: string[] = [];
       for (const img of commentImages) {
         const fileExt = img.file.name.split('.').pop();
         const timestamp = Date.now();
@@ -159,21 +160,14 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
             uploaded_by: user.id
           });
         
-        // Get signed URL
-        const { data: signedData } = await supabase.storage
-          .from('lead-attachments')
-          .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year
-        
-        if (signedData?.signedUrl) {
-          imageUrls.push(signedData.signedUrl);
-        }
+        imagePaths.push(filePath);
       }
       
-      // Build note text with images
+      // Build note text with image markers (using special format: [[IMG:path]])
       let noteText = newNote.trim();
-      if (imageUrls.length > 0) {
-        const imageMarkdown = imageUrls.map(url => `[📷 Imagem](${url})`).join('\n');
-        noteText = noteText ? `${noteText}\n\n${imageMarkdown}` : imageMarkdown;
+      if (imagePaths.length > 0) {
+        const imageMarkers = imagePaths.map(path => `[[IMG:${path}]]`).join('\n');
+        noteText = noteText ? `${noteText}\n\n${imageMarkers}` : imageMarkers;
       }
       
       if (noteText) {
@@ -614,7 +608,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm whitespace-pre-wrap">{linkifyText(note.note_text)}</p>
+                      <NoteContent text={note.note_text} />
                     )}
                   </div>
                 ))
