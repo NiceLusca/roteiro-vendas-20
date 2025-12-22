@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { usePipelineAccessManager } from '@/hooks/usePipelineAccess';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
-import { Eye, Pencil, Settings, Shield, Users, X } from 'lucide-react';
+import { Eye, Pencil, Settings, Shield, Users, X, CheckCircle2, Loader2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -58,6 +58,7 @@ export function PipelineAccessManager() {
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [savingCell, setSavingCell] = useState<string | null>(null);
+  const [savingBulk, setSavingBulk] = useState<string | null>(null);
   
   const { toast } = useToast();
   const { pipelines, loading: loadingPipelines } = useSupabasePipelines();
@@ -138,6 +139,58 @@ export function PipelineAccessManager() {
 
   const getDisplayName = (profile: Profile) => {
     return profile.nome || profile.full_name || 'Nome não definido';
+  };
+
+  const handleGrantAllPipelines = async (userId: string, level: 'view' | 'edit' | 'manage' = 'edit') => {
+    setSavingBulk(userId);
+    
+    try {
+      // Grant access to all active pipelines
+      for (const pipeline of activePipelines) {
+        await grantAccess(userId, pipeline.id, level);
+      }
+      
+      toast({
+        title: "Acesso concedido",
+        description: `Acesso "${accessLevelLabels[level]}" concedido a todos os ${activePipelines.length} pipelines`
+      });
+    } catch (error) {
+      console.error('Error granting bulk access:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível conceder acesso a todos os pipelines",
+        variant: "destructive"
+      });
+    } finally {
+      setSavingBulk(null);
+    }
+  };
+
+  const handleRevokeAllPipelines = async (userId: string) => {
+    setSavingBulk(userId);
+    
+    try {
+      for (const pipeline of activePipelines) {
+        const currentLevel = getUserAccessLevel(userId, pipeline.id);
+        if (currentLevel !== 'none') {
+          await revokeAccess(userId, pipeline.id);
+        }
+      }
+      
+      toast({
+        title: "Acessos revogados",
+        description: "Todos os acessos foram removidos"
+      });
+    } catch (error) {
+      console.error('Error revoking bulk access:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível revogar os acessos",
+        variant: "destructive"
+      });
+    } finally {
+      setSavingBulk(null);
+    }
   };
 
   const nonAdminProfiles = useMemo(() => 
@@ -274,6 +327,9 @@ export function PipelineAccessManager() {
                     <TableHead className="sticky left-0 bg-muted/50 backdrop-blur-sm z-20 min-w-[200px] border-r">
                       Usuário
                     </TableHead>
+                    <TableHead className="text-center min-w-[120px]">
+                      Ações Rápidas
+                    </TableHead>
                     {activePipelines.map(pipeline => (
                       <TableHead key={pipeline.id} className="text-center min-w-[140px]">
                         <div className="truncate" title={pipeline.nome}>
@@ -284,7 +340,13 @@ export function PipelineAccessManager() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {nonAdminProfiles.map(profile => (
+                  {nonAdminProfiles.map(profile => {
+                    const isBulkSaving = savingBulk === profile.user_id;
+                    const userHasAnyAccess = activePipelines.some(p => 
+                      getUserAccessLevel(profile.user_id, p.id) !== 'none'
+                    );
+                    
+                    return (
                     <TableRow key={profile.user_id}>
                       <TableCell className="sticky left-0 bg-muted/30 backdrop-blur-sm z-10 font-medium border-r">
                         <div>
@@ -294,6 +356,53 @@ export function PipelineAccessManager() {
                           <div className="text-xs text-muted-foreground truncate max-w-[180px]">
                             {profile.email}
                           </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center p-2">
+                        <div className="flex gap-1 justify-center">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs gap-1"
+                                  onClick={() => handleGrantAllPipelines(profile.user_id, 'edit')}
+                                  disabled={isBulkSaving}
+                                >
+                                  {isBulkSaving ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                  )}
+                                  Todos
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Conceder acesso "Editar" a todos os pipelines</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          {userHasAnyAccess && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 text-xs text-destructive hover:text-destructive"
+                                    onClick={() => handleRevokeAllPipelines(profile.user_id)}
+                                    disabled={isBulkSaving}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Revogar todos os acessos</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                         </div>
                       </TableCell>
                       {activePipelines.map(pipeline => {
@@ -357,7 +466,7 @@ export function PipelineAccessManager() {
                         );
                       })}
                     </TableRow>
-                  ))}
+                  )})}
                 </TableBody>
               </Table>
             </div>
