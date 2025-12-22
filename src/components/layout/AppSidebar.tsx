@@ -22,11 +22,11 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  Brain,
   HelpCircle,
   Shield
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextSecure';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 
 const mainMenuItems = [
@@ -103,8 +103,12 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const { signOut, user } = useAuth();
+  const { isAdmin, isModerator, loading: roleLoading } = useUserRole();
   const currentPath = location.pathname;
   const collapsed = state === 'collapsed';
+
+  // Show config items only for admins and moderators
+  const canSeeConfig = isAdmin || isModerator;
 
   const isActive = (path: string) => currentPath === path;
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
@@ -190,23 +194,26 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Configurações */}
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {configItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink to={item.url} end className={getNavCls}>
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Configurações - only for admins and moderators */}
+        {canSeeConfig && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Configurações</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {configItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink to={item.url} end className={getNavCls}>
+                        <item.icon className="mr-2 h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Ajuda */}
         <SidebarGroup>

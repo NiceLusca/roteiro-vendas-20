@@ -2,10 +2,11 @@ import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SecurityDashboard } from '@/components/security/SecurityDashboard';
 import { RoleManager } from '@/components/security/RoleManager';
+import { PipelineAccessManager } from '@/components/security/PipelineAccessManager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Users, Settings, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Shield, Users, Settings, AlertTriangle, CheckCircle, Lock } from 'lucide-react';
 
 export default function Security() {
   const securityFeatures = [
@@ -111,6 +112,10 @@ export default function Security() {
               <Users className="h-4 w-4" />
               Permissões
             </TabsTrigger>
+            <TabsTrigger value="access" className="flex items-center gap-2">
+              <Lock className="h-4 w-4" />
+              Acessos
+            </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Configurações
@@ -123,6 +128,10 @@ export default function Security() {
 
           <TabsContent value="roles">
             <RoleManager />
+          </TabsContent>
+
+          <TabsContent value="access">
+            <PipelineAccessManager />
           </TabsContent>
 
           <TabsContent value="settings">
