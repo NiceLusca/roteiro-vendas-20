@@ -17,6 +17,7 @@ interface PipelineStage {
   entrada_criteria?: string;
   saida_criteria?: string;
   duracao_minutos?: number;
+  proxima_etapa_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -56,6 +57,7 @@ export function useSupabasePipelineStages(pipelineId?: string) {
           criterios_avanco,
           closer_padrao,
           ativo,
+          proxima_etapa_id,
           created_at,
           updated_at
         `);

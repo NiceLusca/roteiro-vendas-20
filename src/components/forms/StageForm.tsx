@@ -3,11 +3,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RefreshCcw } from 'lucide-react';
 
 const stageSchema = z.object({
   pipeline_id: z.string().uuid(),
@@ -21,18 +22,25 @@ const stageSchema = z.object({
   wip_limit: z.number().optional(),
   gerar_agendamento_auto: z.boolean().default(false),
   duracao_minutos: z.number().optional(),
+  proxima_etapa_id: z.string().uuid().nullable().optional(),
 });
 
 type StageFormData = z.infer<typeof stageSchema>;
 
+interface PipelineStageOption {
+  id: string;
+  nome: string;
+  ordem: number;
+}
+
 interface StageFormProps {
   stage?: Partial<StageFormData> & { id?: string } | null;
+  pipelineStages?: PipelineStageOption[];
   onSave: (data: StageFormData) => void;
   onCancel: () => void;
 }
 
-export function StageForm({ stage, onSave, onCancel }: StageFormProps) {
-
+export function StageForm({ stage, pipelineStages = [], onSave, onCancel }: StageFormProps) {
   const form = useForm<StageFormData>({
     resolver: zodResolver(stageSchema),
     defaultValues: {
@@ -47,8 +55,12 @@ export function StageForm({ stage, onSave, onCancel }: StageFormProps) {
       wip_limit: stage?.wip_limit || undefined,
       gerar_agendamento_auto: stage?.gerar_agendamento_auto || false,
       duracao_minutos: stage?.duracao_minutos || undefined,
+      proxima_etapa_id: stage?.proxima_etapa_id || null,
     },
   });
+
+  // Filter out current stage from options
+  const availableNextStages = pipelineStages.filter(s => s.id !== stage?.id);
 
   return (
     <Form {...form}>
@@ -114,6 +126,43 @@ export function StageForm({ stage, onSave, onCancel }: StageFormProps) {
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="proxima_etapa_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="flex items-center gap-2">
+                <RefreshCcw className="w-4 h-4" />
+                Próxima Etapa
+              </FormLabel>
+              <Select 
+                onValueChange={(value) => field.onChange(value === 'auto' ? null : value)} 
+                value={field.value || 'auto'}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a próxima etapa" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="auto">
+                    <span className="text-muted-foreground">Automático (próxima na ordem)</span>
+                  </SelectItem>
+                  {availableNextStages.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.ordem}. {s.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                Permite criar fluxos cíclicos selecionando uma etapa anterior como próximo passo.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}

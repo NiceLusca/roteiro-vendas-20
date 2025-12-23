@@ -88,6 +88,7 @@ export interface PipelineStage {
   horarios_preferenciais?: any;
   template_agendamento?: string;
   duracao_minutos?: number;
+  proxima_etapa_id?: string | null; // ID da próxima etapa customizada (permite fluxos cíclicos)
 }
 
 export interface StageChecklistItem {
