@@ -191,55 +191,53 @@ export const KanbanCard = memo(function KanbanCard({
         slaStatus.ringClass
       )}
     >
-      <CardContent className="p-3 space-y-2">
-        {/* Header com nome, score, SLA badge e menu */}
-        <div className="flex items-start justify-between gap-2">
-          {/* SLA Badge no canto superior direito */}
-          <div className="flex items-center gap-1 flex-shrink-0 order-2">
-            <Badge
-              variant="outline" 
-              className={cn(
-                "text-[9px] font-semibold px-1.5 py-0.5 h-5 border-0 rounded-full",
-                slaStatus.color,
-                slaStatus.pulse && "animate-pulse"
-              )}
-            >
-              {slaStatus.icon && <slaStatus.icon className="w-2.5 h-2.5 mr-0.5" />}
-              {slaStatus.label}
-            </Badge>
-            <div 
-              className="opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-auto"
-              onMouseDown={(e) => e.stopPropagation()}
-              onDragStart={(e) => e.preventDefault()}
-            >
-              <KanbanCardMenu
-                hasNextStage={!!nextStage}
-                showMessageAction={stage.proximo_passo_tipo === 'Mensagem'}
-                onViewLead={onViewLead}
-                onOpenChecklist={onOpenChecklist}
-                onRegressStage={onRegressStage}
-                onAdvanceStage={onAdvanceStage}
-                onJumpToStage={onJumpToStage}
-                onTransferPipeline={onTransferPipeline}
-                onCreateAppointment={onCreateAppointment}
-                onRegisterInteraction={onRegisterInteraction}
-                onUnsubscribeFromPipeline={onUnsubscribeFromPipeline}
-              />
-            </div>
-          </div>
-          {/* Nome do lead com mais espaço - permite 2 linhas */}
-          <div className="flex-1 min-w-0 order-1">
-            <h4 className="font-semibold text-sm text-foreground leading-tight line-clamp-2">
-              {lead.nome}
-            </h4>
-            {(lead.segmento || lead.origem) && (
-              <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
-                {lead.segmento && lead.origem 
-                  ? `${lead.segmento} • ${lead.origem}` 
-                  : lead.segmento || lead.origem}
-              </p>
+      <CardContent className="p-3 space-y-2 relative">
+        {/* SLA Badge e Menu - Posição absoluta no canto superior direito */}
+        <div className="absolute -top-1 -right-1 z-10 flex items-center gap-0.5">
+          <Badge
+            variant="outline" 
+            className={cn(
+              "text-[9px] font-semibold px-1.5 py-0.5 h-5 border-0 rounded-full shadow-sm",
+              slaStatus.color,
+              slaStatus.pulse && "animate-pulse"
             )}
+          >
+            {slaStatus.icon && <slaStatus.icon className="w-2.5 h-2.5 mr-0.5" />}
+            {slaStatus.label}
+          </Badge>
+          <div 
+            className="opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-auto"
+            onMouseDown={(e) => e.stopPropagation()}
+            onDragStart={(e) => e.preventDefault()}
+          >
+            <KanbanCardMenu
+              hasNextStage={!!nextStage}
+              showMessageAction={stage.proximo_passo_tipo === 'Mensagem'}
+              onViewLead={onViewLead}
+              onOpenChecklist={onOpenChecklist}
+              onRegressStage={onRegressStage}
+              onAdvanceStage={onAdvanceStage}
+              onJumpToStage={onJumpToStage}
+              onTransferPipeline={onTransferPipeline}
+              onCreateAppointment={onCreateAppointment}
+              onRegisterInteraction={onRegisterInteraction}
+              onUnsubscribeFromPipeline={onUnsubscribeFromPipeline}
+            />
           </div>
+        </div>
+
+        {/* Nome do lead - ocupa toda a largura disponível */}
+        <div className="pr-14">
+          <h4 className="font-semibold text-sm text-foreground leading-tight line-clamp-2">
+            {lead.nome}
+          </h4>
+          {(lead.segmento || lead.origem) && (
+            <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+              {lead.segmento && lead.origem 
+                ? `${lead.segmento} • ${lead.origem}` 
+                : lead.segmento || lead.origem}
+            </p>
+          )}
         </div>
 
         {/* Tags do Lead - 2 visíveis + botão de adicionar */}
