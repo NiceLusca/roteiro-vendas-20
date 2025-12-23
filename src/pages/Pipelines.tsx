@@ -267,7 +267,10 @@ function PipelinesContent({ slug }: { slug: string }) {
     
     const currentStageIndex = pipelineStages.findIndex(s => s.id === entry.etapa_atual_id);
     const currentStage = pipelineStages[currentStageIndex];
-    const nextStage = pipelineStages[currentStageIndex + 1];
+    // Usar proxima_etapa_id se definido (etapa cíclica), senão usar a próxima na ordem
+    const nextStage = currentStage?.proxima_etapa_id
+      ? pipelineStages.find(s => s.id === currentStage.proxima_etapa_id)
+      : pipelineStages[currentStageIndex + 1];
     
     if (!currentStage || !nextStage) {
       console.error('❌ Stages não encontrados');
@@ -482,7 +485,10 @@ function PipelinesContent({ slug }: { slug: string }) {
   const stageEntries = pipelineStages.map((stage, index) => {
     const entries = allEntries.filter(entry => entry.etapa_atual_id === stage.id);
     const wipExceeded = stage.wip_limit ? entries.length > stage.wip_limit : false;
-    const nextStage = index < pipelineStages.length - 1 ? pipelineStages[index + 1] : null;
+    // Usar proxima_etapa_id se definido (etapa cíclica), senão usar a próxima na ordem
+    const nextStage = stage.proxima_etapa_id
+      ? pipelineStages.find(s => s.id === stage.proxima_etapa_id) || null
+      : (index < pipelineStages.length - 1 ? pipelineStages[index + 1] : null);
 
     const entriesWithAppointments = entries.map(entry => ({
       ...entry,
