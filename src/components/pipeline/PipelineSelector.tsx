@@ -40,7 +40,7 @@ export function PipelineSelector({
     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4 max-w-full">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground">Pipeline de Vendas</h1>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground">Pipeline</h1>
           {showAccessBadge && accessInfo.icon && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -57,14 +57,14 @@ export function PipelineSelector({
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
           <Select value={selectedPipelineId} onValueChange={onPipelineChange}>
-            <SelectTrigger className="w-full sm:w-48 md:w-56 lg:w-64">
+            <SelectTrigger className="w-full sm:w-56 md:w-64 lg:w-72 h-11 text-base font-medium">
               <SelectValue placeholder="Selecionar pipeline" />
             </SelectTrigger>
             <SelectContent>
               {pipelines.map(pipeline => (
-                <SelectItem key={pipeline.id} value={pipeline.id}>
+                <SelectItem key={pipeline.id} value={pipeline.id} className="text-base py-2.5">
                   <div className="flex items-center gap-2">
-                    <span>{pipeline.nome}</span>
+                    <span className="font-medium">{pipeline.nome}</span>
                     {pipeline.primary_pipeline && (
                       <Badge variant="secondary" className="text-xs">
                         Primário

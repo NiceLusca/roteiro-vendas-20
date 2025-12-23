@@ -1,44 +1,48 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar } from '@/components/ui/sidebar';
-import { LayoutDashboard, Users, GitBranch, Calendar, TrendingUp, ShoppingCart, BarChart3, Settings, LogOut, HelpCircle, Shield } from 'lucide-react';
+import { LayoutGrid, Contact, Columns3, CalendarDays, Handshake, Receipt, LineChart, Activity, Settings, LogOut, LifeBuoy, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextSecure';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
+
 const mainMenuItems = [{
   title: 'Dashboard',
   url: '/',
-  icon: LayoutDashboard
+  icon: LayoutGrid
 }, {
   title: 'Pipelines',
   url: '/pipelines',
-  icon: GitBranch
+  icon: Columns3
 }, {
   title: 'Leads',
   url: '/leads',
-  icon: Users
+  icon: Contact
 }, {
   title: 'Agenda',
   url: '/agenda',
-  icon: Calendar
+  icon: CalendarDays
 }];
+
 const salesItems = [{
   title: 'Negociações',
   url: '/deals',
-  icon: TrendingUp
+  icon: Handshake
 }, {
   title: 'Vendas',
   url: '/orders',
-  icon: ShoppingCart
+  icon: Receipt
 }];
+
 const analyticsItems = [{
   title: 'Relatórios',
   url: '/reports',
-  icon: BarChart3
+  icon: LineChart
 }, {
   title: 'Analytics',
   url: '/analytics',
-  icon: TrendingUp
+  icon: Activity
 }];
+
 const configItems = [{
   title: 'Configurações',
   url: '/settings',
@@ -46,12 +50,13 @@ const configItems = [{
 }, {
   title: 'Segurança',
   url: '/security',
-  icon: Shield
+  icon: ShieldCheck
 }];
+
 const helpItems = [{
   title: 'Central de Ajuda',
   url: '/help',
-  icon: HelpCircle
+  icon: LifeBuoy
 }];
 export function AppSidebar() {
   const {
@@ -96,14 +101,14 @@ export function AppSidebar() {
       <SidebarContent>
         {/* Menu Principal */}
         <SidebarGroup>
-          <SidebarGroupLabel>Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mainMenuItems.map(item => <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} end className={getNavCls}>
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      <item.icon className="mr-2.5 h-5 w-5" />
+                      {!collapsed && <span className="font-medium text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>)}
@@ -113,14 +118,14 @@ export function AppSidebar() {
 
         {/* Vendas */}
         <SidebarGroup>
-          <SidebarGroupLabel>Vendas</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Vendas</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {salesItems.map(item => <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} end className={getNavCls}>
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      <item.icon className="mr-2.5 h-5 w-5" />
+                      {!collapsed && <span className="font-medium text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>)}
@@ -130,14 +135,14 @@ export function AppSidebar() {
 
         {/* Analytics */}
         <SidebarGroup>
-          <SidebarGroupLabel>Analytics</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Analytics</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {analyticsItems.map(item => <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} end className={getNavCls}>
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      <item.icon className="mr-2.5 h-5 w-5" />
+                      {!collapsed && <span className="font-medium text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>)}
@@ -147,14 +152,14 @@ export function AppSidebar() {
 
         {/* Configurações - only for admins and moderators */}
         {canSeeConfig && <SidebarGroup>
-            <SidebarGroupLabel>Configurações</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Configurações</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {configItems.map(item => <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                       <NavLink to={item.url} end className={getNavCls}>
-                        <item.icon className="mr-2 h-4 w-4" />
-                        {!collapsed && <span>{item.title}</span>}
+                        <item.icon className="mr-2.5 h-5 w-5" />
+                        {!collapsed && <span className="font-medium text-sm">{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>)}
@@ -169,8 +174,8 @@ export function AppSidebar() {
               {helpItems.map(item => <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} end className={getNavCls}>
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      <item.icon className="mr-2.5 h-5 w-5" />
+                      {!collapsed && <span className="font-medium text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>)}
@@ -181,8 +186,8 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
         <Button variant="ghost" size={collapsed ? "icon" : "default"} onClick={signOut} className="w-full justify-start">
-          <LogOut className={`h-4 w-4 ${collapsed ? '' : 'mr-2'}`} />
-          {!collapsed && <span>Sair</span>}
+          <LogOut className={`h-5 w-5 ${collapsed ? '' : 'mr-2.5'}`} />
+          {!collapsed && <span className="font-medium text-sm">Sair</span>}
         </Button>
         {!collapsed && user && <div className="mt-2 text-xs text-muted-foreground truncate">
             {user.email}
