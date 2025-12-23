@@ -124,8 +124,14 @@
 
   /* CRM specific animations */
   .kanban-card {
-    @apply transition-all duration-200 hover:shadow-lg;
+    @apply transition-all duration-200;
     box-shadow: var(--shadow-md);
+    border-left: 4px solid;
+    border-left-color: hsl(var(--stage-color));
+  }
+  
+  .kanban-card:hover {
+    box-shadow: var(--shadow-lg);
   }
   
   .metric-card {
