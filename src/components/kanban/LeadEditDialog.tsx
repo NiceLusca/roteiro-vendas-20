@@ -30,8 +30,12 @@ import {
   Pencil,
   X,
   Check,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Tag,
+  Star
 } from 'lucide-react';
+import { TagPopover } from './TagPopover';
+import { useLeadTags } from '@/hooks/useLeadTags';
 import { formatWhatsApp } from '@/utils/formatters';
 import { linkifyText } from '@/utils/linkify';
 import { toast } from 'sonner';
@@ -93,6 +97,29 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
   const { saveLead } = useSupabaseLeads();
   const { responsibles, history } = useLeadResponsibles(lead.id);
   const { activities } = useLeadActivityLog(lead.id);
+  const { getLeadTags, removeTagFromLead } = useLeadTags();
+  const [leadTags, setLeadTags] = useState<{ id: string; nome: string; cor: string | null }[]>([]);
+
+  // Buscar tags do lead
+  useEffect(() => {
+    const fetchTags = async () => {
+      const tags = await getLeadTags(lead.id);
+      setLeadTags(tags);
+    };
+    if (open) {
+      fetchTags();
+    }
+  }, [lead.id, open, getLeadTags]);
+
+  const handleRemoveTag = async (tagId: string) => {
+    await removeTagFromLead(lead.id, tagId);
+    setLeadTags(prev => prev.filter(t => t.id !== tagId));
+  };
+
+  const handleTagsChange = async () => {
+    const tags = await getLeadTags(lead.id);
+    setLeadTags(tags);
+  };
 
   const handleSave = async () => {
     try {
@@ -348,6 +375,51 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
 
           {/* Tab de Informações */}
           <TabsContent value="info" className="space-y-4 mt-4">
+            {/* Score e Tags em destaque */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Score Badge */}
+              <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                <Star className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Lead Score</p>
+                  <Badge className="bg-primary text-primary-foreground font-bold text-lg px-3 py-1 mt-1">
+                    {lead.lead_score || 0}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Tags Section */}
+              <div className="p-3 bg-muted/30 border rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <Tag className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Tags</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {leadTags.map(tag => (
+                    <Badge 
+                      key={tag.id}
+                      style={{ 
+                        backgroundColor: `${tag.cor || '#3b82f6'}cc`, 
+                        color: 'white' 
+                      }}
+                      className="text-xs px-2 py-0.5 font-medium flex items-center gap-1"
+                    >
+                      {tag.nome}
+                      <X 
+                        className="h-3 w-3 cursor-pointer hover:opacity-70" 
+                        onClick={() => handleRemoveTag(tag.id)}
+                      />
+                    </Badge>
+                  ))}
+                  <TagPopover 
+                    leadId={lead.id} 
+                    currentTags={leadTags} 
+                    onTagsChange={handleTagsChange}
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="nome">Nome</Label>

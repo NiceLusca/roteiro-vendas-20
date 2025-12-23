@@ -194,12 +194,9 @@ export const KanbanCard = memo(function KanbanCard({
       <CardContent className="p-3 space-y-2">
         {/* Header com nome, score, SLA badge e menu */}
         <div className="flex items-start justify-between gap-2">
-          {/* Badges no canto superior direito */}
+          {/* SLA Badge no canto superior direito */}
           <div className="flex items-center gap-1 flex-shrink-0 order-2">
-            <Badge variant="secondary" className="bg-primary/10 text-primary font-bold text-[10px] px-1.5 py-0 h-5">
-              {lead.lead_score}
-            </Badge>
-            <Badge 
+            <Badge
               variant="outline" 
               className={cn(
                 "text-[9px] font-semibold px-1.5 py-0.5 h-5 border-0 rounded-full",
