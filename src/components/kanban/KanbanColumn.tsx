@@ -237,18 +237,6 @@ export const KanbanColumn = memo(function KanbanColumn({
                 {stage.nome}
               </CardTitle>
             </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddLead?.(stage.id);
-              }}
-              className="h-6 w-6 p-0"
-              title="Adicionar lead nesta etapa"
-            >
-              <Plus className="h-3 w-3" />
-            </Button>
           </div>
           
           {/* Contadores */}
