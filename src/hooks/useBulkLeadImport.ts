@@ -22,6 +22,9 @@ const VALID_ORIGENS = [
  * 1. WhatsApp (mais confiável)
  * 2. Email (se WhatsApp não fornecido)
  * 3. Nome + Origem (menos confiável)
+ * 
+ * IMPORTANTE: Quando há duplicatas, SEMPRE retorna o lead mais antigo (created_at ASC)
+ * para garantir consistência nas inscrições de pipeline.
  */
 const findExistingLead = async (leadData: Partial<Lead>): Promise<Lead | null> => {
   try {
@@ -31,6 +34,8 @@ const findExistingLead = async (leadData: Partial<Lead>): Promise<Lead | null> =
         .from('leads')
         .select('*')
         .eq('whatsapp', leadData.whatsapp)
+        .order('created_at', { ascending: true }) // Sempre pegar o mais antigo
+        .limit(1)
         .maybeSingle();
 
       if (error) {
@@ -53,6 +58,8 @@ const findExistingLead = async (leadData: Partial<Lead>): Promise<Lead | null> =
         .from('leads')
         .select('*')
         .eq('email', leadData.email)
+        .order('created_at', { ascending: true }) // Sempre pegar o mais antigo
+        .limit(1)
         .maybeSingle();
 
       if (error) {
@@ -76,6 +83,8 @@ const findExistingLead = async (leadData: Partial<Lead>): Promise<Lead | null> =
         .select('*')
         .eq('nome', leadData.nome)
         .eq('origem', leadData.origem)
+        .order('created_at', { ascending: true }) // Sempre pegar o mais antigo
+        .limit(1)
         .maybeSingle();
 
       if (error) {
