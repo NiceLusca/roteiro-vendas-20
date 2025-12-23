@@ -30,7 +30,10 @@ export const formatDateTime = (date: Date): string => {
 };
 
 // Formatar WhatsApp
-export const formatWhatsApp = (phone: string): string => {
+export const formatWhatsApp = (phone: string | null | undefined): string => {
+  // Retorna vazio se null/undefined
+  if (!phone) return '';
+  
   // Remove tudo que não for número
   const cleaned = phone.replace(/\D/g, '');
   
@@ -48,7 +51,10 @@ export const formatWhatsApp = (phone: string): string => {
 };
 
 // Normalizar WhatsApp para armazenamento
-export const normalizeWhatsApp = (phone: string): string => {
+export const normalizeWhatsApp = (phone: string | null | undefined): string => {
+  // Retorna vazio se null/undefined
+  if (!phone) return '';
+  
   // Remove tudo que não for número
   const cleaned = phone.replace(/\D/g, '');
   
@@ -81,7 +87,8 @@ export const normalizeWhatsApp = (phone: string): string => {
 };
 
 // Validar WhatsApp brasileiro
-export const validateWhatsApp = (phone: string): boolean => {
+export const validateWhatsApp = (phone: string | null | undefined): boolean => {
+  if (!phone) return false;
   const cleaned = phone.replace(/\D/g, '');
   
   // Aceita números de 11 dígitos (DDD + 9 + número)
