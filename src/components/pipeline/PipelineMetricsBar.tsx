@@ -20,16 +20,16 @@ const MetricItem = memo(function MetricItem({
   colorClass = 'text-foreground' 
 }: MetricItemProps) {
   return (
-    <div className="flex items-center gap-3 px-4 py-2">
-      <div className={cn("p-2 rounded-lg bg-muted/50", colorClass)}>
+    <div className="flex items-center gap-2 px-3 py-1.5">
+      <div className={cn("p-1.5 rounded-md bg-muted/40", colorClass)}>
         {icon}
       </div>
       <div className="flex flex-col">
-        <span className="text-xs text-muted-foreground font-medium">{label}</span>
-        <div className="flex items-baseline gap-1.5">
-          <span className={cn("text-lg font-bold", colorClass)}>{value}</span>
+        <span className="text-[10px] text-muted-foreground font-medium leading-tight">{label}</span>
+        <div className="flex items-baseline gap-1">
+          <span className={cn("text-sm font-semibold", colorClass)}>{value}</span>
           {subValue && (
-            <span className="text-xs text-muted-foreground">{subValue}</span>
+            <span className="text-[10px] text-muted-foreground">{subValue}</span>
           )}
         </div>
       </div>
@@ -87,8 +87,8 @@ export const PipelineMetricsBar = memo(function PipelineMetricsBar({
       return createdAt > sevenDaysAgo;
     }).length;
 
-    // Taxa de saúde (leads verdes / total)
-    const healthyLeads = entries.filter(e => e.saude_etapa === 'Verde').length;
+    // Taxa de saúde = leads dentro do prazo (não atrasados)
+    const healthyLeads = totalLeads - overdueLeads;
     const healthRate = totalLeads > 0 ? Math.round((healthyLeads / totalLeads) * 100) : 0;
 
     return {
@@ -101,16 +101,16 @@ export const PipelineMetricsBar = memo(function PipelineMetricsBar({
   }, [entries, stages]);
 
   return (
-    <Card className="flex items-center divide-x divide-border bg-card/80 backdrop-blur-sm border shadow-sm">
+    <div className="flex items-center divide-x divide-border/50 bg-muted/30 rounded-lg border border-border/50">
       <MetricItem
-        icon={<Users className="h-4 w-4 text-primary" />}
-        label="Total de leads"
+        icon={<Users className="h-3.5 w-3.5 text-primary" />}
+        label="Total"
         value={metrics.totalLeads}
         colorClass="text-foreground"
       />
       
       <MetricItem
-        icon={<AlertTriangle className="h-4 w-4 text-destructive" />}
+        icon={<AlertTriangle className="h-3.5 w-3.5 text-destructive" />}
         label="Atrasados"
         value={metrics.overdueLeads}
         subValue={metrics.totalLeads > 0 ? `(${Math.round((metrics.overdueLeads / metrics.totalLeads) * 100)}%)` : ''}
@@ -118,7 +118,7 @@ export const PipelineMetricsBar = memo(function PipelineMetricsBar({
       />
       
       <MetricItem
-        icon={<Clock className="h-4 w-4 text-secondary" />}
+        icon={<Clock className="h-3.5 w-3.5 text-muted-foreground" />}
         label="Tempo médio"
         value={metrics.avgDaysInStage}
         subValue="dias"
@@ -126,18 +126,17 @@ export const PipelineMetricsBar = memo(function PipelineMetricsBar({
       />
       
       <MetricItem
-        icon={<TrendingUp className="h-4 w-4 text-success" />}
-        label="Últimos 7 dias"
+        icon={<TrendingUp className="h-3.5 w-3.5 text-success" />}
+        label="Novos (7d)"
         value={`+${metrics.recentLeads}`}
-        subValue="leads"
         colorClass="text-success"
       />
       
-      <div className="flex items-center gap-3 px-4 py-2">
+      <div className="flex items-center gap-2 px-3 py-1.5">
         <div className="flex flex-col">
-          <span className="text-xs text-muted-foreground font-medium">Saúde do pipeline</span>
-          <div className="flex items-center gap-2 mt-1">
-            <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+          <span className="text-[10px] text-muted-foreground font-medium leading-tight">Saúde</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
               <div 
                 className={cn(
                   "h-full rounded-full transition-all duration-500",
@@ -148,7 +147,7 @@ export const PipelineMetricsBar = memo(function PipelineMetricsBar({
               />
             </div>
             <span className={cn(
-              "text-sm font-bold",
+              "text-sm font-semibold",
               metrics.healthRate >= 70 ? "text-success" :
               metrics.healthRate >= 40 ? "text-warning" : "text-destructive"
             )}>
@@ -157,6 +156,6 @@ export const PipelineMetricsBar = memo(function PipelineMetricsBar({
           </div>
         </div>
       </div>
-    </Card>
+    </div>
   );
 });
