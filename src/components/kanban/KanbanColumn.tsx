@@ -256,9 +256,9 @@ export const KanbanColumn = memo(function KanbanColumn({
       </Card>
 
       {/* Content com scroll nativo */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pr-1">
         {sortedEntries.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {sortedEntries.map((entry) => {
               const stageChecklistItems = checklistItems.filter(
                 item => item.etapa_id === stage.id

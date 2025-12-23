@@ -3,6 +3,7 @@ import { logger } from '@/utils/logger';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { PipelineTableView } from '@/components/pipeline/PipelineTableView';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
+import { PipelineMetricsBar } from '@/components/pipeline/PipelineMetricsBar';
 import { AccessDenied } from '@/components/access/AccessDenied';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
@@ -495,8 +496,16 @@ function PipelinesContent({ slug }: { slug: string }) {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
-      {/* Barra de Filtros - Topo */}
-      <div className="flex-shrink-0 border-b bg-card px-4 py-3">
+      {/* Barra de Métricas Resumidas */}
+      <div className="flex-shrink-0 px-4 pt-4">
+        <PipelineMetricsBar 
+          entries={allEntries}
+          stages={pipelineStages}
+        />
+      </div>
+
+      {/* Barra de Filtros */}
+      <div className="flex-shrink-0 border-b bg-card px-4 py-3 mt-3">
         <div className="flex flex-wrap items-center gap-3">
           {/* Toggle Kanban/Tabela - PRIMEIRO com destaque */}
           <ToggleGroup 

@@ -194,34 +194,36 @@ export const KanbanCard = memo(function KanbanCard({
       onDragEnd={handleDragEnd}
       onClick={handleCardClick}
       className={cn(
-        "kanban-card kanban-card-stage group cursor-pointer active:cursor-grabbing border-l-4",
+        "kanban-card kanban-card-stage group cursor-pointer active:cursor-grabbing",
+        "transition-all duration-200 ease-out",
+        "hover:shadow-xl hover:-translate-y-0.5 hover:border-l-primary",
         stageClass,
         (isLocalDragging || isDragging) && "opacity-50 rotate-1 scale-105 shadow-xl z-50",
         // Ring de urgência para atrasados e vencendo hoje
         slaStatus.ringClass
       )}
     >
-      <CardContent className="p-3">
-        {/* Header compacto com menu */}
-        <div className="flex items-start justify-between mb-2">
+      <CardContent className="p-4 space-y-3">
+        {/* Header com menu */}
+        <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-base text-foreground truncate mb-0.5">
+            <h4 className="font-semibold text-base text-foreground truncate leading-tight">
               {lead.nome}
             </h4>
             {(lead.segmento || lead.origem) && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {lead.segmento && lead.origem 
                   ? `${lead.segmento} • ${lead.origem}` 
                   : lead.segmento || lead.origem}
               </p>
             )}
           </div>
-          <div className="flex items-center gap-1.5 ml-2">
-            <Badge variant="secondary" className="bg-primary/10 text-primary font-bold text-xs px-2">
+          <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+            <Badge variant="secondary" className="bg-primary/10 text-primary font-bold text-xs px-2 py-0.5">
               {lead.lead_score}
             </Badge>
             <div 
-              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto"
+              className="opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-auto"
               onMouseDown={(e) => e.stopPropagation()}
               onDragStart={(e) => e.preventDefault()}
             >
@@ -244,42 +246,42 @@ export const KanbanCard = memo(function KanbanCard({
 
         {/* Tags do Lead */}
         {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-2">
-            {tags.slice(0, 3).map((tag) => (
+          <div className="flex flex-wrap gap-1.5">
+            {tags.slice(0, 2).map((tag) => (
               <Badge 
                 key={tag.id}
                 style={{ backgroundColor: tag.cor || '#3b82f6', color: 'white' }}
-                className="text-[10px] px-1.5 py-0 h-4"
+                className="text-[10px] px-2 py-0.5 h-5 font-medium shadow-sm"
               >
                 {tag.nome}
               </Badge>
             ))}
-            {tags.length > 3 && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-                +{tags.length - 3}
+            {tags.length > 2 && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 h-5 bg-muted/50">
+                +{tags.length - 2}
               </Badge>
             )}
           </div>
         )}
 
         {/* Telefone com copiar */}
-        <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
-          <Phone className="h-3 w-3 flex-shrink-0" />
-          <span className="truncate flex-1">{formatWhatsApp(lead.whatsapp)}</span>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 rounded-md px-2.5 py-1.5">
+          <Phone className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/70" />
+          <span className="truncate flex-1 font-medium">{formatWhatsApp(lead.whatsapp)}</span>
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 w-6 p-0 hover:bg-primary/10 flex-shrink-0"
+            className="h-6 w-6 p-0 hover:bg-primary/10 flex-shrink-0 rounded-full"
             onClick={handleCopyWhatsApp}
             title={copiedWhatsApp ? "Copiado!" : "Copiar WhatsApp"}
           >
             <Copy className={cn(
-              "h-3 w-3 transition-colors",
-              copiedWhatsApp ? "text-success" : "text-muted-foreground hover:text-primary"
+              "h-3 w-3 transition-all duration-200",
+              copiedWhatsApp ? "text-success scale-110" : "text-muted-foreground hover:text-primary"
             )} />
           </Button>
           {copiedWhatsApp && (
-            <span className="text-[10px] text-success font-medium animate-in fade-in slide-in-from-left-1 flex-shrink-0">
+            <span className="text-[10px] text-success font-semibold animate-in fade-in slide-in-from-left-1 flex-shrink-0">
               Copiado!
             </span>
           )}
@@ -287,18 +289,16 @@ export const KanbanCard = memo(function KanbanCard({
 
         {/* Próximo Agendamento */}
         {nextAppointment && (
-          <div className="mb-2">
-            <AppointmentBadge 
-              startAt={nextAppointment.start_at}
-              title={nextAppointment.titulo}
-              compact
-            />
-          </div>
+          <AppointmentBadge 
+            startAt={nextAppointment.start_at}
+            title={nextAppointment.titulo}
+            compact
+          />
         )}
 
         {/* Responsável principal + SLA */}
-        <div className="flex items-center justify-between text-xs mb-3 py-1.5 px-2 bg-muted/50 rounded-md border border-border/30">
-          <div className="flex items-center gap-2 text-muted-foreground truncate min-w-0 flex-1">
+        <div className="flex items-center justify-between text-xs py-2 px-3 bg-gradient-to-r from-muted/40 to-muted/20 rounded-lg border border-border/20">
+          <div className="flex items-center gap-2.5 text-muted-foreground truncate min-w-0 flex-1">
             {responsibles.length > 0 ? (() => {
               const primaryResp = responsibles.find(r => r.is_primary) || responsibles[0];
               const respName = primaryResp?.profile?.full_name 
@@ -307,7 +307,7 @@ export const KanbanCard = memo(function KanbanCard({
               const initial = respName.charAt(0).toUpperCase();
               return (
                 <>
-                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 ring-1 ring-primary/30">
+                  <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0 ring-2 ring-primary/20 shadow-sm">
                     <span className="text-xs font-bold text-primary">
                       {initial}
                     </span>
@@ -318,13 +318,13 @@ export const KanbanCard = memo(function KanbanCard({
                 </>
               );
             })() : (
-              <span className="italic text-muted-foreground/60 text-xs">Sem responsável</span>
+              <span className="italic text-muted-foreground/50 text-xs">Sem responsável</span>
             )}
           </div>
           <Badge 
             variant="outline" 
             className={cn(
-              "text-[10px] font-semibold px-2 py-0.5 h-5 border-0 flex-shrink-0 ml-2 rounded-full",
+              "text-[10px] font-semibold px-2.5 py-1 h-6 border-0 flex-shrink-0 ml-2 rounded-full shadow-sm",
               slaStatus.color,
               slaStatus.pulse && "animate-pulse"
             )}
