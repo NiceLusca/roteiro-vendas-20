@@ -247,13 +247,8 @@ function PipelinesContent({ slug }: { slug: string }) {
 
   // Handler para avançar etapa via botão
   const handleAdvanceStage = useCallback(async (entryId: string) => {
-    console.log('📍 [Pipelines] handleAdvanceStage chamado:', entryId);
-    
     const entry = allEntries.find(e => e.id === entryId);
-    if (!entry) {
-      console.error('❌ Entry não encontrada');
-      return;
-    }
+    if (!entry) return;
     
     const currentStageIndex = pipelineStages.findIndex(s => s.id === entry.etapa_atual_id);
     const currentStage = pipelineStages[currentStageIndex];
@@ -262,10 +257,7 @@ function PipelinesContent({ slug }: { slug: string }) {
       ? pipelineStages.find(s => s.id === currentStage.proxima_etapa_id)
       : pipelineStages[currentStageIndex + 1];
     
-    if (!currentStage || !nextStage) {
-      console.error('❌ Stages não encontrados');
-      return;
-    }
+    if (!currentStage || !nextStage) return;
     
     await moveLead({
       entry,
@@ -273,10 +265,7 @@ function PipelinesContent({ slug }: { slug: string }) {
       toStage: nextStage,
       checklistItems: [],
       currentEntriesInTargetStage: 0,
-      onSuccess: () => {
-        console.log('✅ [Pipelines] Avançou com sucesso');
-        handleRefresh();
-      }
+      onSuccess: handleRefresh
     });
   }, [allEntries, pipelineStages, moveLead, handleRefresh]);
 
@@ -285,22 +274,14 @@ function PipelinesContent({ slug }: { slug: string }) {
 
   // Handler para regredir etapa via botão
   const handleRegressStage = useCallback(async (entryId: string) => {
-    console.log('📍 [Pipelines] handleRegressStage chamado:', entryId);
-    
     const entry = allEntries.find(e => e.id === entryId);
-    if (!entry) {
-      console.error('❌ Entry não encontrada');
-      return;
-    }
+    if (!entry) return;
     
     const currentStageIndex = pipelineStages.findIndex(s => s.id === entry.etapa_atual_id);
     const currentStage = pipelineStages[currentStageIndex];
     const previousStage = pipelineStages[currentStageIndex - 1];
     
-    if (!currentStage || !previousStage) {
-      console.error('❌ Não há etapa anterior');
-      return;
-    }
+    if (!currentStage || !previousStage) return;
     
     await moveLead({
       entry,
@@ -308,10 +289,7 @@ function PipelinesContent({ slug }: { slug: string }) {
       toStage: previousStage,
       checklistItems: [],
       currentEntriesInTargetStage: 0,
-      onSuccess: () => {
-        console.log('✅ [Pipelines] Regrediu com sucesso');
-        handleRefresh();
-      }
+      onSuccess: handleRefresh
     });
   }, [allEntries, pipelineStages, moveLead, handleRefresh]);
 
@@ -325,18 +303,12 @@ function PipelinesContent({ slug }: { slug: string }) {
     if (!stageJumpDialogState.entryId) return;
     
     const entry = allEntries.find(e => e.id === stageJumpDialogState.entryId);
-    if (!entry) {
-      console.error('❌ Entry não encontrada');
-      return;
-    }
+    if (!entry) return;
     
     const fromStage = pipelineStages.find(s => s.id === entry.etapa_atual_id);
     const toStage = pipelineStages.find(s => s.id === targetStageId);
     
-    if (!fromStage || !toStage) {
-      console.error('❌ Stages não encontrados');
-      return;
-    }
+    if (!fromStage || !toStage) return;
     
     await moveLead({
       entry,
@@ -345,7 +317,6 @@ function PipelinesContent({ slug }: { slug: string }) {
       checklistItems: [],
       currentEntriesInTargetStage: allEntries.filter(e => e.etapa_atual_id === targetStageId).length,
       onSuccess: () => {
-        console.log('✅ [Pipelines] Pulou etapas com sucesso');
         setStageJumpDialogState({ open: false, entryId: null });
         handleRefresh();
       }
