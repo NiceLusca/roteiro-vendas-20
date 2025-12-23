@@ -8,6 +8,7 @@ import { ArrowRight, AlertCircle, AlertTriangle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { KanbanCardMenu } from './KanbanCardMenu';
 import { AppointmentBadge } from '@/components/notifications/AppointmentBadge';
+import { TagPopover } from './TagPopover';
 import type { LeadResponsible } from '@/hooks/useLeadResponsibles';
 import type { LeadTag } from '@/types/bulkImport';
 
@@ -193,25 +194,11 @@ export const KanbanCard = memo(function KanbanCard({
       <CardContent className="p-3 space-y-2">
         {/* Header com nome, score, SLA badge e menu */}
         <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h4 className="font-semibold text-sm text-foreground truncate leading-tight flex-1">
-                {lead.nome}
-              </h4>
-              <Badge variant="secondary" className="bg-primary/10 text-primary font-bold text-[10px] px-1.5 py-0 h-5 flex-shrink-0">
-                {lead.lead_score}
-              </Badge>
-            </div>
-            {(lead.segmento || lead.origem) && (
-              <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
-                {lead.segmento && lead.origem 
-                  ? `${lead.segmento} • ${lead.origem}` 
-                  : lead.segmento || lead.origem}
-              </p>
-            )}
-          </div>
-          {/* SLA Badge no canto superior direito */}
-          <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Badges no canto superior direito */}
+          <div className="flex items-center gap-1 flex-shrink-0 order-2">
+            <Badge variant="secondary" className="bg-primary/10 text-primary font-bold text-[10px] px-1.5 py-0 h-5">
+              {lead.lead_score}
+            </Badge>
             <Badge 
               variant="outline" 
               className={cn(
@@ -243,27 +230,48 @@ export const KanbanCard = memo(function KanbanCard({
               />
             </div>
           </div>
+          {/* Nome do lead com mais espaço - permite 2 linhas */}
+          <div className="flex-1 min-w-0 order-1">
+            <h4 className="font-semibold text-sm text-foreground leading-tight line-clamp-2">
+              {lead.nome}
+            </h4>
+            {(lead.segmento || lead.origem) && (
+              <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                {lead.segmento && lead.origem 
+                  ? `${lead.segmento} • ${lead.origem}` 
+                  : lead.segmento || lead.origem}
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* Tags do Lead - Mais discretas, apenas 1 visível + badge */}
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
+        {/* Tags do Lead - 2 visíveis + botão de adicionar */}
+        <div className="flex flex-wrap items-center gap-1">
+          {tags.slice(0, 2).map(tag => (
             <Badge 
+              key={tag.id}
               style={{ 
-                backgroundColor: `${tags[0].cor || '#3b82f6'}cc`, 
+                backgroundColor: `${tag.cor || '#3b82f6'}cc`, 
                 color: 'white' 
               }}
               className="text-[9px] px-1.5 py-0 h-4 font-medium"
             >
-              {tags[0].nome}
+              {tag.nome}
             </Badge>
-            {tags.length > 1 && (
-              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-muted/30 text-muted-foreground">
-                +{tags.length - 1}
-              </Badge>
-            )}
+          ))}
+          {tags.length > 2 && (
+            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-muted/30 text-muted-foreground">
+              +{tags.length - 2}
+            </Badge>
+          )}
+          <div onClick={(e) => e.stopPropagation()}>
+            <TagPopover 
+              leadId={lead.id} 
+              currentTags={tags} 
+              onTagsChange={onTagsChange}
+            />
           </div>
-        )}
+        </div>
 
 
         {/* Próximo Agendamento */}
@@ -355,9 +363,10 @@ export const KanbanCard = memo(function KanbanCard({
     prevProps.isDragging === nextProps.isDragging &&
     // Comparação de responsáveis
     prevProps.responsibles?.length === nextProps.responsibles?.length &&
-    // Comparação de tags
+    // Comparação de tags (verificar 2 primeiras)
     prevProps.tags?.length === nextProps.tags?.length &&
     prevProps.tags?.[0]?.id === nextProps.tags?.[0]?.id &&
+    prevProps.tags?.[1]?.id === nextProps.tags?.[1]?.id &&
     // ✅ SOLUÇÃO 3: Comparação profunda de nextAppointment
     prevProps.nextAppointment?.id === nextProps.nextAppointment?.id &&
     prevProps.nextAppointment?.start_at === nextProps.nextAppointment?.start_at &&
