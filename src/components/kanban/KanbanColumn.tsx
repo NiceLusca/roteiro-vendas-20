@@ -1,11 +1,10 @@
 import React, { memo, useMemo, useCallback, DragEvent, useState } from 'react';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { KanbanCard } from './KanbanCard';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
 import { LeadTag } from '@/types/bulkImport';
-import { Plus, AlertTriangle, Loader2, GripVertical } from 'lucide-react';
+import { AlertTriangle, Loader2, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
 
@@ -144,18 +143,6 @@ export const KanbanColumn = memo(function KanbanColumn({
     });
   }, [entries]);
 
-  const getStageColorClass = useCallback((stageName: string): string => {
-    const normalized = stageName.toLowerCase();
-    if (normalized.includes('entrada')) return 'stage-entrada';
-    if (normalized.includes('contato 1')) return 'stage-contato-1';
-    if (normalized.includes('contato 2')) return 'stage-contato-2';
-    if (normalized.includes('agendou')) return 'stage-agendou';
-    if (normalized.includes('fechou')) return 'stage-fechou';
-    return 'stage-entrada';
-  }, []);
-
-  const stageClass = useMemo(() => getStageColorClass(stage.nome), [stage.nome, getStageColorClass]);
-
   // Handlers para arrastar colunas pelo header
   const handleColumnDragStart = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.stopPropagation();
@@ -206,22 +193,39 @@ export const KanbanColumn = memo(function KanbanColumn({
     }
   }, [stage.id, onColumnDrop]);
 
+  // Calcular cor do progresso baseada na posição da etapa
+  const stageProgressColor = useMemo(() => {
+    // Cores de progresso: início azul -> meio amarelo -> fim verde
+    const colors = [
+      'from-blue-500/80 to-blue-400/60',      // Primeira etapa
+      'from-indigo-500/80 to-indigo-400/60',  // Segunda  
+      'from-violet-500/80 to-violet-400/60',  // Terceira
+      'from-amber-500/80 to-amber-400/60',    // Quarta
+      'from-emerald-500/80 to-emerald-400/60' // Última (sucesso)
+    ];
+    const ordem = stage.ordem || 0;
+    return colors[Math.min(ordem, colors.length - 1)];
+  }, [stage.ordem]);
+
   return (
     <div 
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={cn(
-        "flex flex-col w-56 min-w-56 flex-shrink-0 transition-all duration-200 p-2 rounded-lg",
+        "flex flex-col w-56 min-w-56 flex-shrink-0 transition-all duration-200 rounded-lg",
         "bg-[hsl(var(--kanban-column-bg))]",
         isOver && "ring-2 ring-primary/50 bg-primary/5 scale-[1.01]",
         isDraggingColumn && "opacity-50 scale-95",
         isColumnOver && "ring-2 ring-accent/70 bg-accent/10"
       )}
     >
-      {/* Header da Coluna - Arrastável */}
-      <Card 
-        className={cn('mb-4 kanban-column-header', stageClass, wipExceeded && 'border-warning')}
+      {/* Header da Coluna - Redesenhado com barra de progresso */}
+      <div 
+        className={cn(
+          "mb-3 cursor-grab active:cursor-grabbing select-none",
+          wipExceeded && "ring-1 ring-warning/50 rounded-lg"
+        )}
         draggable={true}
         onDragStart={handleColumnDragStart}
         onDragEnd={handleColumnDragEnd}
@@ -229,36 +233,38 @@ export const KanbanColumn = memo(function KanbanColumn({
         onDragLeave={handleColumnDragLeave}
         onDrop={handleColumnDrop}
       >
-        <CardHeader className="pb-2 px-2 md:px-2 lg:px-3 cursor-grab active:cursor-grabbing">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <GripVertical className="h-4 w-4 text-muted-foreground/50" />
-              <CardTitle className="text-base font-bold">
-                {stage.nome}
-              </CardTitle>
-            </div>
+        {/* Barra de progresso colorida */}
+        <div className={cn(
+          "h-1 rounded-full bg-gradient-to-r mb-2 transition-all",
+          stageProgressColor
+        )} />
+        
+        {/* Título e contador */}
+        <div className="flex items-center justify-between px-1 py-1">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0" />
+            <h3 className="font-semibold text-sm text-foreground truncate">
+              {stage.nome}
+            </h3>
           </div>
-          
-          {/* Contadores */}
-          <div className="flex items-center gap-2 text-sm mt-1">
-            <span className="text-muted-foreground font-medium">
-              {entries.length} {entries.length === 1 ? 'lead' : 'leads'}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full font-medium">
+              {entries.length}
             </span>
-            
             {stage.wip_limit && wipExceeded && (
-              <Badge variant="outline" className="border-warning text-warning text-xs">
-                <AlertTriangle className="h-3 w-3 mr-1" />
-                WIP excedido
+              <Badge variant="outline" className="border-warning text-warning text-[10px] px-1.5 py-0 h-5">
+                <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+                WIP
               </Badge>
             )}
           </div>
-        </CardHeader>
-      </Card>
+        </div>
+      </div>
 
       {/* Content com scroll nativo */}
-      <div className="flex-1 overflow-y-auto pr-1">
+      <div className="flex-1 overflow-y-auto px-1 pb-2">
         {sortedEntries.length > 0 && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {sortedEntries.map((entry) => {
               const stageChecklistItems = checklistItems.filter(
                 item => item.etapa_id === stage.id
