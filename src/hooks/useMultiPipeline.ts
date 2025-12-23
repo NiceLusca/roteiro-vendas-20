@@ -44,7 +44,7 @@ export function useMultiPipeline() {
     }
   }, [transferToPipeline, logChange]);
 
-  const inscribePipeline = useCallback(async (leadId: string, pipelineId: string, stageId: string) => {
+  const inscribePipeline = useCallback(async (leadId: string, pipelineId: string, stageId: string): Promise<{ created: boolean; entryId?: string }> => {
     logger.debug('inscribePipeline chamado', {
       feature: 'multi-pipeline',
       metadata: { leadId, pipelineId, stageId }
@@ -62,8 +62,11 @@ export function useMultiPipeline() {
         .maybeSingle();
 
       if (existingEntries) {
-        logger.debug('Lead já inscrito', { feature: 'multi-pipeline' });
-        return;
+        logger.debug('Lead já inscrito no pipeline', { 
+          feature: 'multi-pipeline',
+          metadata: { leadId, pipelineId, existingEntryId: existingEntries.id }
+        });
+        return { created: false, entryId: existingEntries.id };
       }
       
       // Create new entry
@@ -89,6 +92,7 @@ export function useMultiPipeline() {
           ],
           ator: 'Sistema (Inscrição)'
         });
+        return { created: true, entryId: newEntry.id };
       } else {
         logger.error('createEntry retornou null', undefined, {
           feature: 'multi-pipeline'
