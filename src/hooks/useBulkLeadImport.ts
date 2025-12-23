@@ -301,9 +301,14 @@ export function useBulkLeadImport() {
       if (!leadData.nome) {
         errors.push('Nome é obrigatório');
       }
-      if (!leadData.whatsapp) {
-        errors.push('WhatsApp é obrigatório');
+
+      // Para import sem WhatsApp: exigir ao menos um identificador (WhatsApp ou Email)
+      const hasWhatsapp = !!leadData.whatsapp && String(leadData.whatsapp).trim() !== '';
+      const hasEmail = !!leadData.email && String(leadData.email).trim() !== '';
+      if (!hasWhatsapp && !hasEmail) {
+        errors.push('Email ou WhatsApp é obrigatório');
       }
+
       if (!leadData.origem) {
         errors.push('Origem é obrigatória');
       }
