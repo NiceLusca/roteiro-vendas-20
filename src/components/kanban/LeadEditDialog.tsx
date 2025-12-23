@@ -335,7 +335,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="info" className="w-full">
+        <Tabs defaultValue="comments" className="w-full">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="info">Informações</TabsTrigger>
             <TabsTrigger value="responsibles">

@@ -191,9 +191,9 @@ export const KanbanCard = memo(function KanbanCard({
         slaStatus.ringClass
       )}
     >
-      <CardContent className="p-3 space-y-2 relative">
-        {/* SLA Badge e Menu - Posição absoluta no canto superior direito */}
-        <div className="absolute -top-1 -right-1 z-10 flex items-center gap-0.5">
+      <CardContent className="p-3 pt-4 space-y-2 relative">
+        {/* SLA Badge e Menu - Posição absoluta no canto superior direito, dentro do card */}
+        <div className="absolute top-1 right-1 z-10 flex items-center gap-0.5">
           <Badge
             variant="outline" 
             className={cn(
