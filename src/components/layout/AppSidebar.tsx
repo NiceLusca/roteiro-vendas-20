@@ -188,9 +188,11 @@ export function AppSidebar() {
             {user.email}
           </div>}
         {!collapsed && <div className="mt-3 pt-3 border-t border-sidebar-border/40 flex items-center justify-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
-            <span className="text-[10px] text-muted-foreground/80 font-medium tracking-wide">
-              Powered by <span className="text-primary/80 font-semibold">Oceano Azul</span>
+            <span className="text-[10px] text-muted-foreground/70 font-medium">
+              Powered by
+            </span>
+            <span className="text-sm font-bold text-blue-600">
+              Oceano Azul
             </span>
           </div>}
       </SidebarFooter>

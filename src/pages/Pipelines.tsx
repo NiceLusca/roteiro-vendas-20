@@ -82,7 +82,7 @@ function PipelinesContent({ slug }: { slug: string }) {
   
   // Ler filtros da URL (persistência)
   const searchTerm = searchParams.get('search') || '';
-  const filterCloser = searchParams.get('closer') || 'all';
+  
   const filterScore = searchParams.get('score') || 'all';
   const filterHealth = searchParams.get('health') || 'all';
   const filterResponsibleName = searchParams.get('responsible') || 'all';
@@ -200,11 +200,6 @@ function PipelinesContent({ slug }: { slug: string }) {
     }))
     // Aplicar filtros client-side (busca já é server-side)
     .filter(entry => {
-      // Filtro de closer
-      if (filterCloser !== 'all' && entry.leads?.closer !== filterCloser) {
-        return false;
-      }
-      
       // Filtro de score
       if (filterScore !== 'all' && entry.leads?.lead_score_classification !== filterScore) {
         return false;
@@ -236,12 +231,6 @@ function PipelinesContent({ slug }: { slug: string }) {
       return true;
     });
 
-  // Obter closers únicos para o filtro
-  const closers = Array.from(new Set(
-    allEntries
-      .map(e => e.leads?.closer)
-      .filter(Boolean)
-  ));
 
   // ✅ Forçar refetch explícito no banco de dados
   const handleRefresh = useCallback(async () => {
@@ -558,50 +547,15 @@ function PipelinesContent({ slug }: { slug: string }) {
             />
           </div>
 
-          {/* Filtro Closer */}
-          <Select value={filterCloser} onValueChange={(v) => updateFilter('closer', v)}>
-            <SelectTrigger className="w-36 h-9">
-              <SelectValue placeholder="Closer" />
-            </SelectTrigger>
-            <SelectContent className="bg-popover z-50">
-              <SelectItem value="all">Todos closers</SelectItem>
-              {closers.map((closer, index) => (
-                <SelectItem key={closer || index} value={closer as string}>
-                  {closer as string}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Filtro Score */}
-          <Select value={filterScore} onValueChange={(v) => updateFilter('score', v)}>
-            <SelectTrigger className="w-32 h-9">
-              <SelectValue placeholder="Score" />
-            </SelectTrigger>
-            <SelectContent className="bg-popover z-50">
-              <SelectItem value="all">Todos scores</SelectItem>
-              <SelectItem value="Alto">Alto</SelectItem>
-              <SelectItem value="Médio">Médio</SelectItem>
-              <SelectItem value="Baixo">Baixo</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Filtro Saúde */}
-          <Select value={filterHealth} onValueChange={(v) => updateFilter('health', v)}>
-            <SelectTrigger className="w-32 h-9">
-              <SelectValue placeholder="Saúde" />
-            </SelectTrigger>
-            <SelectContent className="bg-popover z-50">
-              <SelectItem value="all">Todas saúdes</SelectItem>
-              <SelectItem value="Verde">Verde</SelectItem>
-              <SelectItem value="Amarelo">Amarelo</SelectItem>
-              <SelectItem value="Vermelho">Vermelho</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Filtro Responsável */}
+          {/* Filtro Responsável - 1ª posição */}
           <Select value={filterResponsibleName} onValueChange={(v) => updateFilter('responsible', v)}>
-            <SelectTrigger className="w-40 h-9">
+            <SelectTrigger 
+              className={`w-40 h-9 ${
+                filterResponsibleName !== 'all' 
+                  ? 'border-primary text-primary font-medium' 
+                  : ''
+              }`}
+            >
               <SelectValue placeholder="Responsável" />
             </SelectTrigger>
             <SelectContent className="bg-popover z-50">
@@ -614,9 +568,65 @@ function PipelinesContent({ slug }: { slug: string }) {
             </SelectContent>
           </Select>
 
-          {/* Filtro Tag */}
+          {/* Filtro Score com cores dinâmicas */}
+          <Select value={filterScore} onValueChange={(v) => updateFilter('score', v)}>
+            <SelectTrigger 
+              className={`w-32 h-9 ${
+                filterScore === 'Alto' ? 'border-green-500 text-green-600 font-medium' :
+                filterScore === 'Médio' ? 'border-yellow-500 text-yellow-600 font-medium' :
+                filterScore === 'Baixo' ? 'border-red-500 text-red-600 font-medium' : ''
+              }`}
+            >
+              <SelectValue placeholder="Score" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="all">Todos scores</SelectItem>
+              <SelectItem value="Alto">
+                <span className="text-green-600">Alto</span>
+              </SelectItem>
+              <SelectItem value="Médio">
+                <span className="text-yellow-600">Médio</span>
+              </SelectItem>
+              <SelectItem value="Baixo">
+                <span className="text-red-600">Baixo</span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Filtro Saúde com cores dinâmicas */}
+          <Select value={filterHealth} onValueChange={(v) => updateFilter('health', v)}>
+            <SelectTrigger 
+              className={`w-32 h-9 ${
+                filterHealth === 'Verde' ? 'border-green-500 text-green-600 font-medium' :
+                filterHealth === 'Amarelo' ? 'border-yellow-500 text-yellow-600 font-medium' :
+                filterHealth === 'Vermelho' ? 'border-red-500 text-red-600 font-medium' : ''
+              }`}
+            >
+              <SelectValue placeholder="Saúde" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="all">Todas saúdes</SelectItem>
+              <SelectItem value="Verde">
+                <span className="text-green-600">Verde</span>
+              </SelectItem>
+              <SelectItem value="Amarelo">
+                <span className="text-yellow-600">Amarelo</span>
+              </SelectItem>
+              <SelectItem value="Vermelho">
+                <span className="text-red-600">Vermelho</span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Filtro Tag com cor dinâmica */}
           <Select value={filterTagName} onValueChange={(v) => updateFilter('tag', v)}>
-            <SelectTrigger className="w-32 h-9">
+            <SelectTrigger 
+              className={`w-32 h-9 ${filterTagName !== 'all' ? 'font-medium' : ''}`}
+              style={filterTagName !== 'all' ? {
+                borderColor: availableTags.find(t => t.nome === filterTagName)?.cor || '#3b82f6',
+                color: availableTags.find(t => t.nome === filterTagName)?.cor || '#3b82f6'
+              } : {}}
+            >
               <SelectValue placeholder="Tag" />
             </SelectTrigger>
             <SelectContent className="bg-popover z-50">
@@ -636,7 +646,7 @@ function PipelinesContent({ slug }: { slug: string }) {
           </Select>
 
           {/* Limpar filtros */}
-          {(searchTerm || filterCloser !== 'all' || filterScore !== 'all' || filterHealth !== 'all' || filterResponsibleName !== 'all' || filterTagName !== 'all') && (
+          {(searchTerm || filterScore !== 'all' || filterHealth !== 'all' || filterResponsibleName !== 'all' || filterTagName !== 'all') && (
             <Button
               variant="outline"
               size="sm"

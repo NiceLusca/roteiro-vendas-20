@@ -208,11 +208,13 @@ export const KanbanCard = memo(function KanbanCard({
             <h4 className="font-semibold text-base text-foreground truncate mb-0.5">
               {lead.nome}
             </h4>
-            <p className="text-xs text-muted-foreground">
-              {lead.segmento && lead.origem 
-                ? `${lead.segmento} • ${lead.origem}` 
-                : lead.segmento || lead.origem || 'Sem categoria'}
-            </p>
+            {(lead.segmento || lead.origem) && (
+              <p className="text-xs text-muted-foreground">
+                {lead.segmento && lead.origem 
+                  ? `${lead.segmento} • ${lead.origem}` 
+                  : lead.segmento || lead.origem}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-1.5 ml-2">
             <Badge variant="secondary" className="bg-primary/10 text-primary font-bold text-xs px-2">
