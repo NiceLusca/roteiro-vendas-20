@@ -10,8 +10,7 @@ import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabaseDeals } from '@/hooks/useSupabaseDeals';
 import { useSupabaseOrders } from '@/hooks/useSupabaseOrders';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
-import { LoadingState, EmptyState } from '@/components/ui/loading-states';
-import { CardSkeleton } from '@/components/ui/loading-skeleton';
+import { EmptyState } from '@/components/ui/enhanced-loading';
 import { 
   Users, 
   Calendar, 
