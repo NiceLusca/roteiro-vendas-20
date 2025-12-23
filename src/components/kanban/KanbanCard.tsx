@@ -307,15 +307,28 @@ export const KanbanCard = memo(function KanbanCard({
           </div>
         )}
 
-        {/* SLA Badge com alertas visuais */}
-        <div className="flex items-center justify-between text-xs mb-3 py-1.5 px-2 bg-muted/30 rounded">
-          <span className="text-muted-foreground truncate">
-            {stage.proximo_passo_tipo}
-          </span>
+        {/* Responsável principal + SLA */}
+        <div className="flex items-center justify-between text-xs mb-3 py-1.5 px-2 bg-muted/40 rounded">
+          <div className="flex items-center gap-1.5 text-muted-foreground truncate min-w-0 flex-1">
+            {responsibles.length > 0 ? (
+              <>
+                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-[10px] font-semibold text-primary">
+                    {(responsibles.find(r => r.is_primary)?.profile?.full_name || responsibles[0]?.profile?.full_name || '?').charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <span className="truncate text-foreground/70 font-medium">
+                  {responsibles.find(r => r.is_primary)?.profile?.full_name || responsibles[0]?.profile?.full_name || 'Responsável'}
+                </span>
+              </>
+            ) : (
+              <span className="italic text-muted-foreground/60">Sem responsável</span>
+            )}
+          </div>
           <Badge 
             variant="outline" 
             className={cn(
-              "text-[10px] font-semibold px-1.5 py-0 h-5 border-0",
+              "text-[10px] font-semibold px-1.5 py-0 h-5 border-0 flex-shrink-0 ml-2",
               slaStatus.color,
               slaStatus.pulse && "animate-pulse"
             )}
