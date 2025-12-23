@@ -17,7 +17,6 @@ interface DefaultValuesStepProps {
 
 const REQUIRED_FIELDS = [
   { key: 'nome', label: 'Nome', type: 'text', canBeEmpty: false },
-  { key: 'whatsapp', label: 'WhatsApp', type: 'text', canBeEmpty: false },
   { key: 'origem', label: 'Origem', type: 'text', canBeEmpty: false, placeholder: 'Ex: Indicação, Instagram, Facebook, etc.' },
 ];
 

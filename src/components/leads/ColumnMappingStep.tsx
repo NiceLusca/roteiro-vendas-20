@@ -16,7 +16,7 @@ interface ColumnMappingStepProps {
 
 const LEAD_FIELDS: Array<{ key: keyof Lead; label: string; required: boolean }> = [
   { key: 'nome', label: 'Nome', required: true },
-  { key: 'whatsapp', label: 'WhatsApp', required: true },
+  { key: 'whatsapp', label: 'WhatsApp', required: false },
   { key: 'origem', label: 'Origem', required: true },
   { key: 'email', label: 'Email', required: false },
   { key: 'segmento', label: 'Segmento', required: false },
