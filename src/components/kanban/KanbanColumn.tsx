@@ -220,7 +220,7 @@ export const KanbanColumn = memo(function KanbanColumn({
         onDrop={handleColumnDrop}
       >
         {/* Linha sutil separadora */}
-        <div className="h-0.5 rounded-full bg-border mb-2" />
+        <div className="h-1 rounded-full bg-gradient-to-r from-emerald-500/80 to-emerald-400/60 mb-2" />
         
         {/* Título e contador */}
         <div className="flex items-start justify-between px-1 py-1">
