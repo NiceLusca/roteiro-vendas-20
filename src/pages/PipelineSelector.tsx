@@ -114,7 +114,7 @@ export default function PipelineSelector() {
             return (
               <Card
                 key={pipeline.id}
-                className="hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/50 cursor-pointer group"
+                className="bg-card hover:shadow-xl transition-all duration-300 border border-border/60 hover:border-primary/50 cursor-pointer group shadow-md"
                 onClick={() => navigate(`/pipelines/${pipeline.slug}`)}
               >
                 <CardHeader>

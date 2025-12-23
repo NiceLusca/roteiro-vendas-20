@@ -3,14 +3,15 @@
 @tailwind utilities;
 
 /* Lúmen CRM Design System - Paleta futurista e tecnológica */
+/* Tema claro fixo - sem suporte a dark mode para simplicidade */
 
 @layer base {
   :root {
-    /* Base colors */
-    --background: 0 0% 100%;
+    /* Base colors - fundo levemente cinza para criar hierarquia */
+    --background: 220 20% 96%;
     --foreground: 217 32% 17%;
 
-    /* Cards e elementos */
+    /* Cards e elementos - branco puro para destacar */
     --card: 0 0% 100%;
     --card-foreground: 217 32% 17%;
 
@@ -27,7 +28,7 @@
     --secondary-foreground: 0 0% 100%;
 
     /* Muted para textos auxiliares */
-    --muted: 220 14% 96%;
+    --muted: 220 14% 92%;
     --muted-foreground: 215 16% 47%;
 
     /* Accent para elementos interativos */
@@ -51,7 +52,7 @@
     --danger-foreground: 0 0% 100%;
 
     /* Borders e inputs */
-    --border: 220 13% 91%;
+    --border: 220 13% 88%;
     --input: 220 13% 91%;
     --ring: 263 69% 50%;
 
@@ -61,69 +62,26 @@
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 14% 98%));
     --gradient-energy: linear-gradient(135deg, hsl(24 95% 53%), hsl(38 92% 50%));
 
-    /* Shadows com cores da marca */
-    --shadow-sm: 0 1px 2px 0 hsl(263 69% 50% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(263 69% 50% / 0.1), 0 2px 4px -2px hsl(263 69% 50% / 0.1);
-    --shadow-lg: 0 10px 15px -3px hsl(263 69% 50% / 0.1), 0 4px 6px -4px hsl(263 69% 50% / 0.1);
+    /* Shadows com cores da marca - mais pronunciadas */
+    --shadow-sm: 0 1px 3px 0 hsl(220 20% 20% / 0.08);
+    --shadow-md: 0 4px 8px -1px hsl(220 20% 20% / 0.12), 0 2px 4px -2px hsl(220 20% 20% / 0.08);
+    --shadow-lg: 0 10px 20px -3px hsl(220 20% 20% / 0.15), 0 4px 8px -4px hsl(220 20% 20% / 0.1);
 
     --radius: 0.75rem;
 
-    --sidebar-background: 214 13% 95%;
+    /* Sidebar */
+    --sidebar-background: 220 20% 98%;
     --sidebar-foreground: 215 25% 27%;
     --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 217 91% 95%;
     --sidebar-accent-foreground: 217 91% 60%;
-    --sidebar-border: 214 13% 90%;
+    --sidebar-border: 220 13% 90%;
     --sidebar-ring: 217 91% 60%;
-  }
 
-  .dark {
-    /* Dark theme colors */
-    --background: 217 32% 17%;
-    --foreground: 220 14% 96%;
-
-    --card: 217 32% 17%;
-    --card-foreground: 220 14% 96%;
-
-    --popover: 217 32% 17%;
-    --popover-foreground: 220 14% 96%;
-
-    --primary: 263 69% 55%;
-    --primary-foreground: 217 32% 17%;
-    --primary-hover: 263 69% 50%;
-
-    --secondary: 217 91% 65%;
-    --secondary-foreground: 217 32% 17%;
-
-    --muted: 215 25% 27%;
-    --muted-foreground: 215 16% 65%;
-
-    --accent: 215 25% 27%;
-    --accent-foreground: 263 69% 55%;
-
-    --destructive: 24 95% 53%;
-    --destructive-foreground: 0 0% 100%;
-
-    --success: 158 64% 40%;
-    --success-foreground: 0 0% 100%;
-    --warning: 24 95% 53%;
-    --warning-foreground: 217 32% 17%;
-    --danger: 0 84% 60%;
-    --danger-foreground: 0 0% 100%;
-
-    --border: 215 25% 27%;
-    --input: 215 25% 27%;
-    --ring: 263 69% 55%;
-
-    --sidebar-background: 215 28% 12%;
-    --sidebar-foreground: 213 31% 91%;
-    --sidebar-primary: 217 91% 65%;
-    --sidebar-primary-foreground: 215 28% 17%;
-    --sidebar-accent: 215 25% 27%;
-    --sidebar-accent-foreground: 213 31% 91%;
-    --sidebar-border: 215 25% 27%;
-    --sidebar-ring: 217 91% 65%;
+    /* Kanban específico */
+    --kanban-bg: 220 20% 94%;
+    --kanban-column-bg: 220 14% 98%;
   }
 }
 
@@ -166,7 +124,8 @@
 
   /* CRM specific animations */
   .kanban-card {
-    @apply transition-all duration-200 hover:shadow-md;
+    @apply transition-all duration-200 hover:shadow-lg;
+    box-shadow: var(--shadow-md);
   }
   
   .metric-card {
@@ -196,15 +155,20 @@
 
   /* Header da coluna Kanban com barra colorida */
   .kanban-column-header {
-    @apply border-t-4 bg-card;
+    @apply border-t-4 bg-card shadow-md;
     border-top-color: hsl(var(--stage-color));
-    background: linear-gradient(180deg, hsl(var(--stage-color) / 0.05), hsl(var(--card)));
+    background: linear-gradient(180deg, hsl(var(--stage-color) / 0.08), hsl(var(--card)));
   }
 
-  /* Cards do Kanban com borda colorida */
+  /* Cards do Kanban com borda colorida e sombra */
   .kanban-card-stage {
-    background: hsl(var(--stage-color) / 0.02);
+    @apply bg-card;
     border-left: 4px solid;
     border-left-color: hsl(var(--stage-color));
+  }
+
+  /* Área de scroll do Kanban */
+  .kanban-area {
+    background: hsl(var(--kanban-bg));
   }
 }
