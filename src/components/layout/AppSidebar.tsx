@@ -187,9 +187,10 @@ export function AppSidebar() {
         {!collapsed && user && <div className="mt-2 text-xs text-muted-foreground truncate">
             {user.email}
           </div>}
-        {!collapsed && <div className="mt-3 pt-3 border-t border-sidebar-border/50">
-            <span className="text-[10px] text-secondary font-medium">
-              Powered by Oceano Azul
+        {!collapsed && <div className="mt-3 pt-3 border-t border-sidebar-border/40 flex items-center justify-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
+            <span className="text-[10px] text-muted-foreground/80 font-medium tracking-wide">
+              Powered by <span className="text-primary/80 font-semibold">Oceano Azul</span>
             </span>
           </div>}
       </SidebarFooter>

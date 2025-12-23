@@ -209,7 +209,9 @@ export const KanbanCard = memo(function KanbanCard({
               {lead.nome}
             </h4>
             <p className="text-xs text-muted-foreground">
-              {lead.segmento} • {lead.origem}
+              {lead.segmento && lead.origem 
+                ? `${lead.segmento} • ${lead.origem}` 
+                : lead.segmento || lead.origem || 'Sem categoria'}
             </p>
           </div>
           <div className="flex items-center gap-1.5 ml-2">
@@ -235,20 +237,6 @@ export const KanbanCard = memo(function KanbanCard({
                 onUnsubscribeFromPipeline={onUnsubscribeFromPipeline}
               />
             </div>
-          </div>
-        </div>
-
-        {/* TagPopover (visível no hover) */}
-        <div className="flex justify-end mb-2">
-          <div 
-            className="opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <TagPopover 
-              leadId={lead.id} 
-              currentTags={tags} 
-              onTagsChange={onTagsChange}
-            />
           </div>
         </div>
 
@@ -307,27 +295,34 @@ export const KanbanCard = memo(function KanbanCard({
         )}
 
         {/* Responsável principal + SLA */}
-        <div className="flex items-center justify-between text-xs mb-3 py-1.5 px-2 bg-muted/40 rounded">
-          <div className="flex items-center gap-1.5 text-muted-foreground truncate min-w-0 flex-1">
-            {responsibles.length > 0 ? (
-              <>
-                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <span className="text-[10px] font-semibold text-primary">
-                    {(responsibles.find(r => r.is_primary)?.profile?.full_name || responsibles[0]?.profile?.full_name || '?').charAt(0).toUpperCase()}
+        <div className="flex items-center justify-between text-xs mb-3 py-1.5 px-2 bg-muted/50 rounded-md border border-border/30">
+          <div className="flex items-center gap-2 text-muted-foreground truncate min-w-0 flex-1">
+            {responsibles.length > 0 ? (() => {
+              const primaryResp = responsibles.find(r => r.is_primary) || responsibles[0];
+              const respName = primaryResp?.profile?.full_name 
+                || primaryResp?.profile?.email?.split('@')[0] 
+                || 'Responsável';
+              const initial = respName.charAt(0).toUpperCase();
+              return (
+                <>
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 ring-1 ring-primary/30">
+                    <span className="text-xs font-bold text-primary">
+                      {initial}
+                    </span>
+                  </div>
+                  <span className="truncate text-foreground/80 font-medium text-xs">
+                    {respName}
                   </span>
-                </div>
-                <span className="truncate text-foreground/70 font-medium">
-                  {responsibles.find(r => r.is_primary)?.profile?.full_name || responsibles[0]?.profile?.full_name || 'Responsável'}
-                </span>
-              </>
-            ) : (
-              <span className="italic text-muted-foreground/60">Sem responsável</span>
+                </>
+              );
+            })() : (
+              <span className="italic text-muted-foreground/60 text-xs">Sem responsável</span>
             )}
           </div>
           <Badge 
             variant="outline" 
             className={cn(
-              "text-[10px] font-semibold px-1.5 py-0 h-5 border-0 flex-shrink-0 ml-2",
+              "text-[10px] font-semibold px-2 py-0.5 h-5 border-0 flex-shrink-0 ml-2 rounded-full",
               slaStatus.color,
               slaStatus.pulse && "animate-pulse"
             )}
