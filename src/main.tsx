@@ -16,5 +16,6 @@ createRoot(rootElement).render(
   </React.StrictMode>
 );
 
-// Register service worker for offline support and caching
+// Service Worker: registers in production, cleans up in development
+// This prevents caching issues that cause React hydration errors
 registerServiceWorker();
