@@ -2,14 +2,12 @@ import { memo, useCallback, useMemo, DragEvent, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Lead, LeadPipelineEntry, PipelineStage } from '@/types/crm';
-import { formatWhatsApp } from '@/utils/formatters';
-import { Phone, ArrowRight, AlertCircle, Copy, AlertTriangle, Clock } from 'lucide-react';
+import { ArrowRight, AlertCircle, AlertTriangle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { KanbanCardMenu } from './KanbanCardMenu';
 import { AppointmentBadge } from '@/components/notifications/AppointmentBadge';
-import { ResponsibleAvatars } from '@/components/leads/ResponsibleAvatars';
-import { TagPopover } from './TagPopover';
 import type { LeadResponsible } from '@/hooks/useLeadResponsibles';
 import type { LeadTag } from '@/types/bulkImport';
 
@@ -73,8 +71,6 @@ export const KanbanCard = memo(function KanbanCard({
   onTagsChange
 }: KanbanCardProps) {
   const [isLocalDragging, setIsLocalDragging] = useState(false);
-  const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
-
   // Early return if lead is not loaded yet
   if (!lead) {
     return (
@@ -105,15 +101,6 @@ export const KanbanCard = memo(function KanbanCard({
     setIsLocalDragging(false);
     onDragEnd?.();
   };
-
-  const handleCopyWhatsApp = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    // Copia o número limpo (apenas dígitos)
-    const cleanNumber = lead.whatsapp?.replace(/\D/g, '') || '';
-    navigator.clipboard.writeText(cleanNumber);
-    setCopiedWhatsApp(true);
-    setTimeout(() => setCopiedWhatsApp(false), 2000);
-  }, [lead.whatsapp]);
 
   const getStageColorClass = useCallback((stageName: string): string => {
     const normalized = stageName.toLowerCase();
@@ -203,24 +190,38 @@ export const KanbanCard = memo(function KanbanCard({
         slaStatus.ringClass
       )}
     >
-      <CardContent className="p-4 space-y-3">
-        {/* Header com menu */}
-        <div className="flex items-start justify-between">
+      <CardContent className="p-3 space-y-2">
+        {/* Header com nome, score, SLA badge e menu */}
+        <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-base text-foreground truncate leading-tight">
-              {lead.nome}
-            </h4>
+            <div className="flex items-center gap-2">
+              <h4 className="font-semibold text-sm text-foreground truncate leading-tight flex-1">
+                {lead.nome}
+              </h4>
+              <Badge variant="secondary" className="bg-primary/10 text-primary font-bold text-[10px] px-1.5 py-0 h-5 flex-shrink-0">
+                {lead.lead_score}
+              </Badge>
+            </div>
             {(lead.segmento || lead.origem) && (
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
                 {lead.segmento && lead.origem 
                   ? `${lead.segmento} • ${lead.origem}` 
                   : lead.segmento || lead.origem}
               </p>
             )}
           </div>
-          <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-            <Badge variant="secondary" className="bg-primary/10 text-primary font-bold text-xs px-2 py-0.5">
-              {lead.lead_score}
+          {/* SLA Badge no canto superior direito */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <Badge 
+              variant="outline" 
+              className={cn(
+                "text-[9px] font-semibold px-1.5 py-0.5 h-5 border-0 rounded-full",
+                slaStatus.color,
+                slaStatus.pulse && "animate-pulse"
+              )}
+            >
+              {slaStatus.icon && <slaStatus.icon className="w-2.5 h-2.5 mr-0.5" />}
+              {slaStatus.label}
             </Badge>
             <div 
               className="opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-auto"
@@ -244,48 +245,26 @@ export const KanbanCard = memo(function KanbanCard({
           </div>
         </div>
 
-        {/* Tags do Lead */}
+        {/* Tags do Lead - Mais discretas, apenas 1 visível + badge */}
         {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {tags.slice(0, 2).map((tag) => (
-              <Badge 
-                key={tag.id}
-                style={{ backgroundColor: tag.cor || '#3b82f6', color: 'white' }}
-                className="text-[10px] px-2 py-0.5 h-5 font-medium shadow-sm"
-              >
-                {tag.nome}
-              </Badge>
-            ))}
-            {tags.length > 2 && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 h-5 bg-muted/50">
-                +{tags.length - 2}
+          <div className="flex flex-wrap gap-1">
+            <Badge 
+              style={{ 
+                backgroundColor: `${tags[0].cor || '#3b82f6'}cc`, 
+                color: 'white' 
+              }}
+              className="text-[9px] px-1.5 py-0 h-4 font-medium"
+            >
+              {tags[0].nome}
+            </Badge>
+            {tags.length > 1 && (
+              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-muted/30 text-muted-foreground">
+                +{tags.length - 1}
               </Badge>
             )}
           </div>
         )}
 
-        {/* Telefone com copiar */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 rounded-md px-2.5 py-1.5">
-          <Phone className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/70" />
-          <span className="truncate flex-1 font-medium">{formatWhatsApp(lead.whatsapp)}</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0 hover:bg-primary/10 flex-shrink-0 rounded-full"
-            onClick={handleCopyWhatsApp}
-            title={copiedWhatsApp ? "Copiado!" : "Copiar WhatsApp"}
-          >
-            <Copy className={cn(
-              "h-3 w-3 transition-all duration-200",
-              copiedWhatsApp ? "text-success scale-110" : "text-muted-foreground hover:text-primary"
-            )} />
-          </Button>
-          {copiedWhatsApp && (
-            <span className="text-[10px] text-success font-semibold animate-in fade-in slide-in-from-left-1 flex-shrink-0">
-              Copiado!
-            </span>
-          )}
-        </div>
 
         {/* Próximo Agendamento */}
         {nextAppointment && (
@@ -296,74 +275,70 @@ export const KanbanCard = memo(function KanbanCard({
           />
         )}
 
-        {/* Responsável principal + SLA */}
-        <div className="flex items-center justify-between text-xs py-2 px-3 bg-gradient-to-r from-muted/40 to-muted/20 rounded-lg border border-border/20">
-          <div className="flex items-center gap-2.5 text-muted-foreground truncate min-w-0 flex-1">
-            {responsibles.length > 0 ? (() => {
-              const primaryResp = responsibles.find(r => r.is_primary) || responsibles[0];
-              const respName = primaryResp?.profile?.full_name 
-                || primaryResp?.profile?.email?.split('@')[0] 
-                || 'Responsável';
-              const initial = respName.charAt(0).toUpperCase();
-              return (
-                <>
-                  <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0 ring-2 ring-primary/20 shadow-sm">
-                    <span className="text-xs font-bold text-primary">
-                      {initial}
-                    </span>
-                  </div>
-                  <span className="truncate text-foreground/80 font-medium text-xs">
-                    {respName}
+        {/* Responsável principal - mais compacto */}
+        <div className="flex items-center gap-2 text-xs">
+          {responsibles.length > 0 ? (() => {
+            const primaryResp = responsibles.find(r => r.is_primary) || responsibles[0];
+            const respName = primaryResp?.profile?.full_name 
+              || primaryResp?.profile?.email?.split('@')[0] 
+              || 'Responsável';
+            const initial = respName.charAt(0).toUpperCase();
+            return (
+              <>
+                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-[10px] font-bold text-primary">
+                    {initial}
                   </span>
-                </>
-              );
-            })() : (
-              <span className="italic text-muted-foreground/50 text-xs">Sem responsável</span>
-            )}
-          </div>
-          <Badge 
-            variant="outline" 
-            className={cn(
-              "text-[10px] font-semibold px-2.5 py-1 h-6 border-0 flex-shrink-0 ml-2 rounded-full shadow-sm",
-              slaStatus.color,
-              slaStatus.pulse && "animate-pulse"
-            )}
-          >
-            {slaStatus.icon && <slaStatus.icon className="w-3 h-3 mr-1" />}
-            {slaStatus.label}
-          </Badge>
+                </div>
+                <span className="truncate text-muted-foreground text-[11px]">
+                  {respName}
+                </span>
+              </>
+            );
+          })() : (
+            <span className="italic text-muted-foreground/50 text-[11px]">Sem responsável</span>
+          )}
         </div>
 
-        {/* Botão de Avançar */}
+        {/* Botão de Avançar - Compacto com tooltip */}
         {nextStage && (
-          <Button
-            size="lg"
-            className={cn(
-              "w-full h-10 text-sm font-semibold gap-2",
-              checklistComplete
-                ? "bg-primary hover:bg-primary/90 text-primary-foreground"
-                : "bg-muted text-muted-foreground cursor-not-allowed"
-            )}
-            disabled={!checklistComplete}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (checklistComplete) {
-                onAdvanceStage?.();
-              }
-            }}
-          >
-            {checklistComplete ? (
-              <>
-                <span className="truncate">▶ {nextStage.nome}</span>
-                <ArrowRight className="h-4 w-4 flex-shrink-0" />
-              </>
-            ) : (
-              <>
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                <span className="truncate">Checklist incompleto</span>
-              </>
-            )}
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                className={cn(
+                  "w-full h-7 text-xs font-medium gap-1.5",
+                  checklistComplete
+                    ? "bg-primary/90 hover:bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground cursor-not-allowed"
+                )}
+                disabled={!checklistComplete}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (checklistComplete) {
+                    onAdvanceStage?.();
+                  }
+                }}
+              >
+                {checklistComplete ? (
+                  <>
+                    <ArrowRight className="h-3 w-3 flex-shrink-0" />
+                    <span className="truncate">Avançar</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                    <span className="truncate">Checklist</span>
+                  </>
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              {checklistComplete 
+                ? `Avançar para ${nextStage.nome}` 
+                : 'Complete o checklist para avançar'}
+            </TooltipContent>
+          </Tooltip>
         )}
       </CardContent>
     </Card>
