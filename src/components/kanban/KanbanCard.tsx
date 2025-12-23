@@ -238,9 +238,8 @@ export const KanbanCard = memo(function KanbanCard({
           </div>
         </div>
 
-        {/* Responsáveis e Tags */}
-        <div className="flex items-center justify-between mb-2">
-          <ResponsibleAvatars responsibles={responsibles} maxDisplay={3} size="sm" />
+        {/* TagPopover (visível no hover) */}
+        <div className="flex justify-end mb-2">
           <div 
             className="opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={(e) => e.stopPropagation()}
