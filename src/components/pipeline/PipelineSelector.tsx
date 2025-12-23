@@ -37,50 +37,40 @@ export function PipelineSelector({
   const accessInfo = accessLevelBadge[accessLevel];
 
   return (
-    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4 max-w-full">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground">Pipeline</h1>
-          {showAccessBadge && accessInfo.icon && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge variant={accessInfo.variant} className="gap-1 text-xs">
-                  <accessInfo.icon className="h-3 w-3" />
-                  {accessInfo.label}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                Seu nível de acesso neste pipeline
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
-          <Select value={selectedPipelineId} onValueChange={onPipelineChange}>
-            <SelectTrigger className="w-full sm:w-56 md:w-64 lg:w-72 h-11 text-base font-medium">
-              <SelectValue placeholder="Selecionar pipeline" />
-            </SelectTrigger>
-            <SelectContent>
-              {pipelines.map(pipeline => (
-                <SelectItem key={pipeline.id} value={pipeline.id} className="text-base py-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{pipeline.nome}</span>
-                    {pipeline.primary_pipeline && (
-                      <Badge variant="secondary" className="text-xs">
-                        Primário
-                      </Badge>
-                    )}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {selectedPipeline && (
-            <p className="hidden lg:block text-sm text-muted-foreground truncate">
-              {selectedPipeline.descricao}
-            </p>
-          )}
-        </div>
+    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4 max-w-full">
+      <div className="flex items-center gap-3 min-w-0">
+        <Select value={selectedPipelineId} onValueChange={onPipelineChange}>
+          <SelectTrigger className="w-full sm:w-64 md:w-72 lg:w-80 h-12 text-lg font-semibold border-0 bg-transparent hover:bg-accent/50 focus:ring-0 px-0">
+            <SelectValue placeholder="Selecionar pipeline" />
+          </SelectTrigger>
+          <SelectContent>
+            {pipelines.map(pipeline => (
+              <SelectItem key={pipeline.id} value={pipeline.id} className="text-base py-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{pipeline.nome}</span>
+                  {pipeline.primary_pipeline && (
+                    <Badge variant="secondary" className="text-xs">
+                      Primário
+                    </Badge>
+                  )}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {showAccessBadge && accessInfo.icon && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant={accessInfo.variant} className="gap-1 text-xs">
+                <accessInfo.icon className="h-3 w-3" />
+                {accessInfo.label}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>
+              Seu nível de acesso neste pipeline
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
       
       {/* Only show config buttons if user can manage */}
