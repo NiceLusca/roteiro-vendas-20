@@ -953,6 +953,7 @@ export type Database = {
           ordem: number
           pipeline_id: string
           prazo_em_dias: number | null
+          proxima_etapa_id: string | null
           proximo_passo_label: string | null
           proximo_passo_template: string | null
           proximo_passo_tipo: string | null
@@ -977,6 +978,7 @@ export type Database = {
           ordem: number
           pipeline_id: string
           prazo_em_dias?: number | null
+          proxima_etapa_id?: string | null
           proximo_passo_label?: string | null
           proximo_passo_template?: string | null
           proximo_passo_tipo?: string | null
@@ -1001,6 +1003,7 @@ export type Database = {
           ordem?: number
           pipeline_id?: string
           prazo_em_dias?: number | null
+          proxima_etapa_id?: string | null
           proximo_passo_label?: string | null
           proximo_passo_template?: string | null
           proximo_passo_tipo?: string | null
@@ -1017,6 +1020,13 @@ export type Database = {
             columns: ["pipeline_id"]
             isOneToOne: false
             referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pipeline_stages_proxima_etapa_id_fkey"
+            columns: ["proxima_etapa_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
             referencedColumns: ["id"]
           },
         ]

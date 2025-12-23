@@ -41,6 +41,7 @@ interface StageData {
   wip_limit?: number;
   gerar_agendamento_auto: boolean;
   duracao_minutos?: number;
+  proxima_etapa_id?: string | null;
 }
 
 export function PipelineManager() {
@@ -124,16 +125,39 @@ export function PipelineManager() {
     return checklistItems.filter(item => item.etapa_id === stageId).length;
   };
 
+  const getNextStageName = (stage: StageData, pipelineId: string): string => {
+    if (stage.proxima_etapa_id) {
+      const nextStage = stages.find(s => s.id === stage.proxima_etapa_id);
+      return nextStage ? nextStage.nome : 'Etapa não encontrada';
+    }
+    // Default: próxima na ordem
+    const pipelineStages = getPipelineStages(pipelineId);
+    const currentIndex = pipelineStages.findIndex(s => s.id === stage.id);
+    if (currentIndex >= 0 && currentIndex < pipelineStages.length - 1) {
+      return pipelineStages[currentIndex + 1].nome;
+    }
+    return 'Fim do pipeline';
+  };
+
   const StageRow = ({ stage, pipelineId }: { stage: StageData; pipelineId: string }) => {
+    const nextStageName = getNextStageName(stage, pipelineId);
+    const isCustomNextStage = !!stage.proxima_etapa_id;
+
     return (
       <TableRow>
         <TableCell className="font-medium">{stage.ordem}</TableCell>
         <TableCell>{stage.nome}</TableCell>
         <TableCell>{stage.prazo_em_dias}</TableCell>
         <TableCell>
-          <div>
-            <p className="text-sm">{stage.proximo_passo_label}</p>
-            <Badge variant="outline" className="text-xs">
+          <div className="flex flex-col gap-1">
+            <span className="text-sm">
+              {isCustomNextStage ? (
+                <span className="text-primary font-medium">↺ {nextStageName}</span>
+              ) : (
+                <span className="text-muted-foreground">→ {nextStageName}</span>
+              )}
+            </span>
+            <Badge variant="outline" className="text-xs w-fit">
               {stage.proximo_passo_tipo}
             </Badge>
           </div>
@@ -326,7 +350,7 @@ export function PipelineManager() {
                     <TableHead>Ordem</TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>SLA (dias)</TableHead>
-                    <TableHead>Próximo Passo</TableHead>
+                    <TableHead>Próxima Etapa</TableHead>
                     <TableHead>Checklist</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
@@ -462,6 +486,7 @@ export function PipelineManager() {
           </DialogHeader>
           <StageForm
             stage={selectedStage}
+            pipelineStages={selectedStage?.pipeline_id ? getPipelineStages(selectedStage.pipeline_id) : []}
             onSave={async (data) => {
               const result = await saveStage({ ...data, id: selectedStage?.id });
               if (result) {
