@@ -193,20 +193,6 @@ export const KanbanColumn = memo(function KanbanColumn({
     }
   }, [stage.id, onColumnDrop]);
 
-  // Calcular cor do progresso baseada na posição da etapa
-  const stageProgressColor = useMemo(() => {
-    // Cores de progresso: início azul -> meio amarelo -> fim verde
-    const colors = [
-      'from-blue-500/80 to-blue-400/60',      // Primeira etapa
-      'from-indigo-500/80 to-indigo-400/60',  // Segunda  
-      'from-violet-500/80 to-violet-400/60',  // Terceira
-      'from-amber-500/80 to-amber-400/60',    // Quarta
-      'from-emerald-500/80 to-emerald-400/60' // Última (sucesso)
-    ];
-    const ordem = stage.ordem || 0;
-    return colors[Math.min(ordem, colors.length - 1)];
-  }, [stage.ordem]);
-
   return (
     <div 
       onDragOver={handleDragOver}
@@ -220,7 +206,7 @@ export const KanbanColumn = memo(function KanbanColumn({
         isColumnOver && "ring-2 ring-accent/70 bg-accent/10"
       )}
     >
-      {/* Header da Coluna - Redesenhado com barra de progresso */}
+      {/* Header da Coluna */}
       <div 
         className={cn(
           "mb-3 cursor-grab active:cursor-grabbing select-none",
@@ -233,17 +219,14 @@ export const KanbanColumn = memo(function KanbanColumn({
         onDragLeave={handleColumnDragLeave}
         onDrop={handleColumnDrop}
       >
-        {/* Barra de progresso colorida */}
-        <div className={cn(
-          "h-1 rounded-full bg-gradient-to-r mb-2 transition-all",
-          stageProgressColor
-        )} />
+        {/* Linha sutil separadora */}
+        <div className="h-0.5 rounded-full bg-border mb-2" />
         
         {/* Título e contador */}
-        <div className="flex items-center justify-between px-1 py-1">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0" />
-            <h3 className="font-semibold text-sm text-foreground truncate">
+        <div className="flex items-start justify-between px-1 py-1">
+          <div className="flex items-start gap-1.5 min-w-0 flex-1">
+            <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
+            <h3 className="font-semibold text-sm text-foreground line-clamp-2 min-h-[2.5rem] leading-5">
               {stage.nome}
             </h3>
           </div>

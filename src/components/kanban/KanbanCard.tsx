@@ -336,11 +336,11 @@ export const KanbanCard = memo(function KanbanCard({
                 )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-xs">
-              {checklistComplete 
-                ? `Avançar para ${nextStage.nome}` 
-                : 'Complete o checklist para avançar'}
-            </TooltipContent>
+              <TooltipContent side="bottom" className="text-xs max-w-[200px] text-center">
+                {checklistComplete 
+                  ? `Avançar para ${nextStage.nome}` 
+                  : 'Complete o checklist para avançar'}
+              </TooltipContent>
           </Tooltip>
         )}
       </CardContent>
