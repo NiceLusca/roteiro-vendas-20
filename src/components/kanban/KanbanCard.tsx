@@ -228,9 +228,16 @@ export const KanbanCard = memo(function KanbanCard({
 
         {/* Nome do lead - ocupa toda a largura disponível */}
         <div className="pr-14">
-          <h4 className="font-semibold text-sm text-foreground leading-tight line-clamp-2">
-            {lead.nome}
-          </h4>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <h4 className="font-semibold text-sm text-foreground leading-tight line-clamp-2 cursor-default">
+                {lead.nome}
+              </h4>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs max-w-[250px] z-[60]">
+              {lead.nome}
+            </TooltipContent>
+          </Tooltip>
           {(lead.segmento || lead.origem) && (
             <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
               {lead.segmento && lead.origem 
@@ -336,7 +343,7 @@ export const KanbanCard = memo(function KanbanCard({
                 )}
               </Button>
             </TooltipTrigger>
-              <TooltipContent side="bottom" className="text-xs max-w-[200px] text-center">
+              <TooltipContent side="bottom" className="text-xs max-w-[200px] text-center z-[60]">
                 {checklistComplete 
                   ? `Avançar para ${nextStage.nome}` 
                   : 'Complete o checklist para avançar'}

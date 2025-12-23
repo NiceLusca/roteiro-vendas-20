@@ -1,6 +1,7 @@
 import React, { memo, useMemo, useCallback, DragEvent, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { KanbanCard } from './KanbanCard';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
 import { LeadTag } from '@/types/bulkImport';
@@ -226,9 +227,16 @@ export const KanbanColumn = memo(function KanbanColumn({
         <div className="flex items-start justify-between px-1 py-1">
           <div className="flex items-start gap-1.5 min-w-0 flex-1">
             <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
-            <h3 className="font-semibold text-sm text-foreground line-clamp-2 min-h-[2.5rem] leading-5">
-              {stage.nome}
-            </h3>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <h3 className="font-semibold text-sm text-foreground line-clamp-2 min-h-[2.5rem] leading-5 cursor-default">
+                  {stage.nome}
+                </h3>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs max-w-[200px] z-[60]">
+                {stage.nome}
+              </TooltipContent>
+            </Tooltip>
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full font-medium">
