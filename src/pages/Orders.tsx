@@ -44,10 +44,10 @@ function OrdersContent() {
 
   const getStatusBadgeClass = (status: StatusPedido) => {
     switch (status) {
-      case 'pago': return 'bg-success text-success-foreground';
-      case 'pendente': return 'bg-warning text-warning-foreground';
-      case 'cancelado': return 'bg-destructive text-destructive-foreground';
-      default: return 'bg-muted text-muted-foreground';
+      case 'pago': return 'status-badge status-badge-success';
+      case 'pendente': return 'status-badge status-badge-warning';
+      case 'cancelado': return 'status-badge status-badge-danger';
+      default: return 'status-badge status-badge-muted';
     }
   };
 
@@ -98,10 +98,13 @@ function OrdersContent() {
 
       {/* Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <Card>
-          <CardContent className="p-6">
+        <Card className="metric-card-enhanced relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary/80 to-secondary/60" />
+          <CardContent className="p-6 pt-7">
             <div className="flex items-center">
-              <ShoppingCart className="h-8 w-8 text-primary" />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <ShoppingCart className="h-6 w-6 text-primary" />
+              </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-muted-foreground">Total Pedidos</p>
                 <p className="text-2xl font-bold">{metrics.total}</p>
@@ -110,10 +113,13 @@ function OrdersContent() {
           </CardContent>
         </Card>
         
-        <Card>
-          <CardContent className="p-6">
+        <Card className="metric-card-enhanced relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary/80 to-secondary/60" />
+          <CardContent className="p-6 pt-7">
             <div className="flex items-center">
-              <DollarSign className="h-8 w-8 text-primary" />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <DollarSign className="h-6 w-6 text-primary" />
+              </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-muted-foreground">Receita Total</p>
                 <p className="text-2xl font-bold">{formatCurrency(metrics.valorTotal)}</p>
@@ -122,10 +128,13 @@ function OrdersContent() {
           </CardContent>
         </Card>
         
-        <Card>
-          <CardContent className="p-6">
+        <Card className="metric-card-enhanced relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-success/80 to-success/50" />
+          <CardContent className="p-6 pt-7">
             <div className="flex items-center">
-              <TrendingUp className="h-8 w-8 text-success" />
+              <div className="p-2 rounded-lg bg-success/10">
+                <TrendingUp className="h-6 w-6 text-success" />
+              </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-muted-foreground">Ticket Médio</p>
                 <p className="text-2xl font-bold">{formatCurrency(metrics.ticketMedio)}</p>
@@ -134,10 +143,13 @@ function OrdersContent() {
           </CardContent>
         </Card>
         
-        <Card>
-          <CardContent className="p-6">
+        <Card className="metric-card-enhanced relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-success/80 to-success/50" />
+          <CardContent className="p-6 pt-7">
             <div className="flex items-center">
-              <TrendingUp className="h-8 w-8 text-success" />
+              <div className="p-2 rounded-lg bg-success/10">
+                <TrendingUp className="h-6 w-6 text-success" />
+              </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-muted-foreground">Pedidos Pagos</p>
                 <p className="text-2xl font-bold">{metrics.pagos}</p>
@@ -218,7 +230,7 @@ function OrdersContent() {
                   const lead = leads.find(l => l.id === order.lead_id);
                   
                   return (
-                    <TableRow key={order.id}>
+                    <TableRow key={order.id} className="table-row-hover">
                       <TableCell className="font-medium">{lead?.nome || 'Lead não encontrado'}</TableCell>
                       <TableCell>{formatCurrency(order.total)}</TableCell>
                       <TableCell>
@@ -233,6 +245,7 @@ function OrdersContent() {
                           <Button
                             size="sm"
                             variant="outline"
+                            className="hover:bg-primary/10"
                             onClick={() => setSelectedOrder(order as any)}
                           >
                             Ver Detalhes

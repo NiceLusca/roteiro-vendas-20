@@ -22,6 +22,7 @@ import {
   ArrowRight,
   Phone
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export const Dashboard = memo(function Dashboard() {
   const { leads, loading: leadsLoading } = useSupabaseLeads();
@@ -137,8 +138,9 @@ export const Dashboard = memo(function Dashboard() {
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Próximos Passos */}
-        <Card>
-          <CardHeader>
+        <Card className="card-interactive relative overflow-hidden">
+          <div className="card-header-gradient absolute top-0 left-0 right-0" />
+          <CardHeader className="pt-4">
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-primary" />
               Próximos Passos Urgentes
@@ -153,7 +155,7 @@ export const Dashboard = memo(function Dashboard() {
               proximosPassos.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="list-item-hover flex items-center justify-between p-3 border"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -161,12 +163,12 @@ export const Dashboard = memo(function Dashboard() {
                         {item.lead?.nome}
                       </span>
                       <Badge
-                        variant="outline"
-                        className={
-                          item.saude_etapa === 'Verde' ? 'health-verde' :
-                          item.saude_etapa === 'Amarelo' ? 'health-amarelo' :
-                          'health-vermelho'
-                        }
+                        className={cn(
+                          'status-badge',
+                          item.saude_etapa === 'Verde' ? 'status-badge-success' :
+                          item.saude_etapa === 'Amarelo' ? 'status-badge-warning' :
+                          'status-badge-danger'
+                        )}
                       >
                         {item.saude_etapa}
                       </Badge>
@@ -180,7 +182,7 @@ export const Dashboard = memo(function Dashboard() {
                       </p>
                     )}
                   </div>
-                  <Button size="sm" variant="ghost">
+                  <Button size="sm" variant="ghost" className="hover:bg-primary/10">
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
@@ -190,8 +192,9 @@ export const Dashboard = memo(function Dashboard() {
         </Card>
 
         {/* Próximos Agendamentos */}
-        <Card>
-          <CardHeader>
+        <Card className="card-interactive relative overflow-hidden">
+          <div className="card-header-gradient absolute top-0 left-0 right-0" />
+          <CardHeader className="pt-4">
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-primary" />
               Próximos Agendamentos
@@ -208,9 +211,11 @@ export const Dashboard = memo(function Dashboard() {
               proximosAgendamentos.map((appointment) => {
                 const lead = leads.find(l => l.id === appointment.lead_id);
                 return (
-                  <div key={appointment.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div key={appointment.id} className="list-item-hover flex items-center justify-between p-3 border">
                     <div className="flex items-center space-x-3">
-                      <Calendar className="w-4 h-4 text-primary" />
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Calendar className="w-4 h-4 text-primary" />
+                      </div>
                       <div>
                         <p className="font-medium">{lead?.nome || 'Lead não encontrado'}</p>
                         <p className="text-sm text-muted-foreground">
@@ -218,7 +223,7 @@ export const Dashboard = memo(function Dashboard() {
                         </p>
                       </div>
                     </div>
-                    <Button size="sm" variant="ghost">
+                    <Button size="sm" variant="ghost" className="hover:bg-primary/10">
                       <Phone className="w-4 h-4" />
                     </Button>
                   </div>
@@ -231,8 +236,9 @@ export const Dashboard = memo(function Dashboard() {
 
       {/* Status dos Leads e Top Objeções */}
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
+        <Card className="card-interactive relative overflow-hidden">
+          <div className="card-header-gradient absolute top-0 left-0 right-0" />
+          <CardHeader className="pt-4">
             <CardTitle>Status dos Leads</CardTitle>
           </CardHeader>
           <CardContent>
@@ -241,16 +247,20 @@ export const Dashboard = memo(function Dashboard() {
                 {['lead', 'cliente', 'perdido'].map((status) => {
                   const count = leads.filter(l => l.status_geral === status).length;
                   const label = status === 'lead' ? 'Leads' : status === 'cliente' ? 'Clientes' : 'Perdidos';
-                  const color = status === 'cliente' ? 'bg-green-500' : 
-                               status === 'lead' ? 'bg-blue-500' : 'bg-red-500';
+                  const badgeClass = status === 'cliente' ? 'status-badge-success' : 
+                               status === 'lead' ? 'status-badge-info' : 'status-badge-danger';
                   
                   return (
-                    <div key={status} className="flex items-center justify-between">
+                    <div key={status} className="list-item-hover flex items-center justify-between p-2">
                       <div className="flex items-center space-x-3">
-                        <div className={`w-3 h-3 rounded-full ${color}`}></div>
-                        <span>{label}</span>
+                        <div className={cn(
+                          'w-3 h-3 rounded-full',
+                          status === 'cliente' ? 'bg-success' : 
+                          status === 'lead' ? 'bg-secondary' : 'bg-danger'
+                        )} />
+                        <span className="font-medium">{label}</span>
                       </div>
-                      <Badge variant="secondary">{count}</Badge>
+                      <Badge className={cn('status-badge', badgeClass)}>{count}</Badge>
                     </div>
                   );
                 })}
@@ -265,8 +275,9 @@ export const Dashboard = memo(function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="card-interactive relative overflow-hidden">
+          <div className="card-header-gradient absolute top-0 left-0 right-0" />
+          <CardHeader className="pt-4">
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-warning" />
               Principais Objeções
@@ -298,9 +309,9 @@ export const Dashboard = memo(function Dashboard() {
                 }
                 
                 return topObjections.map(([objecao, count]) => (
-                  <div key={objecao} className="flex items-center justify-between">
+                  <div key={objecao} className="list-item-hover flex items-center justify-between p-2">
                     <span className="text-sm font-medium">{objecao}</span>
-                    <Badge variant="secondary">{count}</Badge>
+                    <Badge className="status-badge status-badge-warning">{count}</Badge>
                   </div>
                 ));
               })()}
