@@ -79,12 +79,12 @@ export default function Agenda() {
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
-      case 'Agendado': return 'bg-blue-100 text-blue-800';
-      case 'Realizado': return 'bg-success text-success-foreground';
-      case 'Cancelado': return 'bg-destructive text-destructive-foreground';
-      case 'Remarcado': return 'bg-warning text-warning-foreground';
-      case 'No-Show': return 'bg-muted text-muted-foreground';
-      default: return 'bg-muted text-muted-foreground';
+      case 'Agendado': return 'status-badge status-badge-info';
+      case 'Realizado': return 'status-badge status-badge-success';
+      case 'Cancelado': return 'status-badge status-badge-danger';
+      case 'Remarcado': return 'status-badge status-badge-warning';
+      case 'No-Show': return 'status-badge status-badge-muted';
+      default: return 'status-badge status-badge-muted';
     }
   };
 
@@ -192,10 +192,11 @@ export default function Agenda() {
         </div>
 
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
+          <Card className="card-interactive relative overflow-hidden">
+            <div className="card-header-gradient absolute top-0 left-0 right-0" />
+            <CardHeader className="pt-4">
               <CardTitle className="flex items-center">
-                <CalendarIcon className="w-5 h-5 mr-2" />
+                <CalendarIcon className="w-5 h-5 mr-2 text-primary" />
                 Próximos Agendamentos
               </CardTitle>
             </CardHeader>
@@ -204,7 +205,7 @@ export default function Agenda() {
                 {getUpcomingAppointments().map((appointment) => {
                   const lead = leads.find(l => l.id === appointment.lead_id);
                   return (
-                    <div key={appointment.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div key={appointment.id} className="list-item-hover flex items-center justify-between p-3 border">
                       <div className="flex items-center space-x-3">
                         <div className="flex flex-col">
                           <span className="text-sm font-medium">{lead?.nome || 'Lead não encontrado'}</span>
@@ -229,13 +230,14 @@ export default function Agenda() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
+          <Card className="card-interactive relative overflow-hidden">
+            <div className="card-header-gradient absolute top-0 left-0 right-0" />
+            <CardHeader className="pt-4">
               <CardTitle>Estatísticas do Dia</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="flex justify-between">
+                <div className="list-item-hover flex justify-between p-2">
                   <span className="text-sm text-muted-foreground">Total hoje</span>
                   <span className="text-sm font-medium">
                     {appointments.filter(a => {
@@ -245,7 +247,7 @@ export default function Agenda() {
                     }).length}
                   </span>
                 </div>
-                <div className="flex justify-between">
+                <div className="list-item-hover flex justify-between p-2">
                   <span className="text-sm text-muted-foreground">Realizadas</span>
                   <span className="text-sm font-medium text-success">
                     {appointments.filter(a => {
@@ -255,7 +257,7 @@ export default function Agenda() {
                     }).length}
                   </span>
                 </div>
-                <div className="flex justify-between">
+                <div className="list-item-hover flex justify-between p-2">
                   <span className="text-sm text-muted-foreground">Pendentes</span>
                   <span className="text-sm font-medium text-warning">
                     {appointments.filter(a => {
@@ -265,7 +267,7 @@ export default function Agenda() {
                     }).length}
                   </span>
                 </div>
-                <div className="flex justify-between">
+                <div className="list-item-hover flex justify-between p-2">
                   <span className="text-sm text-muted-foreground">No-Show</span>
                   <span className="text-sm font-medium text-destructive">
                     {appointments.filter(a => {

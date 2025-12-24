@@ -177,4 +177,66 @@
   .kanban-area {
     background: hsl(var(--kanban-bg));
   }
+
+  /* === Classes de padronização visual === */
+  
+  /* Linha gradiente para headers de cards/seções */
+  .card-header-gradient {
+    @apply h-1 rounded-full bg-gradient-to-r from-success/80 to-success/50 mb-3;
+  }
+
+  /* Card interativo com hover elevado */
+  .card-interactive {
+    @apply transition-all duration-200 ease-out hover:shadow-xl hover:-translate-y-0.5;
+  }
+
+  /* Item de lista com hover visual */
+  .list-item-hover {
+    @apply transition-all duration-200 hover:bg-muted/50 hover:shadow-md hover:-translate-y-px rounded-lg;
+  }
+
+  /* Badge de status padronizado */
+  .status-badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .status-badge-success {
+    @apply bg-success/10 text-success border border-success/20;
+  }
+
+  .status-badge-warning {
+    @apply bg-warning/10 text-warning-foreground border border-warning/20;
+  }
+
+  .status-badge-danger {
+    @apply bg-danger/10 text-danger border border-danger/20;
+  }
+
+  .status-badge-info {
+    @apply bg-secondary/10 text-secondary border border-secondary/20;
+  }
+
+  .status-badge-muted {
+    @apply bg-muted text-muted-foreground border border-border;
+  }
+
+  /* Card com gradiente sutil no header */
+  .card-gradient-header {
+    @apply relative overflow-hidden;
+  }
+
+  .card-gradient-header::before {
+    content: '';
+    @apply absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-success/80 to-success/50;
+  }
+
+  /* Metric card melhorado */
+  .metric-card-enhanced {
+    @apply bg-card border shadow-sm transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+  }
+
+  /* Tabela com hover aprimorado */
+  .table-row-hover {
+    @apply transition-all duration-150 hover:bg-muted/60 hover:shadow-sm;
+  }
 }

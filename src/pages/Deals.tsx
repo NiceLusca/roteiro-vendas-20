@@ -43,10 +43,10 @@ export default function Deals() {
 
   const getStatusBadgeClass = (status: StatusDeal) => {
     switch (status) {
-      case 'Aberta': return 'bg-blue-100 text-blue-800';
-      case 'Ganha': return 'bg-success text-success-foreground';
-      case 'Perdida': return 'bg-destructive text-destructive-foreground';
-      default: return 'bg-muted text-muted-foreground';
+      case 'Aberta': return 'status-badge status-badge-info';
+      case 'Ganha': return 'status-badge status-badge-success';
+      case 'Perdida': return 'status-badge status-badge-danger';
+      default: return 'status-badge status-badge-muted';
     }
   };
 
@@ -68,11 +68,16 @@ export default function Deals() {
     const statusDeals = filteredDeals.filter(d => d.status === status);
     
     return (
-      <Card>
-        <CardHeader>
+      <Card className="card-interactive relative overflow-hidden">
+        <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${
+          status === 'Aberta' ? 'from-secondary/80 to-secondary/50' :
+          status === 'Ganha' ? 'from-success/80 to-success/50' :
+          'from-danger/80 to-danger/50'
+        }`} />
+        <CardHeader className="pt-4">
           <CardTitle className="flex items-center justify-between">
             <span>{status}</span>
-            <Badge variant="secondary">{statusDeals.length}</Badge>
+            <Badge className="status-badge status-badge-muted">{statusDeals.length}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -83,7 +88,7 @@ export default function Deals() {
             return (
               <div
                 key={deal.id}
-                className="p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors"
+                className="list-item-hover p-3 border cursor-pointer"
                 onClick={() => setSelectedDeal(deal as any)}
               >
                 <div className="flex items-center justify-between mb-2">
@@ -143,10 +148,13 @@ export default function Deals() {
 
       {/* Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <Card>
-          <CardContent className="p-6">
+        <Card className="metric-card-enhanced relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary/80 to-secondary/60" />
+          <CardContent className="p-6 pt-7">
             <div className="flex items-center">
-              <TrendingUp className="h-8 w-8 text-primary" />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <TrendingUp className="h-6 w-6 text-primary" />
+              </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-muted-foreground">Total</p>
                 <p className="text-2xl font-bold">{metrics.total}</p>
@@ -155,10 +163,13 @@ export default function Deals() {
           </CardContent>
         </Card>
         
-        <Card>
-          <CardContent className="p-6">
+        <Card className="metric-card-enhanced relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary/80 to-secondary/60" />
+          <CardContent className="p-6 pt-7">
             <div className="flex items-center">
-              <DollarSign className="h-8 w-8 text-primary" />
+              <div className="p-2 rounded-lg bg-primary/10">
+                <DollarSign className="h-6 w-6 text-primary" />
+              </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-muted-foreground">Valor Total</p>
                 <p className="text-2xl font-bold">{formatCurrency(metrics.valorTotal)}</p>
@@ -167,10 +178,13 @@ export default function Deals() {
           </CardContent>
         </Card>
         
-        <Card>
-          <CardContent className="p-6">
+        <Card className="metric-card-enhanced relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-success/80 to-success/50" />
+          <CardContent className="p-6 pt-7">
             <div className="flex items-center">
-              <TrendingUp className="h-8 w-8 text-success" />
+              <div className="p-2 rounded-lg bg-success/10">
+                <TrendingUp className="h-6 w-6 text-success" />
+              </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-muted-foreground">Ganhas</p>
                 <p className="text-2xl font-bold">{metrics.ganhas}</p>
@@ -179,10 +193,13 @@ export default function Deals() {
           </CardContent>
         </Card>
         
-        <Card>
-          <CardContent className="p-6">
+        <Card className="metric-card-enhanced relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-warning/80 to-warning/50" />
+          <CardContent className="p-6 pt-7">
             <div className="flex items-center">
-              <TrendingUp className="h-8 w-8 text-warning" />
+              <div className="p-2 rounded-lg bg-warning/10">
+                <TrendingUp className="h-6 w-6 text-warning" />
+              </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-muted-foreground">Taxa de Conversão</p>
                 <p className="text-2xl font-bold">{metrics.conversao.toFixed(1)}%</p>

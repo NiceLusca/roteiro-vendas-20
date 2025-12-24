@@ -28,10 +28,11 @@ export default function Settings() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
+        <Card className="card-interactive relative overflow-hidden">
+          <div className="card-header-gradient absolute top-0 left-0 right-0" />
+          <CardHeader className="pt-4">
             <CardTitle className="flex items-center">
-              <Database className="w-5 h-5 mr-2" />
+              <Database className="w-5 h-5 mr-2 text-primary" />
               Backup e Exportação
             </CardTitle>
           </CardHeader>
@@ -40,23 +41,24 @@ export default function Settings() {
               Faça backup dos seus dados ou exporte para análise externa
             </p>
             <div className="space-y-2">
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full hover:bg-primary/10">
                 Exportar Leads (CSV)
               </Button>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full hover:bg-primary/10">
                 Exportar Pipelines (JSON)
               </Button>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full hover:bg-primary/10">
                 Backup Completo
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="card-interactive relative overflow-hidden">
+          <div className="card-header-gradient absolute top-0 left-0 right-0" />
+          <CardHeader className="pt-4">
             <CardTitle className="flex items-center">
-              <SettingsIcon className="w-5 h-5 mr-2" />
+              <SettingsIcon className="w-5 h-5 mr-2 text-primary" />
               Logs de Auditoria
             </CardTitle>
           </CardHeader>
@@ -67,7 +69,7 @@ export default function Settings() {
             <div className="space-y-2">
               <Button 
                 variant="outline" 
-                className="w-full"
+                className="w-full hover:bg-primary/10"
                 onClick={() => {
                   // Navigate to all logs page
                   window.location.href = '/audit-logs';
@@ -75,7 +77,7 @@ export default function Settings() {
               >
                 Ver Logs de Auditoria
               </Button>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full hover:bg-primary/10">
                 Limpar Logs Antigos
               </Button>
             </div>
@@ -93,10 +95,11 @@ export default function Settings() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
+        <Card className="card-interactive relative overflow-hidden">
+          <div className="card-header-gradient absolute top-0 left-0 right-0" />
+          <CardHeader className="pt-4">
             <CardTitle className="flex items-center">
-              <Users className="w-5 h-5 mr-2" />
+              <Users className="w-5 h-5 mr-2 text-primary" />
               Usuários e Closers
             </CardTitle>
           </CardHeader>
@@ -104,16 +107,17 @@ export default function Settings() {
             <p className="text-sm text-muted-foreground mb-4">
               Gerencie os usuários e closers do sistema
             </p>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full hover:bg-primary/10">
               Gerenciar Usuários
             </Button>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="card-interactive relative overflow-hidden">
+          <div className="card-header-gradient absolute top-0 left-0 right-0" />
+          <CardHeader className="pt-4">
             <CardTitle className="flex items-center">
-              <SettingsIcon className="w-5 h-5 mr-2" />
+              <SettingsIcon className="w-5 h-5 mr-2 text-primary" />
               Integrações
             </CardTitle>
           </CardHeader>
@@ -127,10 +131,11 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="card-interactive relative overflow-hidden">
+          <div className="card-header-gradient absolute top-0 left-0 right-0" />
+          <CardHeader className="pt-4">
             <CardTitle className="flex items-center">
-              <Workflow className="w-5 h-5 mr-2" />
+              <Workflow className="w-5 h-5 mr-2 text-primary" />
               Automações
             </CardTitle>
           </CardHeader>
@@ -144,10 +149,11 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="card-interactive relative overflow-hidden">
+          <div className="card-header-gradient absolute top-0 left-0 right-0" />
+          <CardHeader className="pt-4">
             <CardTitle className="flex items-center">
-              <Package className="w-5 h-5 mr-2" />
+              <Package className="w-5 h-5 mr-2 text-primary" />
               Backup e Dados
             </CardTitle>
           </CardHeader>
