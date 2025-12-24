@@ -7,7 +7,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight, Zap, Layers, Copy } from 'lucide-react';
+import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight, Zap, Layers, Copy, GripVertical } from 'lucide-react';
 import { SimplePipelineForm } from '@/components/forms/SimplePipelineForm';
 import { PipelineWizardForm } from '@/components/forms/PipelineWizardForm';
 import { StageForm } from '@/components/forms/StageForm';
@@ -56,6 +56,8 @@ export function PipelineManager() {
   const [expandedPipeline, setExpandedPipeline] = useState<string | null>(null);
   const [selectedStageForChecklist, setSelectedStageForChecklist] = useState<{ id: string; nome: string } | null>(null);
   const [pipelineToDelete, setPipelineToDelete] = useState<Pipeline | null>(null);
+  const [draggedStageId, setDraggedStageId] = useState<string | null>(null);
+  const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
   
   const { pipelines, loading, savePipeline, saveComplexPipeline, duplicatePipeline, deletePipeline } = useSupabasePipelines();
   const { stages, saveStage, deleteStage, batchUpdateStages, refetch: refetchStages } = useSupabasePipelineStages();
@@ -139,13 +141,100 @@ export function PipelineManager() {
     return 'Fim do pipeline';
   };
 
+  const handleStageDragStart = (e: React.DragEvent, stageId: string) => {
+    setDraggedStageId(stageId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', stageId);
+  };
+
+  const handleStageDragOver = (e: React.DragEvent, stageId: string) => {
+    e.preventDefault();
+    if (draggedStageId && draggedStageId !== stageId) {
+      setDragOverStageId(stageId);
+    }
+  };
+
+  const handleStageDragLeave = () => {
+    setDragOverStageId(null);
+  };
+
+  const handleStageDrop = async (e: React.DragEvent, targetStage: StageData, pipelineId: string) => {
+    e.preventDefault();
+    setDragOverStageId(null);
+    
+    if (!draggedStageId || draggedStageId === targetStage.id) {
+      setDraggedStageId(null);
+      return;
+    }
+
+    const pipelineStages = getPipelineStages(pipelineId);
+    const draggedStage = pipelineStages.find(s => s.id === draggedStageId);
+    
+    if (!draggedStage) {
+      setDraggedStageId(null);
+      return;
+    }
+
+    // Calculate new order
+    const oldIndex = pipelineStages.findIndex(s => s.id === draggedStageId);
+    const newIndex = pipelineStages.findIndex(s => s.id === targetStage.id);
+    
+    if (oldIndex === newIndex) {
+      setDraggedStageId(null);
+      return;
+    }
+
+    // Reorder stages
+    const reorderedStages = [...pipelineStages];
+    const [movedStage] = reorderedStages.splice(oldIndex, 1);
+    reorderedStages.splice(newIndex, 0, movedStage);
+
+    // Create updates with new order values
+    const updates = reorderedStages.map((stage, index) => ({
+      id: stage.id!,
+      ordem: index + 1
+    }));
+
+    setDraggedStageId(null);
+    
+    // Save to database
+    const success = await batchUpdateStages(updates);
+    if (!success) {
+      toast({
+        title: "Erro ao reordenar",
+        description: "Não foi possível salvar a nova ordem das etapas.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleStageDragEnd = () => {
+    setDraggedStageId(null);
+    setDragOverStageId(null);
+  };
+
   const StageRow = ({ stage, pipelineId }: { stage: StageData; pipelineId: string }) => {
     const nextStageName = getNextStageName(stage, pipelineId);
     const isCustomNextStage = !!stage.proxima_etapa_id;
+    const isDragging = draggedStageId === stage.id;
+    const isDragOver = dragOverStageId === stage.id;
 
     return (
-      <TableRow>
-        <TableCell className="font-medium">{stage.ordem}</TableCell>
+      <TableRow 
+        draggable
+        onDragStart={(e) => handleStageDragStart(e, stage.id!)}
+        onDragOver={(e) => handleStageDragOver(e, stage.id!)}
+        onDragLeave={handleStageDragLeave}
+        onDrop={(e) => handleStageDrop(e, stage, pipelineId)}
+        onDragEnd={handleStageDragEnd}
+        className={`cursor-grab ${isDragging ? 'opacity-50' : ''} ${isDragOver ? 'bg-primary/10 border-t-2 border-primary' : ''}`}
+      >
+        <TableCell className="font-medium">
+          <div className="flex items-center gap-2">
+            <GripVertical className="w-4 h-4 text-muted-foreground" />
+            {stage.ordem}
+          </div>
+        </TableCell>
         <TableCell>{stage.nome}</TableCell>
         <TableCell>{stage.prazo_em_dias}</TableCell>
         <TableCell>
