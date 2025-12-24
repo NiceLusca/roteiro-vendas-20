@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { RefreshCcw } from 'lucide-react';
+import { RefreshCcw, Loader2 } from 'lucide-react';
 
 const stageSchema = z.object({
   pipeline_id: z.string().uuid(),
@@ -36,11 +36,13 @@ interface PipelineStageOption {
 interface StageFormProps {
   stage?: Partial<StageFormData> & { id?: string } | null;
   pipelineStages?: PipelineStageOption[];
-  onSave: (data: StageFormData) => void;
+  onSave: (data: StageFormData) => Promise<void> | void;
   onCancel: () => void;
 }
 
 export function StageForm({ stage, pipelineStages = [], onSave, onCancel }: StageFormProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const form = useForm<StageFormData>({
     resolver: zodResolver(stageSchema),
     defaultValues: {
@@ -62,9 +64,20 @@ export function StageForm({ stage, pipelineStages = [], onSave, onCancel }: Stag
   // Filter out current stage from options
   const availableNextStages = pipelineStages.filter(s => s.id !== stage?.id);
 
+  const handleSubmit = useCallback(async (data: StageFormData) => {
+    if (isSubmitting) return; // Prevent double submission
+    
+    setIsSubmitting(true);
+    try {
+      await onSave(data);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [onSave, isSubmitting]);
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSave)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="pipeline_id"
@@ -296,8 +309,19 @@ export function StageForm({ stage, pipelineStages = [], onSave, onCancel }: Stag
         />
 
         <div className="flex justify-end space-x-2">
-          <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-          <Button type="submit">Salvar</Button>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              'Salvar'
+            )}
+          </Button>
         </div>
       </form>
     </Form>

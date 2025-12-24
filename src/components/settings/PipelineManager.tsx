@@ -492,7 +492,7 @@ export function PipelineManager() {
               if (result) {
                 setIsStageDialogOpen(false);
                 setSelectedStage(null);
-                refetchStages();
+                // Nota: saveStage já chama fetchStages internamente, não precisa chamar refetchStages
               }
             }}
             onCancel={() => {
