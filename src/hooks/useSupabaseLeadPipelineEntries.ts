@@ -44,6 +44,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
   const [isFetching, setIsFetching] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -165,10 +166,13 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
       if (append) {
         setEntries(prev => [...prev, ...processedEntries as any]);
         setPage(prev => prev + 1);
-    } else {
-      setEntries([...processedEntries as any]);
-      setPage(0);
-    }
+      } else {
+        setEntries([...processedEntries as any]);
+        setPage(0);
+      }
+      
+      // Atualizar timestamp da última atualização
+      setLastUpdated(new Date());
     } catch (error) {
       logger.error('Erro ao buscar entries', error as Error, {
         feature: 'lead-pipeline-entries'
@@ -568,7 +572,9 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
   return {
     entries,
     loading,
+    isFetching,
     hasMore,
+    lastUpdated,
     loadMore,
     searchLeads,
     createEntry,
