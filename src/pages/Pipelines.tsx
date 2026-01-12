@@ -4,6 +4,7 @@ import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { PipelineTableView } from '@/components/pipeline/PipelineTableView';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
 import { PipelineMetricsBar } from '@/components/pipeline/PipelineMetricsBar';
+import { DataFreshnessIndicator } from '@/components/ui/data-freshness-indicator';
 import { AccessDenied } from '@/components/access/AccessDenied';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
@@ -638,8 +639,19 @@ function PipelinesContent({ slug }: { slug: string }) {
             </Button>
           )}
 
+          {/* Espaçador flexível */}
+          <div className="flex-1" />
+
+          {/* Indicador de última atualização */}
+          <DataFreshnessIndicator
+            lastUpdated={entries.lastUpdated}
+            onRefresh={handleRefresh}
+            isRefreshing={entries.isFetching}
+            staleThresholdMinutes={5}
+          />
+
           {/* Contador de resultados */}
-          <span className="text-xs text-muted-foreground ml-auto">
+          <span className="text-xs text-muted-foreground">
             {allEntries.length} lead{allEntries.length !== 1 ? 's' : ''}
           </span>
         </div>
