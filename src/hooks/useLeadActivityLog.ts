@@ -34,23 +34,30 @@ interface LogActivityParams {
   details: Record<string, any>;
 }
 
-export function useLeadActivityLog(leadId?: string) {
+export function useLeadActivityLog(leadId?: string, pipelineEntryId?: string) {
   const [activities, setActivities] = useState<LeadActivity[]>([]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
-  // Buscar atividades de um lead
-  const fetchActivities = useCallback(async (id: string) => {
+  // Buscar atividades de um lead (opcionalmente filtrado por pipeline)
+  const fetchActivities = useCallback(async (id: string, entryId?: string) => {
     if (!id) return;
     
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('lead_activity_log')
         .select('*')
         .eq('lead_id', id)
         .order('created_at', { ascending: false })
         .limit(100);
+
+      // Se pipeline especificado, filtrar atividades desse pipeline OU atividades gerais do lead
+      if (entryId) {
+        query = query.or(`pipeline_entry_id.eq.${entryId},pipeline_entry_id.is.null`);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         logger.error('Erro ao buscar atividades', error, { feature: 'activity-log' });
@@ -125,19 +132,19 @@ export function useLeadActivityLog(leadId?: string) {
     }
   }, [user]);
 
-  // Auto-fetch quando leadId muda
+  // Auto-fetch quando leadId ou pipelineEntryId muda
   useEffect(() => {
     if (leadId) {
-      fetchActivities(leadId);
+      fetchActivities(leadId, pipelineEntryId);
     }
-  }, [leadId, fetchActivities]);
+  }, [leadId, pipelineEntryId, fetchActivities]);
 
   // Realtime subscription
   useEffect(() => {
     if (!leadId) return;
 
     const channel = supabase
-      .channel(`activity-log-${leadId}`)
+      .channel(`activity-log-${leadId}-${pipelineEntryId || 'all'}`)
       .on(
         'postgres_changes',
         {
@@ -148,7 +155,14 @@ export function useLeadActivityLog(leadId?: string) {
         },
         (payload) => {
           const newActivity = payload.new as LeadActivity;
-          setActivities(prev => [newActivity, ...prev]);
+          // Filtrar atividades se pipelineEntryId foi especificado
+          if (pipelineEntryId) {
+            if (newActivity.pipeline_entry_id === pipelineEntryId || newActivity.pipeline_entry_id === null) {
+              setActivities(prev => [newActivity, ...prev]);
+            }
+          } else {
+            setActivities(prev => [newActivity, ...prev]);
+          }
         }
       )
       .subscribe();
@@ -156,12 +170,12 @@ export function useLeadActivityLog(leadId?: string) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [leadId]);
+  }, [leadId, pipelineEntryId]);
 
   return {
     activities,
     loading,
     logActivity,
-    refetch: () => leadId && fetchActivities(leadId)
+    refetch: () => leadId && fetchActivities(leadId, pipelineEntryId)
   };
 }

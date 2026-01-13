@@ -24,6 +24,7 @@ import { LeadActivity, ActivityType, useLeadActivityLog } from '@/hooks/useLeadA
 
 interface LeadActivityTimelineProps {
   leadId: string;
+  pipelineEntryId?: string;
   maxHeight?: string;
 }
 
@@ -180,8 +181,8 @@ function ActivityItem({ activity }: { activity: LeadActivity }) {
   );
 }
 
-export function LeadActivityTimeline({ leadId, maxHeight = '400px' }: LeadActivityTimelineProps) {
-  const { activities, loading } = useLeadActivityLog(leadId);
+export function LeadActivityTimeline({ leadId, pipelineEntryId, maxHeight = '500px' }: LeadActivityTimelineProps) {
+  const { activities, loading } = useLeadActivityLog(leadId, pipelineEntryId);
 
   if (loading) {
     return (
