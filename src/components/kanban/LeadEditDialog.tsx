@@ -50,9 +50,11 @@ interface LeadEditDialogProps {
   // Props para transferência de etapa
   currentStageName?: string;
   onJumpToStage?: () => void;
+  // ID do entry no pipeline atual (para filtrar histórico)
+  pipelineEntryId?: string;
 }
 
-export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStageName, onJumpToStage }: LeadEditDialogProps) {
+export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStageName, onJumpToStage, pipelineEntryId }: LeadEditDialogProps) {
   const [formData, setFormData] = useState({
     nome: lead.nome,
     whatsapp: lead.whatsapp || '',
@@ -96,7 +98,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
   } = useLeadAttachments(lead.id);
   const { saveLead } = useSupabaseLeads();
   const { responsibles, history } = useLeadResponsibles(lead.id);
-  const { activities } = useLeadActivityLog(lead.id);
+  const { activities } = useLeadActivityLog(lead.id, pipelineEntryId);
   const { getLeadTags, removeTagFromLead } = useLeadTags();
   const [leadTags, setLeadTags] = useState<{ id: string; nome: string; cor: string | null }[]>([]);
 
@@ -783,7 +785,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
 
           {/* Tab de Histórico */}
           <TabsContent value="history" className="mt-4">
-            <LeadActivityTimeline leadId={lead.id} maxHeight="400px" />
+            <LeadActivityTimeline leadId={lead.id} pipelineEntryId={pipelineEntryId} maxHeight="500px" />
           </TabsContent>
         </Tabs>
       </DialogContent>

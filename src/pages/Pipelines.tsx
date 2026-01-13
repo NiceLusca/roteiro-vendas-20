@@ -694,6 +694,7 @@ function PipelinesContent({ slug }: { slug: string }) {
           onOpenChange={(open) => !open && setEditingLead(null)}
           lead={editingLead}
           onUpdate={handleRefresh}
+          pipelineEntryId={allEntries.find(e => e.lead_id === editingLead.id)?.id}
           currentStageName={pipelineStages.find(s => 
             s.id === allEntries.find(e => e.lead_id === editingLead.id)?.etapa_atual_id
           )?.nome}
