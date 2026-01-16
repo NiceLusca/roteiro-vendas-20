@@ -40,6 +40,8 @@ import { cn } from '@/lib/utils';
 type SortColumn = 'nome' | 'etapa' | 'dias' | 'sla' | 'saude' | 'score' | 'responsavel' | null;
 type SortDirection = 'asc' | 'desc';
 
+export type TableSortOption = 'chronological' | 'alphabetical' | 'delay' | 'score';
+
 interface PipelineTableViewProps {
   stageEntries: Array<{
     stage: PipelineStage;
@@ -48,6 +50,7 @@ interface PipelineTableViewProps {
     wipExceeded: boolean;
   }>;
   tagsMap?: Record<string, LeadTag[]>;
+  sortBy?: TableSortOption;
   onViewLead?: (leadId: string) => void;
   onAdvanceStage?: (entryId: string) => void;
   onRegressStage?: (entryId: string) => void;
@@ -95,6 +98,7 @@ function SortableHeader({
 export function PipelineTableView({
   stageEntries,
   tagsMap = {},
+  sortBy = 'chronological',
   onViewLead,
   onAdvanceStage,
   onRegressStage,
@@ -135,12 +139,43 @@ export function PipelineTableView({
     const entries = [...baseEntries];
     
     if (!sortColumn) {
-      // Default sort: by stage order, then by days in stage (descending)
+      // Use global sortBy as default ordering
       return entries.sort((a, b) => {
-        if (a.stageOrdem !== b.stageOrdem) return a.stageOrdem - b.stageOrdem;
-        const aDays = a.data_entrada_etapa ? differenceInDays(new Date(), new Date(a.data_entrada_etapa)) : 0;
-        const bDays = b.data_entrada_etapa ? differenceInDays(new Date(), new Date(b.data_entrada_etapa)) : 0;
-        return bDays - aDays;
+        switch (sortBy) {
+          case 'alphabetical':
+            return (a.lead?.nome || '').localeCompare(b.lead?.nome || '', 'pt-BR');
+          
+          case 'delay': {
+            const aRemaining = a.stagePrazo && a.data_entrada_etapa 
+              ? a.stagePrazo - differenceInDays(new Date(), new Date(a.data_entrada_etapa))
+              : 999;
+            const bRemaining = b.stagePrazo && b.data_entrada_etapa 
+              ? b.stagePrazo - differenceInDays(new Date(), new Date(b.data_entrada_etapa))
+              : 999;
+            if (aRemaining !== bRemaining) return aRemaining - bRemaining; // Most delayed first
+            // Fallback to chronological
+            const dateA = new Date(a.data_entrada_etapa || a.created_at).getTime();
+            const dateB = new Date(b.data_entrada_etapa || b.created_at).getTime();
+            return dateA - dateB;
+          }
+          
+          case 'score': {
+            const scoreA = a.lead?.lead_score ?? -1;
+            const scoreB = b.lead?.lead_score ?? -1;
+            if (scoreB !== scoreA) return scoreB - scoreA; // Higher score first
+            // Fallback to chronological
+            const dateA = new Date(a.data_entrada_etapa || a.created_at).getTime();
+            const dateB = new Date(b.data_entrada_etapa || b.created_at).getTime();
+            return dateA - dateB;
+          }
+          
+          case 'chronological':
+          default:
+            // Default: oldest first (chronological priority)
+            const dateA = new Date(a.data_entrada_etapa || a.created_at).getTime();
+            const dateB = new Date(b.data_entrada_etapa || b.created_at).getTime();
+            return dateA - dateB;
+        }
       });
     }
 
@@ -197,7 +232,7 @@ export function PipelineTableView({
           return 0;
       }
     });
-  }, [baseEntries, sortColumn, sortDirection]);
+  }, [baseEntries, sortColumn, sortDirection, sortBy]);
 
   const getHealthBadge = (health: string | null) => {
     switch (health) {

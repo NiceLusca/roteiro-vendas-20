@@ -8,12 +8,14 @@ import { LeadTag } from '@/types/bulkImport';
 import { AlertTriangle, Loader2, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
+import { SortOption } from './KanbanBoard';
 
 interface KanbanColumnProps {
   stage: PipelineStage;
   nextStage?: PipelineStage | null;
   entries: Array<LeadPipelineEntry & { lead: Lead }>;
   tagsMap?: Record<string, LeadTag[]>;
+  sortBy?: SortOption;
   wipExceeded: boolean;
   hasMore?: boolean;
   onLoadMore?: () => void;
@@ -47,6 +49,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   nextStage,
   entries,
   tagsMap = {},
+  sortBy = 'chronological',
   wipExceeded,
   hasMore = false,
   onLoadMore,
@@ -119,30 +122,53 @@ export const KanbanColumn = memo(function KanbanColumn({
 
   const sortedEntries = useMemo(() => {
     return [...entries].sort((a, b) => {
-      const scoreA = a.lead?.lead_score ?? null;
-      const scoreB = b.lead?.lead_score ?? null;
-      
-      // 1️⃣ Se ambos têm score: ordenar por score (decrescente - maior primeiro)
-      if (scoreA !== null && scoreB !== null) {
-        return scoreB - scoreA;
+      // Calcular dias de atraso para ordenação por delay
+      const getDelayDays = (entry: typeof entries[0]) => {
+        if (!entry.data_entrada_etapa) return 0;
+        const stageDeadline = stage.prazo_em_dias || stage.sla_horas ? (stage.sla_horas || 0) / 24 : null;
+        if (!stageDeadline) return 0;
+        const entryDate = new Date(entry.data_entrada_etapa);
+        const now = new Date();
+        const daysInStage = Math.floor((now.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
+        return Math.max(0, daysInStage - stageDeadline);
+      };
+
+      switch (sortBy) {
+        case 'alphabetical':
+          // Ordem alfabética pelo nome do lead
+          const nameA = a.lead?.nome?.toLowerCase() || '';
+          const nameB = b.lead?.nome?.toLowerCase() || '';
+          return nameA.localeCompare(nameB, 'pt-BR');
+
+        case 'delay':
+          // Maior atraso primeiro
+          const delayA = getDelayDays(a);
+          const delayB = getDelayDays(b);
+          if (delayB !== delayA) return delayB - delayA;
+          // Se empate, ordenar por data (mais antigos primeiro)
+          const dateADelay = new Date(a.data_entrada_etapa || a.created_at).getTime();
+          const dateBDelay = new Date(b.data_entrada_etapa || b.created_at).getTime();
+          return dateADelay - dateBDelay;
+
+        case 'score':
+          // Maior score primeiro
+          const scoreA = a.lead?.lead_score ?? -1;
+          const scoreB = b.lead?.lead_score ?? -1;
+          if (scoreB !== scoreA) return scoreB - scoreA;
+          // Se empate, ordenar por data (mais antigos primeiro)
+          const dateAScore = new Date(a.data_entrada_etapa || a.created_at).getTime();
+          const dateBScore = new Date(b.data_entrada_etapa || b.created_at).getTime();
+          return dateAScore - dateBScore;
+
+        case 'chronological':
+        default:
+          // Ordenação padrão: mais antigos primeiro (prioridade cronológica)
+          const dateA = new Date(a.data_entrada_etapa || a.created_at).getTime();
+          const dateB = new Date(b.data_entrada_etapa || b.created_at).getTime();
+          return dateA - dateB;
       }
-      
-      // 2️⃣ Se apenas A tem score: A vem primeiro
-      if (scoreA !== null && scoreB === null) {
-        return -1;
-      }
-      
-      // 3️⃣ Se apenas B tem score: B vem primeiro
-      if (scoreA === null && scoreB !== null) {
-        return 1;
-      }
-      
-      // 4️⃣ Se nenhum tem score: ordenar por data (mais antigos primeiro)
-      const dateA = new Date(a.data_entrada_etapa || a.created_at).getTime();
-      const dateB = new Date(b.data_entrada_etapa || b.created_at).getTime();
-      return dateA - dateB;
     });
-  }, [entries]);
+  }, [entries, sortBy, stage.prazo_em_dias, stage.sla_horas]);
 
   // Handlers para arrastar colunas pelo header
   const handleColumnDragStart = useCallback((e: DragEvent<HTMLDivElement>) => {
