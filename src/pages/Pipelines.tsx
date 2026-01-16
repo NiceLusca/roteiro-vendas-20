@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { ArrowLeft, Filter, Search, RotateCcw, LayoutGrid, Table as TableIcon } from 'lucide-react';
+import { ArrowLeft, Filter, Search, RotateCcw, LayoutGrid, Table as TableIcon, ArrowUpDown } from 'lucide-react';
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { useMultiPipeline } from '@/hooks/useMultiPipeline';
@@ -89,6 +89,7 @@ function PipelinesContent({ slug }: { slug: string }) {
   const filterHealth = searchParams.get('health') || 'all';
   const filterResponsibleName = searchParams.get('responsible') || 'all';
   const filterTagName = searchParams.get('tag') || 'all';
+  const sortBy = (searchParams.get('sort') || 'chronological') as 'chronological' | 'alphabetical' | 'delay' | 'score';
 
   // Buscar todas as tags disponíveis
   const { tags: availableTags, refetch: refetchTags } = useLeadTags();
@@ -626,8 +627,24 @@ function PipelinesContent({ slug }: { slug: string }) {
             </SelectContent>
           </Select>
 
+          {/* Ordenação */}
+          <Select value={sortBy} onValueChange={(v) => updateFilter('sort', v)}>
+            <SelectTrigger 
+              className={`w-40 h-9 ${sortBy !== 'chronological' ? 'border-primary text-primary font-medium' : ''}`}
+            >
+              <ArrowUpDown className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Ordenar" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="chronological">Mais antigos primeiro</SelectItem>
+              <SelectItem value="alphabetical">Ordem alfabética</SelectItem>
+              <SelectItem value="delay">Maior atraso</SelectItem>
+              <SelectItem value="score">Maior score</SelectItem>
+            </SelectContent>
+          </Select>
+
           {/* Limpar filtros */}
-          {(searchTerm || filterScore !== 'all' || filterHealth !== 'all' || filterResponsibleName !== 'all' || filterTagName !== 'all') && (
+          {(searchTerm || filterScore !== 'all' || filterHealth !== 'all' || filterResponsibleName !== 'all' || filterTagName !== 'all' || sortBy !== 'chronological') && (
             <Button
               variant="outline"
               size="sm"
@@ -665,6 +682,7 @@ function PipelinesContent({ slug }: { slug: string }) {
             selectedPipelineId={pipelineId}
             stageEntries={stageEntries}
             tagsMap={tagsMap}
+            sortBy={sortBy}
             onTagsChange={handleTagsChange}
             onAddLead={handleAddLead}
             onViewLead={handleViewOrEditLead}
@@ -679,6 +697,7 @@ function PipelinesContent({ slug }: { slug: string }) {
           <PipelineTableView
             stageEntries={stageEntries}
             tagsMap={tagsMap}
+            sortBy={sortBy}
             onViewLead={handleViewOrEditLead}
             onAdvanceStage={handleAdvanceStage}
             onRegressStage={handleRegressStage}

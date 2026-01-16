@@ -8,6 +8,8 @@ import { LeadTag } from '@/types/bulkImport';
 import { logger } from '@/utils/logger';
 import { useToast } from '@/hooks/use-toast';
 
+export type SortOption = 'chronological' | 'alphabetical' | 'delay' | 'score';
+
 interface KanbanBoardProps {
   selectedPipelineId: string;
   stageEntries: Array<{
@@ -17,6 +19,7 @@ interface KanbanBoardProps {
     wipExceeded: boolean;
   }>;
   tagsMap?: Record<string, LeadTag[]>;
+  sortBy?: SortOption;
   onRefresh?: () => void;
   onTagsChange?: () => void;
   onAddLead?: (stageId: string) => void;
@@ -43,6 +46,7 @@ export function KanbanBoard({
   selectedPipelineId,
   stageEntries,
   tagsMap = {},
+  sortBy = 'chronological',
   onRefresh,
   onTagsChange,
   onAddLead,
@@ -173,6 +177,7 @@ export function KanbanBoard({
           nextStage={nextStage}
           entries={entries}
           tagsMap={tagsMap}
+          sortBy={sortBy}
           wipExceeded={wipExceeded}
           hasMore={hasMore}
           onLoadMore={onLoadMore}
