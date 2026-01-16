@@ -1,11 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, ReactNode } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   ArrowRight, 
-  FileText, 
   MessageSquare, 
   UserPlus, 
   UserMinus, 
@@ -18,7 +17,7 @@ import {
   Clock,
   History
 } from 'lucide-react';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { LeadActivity, ActivityType, useLeadActivityLog } from '@/hooks/useLeadActivityLog';
 
@@ -30,106 +29,100 @@ interface LeadActivityTimelineProps {
 
 const activityConfig: Record<ActivityType, {
   icon: typeof ArrowRight;
-  label: string;
   color: string;
 }> = {
   stage_change: {
     icon: ArrowRight,
-    label: 'Movimentação',
     color: 'bg-primary/10 text-primary'
   },
   note_added: {
     icon: MessageSquare,
-    label: 'Comentário',
-    color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+    color: 'bg-purple-500/10 text-purple-600'
   },
   attachment_added: {
     icon: Paperclip,
-    label: 'Anexo',
-    color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+    color: 'bg-blue-500/10 text-blue-600'
   },
   attachment_deleted: {
     icon: Trash2,
-    label: 'Anexo removido',
     color: 'bg-destructive/10 text-destructive'
   },
   responsible_added: {
     icon: UserPlus,
-    label: 'Responsável',
     color: 'bg-success/10 text-success'
   },
   responsible_removed: {
     icon: UserMinus,
-    label: 'Responsável',
     color: 'bg-warning/10 text-warning'
   },
   inscription: {
     icon: PlusCircle,
-    label: 'Inscrição',
     color: 'bg-success/10 text-success'
   },
   archive: {
     icon: Archive,
-    label: 'Arquivado',
     color: 'bg-muted/50 text-muted-foreground'
   },
   transfer: {
     icon: GitBranch,
-    label: 'Transferência',
-    color: 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+    color: 'bg-orange-500/10 text-orange-600'
   },
   lead_created: {
     icon: PlusCircle,
-    label: 'Criação',
     color: 'bg-success/10 text-success'
   },
   lead_updated: {
     icon: Pencil,
-    label: 'Atualização',
     color: 'bg-muted/50 text-muted-foreground'
   }
 };
 
-function formatActivityDescription(activity: LeadActivity): string {
+function formatActivityDescription(activity: LeadActivity): ReactNode {
   const details = activity.details || {};
+  const performer = activity.performed_by_name;
   
+  const PerformerName = () => performer 
+    ? <span className="font-semibold text-foreground">{performer}</span> 
+    : <span className="text-muted-foreground">Sistema</span>;
+
   switch (activity.activity_type) {
     case 'stage_change':
-      return `Moveu de "${details.from_stage || '?'}" para "${details.to_stage || '?'}"`;
+      return <><PerformerName /> moveu para "{details.to_stage || '?'}"</>;
     
     case 'note_added':
       const notePreview = details.note_preview || details.note_text || '';
-      return notePreview.length > 80 ? `${notePreview.substring(0, 80)}...` : notePreview || 'Adicionou um comentário';
+      const truncated = notePreview.length > 50 
+        ? `${notePreview.substring(0, 50)}...` 
+        : notePreview;
+      return <><PerformerName /> comentou{truncated ? `: "${truncated}"` : ''}</>;
     
     case 'attachment_added':
-      return `Anexou "${details.file_name || 'arquivo'}"`;
+      return <><PerformerName /> anexou "{details.file_name || 'arquivo'}"</>;
     
     case 'attachment_deleted':
-      return `Removeu anexo "${details.file_name || 'arquivo'}"`;
+      return <><PerformerName /> removeu anexo "{details.file_name || 'arquivo'}"</>;
     
     case 'responsible_added':
-      return `Adicionou ${details.responsible_name || 'responsável'}`;
+      return <><PerformerName /> adicionou <span className="font-medium">{details.responsible_name || 'responsável'}</span></>;
     
     case 'responsible_removed':
-      return `Removeu ${details.responsible_name || 'responsável'}`;
+      return <><PerformerName /> removeu <span className="font-medium">{details.responsible_name || 'responsável'}</span></>;
     
     case 'inscription':
-      return `Inscreveu no pipeline "${details.pipeline_name || '?'}" na etapa "${details.stage_name || '?'}"`;
+      return <><PerformerName /> inscreveu em "{details.stage_name || details.pipeline_name || '?'}"</>;
     
     case 'archive':
-      return `Arquivou do pipeline "${details.pipeline_name || '?'}"${details.reason ? `: ${details.reason}` : ''}`;
+      return <><PerformerName /> arquivou{details.reason ? `: ${details.reason}` : ''}</>;
     
     case 'transfer':
-      return `Transferiu de "${details.from_pipeline || '?'}" para "${details.to_pipeline || '?'}"`;
+      return <><PerformerName /> transferiu para "{details.to_pipeline || '?'}"</>;
     
     case 'lead_created':
-      return `Lead criado${details.origem ? ` (origem: ${details.origem})` : ''}`;
+      return <>Lead criado{details.origem ? ` via ${details.origem}` : ''}</>;
     
     case 'lead_updated':
       const fields = details.fields_changed || [];
-      return fields.length > 0 
-        ? `Atualizou: ${fields.slice(0, 3).join(', ')}${fields.length > 3 ? ` +${fields.length - 3}` : ''}`
-        : 'Atualizou dados do lead';
+      return <><PerformerName /> atualizou {fields.length > 0 ? fields.slice(0, 2).join(', ') : 'dados'}</>;
     
     default:
       return 'Ação registrada';
@@ -147,35 +140,19 @@ function ActivityItem({ activity }: { activity: LeadActivity }) {
     });
   }, [activity.created_at]);
 
-  const fullDate = useMemo(() => {
-    return format(new Date(activity.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
-  }, [activity.created_at]);
-
   return (
-    <div className="flex gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${config.color}`}>
-        <Icon className="w-4 h-4" />
+    <div className="flex gap-3 py-2">
+      <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${config.color}`}>
+        <Icon className="w-3.5 h-3.5" />
       </div>
       
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1 flex-wrap">
-          <Badge variant="secondary" className={`text-xs ${config.color}`}>
-            {config.label}
-          </Badge>
-          <span className="text-xs text-muted-foreground" title={fullDate}>
-            {timeAgo}
-          </span>
-        </div>
-        
-        <p className="text-sm text-foreground">
+        <p className="text-sm text-muted-foreground">
           {formatActivityDescription(activity)}
         </p>
-        
-        {activity.performed_by_name && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Por: {activity.performed_by_name}
-          </p>
-        )}
+        <span className="text-xs text-muted-foreground/70">
+          {timeAgo}
+        </span>
       </div>
     </div>
   );
