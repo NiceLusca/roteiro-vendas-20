@@ -35,6 +35,10 @@ export function usePipelineAccess() {
     try {
       setLoading(true);
 
+      // Forçar refresh da sessão para garantir token JWT atualizado
+      // Isso previne problemas de cache onde o usuário não vê dados após receber acesso
+      await supabase.auth.refreshSession();
+
       // Check if user is admin
       const { data: roleData } = await supabase
         .from('user_roles')
