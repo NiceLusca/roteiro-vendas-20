@@ -120,6 +120,18 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         }
       });
 
+      // Diagnóstico: alertar quando nenhum lead é retornado para um pipeline específico
+      if (effectivePipelineId && (!data || data.length === 0)) {
+        logger.warn('Nenhum lead retornado para pipeline - possível problema de RLS ou cache', {
+          feature: 'lead-pipeline-entries',
+          metadata: { 
+            pipelineId: effectivePipelineId, 
+            userId: user?.id,
+            suggestion: 'Verificar pipeline_access e token JWT do usuário'
+          }
+        });
+      }
+
       if (error) {
         logger.error('Erro ao buscar entries', error as any, {
           feature: 'lead-pipeline-entries'

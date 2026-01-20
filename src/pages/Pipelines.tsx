@@ -1,5 +1,6 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { logger } from '@/utils/logger';
+import { supabase } from '@/integrations/supabase/client';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
 import { PipelineTableView } from '@/components/pipeline/PipelineTableView';
 import { PipelineSelector } from '@/components/pipeline/PipelineSelector';
@@ -20,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { ArrowLeft, Filter, Search, RotateCcw, LayoutGrid, Table as TableIcon, ArrowUpDown } from 'lucide-react';
+import { ArrowLeft, Filter, Search, RotateCcw, LayoutGrid, Table as TableIcon, ArrowUpDown, RefreshCw, Bug } from 'lucide-react';
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { useMultiPipeline } from '@/hooks/useMultiPipeline';
@@ -396,6 +397,31 @@ function PipelinesContent({ slug }: { slug: string }) {
     setSearchParams(new URLSearchParams());
   }, [setSearchParams]);
 
+  // Função para limpar cache, refresh de sessão e recarregar
+  const handleClearCacheAndRefresh = useCallback(async () => {
+    try {
+      logger.info('Iniciando limpeza de cache e refresh', { feature: 'pipelines' });
+      
+      // Limpar cache do Service Worker
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(key => caches.delete(key)));
+        logger.debug('Cache do SW limpo', { feature: 'pipelines', metadata: { cacheKeys: keys } });
+      }
+      
+      // Forçar refresh do token JWT
+      await supabase.auth.refreshSession();
+      logger.debug('Sessão atualizada', { feature: 'pipelines' });
+      
+      // Recarregar página
+      window.location.reload();
+    } catch (error) {
+      logger.error('Erro ao limpar cache', error as Error, { feature: 'pipelines' });
+      // Ainda assim recarregar
+      window.location.reload();
+    }
+  }, []);
+
   // Handler para adicionar lead em uma etapa específica
   const handleAddLead = useCallback((stageId: string) => {
     logger.debug('Abrindo diálogo para adicionar lead', {
@@ -658,6 +684,26 @@ function PipelinesContent({ slug }: { slug: string }) {
 
           {/* Espaçador flexível */}
           <div className="flex-1" />
+
+          {/* Indicador de debug para admins */}
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-2 py-1 bg-muted/50 rounded text-xs text-muted-foreground border border-dashed">
+                <Bug className="h-3 w-3" />
+                <span>{leadPipelineEntries.length} brutos → {allEntries.length} filtrados</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearCacheAndRefresh}
+                className="h-7 text-xs gap-1"
+                title="Limpa cache do navegador e atualiza sessão"
+              >
+                <RefreshCw className="h-3 w-3" />
+                Resetar
+              </Button>
+            </div>
+          )}
 
           {/* Indicador de última atualização */}
           <DataFreshnessIndicator
