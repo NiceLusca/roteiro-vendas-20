@@ -2,3 +2,6 @@ project_id = "szuqdfakikbotidnxxvw"
 
 [functions.eduzz-webhook]
 verify_jwt = false
+
+[functions.agenda-webhook]
+verify_jwt = false
