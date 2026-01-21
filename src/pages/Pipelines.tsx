@@ -162,6 +162,14 @@ function PipelinesContent({ slug }: { slug: string }) {
   const { data: responsiblesMap = {} } = useMultipleLeadResponsibles(baseLeadIds);
   const { data: tagsMap = {}, refetch: refetchTagsMap } = useMultipleLeadTags(baseLeadIds);
 
+  // Buscar dados extras (deals, appointments) com base no display_config
+  const displayConfig = currentPipeline?.display_config;
+  const { dealsByLeadId, appointmentsByLeadId } = usePipelineDisplayData({
+    pipelineId,
+    leadIds: baseLeadIds,
+    displayConfig
+  });
+
   // Handler para atualizar tags
   const handleTagsChange = useCallback(() => {
     refetchTagsMap();
@@ -730,7 +738,9 @@ function PipelinesContent({ slug }: { slug: string }) {
             stageEntries={stageEntries}
             tagsMap={tagsMap}
             sortBy={sortBy}
-            displayConfig={currentPipeline?.display_config}
+            displayConfig={displayConfig}
+            dealsByLeadId={dealsByLeadId}
+            appointmentsByLeadId={appointmentsByLeadId}
             onTagsChange={handleTagsChange}
             onAddLead={handleAddLead}
             onViewLead={handleViewOrEditLead}
