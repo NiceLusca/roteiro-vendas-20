@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { KanbanCard } from './KanbanCard';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
+import { PipelineDisplayConfig, DealDisplayInfo, AppointmentDisplayInfo } from '@/types/pipelineDisplay';
 import { LeadTag } from '@/types/bulkImport';
 import { AlertTriangle, Loader2, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,11 @@ interface KanbanColumnProps {
   hasMore?: boolean;
   onLoadMore?: () => void;
   loadingMore?: boolean;
+  
+  // Dynamic display props
+  displayConfig?: PipelineDisplayConfig | null;
+  dealsByLeadId?: Record<string, DealDisplayInfo>;
+  appointmentsByLeadId?: Record<string, AppointmentDisplayInfo>;
   
   checklistItems?: Array<{ id: string; etapa_id: string; obrigatorio: boolean }>;
   onAddLead?: (stageId: string) => void;
@@ -54,6 +60,11 @@ export const KanbanColumn = memo(function KanbanColumn({
   hasMore = false,
   onLoadMore,
   loadingMore = false,
+  
+  // Dynamic display props
+  displayConfig,
+  dealsByLeadId = {},
+  appointmentsByLeadId = {},
   
   checklistItems = [],
   onAddLead,
@@ -300,6 +311,9 @@ export const KanbanColumn = memo(function KanbanColumn({
                   nextAppointment={(entry as any).nextAppointment}
                   responsibles={(entry as any).responsibles || []}
                   tags={tagsMap[entry.lead_id] || []}
+                  displayConfig={displayConfig}
+                  dealInfo={dealsByLeadId[entry.lead_id]}
+                  appointmentInfo={appointmentsByLeadId[entry.lead_id]}
                   onViewLead={() => onViewLead?.(entry.lead.id)}
                   onEditLead={() => onEditLead?.(entry.lead.id)}
                   onCreateAppointment={() => onCreateAppointment?.(entry.lead.id)}

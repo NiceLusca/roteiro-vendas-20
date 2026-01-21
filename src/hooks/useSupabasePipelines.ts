@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContextSecure';
 
+import { PipelineDisplayConfig } from '@/types/pipelineDisplay';
+
 interface Pipeline {
   id: string;
   nome: string;
@@ -17,6 +19,7 @@ interface Pipeline {
   responsaveis?: string[];
   tags?: string[];
   default_para_novos_leads?: boolean;
+  display_config?: PipelineDisplayConfig | null;
 }
 
 interface PipelineStage {
@@ -76,7 +79,8 @@ export function useSupabasePipelines() {
           ativo,
           primary_pipeline,
           created_at,
-          updated_at
+          updated_at,
+          display_config
         `)
         .order('created_at', { ascending: false });
 
@@ -90,7 +94,7 @@ export function useSupabasePipelines() {
         return;
       }
 
-      setPipelines((data as Pipeline[]) || []);
+      setPipelines((data as unknown as Pipeline[]) || []);
     } catch (error) {
       console.error('Erro ao buscar pipelines:', error);
     } finally {
@@ -551,7 +555,7 @@ export function useSupabasePipelines() {
         return null;
       }
 
-      return data as Pipeline;
+      return data as unknown as Pipeline;
     } catch (error) {
       console.error('Erro ao buscar pipeline por slug:', error);
       return null;

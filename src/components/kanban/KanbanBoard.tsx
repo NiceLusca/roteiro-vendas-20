@@ -4,6 +4,7 @@ import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { useSupabaseChecklistItems } from '@/hooks/useSupabaseChecklistItems';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
+import { PipelineDisplayConfig, DealDisplayInfo, AppointmentDisplayInfo } from '@/types/pipelineDisplay';
 import { LeadTag } from '@/types/bulkImport';
 import { logger } from '@/utils/logger';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +21,9 @@ interface KanbanBoardProps {
   }>;
   tagsMap?: Record<string, LeadTag[]>;
   sortBy?: SortOption;
+  displayConfig?: PipelineDisplayConfig | null;
+  dealsByLeadId?: Record<string, DealDisplayInfo>;
+  appointmentsByLeadId?: Record<string, AppointmentDisplayInfo>;
   onRefresh?: () => void;
   onTagsChange?: () => void;
   onAddLead?: (stageId: string) => void;
@@ -47,6 +51,9 @@ export function KanbanBoard({
   stageEntries,
   tagsMap = {},
   sortBy = 'chronological',
+  displayConfig,
+  dealsByLeadId = {},
+  appointmentsByLeadId = {},
   onRefresh,
   onTagsChange,
   onAddLead,
@@ -179,6 +186,9 @@ export function KanbanBoard({
           tagsMap={tagsMap}
           sortBy={sortBy}
           wipExceeded={wipExceeded}
+          displayConfig={displayConfig}
+          dealsByLeadId={dealsByLeadId}
+          appointmentsByLeadId={appointmentsByLeadId}
           hasMore={hasMore}
           onLoadMore={onLoadMore}
           loadingMore={loadingMore}

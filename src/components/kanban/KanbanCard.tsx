@@ -4,11 +4,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Lead, LeadPipelineEntry, PipelineStage } from '@/types/crm';
-import { ArrowRight, AlertCircle, AlertTriangle, Clock } from 'lucide-react';
+import { PipelineDisplayConfig, DealDisplayInfo, AppointmentDisplayInfo } from '@/types/pipelineDisplay';
+import { ArrowRight, AlertCircle, AlertTriangle, Clock, DollarSign, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { KanbanCardMenu } from './KanbanCardMenu';
 import { AppointmentBadge } from '@/components/notifications/AppointmentBadge';
 import { TagPopover } from './TagPopover';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import type { LeadResponsible } from '@/hooks/useLeadResponsibles';
 import type { LeadTag } from '@/types/bulkImport';
 
@@ -31,6 +34,9 @@ interface KanbanCardProps {
   responsibles?: LeadResponsible[];
   tags?: LeadTag[];
   isDragging?: boolean;
+  displayConfig?: PipelineDisplayConfig | null;
+  dealInfo?: DealDisplayInfo | null;
+  appointmentInfo?: AppointmentDisplayInfo | null;
   onViewLead?: () => void;
   onEditLead?: () => void;
   onCreateAppointment?: () => void;
@@ -46,7 +52,17 @@ interface KanbanCardProps {
   onTagsChange?: () => void;
 }
 
-// ✅ SOLUÇÃO 3: Custom comparator para evitar re-renders desnecessários
+// Helper to format currency
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+// ✅ Custom comparator para evitar re-renders desnecessários
 export const KanbanCard = memo(function KanbanCard({
   entry,
   lead,
@@ -57,6 +73,9 @@ export const KanbanCard = memo(function KanbanCard({
   responsibles = [],
   tags = [],
   isDragging = false,
+  displayConfig,
+  dealInfo,
+  appointmentInfo,
   onViewLead,
   onEditLead,
   onCreateAppointment,
@@ -72,6 +91,35 @@ export const KanbanCard = memo(function KanbanCard({
   onTagsChange
 }: KanbanCardProps) {
   const [isLocalDragging, setIsLocalDragging] = useState(false);
+
+  // All hooks must be called before any conditional returns
+  const getStageColorClass = useCallback((stageName: string): string => {
+    const normalized = stageName.toLowerCase();
+    if (normalized.includes('entrada')) return 'stage-entrada';
+    if (normalized.includes('contato 1')) return 'stage-contato-1';
+    if (normalized.includes('contato 2')) return 'stage-contato-2';
+    if (normalized.includes('agendou')) return 'stage-agendou';
+    if (normalized.includes('fechou')) return 'stage-fechou';
+    return 'stage-entrada';
+  }, []);
+
+  const stageClass = useMemo(() => getStageColorClass(stage.nome), [stage.nome, getStageColorClass]);
+
+  const handleCardClick = useCallback(() => {
+    if (isLocalDragging) return;
+    onEditLead?.();
+  }, [isLocalDragging, onEditLead]);
+
+  // Check which fields to show
+  const cardFields = displayConfig?.card_fields || ['nome', 'origem', 'tags', 'responsavel', 'sla'];
+  const showValorDeal = cardFields.includes('valor_deal') && dealInfo;
+  const showValorRecorrente = cardFields.includes('valor_recorrente') && dealInfo?.valor_recorrente;
+  const showDataSessao = cardFields.includes('data_sessao') && appointmentInfo;
+  const showCloser = cardFields.includes('closer') && lead?.closer;
+  const showTags = cardFields.includes('tags');
+  const showResponsavel = cardFields.includes('responsavel');
+  const showOrigem = cardFields.includes('origem');
+
   // Early return if lead is not loaded yet
   if (!lead) {
     return (
@@ -102,18 +150,6 @@ export const KanbanCard = memo(function KanbanCard({
     setIsLocalDragging(false);
     onDragEnd?.();
   };
-
-  const getStageColorClass = useCallback((stageName: string): string => {
-    const normalized = stageName.toLowerCase();
-    if (normalized.includes('entrada')) return 'stage-entrada';
-    if (normalized.includes('contato 1')) return 'stage-contato-1';
-    if (normalized.includes('contato 2')) return 'stage-contato-2';
-    if (normalized.includes('agendou')) return 'stage-agendou';
-    if (normalized.includes('fechou')) return 'stage-fechou';
-    return 'stage-entrada';
-  }, []);
-
-  const stageClass = useMemo(() => getStageColorClass(stage.nome), [stage.nome, getStageColorClass]);
 
   // Cálculo direto sem memoização para garantir atualização diária
   const daysInStage = entry.data_entrada_etapa 
@@ -168,13 +204,6 @@ export const KanbanCard = memo(function KanbanCard({
     };
   })();
 
-
-  const handleCardClick = useCallback(() => {
-    // Não abre se estava arrastando
-    if (isLocalDragging) return;
-    onEditLead?.();
-  }, [isLocalDragging, onEditLead]);
-
   return (
     <Card 
       draggable={true}
@@ -187,12 +216,11 @@ export const KanbanCard = memo(function KanbanCard({
         "hover:shadow-xl hover:-translate-y-0.5 hover:border-l-primary",
         stageClass,
         (isLocalDragging || isDragging) && "opacity-50 rotate-1 scale-105 shadow-xl z-50",
-        // Ring de urgência para atrasados e vencendo hoje
         slaStatus.ringClass
       )}
     >
       <CardContent className="p-3 pt-4 space-y-2 relative">
-        {/* SLA Badge e Menu - Posição absoluta no canto superior direito, dentro do card */}
+        {/* SLA Badge e Menu - Posição absoluta no canto superior direito */}
         <div className="absolute top-1 right-1 flex items-center gap-0.5">
           <Badge
             variant="outline" 
@@ -226,7 +254,7 @@ export const KanbanCard = memo(function KanbanCard({
           </div>
         </div>
 
-        {/* Nome do lead - ocupa toda a largura disponível */}
+        {/* Nome do lead */}
         <div className="pr-14">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -238,7 +266,7 @@ export const KanbanCard = memo(function KanbanCard({
               {lead.nome}
             </TooltipContent>
           </Tooltip>
-          {(lead.segmento || lead.origem) && (
+          {showOrigem && (lead.segmento || lead.origem) && (
             <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
               {lead.segmento && lead.origem 
                 ? `${lead.segmento} • ${lead.origem}` 
@@ -247,34 +275,67 @@ export const KanbanCard = memo(function KanbanCard({
           )}
         </div>
 
-        {/* Tags do Lead - 2 visíveis + botão de adicionar */}
-        <div className="flex flex-wrap items-center gap-1">
-          {tags.slice(0, 2).map(tag => (
-            <Badge 
-              key={tag.id}
-              style={{ 
-                backgroundColor: `${tag.cor || '#3b82f6'}cc`, 
-                color: 'white' 
-              }}
-              className="text-[9px] px-1.5 py-0 h-4 font-medium"
-            >
-              {tag.nome}
+        {/* Dynamic: Valor do Deal (badge verde) */}
+        {showValorDeal && (
+          <div className="flex items-center gap-1.5">
+            <Badge className="bg-green-600 hover:bg-green-600 text-white text-[10px] font-semibold px-2 py-0.5 gap-1">
+              <DollarSign className="w-2.5 h-2.5" />
+              {formatCurrency(dealInfo.valor_proposto)}
             </Badge>
-          ))}
-          {tags.length > 2 && (
-            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-muted/30 text-muted-foreground">
-              +{tags.length - 2}
-            </Badge>
-          )}
-          <div onClick={(e) => e.stopPropagation()}>
-            <TagPopover 
-              leadId={lead.id} 
-              currentTags={tags} 
-              onTagsChange={onTagsChange}
-            />
+            {showValorRecorrente && (
+              <Badge variant="outline" className="text-[9px] text-green-600 border-green-600/50">
+                +{formatCurrency(dealInfo.valor_recorrente!)} rec
+              </Badge>
+            )}
           </div>
-        </div>
+        )}
 
+        {/* Dynamic: Data da Sessão */}
+        {showDataSessao && (
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            <Calendar className="w-3 h-3" />
+            <span>
+              {format(new Date(appointmentInfo.data_hora), "dd/MM 'às' HH:mm", { locale: ptBR })}
+            </span>
+          </div>
+        )}
+
+        {/* Dynamic: Closer */}
+        {showCloser && (
+          <p className="text-[10px] text-primary/80 font-medium truncate">
+            Closer: {lead.closer}
+          </p>
+        )}
+
+        {/* Tags do Lead - 2 visíveis + botão de adicionar */}
+        {showTags && (
+          <div className="flex flex-wrap items-center gap-1">
+            {tags.slice(0, 2).map(tag => (
+              <Badge 
+                key={tag.id}
+                style={{ 
+                  backgroundColor: `${tag.cor || '#3b82f6'}cc`, 
+                  color: 'white' 
+                }}
+                className="text-[9px] px-1.5 py-0 h-4 font-medium"
+              >
+                {tag.nome}
+              </Badge>
+            ))}
+            {tags.length > 2 && (
+              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-muted/30 text-muted-foreground">
+                +{tags.length - 2}
+              </Badge>
+            )}
+            <div onClick={(e) => e.stopPropagation()}>
+              <TagPopover 
+                leadId={lead.id} 
+                currentTags={tags} 
+                onTagsChange={onTagsChange}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Próximo Agendamento */}
         {nextAppointment && (
@@ -286,31 +347,33 @@ export const KanbanCard = memo(function KanbanCard({
         )}
 
         {/* Responsável principal - mais compacto */}
-        <div className="flex items-center gap-2 text-xs">
-          {responsibles.length > 0 ? (() => {
-            const primaryResp = responsibles.find(r => r.is_primary) || responsibles[0];
-            const respName = primaryResp?.profile?.full_name 
-              || primaryResp?.profile?.email?.split('@')[0] 
-              || 'Responsável';
-            const initial = respName.charAt(0).toUpperCase();
-            return (
-              <>
-                <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <span className="text-[10px] font-bold text-primary">
-                    {initial}
+        {showResponsavel && (
+          <div className="flex items-center gap-2 text-xs">
+            {responsibles.length > 0 ? (() => {
+              const primaryResp = responsibles.find(r => r.is_primary) || responsibles[0];
+              const respName = primaryResp?.profile?.full_name 
+                || primaryResp?.profile?.email?.split('@')[0] 
+                || 'Responsável';
+              const initial = respName.charAt(0).toUpperCase();
+              return (
+                <>
+                  <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <span className="text-[10px] font-bold text-primary">
+                      {initial}
+                    </span>
+                  </div>
+                  <span className="truncate text-muted-foreground text-[11px]">
+                    {respName}
                   </span>
-                </div>
-                <span className="truncate text-muted-foreground text-[11px]">
-                  {respName}
-                </span>
-              </>
-            );
-          })() : (
-            <span className="italic text-muted-foreground/50 text-[11px]">Sem responsável</span>
-          )}
-        </div>
+                </>
+              );
+            })() : (
+              <span className="italic text-muted-foreground/50 text-[11px]">Sem responsável</span>
+            )}
+          </div>
+        )}
 
-        {/* Botão de Avançar - Compacto com tooltip */}
+        {/* Botão de Avançar */}
         {nextStage && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -363,15 +426,17 @@ export const KanbanCard = memo(function KanbanCard({
     prevProps.stage.id === nextProps.stage.id &&
     prevProps.checklistComplete === nextProps.checklistComplete &&
     prevProps.isDragging === nextProps.isDragging &&
-    // Comparação de responsáveis
     prevProps.responsibles?.length === nextProps.responsibles?.length &&
-    // Comparação de tags (verificar 2 primeiras)
     prevProps.tags?.length === nextProps.tags?.length &&
     prevProps.tags?.[0]?.id === nextProps.tags?.[0]?.id &&
     prevProps.tags?.[1]?.id === nextProps.tags?.[1]?.id &&
-    // ✅ SOLUÇÃO 3: Comparação profunda de nextAppointment
     prevProps.nextAppointment?.id === nextProps.nextAppointment?.id &&
     prevProps.nextAppointment?.start_at === nextProps.nextAppointment?.start_at &&
-    prevProps.nextAppointment?.status === nextProps.nextAppointment?.status
+    prevProps.nextAppointment?.status === nextProps.nextAppointment?.status &&
+    // New comparisons for dynamic fields
+    prevProps.dealInfo?.id === nextProps.dealInfo?.id &&
+    prevProps.dealInfo?.valor_proposto === nextProps.dealInfo?.valor_proposto &&
+    prevProps.appointmentInfo?.id === nextProps.appointmentInfo?.id &&
+    JSON.stringify(prevProps.displayConfig) === JSON.stringify(nextProps.displayConfig)
   );
 });
