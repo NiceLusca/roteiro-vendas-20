@@ -144,6 +144,7 @@ export type Database = {
           status: Database["public"]["Enums"]["status_deal"] | null
           updated_at: string | null
           valor_proposto: number
+          valor_recorrente: number | null
         }
         Insert: {
           created_at?: string | null
@@ -155,6 +156,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["status_deal"] | null
           updated_at?: string | null
           valor_proposto: number
+          valor_recorrente?: number | null
         }
         Update: {
           created_at?: string | null
@@ -166,6 +168,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["status_deal"] | null
           updated_at?: string | null
           valor_proposto?: number
+          valor_recorrente?: number | null
         }
         Relationships: [
           {
@@ -1036,6 +1039,7 @@ export type Database = {
           ativo: boolean | null
           created_at: string | null
           descricao: string | null
+          display_config: Json | null
           id: string
           nome: string
           objetivo: string | null
@@ -1047,6 +1051,7 @@ export type Database = {
           ativo?: boolean | null
           created_at?: string | null
           descricao?: string | null
+          display_config?: Json | null
           id?: string
           nome: string
           objetivo?: string | null
@@ -1058,6 +1063,7 @@ export type Database = {
           ativo?: boolean | null
           created_at?: string | null
           descricao?: string | null
+          display_config?: Json | null
           id?: string
           nome?: string
           objetivo?: string | null

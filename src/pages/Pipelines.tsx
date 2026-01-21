@@ -15,6 +15,7 @@ import { useMultipleLeadResponsibles } from '@/hooks/useLeadResponsibles';
 import { useLeadTags } from '@/hooks/useLeadTags';
 import { useMultipleLeadTags } from '@/hooks/useLeadTagsBulk';
 import { usePipelineAccess } from '@/hooks/usePipelineAccess';
+import { usePipelineDisplayData } from '@/hooks/usePipelineDisplayData';
 import { EnhancedLoading, SmartSkeleton } from '@/components/ui/enhanced-loading';
 import { KanbanSkeleton } from '@/components/ui/loading-skeleton';
 import { Button } from '@/components/ui/button';
@@ -729,6 +730,7 @@ function PipelinesContent({ slug }: { slug: string }) {
             stageEntries={stageEntries}
             tagsMap={tagsMap}
             sortBy={sortBy}
+            displayConfig={currentPipeline?.display_config}
             onTagsChange={handleTagsChange}
             onAddLead={handleAddLead}
             onViewLead={handleViewOrEditLead}
