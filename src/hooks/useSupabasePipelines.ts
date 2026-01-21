@@ -562,6 +562,42 @@ export function useSupabasePipelines() {
     }
   };
 
+  // Update display config only
+  const updateDisplayConfig = async (pipelineId: string, config: PipelineDisplayConfig): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase
+        .from('pipelines')
+        .update({ 
+          display_config: config as any,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', pipelineId);
+
+      if (error) {
+        console.error('Erro ao atualizar display_config:', error);
+        toast({
+          title: "Erro ao salvar configuração",
+          description: error.message,
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      toast({
+        title: "Configuração salva!",
+        description: "As alterações de visualização foram aplicadas.",
+      });
+
+      await fetchPipelines();
+      return true;
+    } catch (error) {
+      console.error('Erro ao atualizar display_config:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchPipelines();
@@ -579,6 +615,7 @@ export function useSupabasePipelines() {
     getPipelineBySlug,
     getActivePipelines,
     getPrimaryPipeline,
+    updateDisplayConfig,
     refetch: fetchPipelines
   };
 }

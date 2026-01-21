@@ -7,15 +7,17 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight, Zap, Layers, Copy, GripVertical } from 'lucide-react';
+import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight, Zap, Layers, Copy, GripVertical, Eye } from 'lucide-react';
 import { SimplePipelineForm } from '@/components/forms/SimplePipelineForm';
 import { PipelineWizardForm } from '@/components/forms/PipelineWizardForm';
 import { StageForm } from '@/components/forms/StageForm';
 import { StageChecklistManager } from '@/components/settings/StageChecklistManager';
+import { PipelineDisplayConfigDialog } from '@/components/settings/PipelineDisplayConfigDialog';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { useSupabaseChecklistItems } from '@/hooks/useSupabaseChecklistItems';
 import { useToast } from '@/hooks/use-toast';
+import { PipelineDisplayConfig } from '@/types/pipelineDisplay';
 
 interface Pipeline {
   id: string;
@@ -26,6 +28,7 @@ interface Pipeline {
   primary_pipeline: boolean;
   created_at?: string;
   updated_at?: string;
+  display_config?: PipelineDisplayConfig | null;
 }
 
 interface StageData {
@@ -49,7 +52,9 @@ export function PipelineManager() {
   const [isWizardDialogOpen, setIsWizardDialogOpen] = useState(false);
   const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
+  const [isDisplayConfigDialogOpen, setIsDisplayConfigDialogOpen] = useState(false);
   const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null);
+  const [selectedPipelineForConfig, setSelectedPipelineForConfig] = useState<Pipeline | null>(null);
   const [pipelineToDuplicate, setPipelineToDuplicate] = useState<Pipeline | null>(null);
   const [duplicateName, setDuplicateName] = useState('');
   const [selectedStage, setSelectedStage] = useState<StageData | null>(null);
@@ -59,7 +64,7 @@ export function PipelineManager() {
   const [draggedStageId, setDraggedStageId] = useState<string | null>(null);
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
   
-  const { pipelines, loading, savePipeline, saveComplexPipeline, duplicatePipeline, deletePipeline } = useSupabasePipelines();
+  const { pipelines, loading, savePipeline, saveComplexPipeline, duplicatePipeline, deletePipeline, updateDisplayConfig } = useSupabasePipelines();
   const { stages, saveStage, deleteStage, batchUpdateStages, refetch: refetchStages } = useSupabasePipelineStages();
   const { checklistItems, refetch: refetchChecklistItems } = useSupabaseChecklistItems();
   const { toast } = useToast();
@@ -329,6 +334,19 @@ export function PipelineManager() {
             </div>
             
             <div className="flex items-center gap-2">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedPipelineForConfig(pipeline);
+                  setIsDisplayConfigDialogOpen(true);
+                }}
+                title="Configurar campos visíveis"
+              >
+                <Eye className="w-3 h-3 mr-1" />
+                Visualização
+              </Button>
               <Button 
                 size="sm" 
                 variant="outline"
@@ -657,6 +675,17 @@ export function PipelineManager() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Display Config Dialog */}
+      <PipelineDisplayConfigDialog
+        pipeline={selectedPipelineForConfig}
+        open={isDisplayConfigDialogOpen}
+        onOpenChange={(open) => {
+          setIsDisplayConfigDialogOpen(open);
+          if (!open) setSelectedPipelineForConfig(null);
+        }}
+        onSave={updateDisplayConfig}
+      />
     </div>
   );
 }
