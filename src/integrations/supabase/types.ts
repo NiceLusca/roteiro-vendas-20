@@ -133,6 +133,48 @@ export type Database = {
         }
         Relationships: []
       }
+      deal_products: {
+        Row: {
+          created_at: string | null
+          deal_id: string
+          id: string
+          product_id: string
+          quantidade: number | null
+          valor_unitario: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          deal_id: string
+          id?: string
+          product_id: string
+          quantidade?: number | null
+          valor_unitario?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          deal_id?: string
+          id?: string
+          product_id?: string
+          quantidade?: number | null
+          valor_unitario?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_products_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deals: {
         Row: {
           created_at: string | null

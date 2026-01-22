@@ -146,11 +146,12 @@ serve(async (req) => {
     // Create appointment if date is provided
     let appointmentId: string | null = null;
     if (dataSessao) {
+      // IMPORTANTE: O enum status_appointment usa lowercase: 'agendado', 'confirmado', 'realizado', 'cancelado', 'remarcado'
       const appointmentData = {
         lead_id: leadId,
         data_hora: dataSessao,
         start_at: dataSessao,
-        status: 'Agendado',
+        status: 'agendado',  // lowercase para match com o enum
         titulo: tituloEvento,
         notas: desejoSessao || null,
       };
@@ -227,7 +228,7 @@ serve(async (req) => {
       .select('id')
       .eq('lead_id', leadId)
       .eq('pipeline_id', pipeline.id)
-      .eq('status_inscricao', 'Ativo')
+      .eq('status_inscricao', 'ativo')
       .maybeSingle();
 
     let entryId: string | null = null;
@@ -244,7 +245,7 @@ serve(async (req) => {
           lead_id: leadId,
           pipeline_id: pipeline.id,
           etapa_atual_id: firstStage.id,
-          status_inscricao: 'Ativo',
+          status_inscricao: 'ativo',  // lowercase
           data_inscricao: now,
           data_entrada_etapa: now,
           saude_etapa: 'Verde',
