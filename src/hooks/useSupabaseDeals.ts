@@ -8,7 +8,10 @@ interface Deal {
   lead_id: string;
   product_id?: string;
   valor_proposto: number;
+  valor_recorrente?: number | null;
   status: 'Aberta' | 'Ganha' | 'Perdida' | 'Pausada';
+  motivo_perda?: string | null;
+  data_fechamento?: string | null;
   closer?: string;
   fase_negociacao?: string;
   created_at: string;
@@ -33,6 +36,7 @@ export function useSupabaseDeals() {
           lead_id,
           produto_id,
           valor_proposto,
+          valor_recorrente,
           status,
           data_fechamento,
           motivo_perda,

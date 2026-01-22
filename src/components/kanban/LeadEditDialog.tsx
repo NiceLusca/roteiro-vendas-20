@@ -6,12 +6,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Lead } from '@/types/crm';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Lead, Appointment } from '@/types/crm';
 import { useLeadNotes } from '@/hooks/useLeadNotes';
 import { useLeadAttachments } from '@/hooks/useLeadAttachments';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useLeadResponsibles } from '@/hooks/useLeadResponsibles';
 import { useLeadActivityLog } from '@/hooks/useLeadActivityLog';
+import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
+import { useSupabaseDeals } from '@/hooks/useSupabaseDeals';
 import { ResponsibleSelector } from '@/components/leads/ResponsibleSelector';
 import { LeadActivityTimeline } from '@/components/timeline/LeadActivityTimeline';
 import { NoteContent } from './NoteContent';
@@ -32,7 +37,11 @@ import {
   Check,
   ArrowRightLeft,
   Tag,
-  Star
+  Star,
+  Calendar as CalendarIcon,
+  DollarSign,
+  Clock,
+  Loader2
 } from 'lucide-react';
 import { TagPopover } from './TagPopover';
 import { useLeadTags } from '@/hooks/useLeadTags';
@@ -41,6 +50,8 @@ import { linkifyText } from '@/utils/linkify';
 import { toast } from 'sonner';
 import { logger } from '@/utils/logger';
 import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface LeadEditDialogProps {
   open: boolean;
@@ -70,6 +81,20 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
   const [currentUserName, setCurrentUserName] = useState<string>('');
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editingNoteText, setEditingNoteText] = useState('');
+
+  // Estados para agendamento
+  const [appointmentDate, setAppointmentDate] = useState<Date | undefined>(undefined);
+  const [appointmentTime, setAppointmentTime] = useState('09:00');
+  const [appointmentDuration, setAppointmentDuration] = useState('60');
+  const [appointmentNotes, setAppointmentNotes] = useState('');
+  const [savingAppointment, setSavingAppointment] = useState(false);
+
+  // Estados para deal
+  const [dealValor, setDealValor] = useState('');
+  const [dealRecorrente, setDealRecorrente] = useState('');
+  const [dealStatus, setDealStatus] = useState<'aberto' | 'ganho' | 'perdido'>('aberto');
+  const [dealMotivo, setDealMotivo] = useState('');
+  const [savingDeal, setSavingDeal] = useState(false);
 
   // Buscar nome do usuário atual para o histórico
   useEffect(() => {
@@ -101,6 +126,127 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
   const { activities } = useLeadActivityLog(lead.id, pipelineEntryId);
   const { getLeadTags, removeTagFromLead } = useLeadTags();
   const [leadTags, setLeadTags] = useState<{ id: string; nome: string; cor: string | null }[]>([]);
+
+  // Hooks para agendamentos e deals
+  const { appointments, saveAppointment, getUpcomingAppointments } = useSupabaseAppointments();
+  const { deals, saveDeal, getDealsByLeadId } = useSupabaseDeals();
+
+  // Filtrar dados do lead atual
+  const leadAppointments = appointments.filter(a => a.lead_id === lead.id);
+  const leadDeals = getDealsByLeadId(lead.id);
+  const existingDeal = leadDeals[0]; // Pegar o deal mais recente
+
+  // Sincronizar deal existente quando abrir
+  useEffect(() => {
+    if (open && existingDeal) {
+      setDealValor(formatCurrencyInput(String(Math.round(existingDeal.valor_proposto * 100))));
+      setDealRecorrente(existingDeal.valor_recorrente 
+        ? formatCurrencyInput(String(Math.round(existingDeal.valor_recorrente * 100)))
+        : '');
+      setDealStatus(existingDeal.status as typeof dealStatus || 'aberto');
+      setDealMotivo(existingDeal.motivo_perda || '');
+    } else if (open) {
+      setDealValor('');
+      setDealRecorrente('');
+      setDealStatus('aberto');
+      setDealMotivo('');
+    }
+  }, [open, existingDeal]);
+
+  // Helper para formatar moeda
+  const formatCurrencyInput = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return '';
+    const cents = parseInt(digits, 10);
+    const reais = cents / 100;
+    return reais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
+  // Handler para salvar agendamento
+  const handleSaveAppointment = async () => {
+    if (!appointmentDate) {
+      toast.error('Selecione uma data');
+      return;
+    }
+
+    try {
+      setSavingAppointment(true);
+      
+      const [hours, minutes] = appointmentTime.split(':').map(Number);
+      const startAt = new Date(appointmentDate);
+      startAt.setHours(hours, minutes, 0, 0);
+      
+      const endAt = new Date(startAt);
+      endAt.setMinutes(endAt.getMinutes() + parseInt(appointmentDuration));
+
+      await saveAppointment({
+        lead_id: lead.id,
+        titulo: `Sessão com ${lead.nome}`,
+        data_hora: startAt,
+        start_at: startAt,
+        end_at: endAt,
+        duracao_minutos: parseInt(appointmentDuration),
+        status: 'Agendado',
+        notas: appointmentNotes || undefined
+      });
+
+      // Reset form
+      setAppointmentDate(undefined);
+      setAppointmentTime('09:00');
+      setAppointmentDuration('60');
+      setAppointmentNotes('');
+      
+      toast.success('Agendamento criado com sucesso!');
+      onUpdate?.();
+    } catch (error) {
+      console.error('Erro ao salvar agendamento:', error);
+      toast.error('Erro ao criar agendamento');
+    } finally {
+      setSavingAppointment(false);
+    }
+  };
+
+  // Handler para salvar deal
+  const handleSaveDeal = async () => {
+    const parsedValor = parseFloat(dealValor.replace(/\D/g, '')) / 100 || 0;
+    if (parsedValor <= 0) {
+      toast.error('Informe um valor válido');
+      return;
+    }
+
+    try {
+      setSavingDeal(true);
+      
+      const parsedRecorrente = dealRecorrente 
+        ? parseFloat(dealRecorrente.replace(/\D/g, '')) / 100 
+        : null;
+
+      // Mapear status para o formato do banco
+      const statusMap = {
+        'aberto': 'aberto',
+        'ganho': 'ganho', 
+        'perdido': 'perdido'
+      };
+
+      await saveDeal({
+        ...(existingDeal?.id ? { id: existingDeal.id } : {}),
+        lead_id: lead.id,
+        valor_proposto: parsedValor,
+        valor_recorrente: parsedRecorrente,
+        status: statusMap[dealStatus] as any,
+        motivo_perda: dealStatus === 'perdido' ? dealMotivo : null,
+        data_fechamento: dealStatus !== 'aberto' ? new Date().toISOString() : null
+      });
+
+      toast.success(existingDeal ? 'Negociação atualizada!' : 'Negociação criada!');
+      onUpdate?.();
+    } catch (error) {
+      console.error('Erro ao salvar deal:', error);
+      toast.error('Erro ao salvar negociação');
+    } finally {
+      setSavingDeal(false);
+    }
+  };
 
   // Buscar tags do lead
   useEffect(() => {
@@ -338,40 +484,53 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
         </DialogHeader>
 
         <Tabs defaultValue="comments" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="info">Informações</TabsTrigger>
-            <TabsTrigger value="responsibles">
-              Responsáveis
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="info" className="text-xs px-2">Info</TabsTrigger>
+            <TabsTrigger value="responsibles" className="text-xs px-2">
+              Resp.
               {responsibles.length > 0 && (
-                <Badge variant="secondary" className="ml-2">
+                <Badge variant="secondary" className="ml-1 text-[10px] px-1">
                   {responsibles.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="comments">
-              Comentários
+            <TabsTrigger value="comments" className="text-xs px-2">
+              Notas
               {notes.length > 0 && (
-                <Badge variant="secondary" className="ml-2">
+                <Badge variant="secondary" className="ml-1 text-[10px] px-1">
                   {notes.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="attachments">
+            <TabsTrigger value="appointments" className="text-xs px-2">
+              <CalendarIcon className="h-3 w-3 mr-1" />
+              Agenda
+              {leadAppointments.length > 0 && (
+                <Badge variant="secondary" className="ml-1 text-[10px] px-1">
+                  {leadAppointments.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="deals" className="text-xs px-2">
+              <DollarSign className="h-3 w-3 mr-1" />
+              Vendas
+              {leadDeals.length > 0 && (
+                <Badge variant="secondary" className="ml-1 text-[10px] px-1">
+                  {leadDeals.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="attachments" className="text-xs px-2">
               Anexos
               {attachments.length > 0 && (
-                <Badge variant="secondary" className="ml-2">
+                <Badge variant="secondary" className="ml-1 text-[10px] px-1">
                   {attachments.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="history">
-              <History className="h-4 w-4 mr-1" />
-              Histórico
-              {activities.length > 0 && (
-                <Badge variant="secondary" className="ml-2">
-                  {activities.length}
-                </Badge>
-              )}
+            <TabsTrigger value="history" className="text-xs px-2">
+              <History className="h-3 w-3 mr-1" />
+              Log
             </TabsTrigger>
           </TabsList>
 
@@ -779,6 +938,257 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
                     </div>
                   </div>
                 ))
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Tab de Agendamentos */}
+          <TabsContent value="appointments" className="space-y-4 mt-4">
+            {/* Formulário de novo agendamento */}
+            <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
+              <h4 className="font-medium flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4" />
+                Novo Agendamento
+              </h4>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Data *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {appointmentDate 
+                          ? format(appointmentDate, "dd/MM/yyyy", { locale: ptBR })
+                          : "Selecionar data"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={appointmentDate}
+                        onSelect={setAppointmentDate}
+                        locale={ptBR}
+                        disabled={(date) => date < new Date()}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Horário *</Label>
+                  <Input
+                    type="time"
+                    value={appointmentTime}
+                    onChange={(e) => setAppointmentTime(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Duração</Label>
+                  <Select value={appointmentDuration} onValueChange={setAppointmentDuration}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="30">30 minutos</SelectItem>
+                      <SelectItem value="45">45 minutos</SelectItem>
+                      <SelectItem value="60">1 hora</SelectItem>
+                      <SelectItem value="90">1h 30min</SelectItem>
+                      <SelectItem value="120">2 horas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Observações</Label>
+                  <Input
+                    placeholder="Notas do agendamento..."
+                    value={appointmentNotes}
+                    onChange={(e) => setAppointmentNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <Button 
+                onClick={handleSaveAppointment} 
+                disabled={!appointmentDate || savingAppointment}
+                className="w-full"
+              >
+                {savingAppointment ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    Criar Agendamento
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Lista de agendamentos existentes */}
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm text-muted-foreground">Agendamentos ({leadAppointments.length})</h4>
+              {leadAppointments.length === 0 ? (
+                <p className="text-center text-muted-foreground py-6 text-sm">
+                  Nenhum agendamento
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {leadAppointments.map((apt) => (
+                    <div key={apt.id} className="p-3 border rounded-lg flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">
+                            {format(new Date(apt.data_hora), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {apt.titulo} • {apt.duracao_minutos || 60}min
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant={
+                        apt.status === 'Agendado' ? 'default' :
+                        apt.status === 'Realizado' ? 'secondary' :
+                        'outline'
+                      }>
+                        {apt.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Tab de Vendas/Deals */}
+          <TabsContent value="deals" className="space-y-4 mt-4">
+            {/* Formulário de deal */}
+            <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
+              <h4 className="font-medium flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                {existingDeal ? 'Editar Negociação' : 'Nova Negociação'}
+              </h4>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Valor da Venda (R$) *</Label>
+                  <Input
+                    placeholder="R$ 0,00"
+                    value={dealValor}
+                    onChange={(e) => setDealValor(formatCurrencyInput(e.target.value))}
+                    className="font-mono"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Valor Recorrente (R$/mês)</Label>
+                  <Input
+                    placeholder="R$ 0,00"
+                    value={dealRecorrente}
+                    onChange={(e) => setDealRecorrente(formatCurrencyInput(e.target.value))}
+                    className="font-mono"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={dealStatus} onValueChange={(v) => setDealStatus(v as typeof dealStatus)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="aberto">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                          Em Negociação
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="ganho">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-green-500" />
+                          Ganha
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="perdido">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-red-500" />
+                          Perdida
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {dealStatus === 'perdido' && (
+                  <div className="space-y-2">
+                    <Label>Motivo da Perda</Label>
+                    <Input
+                      placeholder="Por que a venda foi perdida?"
+                      value={dealMotivo}
+                      onChange={(e) => setDealMotivo(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <Button 
+                onClick={handleSaveDeal} 
+                disabled={!dealValor || savingDeal}
+                className="w-full"
+              >
+                {savingDeal ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    {existingDeal ? 'Atualizar Negociação' : 'Criar Negociação'}
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Lista de deals existentes */}
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm text-muted-foreground">Negociações ({leadDeals.length})</h4>
+              {leadDeals.length === 0 ? (
+                <p className="text-center text-muted-foreground py-6 text-sm">
+                  Nenhuma negociação
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {leadDeals.map((deal) => (
+                    <div key={deal.id} className="p-3 border rounded-lg flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium font-mono">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.valor_proposto)}
+                          </p>
+                          {deal.valor_recorrente && (
+                            <p className="text-xs text-muted-foreground">
+                              +{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.valor_recorrente)}/mês
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <Badge variant={
+                        deal.status === 'Ganha' ? 'default' :
+                        deal.status === 'Perdida' ? 'destructive' :
+                        'secondary'
+                      }>
+                        {deal.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </TabsContent>
