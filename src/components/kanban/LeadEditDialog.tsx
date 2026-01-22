@@ -17,6 +17,8 @@ import { useLeadResponsibles } from '@/hooks/useLeadResponsibles';
 import { useLeadActivityLog } from '@/hooks/useLeadActivityLog';
 import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
 import { useSupabaseDeals } from '@/hooks/useSupabaseDeals';
+import { useSupabaseProducts } from '@/hooks/useSupabaseProducts';
+import { useSupabaseDealProducts } from '@/hooks/useSupabaseDealProducts';
 import { ResponsibleSelector } from '@/components/leads/ResponsibleSelector';
 import { LeadActivityTimeline } from '@/components/timeline/LeadActivityTimeline';
 import { NoteContent } from './NoteContent';
@@ -41,7 +43,10 @@ import {
   Calendar as CalendarIcon,
   DollarSign,
   Clock,
-  Loader2
+  Loader2,
+  RefreshCw,
+  Check as CheckIcon,
+  Package
 } from 'lucide-react';
 import { TagPopover } from './TagPopover';
 import { useLeadTags } from '@/hooks/useLeadTags';
@@ -92,9 +97,10 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
   // Estados para deal
   const [dealValor, setDealValor] = useState('');
   const [dealRecorrente, setDealRecorrente] = useState('');
-  const [dealStatus, setDealStatus] = useState<'aberto' | 'ganho' | 'perdido'>('aberto');
-  const [dealMotivo, setDealMotivo] = useState('');
+  const [vendaConfirmada, setVendaConfirmada] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [savingDeal, setSavingDeal] = useState(false);
+  const [productSearchOpen, setProductSearchOpen] = useState(false);
 
   // Buscar nome do usuário atual para o histórico
   useEffect(() => {
@@ -127,14 +133,18 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
   const { getLeadTags, removeTagFromLead } = useLeadTags();
   const [leadTags, setLeadTags] = useState<{ id: string; nome: string; cor: string | null }[]>([]);
 
-  // Hooks para agendamentos e deals
+  // Hooks para agendamentos, deals e produtos
   const { appointments, saveAppointment, getUpcomingAppointments } = useSupabaseAppointments();
   const { deals, saveDeal, getDealsByLeadId } = useSupabaseDeals();
+  const { products } = useSupabaseProducts();
 
   // Filtrar dados do lead atual
   const leadAppointments = appointments.filter(a => a.lead_id === lead.id);
   const leadDeals = getDealsByLeadId(lead.id);
   const existingDeal = leadDeals[0]; // Pegar o deal mais recente
+  
+  // Hook para produtos do deal (só ativa quando há deal)
+  const { dealProducts, setProducts: setDealProducts } = useSupabaseDealProducts(existingDeal?.id);
 
   // Sincronizar deal existente quando abrir
   useEffect(() => {
@@ -143,15 +153,22 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
       setDealRecorrente(existingDeal.valor_recorrente 
         ? formatCurrencyInput(String(Math.round(existingDeal.valor_recorrente * 100)))
         : '');
-      setDealStatus(existingDeal.status as typeof dealStatus || 'aberto');
-      setDealMotivo(existingDeal.motivo_perda || '');
+      setVendaConfirmada(existingDeal.status === 'Ganha');
+      // Produtos são carregados pelo hook useSupabaseDealProducts
     } else if (open) {
       setDealValor('');
       setDealRecorrente('');
-      setDealStatus('aberto');
-      setDealMotivo('');
+      setVendaConfirmada(false);
+      setSelectedProductIds([]);
     }
   }, [open, existingDeal]);
+  
+  // Sincronizar produtos selecionados com os do deal
+  useEffect(() => {
+    if (dealProducts.length > 0) {
+      setSelectedProductIds(dealProducts.map(dp => dp.product_id));
+    }
+  }, [dealProducts]);
 
   // Helper para formatar moeda
   const formatCurrencyInput = (value: string) => {
@@ -186,13 +203,9 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
         start_at: startAt,
         end_at: endAt,
         duracao_minutos: parseInt(appointmentDuration),
-        status: 'Agendado',
+        status: 'agendado' as any,  // O banco usa lowercase
         notas: appointmentNotes || undefined
       });
-
-      // Reset form
-      setAppointmentDate(undefined);
-      setAppointmentTime('09:00');
       setAppointmentDuration('60');
       setAppointmentNotes('');
       
@@ -208,9 +221,20 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
 
   // Handler para salvar deal
   const handleSaveDeal = async () => {
-    const parsedValor = parseFloat(dealValor.replace(/\D/g, '')) / 100 || 0;
-    if (parsedValor <= 0) {
-      toast.error('Informe um valor válido');
+    // Calcular valor total dos produtos se não houver valor manual
+    let parsedValor = parseFloat(dealValor.replace(/\D/g, '')) / 100 || 0;
+    
+    // Se não tem valor manual, calcular pelos produtos selecionados
+    if (parsedValor <= 0 && selectedProductIds.length > 0) {
+      parsedValor = selectedProductIds.reduce((sum, prodId) => {
+        const prod = products.find(p => p.id === prodId);
+        return sum + (prod?.preco || 0);
+      }, 0);
+      setDealValor(formatCurrencyInput(String(Math.round(parsedValor * 100))));
+    }
+    
+    if (parsedValor <= 0 && selectedProductIds.length === 0) {
+      toast.error('Selecione produtos ou informe um valor');
       return;
     }
 
@@ -221,22 +245,22 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
         ? parseFloat(dealRecorrente.replace(/\D/g, '')) / 100 
         : null;
 
-      // Mapear status para o formato do banco
-      const statusMap = {
-        'aberto': 'aberto',
-        'ganho': 'ganho', 
-        'perdido': 'perdido'
-      };
+      // O status é baseado no checkbox de venda confirmada
+      const status = vendaConfirmada ? 'ganho' : 'aberto';
 
-      await saveDeal({
+      const result = await saveDeal({
         ...(existingDeal?.id ? { id: existingDeal.id } : {}),
         lead_id: lead.id,
         valor_proposto: parsedValor,
         valor_recorrente: parsedRecorrente,
-        status: statusMap[dealStatus] as any,
-        motivo_perda: dealStatus === 'perdido' ? dealMotivo : null,
-        data_fechamento: dealStatus !== 'aberto' ? new Date().toISOString() : null
+        status: status as any,
+        data_fechamento: vendaConfirmada ? new Date().toISOString() : null
       });
+
+      // Salvar produtos associados ao deal
+      if (result?.id && selectedProductIds.length > 0) {
+        await setDealProducts(selectedProductIds);
+      }
 
       toast.success(existingDeal ? 'Negociação atualizada!' : 'Negociação criada!');
       onUpdate?.();
@@ -246,6 +270,15 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
     } finally {
       setSavingDeal(false);
     }
+  };
+  
+  // Toggle de produto selecionado
+  const toggleProduct = (productId: string) => {
+    setSelectedProductIds(prev => 
+      prev.includes(productId)
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
   };
 
   // Buscar tags do lead
@@ -1074,15 +1107,102 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
                 {existingDeal ? 'Editar Negociação' : 'Nova Negociação'}
               </h4>
 
+              {/* Checkbox de venda confirmada */}
+              <div 
+                className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                  vendaConfirmada 
+                    ? 'border-primary bg-primary/10' 
+                    : 'border-muted hover:border-primary/50'
+                }`}
+                onClick={() => setVendaConfirmada(!vendaConfirmada)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center ${
+                    vendaConfirmada 
+                      ? 'bg-primary border-primary' 
+                      : 'border-muted-foreground/50'
+                  }`}>
+                    {vendaConfirmada && <CheckIcon className="h-4 w-4 text-primary-foreground" />}
+                  </div>
+                  <div>
+                    <p className="font-medium">Venda Confirmada</p>
+                    <p className="text-xs text-muted-foreground">
+                      Marque quando a venda for fechada para contabilizar nas estatísticas
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Seletor de produtos */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Produtos Vendidos
+                </Label>
+                <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
+                  {products.length === 0 ? (
+                    <p className="p-3 text-sm text-muted-foreground text-center">
+                      Nenhum produto cadastrado
+                    </p>
+                  ) : (
+                    products.filter(p => p.ativo).map(product => (
+                      <div 
+                        key={product.id}
+                        className={`p-3 flex items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors ${
+                          selectedProductIds.includes(product.id) ? 'bg-primary/5' : ''
+                        }`}
+                        onClick={() => toggleProduct(product.id)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                            selectedProductIds.includes(product.id)
+                              ? 'bg-primary border-primary'
+                              : 'border-muted-foreground/30'
+                          }`}>
+                            {selectedProductIds.includes(product.id) && (
+                              <CheckIcon className="h-3 w-3 text-primary-foreground" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{product.nome}</p>
+                            {product.descricao && (
+                              <p className="text-xs text-muted-foreground line-clamp-1">{product.descricao}</p>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-sm font-mono text-muted-foreground">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco)}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+                {selectedProductIds.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedProductIds.length} produto(s) selecionado(s) • Total: {
+                      new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                        selectedProductIds.reduce((sum, id) => {
+                          const p = products.find(prod => prod.id === id);
+                          return sum + (p?.preco || 0);
+                        }, 0)
+                      )
+                    }
+                  </p>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Valor da Venda (R$) *</Label>
+                  <Label>Valor da Venda (R$)</Label>
                   <Input
-                    placeholder="R$ 0,00"
+                    placeholder="Auto-calculado pelos produtos"
                     value={dealValor}
                     onChange={(e) => setDealValor(formatCurrencyInput(e.target.value))}
                     className="font-mono"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Deixe em branco para usar o valor dos produtos
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -1094,51 +1214,11 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
                     className="font-mono"
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={dealStatus} onValueChange={(v) => setDealStatus(v as typeof dealStatus)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="aberto">
-                        <span className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-blue-500" />
-                          Em Negociação
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="ganho">
-                        <span className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-green-500" />
-                          Ganha
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="perdido">
-                        <span className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-red-500" />
-                          Perdida
-                        </span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {dealStatus === 'perdido' && (
-                  <div className="space-y-2">
-                    <Label>Motivo da Perda</Label>
-                    <Input
-                      placeholder="Por que a venda foi perdida?"
-                      value={dealMotivo}
-                      onChange={(e) => setDealMotivo(e.target.value)}
-                    />
-                  </div>
-                )}
               </div>
 
               <Button 
                 onClick={handleSaveDeal} 
-                disabled={!dealValor || savingDeal}
+                disabled={(!dealValor && selectedProductIds.length === 0) || savingDeal}
                 className="w-full"
               >
                 {savingDeal ? (
