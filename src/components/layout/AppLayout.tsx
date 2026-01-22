@@ -7,7 +7,7 @@ import { BreadcrumbNavigation } from '@/components/ui/breadcrumb-navigation';
 import { CommandPalette } from '@/components/ui/command-palette';
 import { KeyboardShortcutsHelp } from '@/components/ui/keyboard-shortcuts-help';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
-import { useSLANotifications } from '@/hooks/useSLANotifications';
+import { useNotificationEngine } from '@/hooks/useNotificationEngine';
 import { GlobalKeyboardShortcuts } from '@/components/help/GlobalKeyboardShortcuts';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContextSecure';
@@ -18,8 +18,8 @@ export function AppLayout() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Initialize SLA notifications monitoring
-  useSLANotifications();
+  // Initialize notification engine (SLA + appointments)
+  useNotificationEngine();
 
   // Global keyboard shortcuts
   useEffect(() => {
