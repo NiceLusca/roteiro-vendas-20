@@ -9,6 +9,7 @@ interface Deal {
   product_id?: string;
   valor_proposto: number;
   valor_recorrente?: number | null;
+  recorrente?: boolean; // Checkbox para estatísticas (à vista vs recorrente)
   status: 'Aberta' | 'Ganha' | 'Perdida' | 'Pausada';
   motivo_perda?: string | null;
   data_fechamento?: string | null;
@@ -37,6 +38,7 @@ export function useSupabaseDeals() {
           produto_id,
           valor_proposto,
           valor_recorrente,
+          recorrente,
           status,
           data_fechamento,
           motivo_perda,

@@ -183,6 +183,7 @@ export type Database = {
           lead_id: string
           motivo_perda: string | null
           produto_id: string | null
+          recorrente: boolean | null
           status: Database["public"]["Enums"]["status_deal"] | null
           updated_at: string | null
           valor_proposto: number
@@ -195,6 +196,7 @@ export type Database = {
           lead_id: string
           motivo_perda?: string | null
           produto_id?: string | null
+          recorrente?: boolean | null
           status?: Database["public"]["Enums"]["status_deal"] | null
           updated_at?: string | null
           valor_proposto: number
@@ -207,6 +209,7 @@ export type Database = {
           lead_id?: string
           motivo_perda?: string | null
           produto_id?: string | null
+          recorrente?: boolean | null
           status?: Database["public"]["Enums"]["status_deal"] | null
           updated_at?: string | null
           valor_proposto?: number
