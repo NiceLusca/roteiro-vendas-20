@@ -96,7 +96,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
 
   // Estados para deal
   const [dealValor, setDealValor] = useState('');
-  const [dealRecorrente, setDealRecorrente] = useState('');
+  const [vendaRecorrente, setVendaRecorrente] = useState(false); // Checkbox para estatísticas
   const [vendaConfirmada, setVendaConfirmada] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [savingDeal, setSavingDeal] = useState(false);
@@ -150,14 +150,12 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
   useEffect(() => {
     if (open && existingDeal) {
       setDealValor(formatCurrencyInput(String(Math.round(existingDeal.valor_proposto * 100))));
-      setDealRecorrente(existingDeal.valor_recorrente 
-        ? formatCurrencyInput(String(Math.round(existingDeal.valor_recorrente * 100)))
-        : '');
+      setVendaRecorrente((existingDeal as any).recorrente === true);
       setVendaConfirmada(existingDeal.status === 'Ganha');
       // Produtos são carregados pelo hook useSupabaseDealProducts
     } else if (open) {
       setDealValor('');
-      setDealRecorrente('');
+      setVendaRecorrente(false);
       setVendaConfirmada(false);
       setSelectedProductIds([]);
     }
@@ -221,29 +219,16 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
 
   // Handler para salvar deal
   const handleSaveDeal = async () => {
-    // Calcular valor total dos produtos se não houver valor manual
-    let parsedValor = parseFloat(dealValor.replace(/\D/g, '')) / 100 || 0;
+    const parsedValor = parseFloat(dealValor.replace(/\D/g, '')) / 100 || 0;
     
-    // Se não tem valor manual, calcular pelos produtos selecionados
-    if (parsedValor <= 0 && selectedProductIds.length > 0) {
-      parsedValor = selectedProductIds.reduce((sum, prodId) => {
-        const prod = products.find(p => p.id === prodId);
-        return sum + (prod?.preco || 0);
-      }, 0);
-      setDealValor(formatCurrencyInput(String(Math.round(parsedValor * 100))));
-    }
-    
-    if (parsedValor <= 0 && selectedProductIds.length === 0) {
-      toast.error('Selecione produtos ou informe um valor');
+    // Valor é obrigatório - preenchido pelo closer
+    if (parsedValor <= 0) {
+      toast.error('Informe o valor da venda');
       return;
     }
 
     try {
       setSavingDeal(true);
-      
-      const parsedRecorrente = dealRecorrente 
-        ? parseFloat(dealRecorrente.replace(/\D/g, '')) / 100 
-        : null;
 
       // O status é baseado no checkbox de venda confirmada
       const status = vendaConfirmada ? 'ganho' : 'aberto';
@@ -252,7 +237,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
         ...(existingDeal?.id ? { id: existingDeal.id } : {}),
         lead_id: lead.id,
         valor_proposto: parsedValor,
-        valor_recorrente: parsedRecorrente,
+        recorrente: vendaRecorrente, // Boolean para estatísticas
         status: status as any,
         data_fechamento: vendaConfirmada ? new Date().toISOString() : null
       });
@@ -1191,34 +1176,48 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Valor da Venda (R$)</Label>
-                  <Input
-                    placeholder="Auto-calculado pelos produtos"
-                    value={dealValor}
-                    onChange={(e) => setDealValor(formatCurrencyInput(e.target.value))}
-                    className="font-mono"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Deixe em branco para usar o valor dos produtos
-                  </p>
-                </div>
+              {/* Campo de valor obrigatório */}
+              <div className="space-y-2">
+                <Label>Valor da Venda (R$) *</Label>
+                <Input
+                  placeholder="R$ 0,00"
+                  value={dealValor}
+                  onChange={(e) => setDealValor(formatCurrencyInput(e.target.value))}
+                  className="font-mono text-lg"
+                />
+              </div>
 
-                <div className="space-y-2">
-                  <Label>Valor Recorrente (R$/mês)</Label>
-                  <Input
-                    placeholder="R$ 0,00"
-                    value={dealRecorrente}
-                    onChange={(e) => setDealRecorrente(formatCurrencyInput(e.target.value))}
-                    className="font-mono"
-                  />
+              {/* Checkbox de venda recorrente */}
+              <div 
+                className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                  vendaRecorrente 
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' 
+                    : 'border-muted hover:border-muted-foreground/50'
+                }`}
+                onClick={() => setVendaRecorrente(!vendaRecorrente)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                    vendaRecorrente 
+                      ? 'bg-blue-500 border-blue-500' 
+                      : 'border-muted-foreground/50'
+                  }`}>
+                    {vendaRecorrente && <CheckIcon className="h-3 w-3 text-white" />}
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Venda Recorrente</p>
+                    <p className="text-xs text-muted-foreground">
+                      {vendaRecorrente 
+                        ? 'Mensalidade / Assinatura' 
+                        : 'Pagamento à vista (única vez)'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               <Button 
                 onClick={handleSaveDeal} 
-                disabled={(!dealValor && selectedProductIds.length === 0) || savingDeal}
+                disabled={!dealValor || savingDeal}
                 className="w-full"
               >
                 {savingDeal ? (
@@ -1252,10 +1251,10 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
                           <p className="text-sm font-medium font-mono">
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.valor_proposto)}
                           </p>
-                          {deal.valor_recorrente && (
-                            <p className="text-xs text-muted-foreground">
-                              +{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(deal.valor_recorrente)}/mês
-                            </p>
+                          {(deal as any).recorrente && (
+                            <Badge variant="outline" className="text-xs">
+                              Recorrente
+                            </Badge>
                           )}
                         </div>
                       </div>
