@@ -30,6 +30,7 @@ interface KanbanBoardProps {
   onViewLead?: (leadId: string) => void;
   onEditLead?: (leadId: string) => void;
   onCreateAppointment?: (leadId: string) => void;
+  onManageDeal?: (leadId: string) => void;
   onAdvanceStage?: (entryId: string) => void;
   onJumpToStage?: (entryId: string) => void;
   onRegisterInteraction?: (leadId: string) => void;
@@ -60,6 +61,7 @@ export function KanbanBoard({
   onViewLead,
   onEditLead,
   onCreateAppointment,
+  onManageDeal,
   onAdvanceStage,
   onJumpToStage,
   onRegisterInteraction,
@@ -197,6 +199,7 @@ export function KanbanBoard({
           onViewLead={onViewLead}
           onEditLead={onEditLead}
           onCreateAppointment={onCreateAppointment}
+          onManageDeal={onManageDeal}
           onAdvanceStage={onAdvanceStage}
           onJumpToStage={onJumpToStage}
           onRegisterInteraction={onRegisterInteraction}

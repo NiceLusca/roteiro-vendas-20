@@ -47,6 +47,7 @@ interface KanbanCardProps {
   onRegressStage?: () => void;
   onTransferPipeline?: () => void;
   onUnsubscribeFromPipeline?: () => void;
+  onManageDeal?: () => void;
   onDragStart?: (entryId: string) => void;
   onDragEnd?: () => void;
   onTagsChange?: () => void;
@@ -86,6 +87,7 @@ export const KanbanCard = memo(function KanbanCard({
   onRegressStage,
   onTransferPipeline,
   onUnsubscribeFromPipeline,
+  onManageDeal,
   onDragStart,
   onDragEnd,
   onTagsChange
@@ -250,6 +252,7 @@ export const KanbanCard = memo(function KanbanCard({
               onCreateAppointment={onCreateAppointment}
               onRegisterInteraction={onRegisterInteraction}
               onUnsubscribeFromPipeline={onUnsubscribeFromPipeline}
+              onManageDeal={onManageDeal}
             />
           </div>
         </div>

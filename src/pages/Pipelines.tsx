@@ -10,6 +10,8 @@ import { AccessDenied } from '@/components/access/AccessDenied';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
+import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
+import { useSupabaseDeals } from '@/hooks/useSupabaseDeals';
 import { useKanbanAppointments } from '@/hooks/useKanbanAppointments';
 import { useMultipleLeadResponsibles } from '@/hooks/useLeadResponsibles';
 import { useLeadTags } from '@/hooks/useLeadTags';
@@ -29,7 +31,9 @@ import { useMultiPipeline } from '@/hooks/useMultiPipeline';
 import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
 import { StageJumpDialog } from '@/components/pipeline/StageJumpDialog';
 import { UnsubscribeConfirmDialog } from '@/components/pipeline/UnsubscribeConfirmDialog';
-import { Lead } from '@/types/crm';
+import { AppointmentDialog } from '@/components/appointment/AppointmentDialog';
+import { DealDialog } from '@/components/deals/DealDialog';
+import { Lead, Appointment } from '@/types/crm';
 
 // Componente que usa hooks do CRM (já está dentro do CRMProviderWrapper do App.tsx)
 function PipelinesContent({ slug }: { slug: string }) {
@@ -68,6 +72,8 @@ function PipelinesContent({ slug }: { slug: string }) {
   const leadPipelineEntries = entries.entries;
   const { stages } = useSupabasePipelineStages(pipelineId);
   const { fetchNextAppointments, getNextAppointmentForLead } = useKanbanAppointments();
+  const { saveAppointment } = useSupabaseAppointments();
+  const { saveDeal, getDealsByLeadId: getDealsForLead, deals: allDeals, refetch: refetchDeals } = useSupabaseDeals();
   const { moveLead } = useLeadMovement();
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [stageJumpDialogState, setStageJumpDialogState] = useState<{
@@ -80,6 +86,21 @@ function PipelinesContent({ slug }: { slug: string }) {
     leadId: string | null;
     leadName: string;
   }>({ open: false, entryId: null, leadId: null, leadName: '' });
+  
+  // Estado do dialog de agendamento
+  const [appointmentDialogState, setAppointmentDialogState] = useState<{
+    open: boolean;
+    leadId: string | null;
+    leadName: string;
+  }>({ open: false, leadId: null, leadName: '' });
+
+  // Estado do dialog de deal
+  const [dealDialogState, setDealDialogState] = useState<{
+    open: boolean;
+    leadId: string | null;
+    leadName: string;
+    existingDeal: any | null;
+  }>({ open: false, leadId: null, leadName: '', existingDeal: null });
   
   // Estado da visualização (kanban ou tabela)
   const viewMode = searchParams.get('view') || 'kanban';
@@ -440,6 +461,51 @@ function PipelinesContent({ slug }: { slug: string }) {
     navigate(`/leads?pipeline=${pipelineId}&stage=${stageId}&action=create`);
   }, [navigate, pipelineId]);
 
+  // Handler para criar agendamento
+  const handleCreateAppointment = useCallback((leadId: string) => {
+    const entry = allEntries.find(e => e.lead_id === leadId);
+    setAppointmentDialogState({
+      open: true,
+      leadId,
+      leadName: entry?.leads?.nome || 'Lead'
+    });
+  }, [allEntries]);
+
+  // Handler para salvar agendamento
+  const handleSaveAppointment = useCallback(async (appointmentData: Omit<Appointment, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      await saveAppointment(appointmentData);
+      setAppointmentDialogState({ open: false, leadId: null, leadName: '' });
+      handleRefresh();
+    } catch (error) {
+      console.error('Erro ao salvar agendamento:', error);
+    }
+  }, [saveAppointment, handleRefresh]);
+
+  // Handler para gerenciar deal
+  const handleManageDeal = useCallback((leadId: string) => {
+    const entry = allEntries.find(e => e.lead_id === leadId);
+    const existingDeal = dealsByLeadId[leadId] || null;
+    setDealDialogState({
+      open: true,
+      leadId,
+      leadName: entry?.leads?.nome || 'Lead',
+      existingDeal
+    });
+  }, [allEntries, dealsByLeadId]);
+
+  // Handler para salvar deal
+  const handleSaveDeal = useCallback(async (dealData: any) => {
+    try {
+      await saveDeal(dealData);
+      setDealDialogState({ open: false, leadId: null, leadName: '', existingDeal: null });
+      await refetchDeals();
+      handleRefresh();
+    } catch (error) {
+      console.error('Erro ao salvar deal:', error);
+    }
+  }, [saveDeal, refetchDeals, handleRefresh]);
+
   // Mostrar skeleton enquanto carrega
   if (loadingPipeline || accessLoading) {
     return (
@@ -745,6 +811,8 @@ function PipelinesContent({ slug }: { slug: string }) {
             onAddLead={handleAddLead}
             onViewLead={handleViewOrEditLead}
             onEditLead={handleViewOrEditLead}
+            onCreateAppointment={handleCreateAppointment}
+            onManageDeal={handleManageDeal}
             onAdvanceStage={handleAdvanceStage}
             onJumpToStage={handleJumpToStage}
             onRegressStage={handleRegressStage}
@@ -806,6 +874,29 @@ function PipelinesContent({ slug }: { slug: string }) {
         pipelineName={currentPipeline?.nome || ''}
         onConfirm={handleConfirmUnsubscribe}
       />
+
+      {/* Dialog de Agendamento */}
+      {appointmentDialogState.open && appointmentDialogState.leadId && (
+        <AppointmentDialog
+          open={appointmentDialogState.open}
+          onOpenChange={(open) => !open && setAppointmentDialogState({ open: false, leadId: null, leadName: '' })}
+          leadId={appointmentDialogState.leadId}
+          leadName={appointmentDialogState.leadName}
+          onSave={handleSaveAppointment}
+        />
+      )}
+
+      {/* Dialog de Deal */}
+      {dealDialogState.open && dealDialogState.leadId && (
+        <DealDialog
+          open={dealDialogState.open}
+          onOpenChange={(open) => !open && setDealDialogState({ open: false, leadId: null, leadName: '', existingDeal: null })}
+          leadId={dealDialogState.leadId}
+          leadName={dealDialogState.leadName}
+          existingDeal={dealDialogState.existingDeal}
+          onSave={handleSaveDeal}
+        />
+      )}
     </div>
   );
 }
