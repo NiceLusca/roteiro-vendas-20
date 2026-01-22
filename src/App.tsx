@@ -21,7 +21,7 @@ import { Auth } from "./pages/Auth";
 import { EnhancedInstallPrompt, InstallBanner } from "@/components/pwa/EnhancedInstallPrompt";
 import { EnhancedLoading } from "@/components/ui/enhanced-loading";
 import { NotificationPermissionBanner } from "@/components/notifications/NotificationPermissionBanner";
-import { useAppointmentNotifications } from "@/hooks/useAppointmentNotifications";
+import { useNotificationEngine } from "@/hooks/useNotificationEngine";
 import { CRMProviderWrapper } from "@/contexts/CRMProviderWrapper";
 
 // Lazy imports with enhanced loading
@@ -75,9 +75,9 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 }
 
 function NotificationHandler() {
-  const { checkAppointments } = useAppointmentNotifications();
+  const { runAllChecks } = useNotificationEngine();
   
-  return <NotificationPermissionBanner onPermissionGranted={checkAppointments} />;
+  return <NotificationPermissionBanner onPermissionGranted={runAllChecks} />;
 }
 
 function AppContent() {

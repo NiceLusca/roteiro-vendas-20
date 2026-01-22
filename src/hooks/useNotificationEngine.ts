@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextSecure';
 import { useNotificationSettings } from './useNotificationSettings';
@@ -7,14 +7,45 @@ import {
   notifyStageTimeout, 
   notifyAppointmentReminder 
 } from '@/utils/notificationService';
+import { 
+  calculateUrgency, 
+  shouldNotify, 
+  showBrowserNotification,
+  type AppointmentNotification 
+} from '@/utils/appointmentNotifier';
 import { differenceInDays, differenceInMinutes } from 'date-fns';
+import { logger } from '@/utils/logger';
 
-// Track which notifications have been sent to avoid duplicates
+// Track sent notifications to avoid duplicates (cleared on page refresh)
 const sentNotifications = new Set<string>();
 
-export function useSLANotifications() {
+// Singleton check interval to prevent multiple instances
+let checkIntervalId: NodeJS.Timeout | null = null;
+let isEngineRunning = false;
+
+export function useNotificationEngine() {
   const { user } = useAuth();
   const { settings, isQuietHours } = useNotificationSettings();
+  const [permission, setPermission] = useState<NotificationPermission>('default');
+
+  // Check browser notification permission
+  useEffect(() => {
+    if ('Notification' in window) {
+      setPermission(Notification.permission);
+    }
+  }, []);
+
+  // Request browser notification permission
+  const requestPermission = useCallback(async () => {
+    if (!('Notification' in window)) {
+      logger.warn('Browser não suporta notificações', { feature: 'notification-engine' });
+      return false;
+    }
+
+    const result = await Notification.requestPermission();
+    setPermission(result);
+    return result === 'granted';
+  }, []);
 
   // Check SLA breaches for leads in pipelines
   const checkSLABreaches = useCallback(async () => {
@@ -37,7 +68,8 @@ export function useSLANotifications() {
           )
         `)
         .eq('status_inscricao', 'ativo')
-        .not('etapa_atual_id', 'is', null);
+        .not('etapa_atual_id', 'is', null)
+        .limit(200); // Limit for performance
 
       if (error || !entries) return;
 
@@ -87,13 +119,14 @@ export function useSLANotifications() {
         }
       }
     } catch (error) {
-      console.error('Error checking SLA breaches:', error);
+      logger.error('Erro ao verificar SLA breaches', error as Error, { feature: 'notification-engine' });
     }
   }, [user?.id, settings.sla_breaches, settings.stage_timeouts, isQuietHours]);
 
-  // Check upcoming appointments
-  const checkAppointmentReminders = useCallback(async () => {
+  // Check upcoming appointments and send reminders
+  const checkAppointments = useCallback(async () => {
     if (!user?.id || !settings.appointment_reminders || isQuietHours()) return;
+    if (permission !== 'granted') return;
 
     try {
       const now = new Date();
@@ -110,7 +143,8 @@ export function useSLANotifications() {
         `)
         .eq('status', 'agendado')
         .gte('start_at', now.toISOString())
-        .lte('start_at', in24Hours.toISOString());
+        .lte('start_at', in24Hours.toISOString())
+        .limit(50); // Limit for performance
 
       if (error || !appointments) return;
 
@@ -119,6 +153,7 @@ export function useSLANotifications() {
         if (!appointment.start_at || !lead?.nome) continue;
 
         const minutesUntil = differenceInMinutes(new Date(appointment.start_at), now);
+        const urgency = calculateUrgency(appointment.start_at);
 
         // Send reminders at 24h, 2h, and 30min
         const reminderPoints = [1440, 120, 30]; // minutes
@@ -128,7 +163,8 @@ export function useSLANotifications() {
           if (minutesUntil <= point && minutesUntil > point - 5) {
             const notificationKey = `appointment_${appointment.id}_${point}`;
             
-            if (!sentNotifications.has(notificationKey)) {
+            if (!sentNotifications.has(notificationKey) && shouldNotify(appointment.id, urgency)) {
+              // Create database notification
               await notifyAppointmentReminder(
                 user.id,
                 appointment.lead_id,
@@ -136,40 +172,77 @@ export function useSLANotifications() {
                 appointment.titulo,
                 minutesUntil
               );
+
+              // Show browser notification
+              const browserNotification: AppointmentNotification = {
+                id: appointment.id,
+                leadId: appointment.lead_id,
+                leadName: lead.nome,
+                startAt: appointment.start_at,
+                title: appointment.titulo,
+                urgency,
+              };
+              await showBrowserNotification(browserNotification);
+
               sentNotifications.add(notificationKey);
             }
           }
         }
       }
     } catch (error) {
-      console.error('Error checking appointment reminders:', error);
+      logger.error('Erro ao verificar agendamentos', error as Error, { feature: 'notification-engine' });
     }
-  }, [user?.id, settings.appointment_reminders, isQuietHours]);
+  }, [user?.id, settings.appointment_reminders, permission, isQuietHours]);
 
-  // Run checks periodically
+  // Combined check function
+  const runAllChecks = useCallback(async () => {
+    await Promise.all([
+      checkSLABreaches(),
+      checkAppointments()
+    ]);
+  }, [checkSLABreaches, checkAppointments]);
+
+  // Run checks periodically (singleton pattern - only one interval)
   useEffect(() => {
     if (!user?.id) return;
 
-    // Initial check after a short delay
-    const initialTimeout = setTimeout(() => {
-      checkSLABreaches();
-      checkAppointmentReminders();
-    }, 5000);
+    // Prevent multiple instances
+    if (isEngineRunning) {
+      return;
+    }
+    isEngineRunning = true;
 
-    // Check every 5 minutes
-    const interval = setInterval(() => {
-      checkSLABreaches();
-      checkAppointmentReminders();
-    }, 5 * 60 * 1000);
+    // Initial check after a short delay
+    const initialTimeout = setTimeout(runAllChecks, 5000);
+
+    // Check every 5 minutes (only one interval globally)
+    if (!checkIntervalId) {
+      checkIntervalId = setInterval(runAllChecks, 5 * 60 * 1000);
+    }
 
     return () => {
       clearTimeout(initialTimeout);
-      clearInterval(interval);
+      isEngineRunning = false;
+      // Don't clear the interval here - it's shared
     };
-  }, [user?.id, checkSLABreaches, checkAppointmentReminders]);
+  }, [user?.id, runAllChecks]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (checkIntervalId) {
+        clearInterval(checkIntervalId);
+        checkIntervalId = null;
+      }
+      isEngineRunning = false;
+    };
+  }, []);
 
   return {
+    permission,
+    requestPermission,
     checkSLABreaches,
-    checkAppointmentReminders,
+    checkAppointments,
+    runAllChecks,
   };
 }

@@ -22,7 +22,6 @@ import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { SLAMonitor } from '@/components/pipeline/SLAMonitor';
 import { NotificationSystem } from '@/components/pipeline/NotificationSystem';
-import { WorkflowOrchestrator } from '@/components/pipeline/WorkflowOrchestrator';
 
 interface PipelineHealth {
   pipelineId: string;
@@ -429,9 +428,8 @@ export function PipelineHealthDashboard({ pipelineId, className }: PipelineHealt
         </div>
       )}
 
-      {/* Workflow and Notifications */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <WorkflowOrchestrator />
+      {/* Notifications */}
+      <div className="grid grid-cols-1 gap-6">
         <NotificationSystem />
       </div>
     </div>

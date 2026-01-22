@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Settings as SettingsIcon, Users, Workflow, Package, Database, Zap, Bell } from 'lucide-react';
 import { PipelineManager } from '@/components/settings/PipelineManager';
 import { ProductManager } from '@/components/settings/ProductManager';
-import { WorkflowOrchestrator } from '@/components/pipeline/WorkflowOrchestrator';
 import { NotificationSettingsCard } from '@/components/notifications/NotificationSettingsCard';
 import { RoleManager } from '@/components/security/RoleManager';
 
@@ -203,7 +202,16 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="automation">
-          <WorkflowOrchestrator />
+          <Card className="p-8 text-center">
+            <div className="space-y-4">
+              <Zap className="h-12 w-12 mx-auto text-muted-foreground" />
+              <h3 className="text-lg font-semibold">Automação em Desenvolvimento</h3>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                O sistema de automação está sendo reconstruído para suportar maior escala. 
+                Em breve você poderá configurar regras automatizadas aqui.
+              </p>
+            </div>
+          </Card>
         </TabsContent>
 
         <TabsContent value="notifications">
