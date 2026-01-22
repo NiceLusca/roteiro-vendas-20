@@ -3,16 +3,19 @@ import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Settings as SettingsIcon, Users, Workflow, Package, Database, Zap, Bell } from 'lucide-react';
 import { PipelineManager } from '@/components/settings/PipelineManager';
 import { ProductManager } from '@/components/settings/ProductManager';
 import { WorkflowOrchestrator } from '@/components/pipeline/WorkflowOrchestrator';
 import { NotificationSettingsCard } from '@/components/notifications/NotificationSettingsCard';
+import { RoleManager } from '@/components/security/RoleManager';
 
 export default function Settings() {
   const [searchParams] = useSearchParams();
   const tabFromUrl = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(tabFromUrl || 'pipelines');
+  const [isUserManagerOpen, setIsUserManagerOpen] = useState(false);
 
   useEffect(() => {
     if (tabFromUrl) {
@@ -107,7 +110,11 @@ export default function Settings() {
             <p className="text-sm text-muted-foreground mb-4">
               Gerencie os usuários e closers do sistema
             </p>
-            <Button variant="outline" className="w-full hover:bg-primary/10">
+            <Button 
+              variant="outline" 
+              className="w-full hover:bg-primary/10"
+              onClick={() => setIsUserManagerOpen(true)}
+            >
               Gerenciar Usuários
             </Button>
           </CardContent>
@@ -211,6 +218,19 @@ export default function Settings() {
           {renderDataTab()}
         </TabsContent>
       </Tabs>
+
+      {/* Dialog de Gerenciamento de Usuários */}
+      <Dialog open={isUserManagerOpen} onOpenChange={setIsUserManagerOpen}>
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Gerenciar Usuários e Roles
+            </DialogTitle>
+          </DialogHeader>
+          <RoleManager />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
