@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Lead, Appointment } from '@/types/crm';
+import { PipelineDisplayConfig } from '@/types/pipelineDisplay';
 import { useLeadNotes } from '@/hooks/useLeadNotes';
 import { useLeadAttachments } from '@/hooks/useLeadAttachments';
 import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
@@ -68,9 +69,11 @@ interface LeadEditDialogProps {
   onJumpToStage?: () => void;
   // ID do entry no pipeline atual (para filtrar histórico)
   pipelineEntryId?: string;
+  // Config de exibição do pipeline (controla quais abas aparecem)
+  displayConfig?: PipelineDisplayConfig;
 }
 
-export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStageName, onJumpToStage, pipelineEntryId }: LeadEditDialogProps) {
+export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStageName, onJumpToStage, pipelineEntryId, displayConfig }: LeadEditDialogProps) {
   const [formData, setFormData] = useState({
     nome: lead.nome,
     whatsapp: lead.whatsapp || '',
@@ -502,55 +505,69 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
         </DialogHeader>
 
         <Tabs defaultValue="comments" className="w-full">
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="info" className="text-xs px-2">Info</TabsTrigger>
-            <TabsTrigger value="responsibles" className="text-xs px-2">
-              Resp.
-              {responsibles.length > 0 && (
-                <Badge variant="secondary" className="ml-1 text-[10px] px-1">
-                  {responsibles.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="comments" className="text-xs px-2">
-              Notas
-              {notes.length > 0 && (
-                <Badge variant="secondary" className="ml-1 text-[10px] px-1">
-                  {notes.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="appointments" className="text-xs px-2">
-              <CalendarIcon className="h-3 w-3 mr-1" />
-              Agenda
-              {leadAppointments.length > 0 && (
-                <Badge variant="secondary" className="ml-1 text-[10px] px-1">
-                  {leadAppointments.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="deals" className="text-xs px-2">
-              <DollarSign className="h-3 w-3 mr-1" />
-              Vendas
-              {leadDeals.length > 0 && (
-                <Badge variant="secondary" className="ml-1 text-[10px] px-1">
-                  {leadDeals.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="attachments" className="text-xs px-2">
-              Anexos
-              {attachments.length > 0 && (
-                <Badge variant="secondary" className="ml-1 text-[10px] px-1">
-                  {attachments.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="history" className="text-xs px-2">
-              <History className="h-3 w-3 mr-1" />
-              Log
-            </TabsTrigger>
-          </TabsList>
+          {/* Renderização condicional das abas baseado no displayConfig do pipeline */}
+          {(() => {
+            const showAppointments = displayConfig?.show_appointments !== false;
+            const showDeals = displayConfig?.show_deals === true;
+            // Contar colunas dinamicamente
+            const colCount = 5 + (showAppointments ? 1 : 0) + (showDeals ? 1 : 0);
+            
+            return (
+              <TabsList className={`grid w-full`} style={{ gridTemplateColumns: `repeat(${colCount}, minmax(0, 1fr))` }}>
+                <TabsTrigger value="info" className="text-xs px-2">Info</TabsTrigger>
+                <TabsTrigger value="responsibles" className="text-xs px-2">
+                  Resp.
+                  {responsibles.length > 0 && (
+                    <Badge variant="secondary" className="ml-1 text-[10px] px-1">
+                      {responsibles.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="comments" className="text-xs px-2">
+                  Notas
+                  {notes.length > 0 && (
+                    <Badge variant="secondary" className="ml-1 text-[10px] px-1">
+                      {notes.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                {showAppointments && (
+                  <TabsTrigger value="appointments" className="text-xs px-2">
+                    <CalendarIcon className="h-3 w-3 mr-1" />
+                    Agenda
+                    {leadAppointments.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 text-[10px] px-1">
+                        {leadAppointments.length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                )}
+                {showDeals && (
+                  <TabsTrigger value="deals" className="text-xs px-2">
+                    <DollarSign className="h-3 w-3 mr-1" />
+                    Vendas
+                    {leadDeals.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 text-[10px] px-1">
+                        {leadDeals.length}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                )}
+                <TabsTrigger value="attachments" className="text-xs px-2">
+                  Anexos
+                  {attachments.length > 0 && (
+                    <Badge variant="secondary" className="ml-1 text-[10px] px-1">
+                      {attachments.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="history" className="text-xs px-2">
+                  <History className="h-3 w-3 mr-1" />
+                  Log
+                </TabsTrigger>
+              </TabsList>
+            );
+          })()}
 
           {/* Tab de Informações */}
           <TabsContent value="info" className="space-y-4 mt-4">
