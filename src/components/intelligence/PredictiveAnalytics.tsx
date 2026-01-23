@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { TrendingUp, TrendingDown, Brain, Target, Clock, AlertTriangle, Zap, BarChart3 } from 'lucide-react';
@@ -33,7 +32,6 @@ interface ConversionPrediction {
 }
 
 export function PredictiveAnalytics({ pipelineId }: { pipelineId: string }) {
-  const { leads } = useSupabaseLeads();
   const { entries } = useSupabaseLeadPipelineEntries(pipelineId);
   const { stages } = useSupabasePipelineStages(pipelineId);
   const { toast } = useToast();
@@ -51,7 +49,7 @@ export function PredictiveAnalytics({ pipelineId }: { pipelineId: string }) {
       // Simular análise preditiva baseada em dados históricos
       const activeEntries = entries.filter(e => e.status_inscricao === 'Ativo');
       const leadsWithData = activeEntries.map(entry => {
-        const lead = leads.find(l => l.id === entry.lead_id);
+        const lead = entry.leads; // Use JOIN data
         const currentStage = stages.find(s => s.id === entry.etapa_atual_id);
         return { entry, lead, currentStage };
       }).filter(item => item.lead && item.currentStage);
@@ -281,10 +279,10 @@ export function PredictiveAnalytics({ pipelineId }: { pipelineId: string }) {
   };
 
   useEffect(() => {
-    if (entries.length > 0 && leads.length > 0) {
+    if (entries.length > 0) {
       generatePredictiveInsights();
     }
-  }, [pipelineId, entries.length, leads.length]);
+  }, [pipelineId, entries.length]);
 
   return (
     <div className="space-y-6">

@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContextSecure';
 import { useToast } from '@/hooks/use-toast';
 import { Lead } from '@/types/crm';
 import { ColumnMapping, ParsedLead, ImportResult, ImportProgress } from '@/types/bulkImport';
-import { useSupabaseLeads } from './useSupabaseLeads';
+import { useLeadSave } from './useLeadSave';
 import { useLeadTags } from './useLeadTags';
 import { useMultiPipeline } from './useMultiPipeline';
 import { sanitizeText } from '@/schemas/leadValidation';
@@ -192,7 +192,7 @@ export function useBulkLeadImport() {
   const [importing, setImporting] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
-  const { saveLead } = useSupabaseLeads();
+  const { saveLead } = useLeadSave();
   const { assignTagsToLead } = useLeadTags();
   const { inscribePipeline } = useMultiPipeline();
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -7,7 +7,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useLeadSearch } from '@/hooks/useLeadSearch';
 import { useSupabaseProducts } from '@/hooks/useSupabaseProducts';
 import { Deal, StatusDeal } from '@/types/crm';
 
@@ -28,7 +28,8 @@ interface DealFormProps {
 }
 
 export function DealForm({ initialData, onSave, onCancel }: DealFormProps) {
-  const { leads } = useSupabaseLeads();
+  const [leadSearch, setLeadSearch] = useState('');
+  const { data: leads = [] } = useLeadSearch({ searchTerm: leadSearch, limit: 20 });
   const { products } = useSupabaseProducts();
 
   const form = useForm<DealFormData>({

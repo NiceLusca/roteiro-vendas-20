@@ -32,7 +32,6 @@ import {
   Filter,
   RefreshCw
 } from 'lucide-react';
-import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
 import { useSupabaseLeadPipelineEntries } from '@/hooks/useSupabaseLeadPipelineEntries';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { useSupabaseDeals } from '@/hooks/useSupabaseDeals';
@@ -71,16 +70,15 @@ export function ConversionFunnelAnalytics({ className, pipelineId }: ConversionF
   const [timeframe, setTimeframe] = useState<'30d' | '90d' | '1y'>('30d');
   const [viewMode, setViewMode] = useState<'absolute' | 'percentage'>('absolute');
 
-  const { leads, loading: leadsLoading } = useSupabaseLeads();
   const { entries: pipelineEntries, loading: entriesLoading } = useSupabaseLeadPipelineEntries();
   const { stages, loading: stagesLoading } = useSupabasePipelineStages();
   const { deals, loading: dealsLoading } = useSupabaseDeals();
 
-  const loading = leadsLoading || entriesLoading || stagesLoading || dealsLoading;
+  const loading = entriesLoading || stagesLoading || dealsLoading;
 
   // Calculate funnel metrics
   const funnelMetrics = useMemo((): FunnelMetrics => {
-    if (!leads || !pipelineEntries || !stages || !deals) {
+    if (!pipelineEntries || !stages || !deals) {
       return {
         totalLeads: 0,
         totalConversions: 0,
@@ -143,7 +141,8 @@ export function ConversionFunnelAnalytics({ className, pipelineId }: ConversionF
         };
       });
 
-    const totalLeads = leads.length;
+    // Use pipelineEntries count instead of leads array
+    const totalLeads = pipelineEntries.length;
     const totalConversions = deals.filter(deal => deal.status === 'Ganha').length;
     const overallConversionRate = totalLeads > 0 ? (totalConversions / totalLeads) * 100 : 0;
     const totalRevenue = deals
@@ -151,9 +150,11 @@ export function ConversionFunnelAnalytics({ className, pipelineId }: ConversionF
       .reduce((sum, deal) => sum + Number(deal.valor_proposto || 0), 0);
     
     // Find bottleneck stage (highest drop-off rate)
-    const bottleneckStage = stageMetrics.reduce((worst, current) => 
-      current.dropOffRate > worst.dropOffRate ? current : worst
-    ).name;
+    const bottleneckStage = stageMetrics.length > 0 
+      ? stageMetrics.reduce((worst, current) => 
+          current.dropOffRate > worst.dropOffRate ? current : worst
+        ).name
+      : '';
 
     // Calculate average sales cycle time
     const avgSalesCycleTime = stageMetrics.reduce((sum, stage) => sum + stage.avgTimeInStage, 0);
@@ -167,7 +168,7 @@ export function ConversionFunnelAnalytics({ className, pipelineId }: ConversionF
       bottleneckStage,
       stages: stageMetrics
     };
-  }, [leads, pipelineEntries, stages, deals, pipelineId]);
+  }, [pipelineEntries, stages, deals, pipelineId]);
 
   if (loading) {
     return (
