@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter, useSidebar } from '@/components/ui/sidebar';
-import { LayoutGrid, Contact, Columns3, CalendarDays, Handshake, Receipt, LineChart, Activity, Settings, LogOut, LifeBuoy, ShieldCheck } from 'lucide-react';
+import { LayoutGrid, Contact, Columns3, CalendarDays, Handshake, Receipt, LineChart, Settings, LogOut, HelpCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextSecure';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
@@ -37,10 +37,6 @@ const analyticsItems = [{
   title: 'Relatórios',
   url: '/reports',
   icon: LineChart
-}, {
-  title: 'Analytics',
-  url: '/analytics',
-  icon: Activity
 }];
 
 const configItems = [{
@@ -54,9 +50,9 @@ const configItems = [{
 }];
 
 const helpItems = [{
-  title: 'Central de Ajuda',
+  title: 'Ajuda',
   url: '/help',
-  icon: LifeBuoy
+  icon: HelpCircle
 }];
 export function AppSidebar() {
   const {
@@ -133,9 +129,9 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Analytics */}
+        {/* Insights */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Analytics</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Insights</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {analyticsItems.map(item => <SidebarMenuItem key={item.title}>
