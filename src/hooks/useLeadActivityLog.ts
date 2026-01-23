@@ -49,8 +49,7 @@ export function useLeadActivityLog(leadId?: string, pipelineEntryId?: string) {
         .from('lead_activity_log')
         .select('*')
         .eq('lead_id', id)
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .order('created_at', { ascending: false });
 
       // Se pipeline especificado, filtrar atividades desse pipeline OU atividades gerais do lead
       if (entryId) {
