@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Plus, Calendar as CalendarIcon, Clock, User } from 'lucide-react';
 import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
-import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useLeadSearch } from '@/hooks/useLeadSearch';
 import { AppointmentForm } from '@/components/forms/AppointmentForm';
 import { formatDate } from '@/utils/formatters';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -49,7 +49,9 @@ export default function Agenda() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const { appointments, saveAppointment, cancelAppointment, refetch: refetchAppointments } = useSupabaseAppointments();
-  const { leads } = useSupabaseLeads();
+  
+  // Usar hook otimizado - busca apenas leads necessários (limite maior para agenda)
+  const { data: leads = [] } = useLeadSearch({ limit: 200 });
 
   // Transform appointments into calendar events
   const events = appointments.map(appointment => {
