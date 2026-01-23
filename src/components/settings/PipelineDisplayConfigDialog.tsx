@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PipelineDisplayConfig, AVAILABLE_DISPLAY_FIELDS, DEFAULT_DISPLAY_CONFIG } from '@/types/pipelineDisplay';
-import { Loader2, LayoutGrid, TableProperties, Database } from 'lucide-react';
+import { Loader2, LayoutGrid, TableProperties, Eye, Info } from 'lucide-react';
 
 interface Pipeline {
   id: string;
@@ -31,6 +31,11 @@ const FIELD_GROUPS = {
   'Outros': ['responsavel', 'tags'],
 } as const;
 
+// Fields that require deals data
+const DEAL_FIELDS = ['valor_deal', 'valor_recorrente', 'closer', 'objecao'];
+// Fields that require appointments data
+const APPOINTMENT_FIELDS = ['data_sessao'];
+
 export function PipelineDisplayConfigDialog({ 
   pipeline, 
   open, 
@@ -46,7 +51,7 @@ export function PipelineDisplayConfigDialog({
   const [tableColumns, setTableColumns] = useState<string[]>(currentConfig.table_columns || []);
   const [showDeals, setShowDeals] = useState(currentConfig.show_deals ?? false);
   const [showOrders, setShowOrders] = useState(currentConfig.show_orders ?? false);
-  const [showAppointments, setShowAppointments] = useState(currentConfig.show_appointments ?? true);
+  const [showAppointments, setShowAppointments] = useState(currentConfig.show_appointments ?? false);
 
   // Reset state when pipeline changes
   useEffect(() => {
@@ -56,9 +61,29 @@ export function PipelineDisplayConfigDialog({
       setTableColumns(config.table_columns || []);
       setShowDeals(config.show_deals ?? false);
       setShowOrders(config.show_orders ?? false);
-      setShowAppointments(config.show_appointments ?? true);
+      setShowAppointments(config.show_appointments ?? false);
     }
   }, [pipeline]);
+
+  // Auto-sync: when deal fields are selected, enable showDeals
+  useEffect(() => {
+    const hasDealFieldsInCard = cardFields.some(f => DEAL_FIELDS.includes(f));
+    const hasDealFieldsInTable = tableColumns.some(f => DEAL_FIELDS.includes(f));
+    
+    if (hasDealFieldsInCard || hasDealFieldsInTable) {
+      setShowDeals(true);
+    }
+  }, [cardFields, tableColumns]);
+
+  // Auto-sync: when appointment fields are selected, enable showAppointments
+  useEffect(() => {
+    const hasAppointmentFieldsInCard = cardFields.some(f => APPOINTMENT_FIELDS.includes(f));
+    const hasAppointmentFieldsInTable = tableColumns.some(f => APPOINTMENT_FIELDS.includes(f));
+    
+    if (hasAppointmentFieldsInCard || hasAppointmentFieldsInTable) {
+      setShowAppointments(true);
+    }
+  }, [cardFields, tableColumns]);
 
   const toggleField = (field: string, list: string[], setList: (v: string[]) => void) => {
     if (list.includes(field)) {
@@ -132,6 +157,44 @@ export function PipelineDisplayConfigDialog({
 
         <ScrollArea className="flex-1 pr-4">
           <div className="space-y-6 py-4">
+            {/* Tab Control Section - Most Important, at the top */}
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Eye className="w-4 h-4 text-primary" />
+                <h3 className="font-semibold">Abas no Dialog de Edição</h3>
+              </div>
+              <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                <Info className="w-3 h-3 mt-0.5 shrink-0" />
+                Controle quais abas aparecem ao clicar em um lead deste pipeline
+              </p>
+              
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div className="flex items-center justify-between p-3 rounded-md border bg-background">
+                  <Label htmlFor="show-appointments-tab" className="font-medium cursor-pointer">
+                    Aba "Agenda"
+                  </Label>
+                  <Switch 
+                    id="show-appointments-tab"
+                    checked={showAppointments}
+                    onCheckedChange={setShowAppointments}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-md border bg-background">
+                  <Label htmlFor="show-deals-tab" className="font-medium cursor-pointer">
+                    Aba "Vendas"
+                  </Label>
+                  <Switch 
+                    id="show-deals-tab"
+                    checked={showDeals}
+                    onCheckedChange={setShowDeals}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
             {/* Card Fields Section */}
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -157,57 +220,6 @@ export function PipelineDisplayConfigDialog({
                 {Object.entries(FIELD_GROUPS).map(([groupName, fields]) => 
                   renderFieldGroup(groupName, fields, tableColumns, setTableColumns)
                 )}
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Data Loading Options */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Database className="w-4 h-4 text-primary" />
-                <h3 className="font-semibold">Dados Adicionais</h3>
-              </div>
-              <p className="text-sm text-muted-foreground pl-6">
-                Ativar carregamento de dados relacionados (impacta performance)
-              </p>
-              
-              <div className="pl-6 space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-md border">
-                  <div>
-                    <Label htmlFor="show-deals" className="font-medium">Carregar Deals</Label>
-                    <p className="text-xs text-muted-foreground">Valores de venda, status de negócio</p>
-                  </div>
-                  <Switch 
-                    id="show-deals"
-                    checked={showDeals}
-                    onCheckedChange={setShowDeals}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-md border">
-                  <div>
-                    <Label htmlFor="show-orders" className="font-medium">Carregar Pedidos</Label>
-                    <p className="text-xs text-muted-foreground">Pedidos e itens vendidos</p>
-                  </div>
-                  <Switch 
-                    id="show-orders"
-                    checked={showOrders}
-                    onCheckedChange={setShowOrders}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-md border">
-                  <div>
-                    <Label htmlFor="show-appointments" className="font-medium">Carregar Agendamentos</Label>
-                    <p className="text-xs text-muted-foreground">Data e hora das sessões</p>
-                  </div>
-                  <Switch 
-                    id="show-appointments"
-                    checked={showAppointments}
-                    onCheckedChange={setShowAppointments}
-                  />
-                </div>
               </div>
             </div>
           </div>
