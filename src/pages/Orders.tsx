@@ -69,11 +69,11 @@ function OrdersContent() {
   };
 
   return (
-    <div className="p-6 h-full overflow-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-6 h-full overflow-auto space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Vendas</h1>
-          <p className="text-muted-foreground">Gerencie seus pedidos e vendas</p>
+          <h1 className="text-3xl font-bold">Pedidos</h1>
+          <p className="text-muted-foreground">Gerencie seus pedidos e vendas fechadas</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -354,9 +354,5 @@ function OrdersContent() {
 }
 
 export default function Orders() {
-  return (
-    <div className="p-6 h-full overflow-auto">
-      <OrdersContent />
-    </div>
-  );
+  return <OrdersContent />;
 }

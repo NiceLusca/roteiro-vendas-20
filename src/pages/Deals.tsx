@@ -110,7 +110,7 @@ export default function Deals() {
           })}
           {statusDeals.length === 0 && (
             <p className="text-center text-muted-foreground py-8">
-              Nenhuma negociação {status.toLowerCase()}
+              Nenhuma oportunidade {status.toLowerCase()}
             </p>
           )}
         </CardContent>
@@ -122,19 +122,19 @@ export default function Deals() {
     <div className="p-6 h-full overflow-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold">Negociações</h1>
+          <h1 className="text-3xl font-bold">Oportunidades</h1>
           <p className="text-muted-foreground">Gerencie suas oportunidades de venda</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
-              Nova Negociação
+              Nova Oportunidade
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Nova Negociação</DialogTitle>
+              <DialogTitle>Nova Oportunidade</DialogTitle>
             </DialogHeader>
             <DealForm
               onSave={(dealData) => {
@@ -265,7 +265,7 @@ export default function Deals() {
         <Dialog open={!!selectedDeal} onOpenChange={() => setSelectedDeal(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>Detalhes da Negociação</DialogTitle>
+              <DialogTitle>Detalhes da Oportunidade</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">

@@ -130,7 +130,7 @@ export default function Agenda() {
     <div className="p-6 h-full overflow-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold">Agenda</h1>
+          <h1 className="text-3xl font-bold">Agenda</h1>
           <p className="text-muted-foreground">Gerencie seus agendamentos e sessões</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
