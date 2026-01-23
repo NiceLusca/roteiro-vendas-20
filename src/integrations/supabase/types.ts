@@ -1349,33 +1349,7 @@ export type Database = {
       }
     }
     Views: {
-      mv_pipeline_metrics: {
-        Row: {
-          etapa_atual_id: string | null
-          leads_atencao: number | null
-          leads_atrasados: number | null
-          leads_ok: number | null
-          pipeline_id: string | null
-          tempo_medio_dias: number | null
-          total_leads: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_lead_pipeline_entries_pipeline"
-            columns: ["pipeline_id"]
-            isOneToOne: false
-            referencedRelation: "pipelines"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_lead_pipeline_entries_stage"
-            columns: ["etapa_atual_id"]
-            isOneToOne: false
-            referencedRelation: "pipeline_stages"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       decode_html_entities: { Args: { input_text: string }; Returns: string }

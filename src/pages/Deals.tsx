@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Search, Filter, DollarSign, User, Calendar, TrendingUp } from 'lucide-react';
 import { useSupabaseDeals } from '@/hooks/useSupabaseDeals';
-import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useLeadSearch } from '@/hooks/useLeadSearch';
 import { useSupabaseProducts } from '@/hooks/useSupabaseProducts';
 import { DealForm } from '@/components/forms/DealForm';
 import { DealLossDialog } from '@/components/deals/DealLossDialog';
@@ -25,7 +25,8 @@ export default function Deals() {
   const { saveDeal } = useLeadData();
 
   const { deals } = useSupabaseDeals();
-  const { leads } = useSupabaseLeads();
+  // Usar hook otimizado - busca apenas leads necessários
+  const { data: leads = [] } = useLeadSearch({ limit: 200 });
   const { products } = useSupabaseProducts();
 
   const filteredDeals = deals.filter(deal => {

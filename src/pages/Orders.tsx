@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Search, DollarSign, ShoppingCart, TrendingUp } from 'lucide-react';
 import { useSupabaseOrders } from '@/hooks/useSupabaseOrders';
-import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useLeadSearch } from '@/hooks/useLeadSearch';
 import { useSupabaseProducts } from '@/hooks/useSupabaseProducts';
 import { OrderForm } from '@/components/orders/OrderForm';
 import { RefundDialog } from '@/components/orders/RefundDialog';
@@ -26,7 +26,8 @@ function OrdersContent() {
   
   const { saveOrder } = useLeadData();
   const { orders, orderItems } = useSupabaseOrders();
-  const { leads } = useSupabaseLeads();
+  // Usar hook otimizado - busca apenas leads necessários
+  const { data: leads = [] } = useLeadSearch({ limit: 200 });
   const { products } = useSupabaseProducts();
 
   const filteredOrders = orders.filter(order => {

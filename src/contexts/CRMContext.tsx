@@ -1,29 +1,34 @@
 import { createContext, useContext, ReactNode } from "react";
-import { Lead, Pipeline, PipelineStage, LeadPipelineEntry } from "@/types/crm";
-import { useSupabaseLeads } from "@/hooks/useSupabaseLeads";
+import { Pipeline, PipelineStage, LeadPipelineEntry, Lead } from "@/types/crm";
 import { useSupabasePipelines } from "@/hooks/useSupabasePipelines";
-import { useSupabaseLeadPipelineEntries } from "@/hooks/useSupabaseLeadPipelineEntries";
 import { useSupabasePipelineStages } from "@/hooks/useSupabasePipelineStages";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/utils/logger";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContextSecure";
 
-// Context
+/**
+ * CRMContext Leve - Não carrega leads globalmente
+ * 
+ * Para operações com leads, use:
+ * - useOptimizedLeads: listagem paginada
+ * - useLeadById: buscar lead específico
+ * - useLeadSearch: autocomplete/busca
+ * - useLeadData: mutações (salvar, atualizar)
+ */
+
 interface CRMContextType {
-  // Data
-  leads: Lead[];
+  // Data - SEM LEADS (usar hooks específicos)
   pipelines: Pipeline[];
   stages: PipelineStage[];
-  entries: LeadPipelineEntry[];
   
   // Loading states
   loading: {
-    leads: boolean;
     pipelines: boolean;
     stages: boolean;
-    entries: boolean;
   };
   
-  // Lead operations
+  // Lead operations (delegam para supabase diretamente)
   createLead: (leadData: Partial<Lead>) => Promise<Lead | null>;
   updateLead: (leadId: string, updates: Partial<Lead>) => Promise<Lead | null>;
   
@@ -40,29 +45,50 @@ interface CRMContextType {
 
 const CRMContext = createContext<CRMContextType | undefined>(undefined);
 
-// Provider Component
 interface CRMProviderProps {
   children: ReactNode;
 }
 
 export function CRMProvider({ children }: CRMProviderProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  // Individual hooks for data operations
-  const { leads, loading: leadsLoading, saveLead, refetch: refetchLeads } = useSupabaseLeads();
+  // Apenas pipelines e stages são carregados globalmente
   const { pipelines, loading: pipelinesLoading, refetch: refetchPipelines } = useSupabasePipelines();
   const { stages, loading: stagesLoading, refetch: refetchStages } = useSupabasePipelineStages();
 
-  // CRM Operations
+  // Lead operations - agora usam supabase diretamente
   const createLead = async (leadData: Partial<Lead>): Promise<Lead | null> => {
+    if (!user) return null;
+    
     try {
-      const newLead = await saveLead(leadData);
-      if (newLead) {
-        // Refetch to ensure consistency
-        await refetchLeads();
-        return newLead;
-      }
-      return null;
+      // Prepare payload without Date objects (Supabase expects strings)
+      const { created_at, updated_at, ...restData } = leadData as any;
+      const payload = {
+        ...restData,
+        user_id: user.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('leads')
+        .insert([payload])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: 'Lead criado com sucesso',
+        description: `Lead ${data.nome} foi criado`
+      });
+
+      return {
+        ...data,
+        created_at: new Date(data.created_at),
+        updated_at: new Date(data.updated_at)
+      } as Lead;
     } catch (error) {
       logger.error('Error creating lead', error as Error, { feature: 'crm-context' });
       toast({
@@ -76,13 +102,30 @@ export function CRMProvider({ children }: CRMProviderProps) {
 
   const updateLead = async (leadId: string, updates: Partial<Lead>): Promise<Lead | null> => {
     try {
-      const updatedLead = await saveLead({ ...updates, id: leadId });
-      if (updatedLead) {
-        // Refetch to ensure consistency
-        await refetchLeads();
-        return updatedLead;
-      }
-      return null;
+      // Remove Date objects and prepare string dates
+      const { created_at, updated_at, ...restUpdates } = updates as any;
+      const { data, error } = await supabase
+        .from('leads')
+        .update({
+          ...restUpdates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', leadId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: 'Lead atualizado com sucesso',
+        description: `Lead ${data.nome} foi atualizado`
+      });
+
+      return {
+        ...data,
+        created_at: new Date(data.created_at),
+        updated_at: new Date(data.updated_at)
+      } as Lead;
     } catch (error) {
       logger.error('Error updating lead', error as Error, { feature: 'crm-context', metadata: { leadId } });
       toast({
@@ -96,8 +139,6 @@ export function CRMProvider({ children }: CRMProviderProps) {
 
   const inscribeLeadToPipeline = async (leadId: string, pipelineId: string, stageId: string): Promise<boolean> => {
     try {
-      const { supabase } = await import('@/integrations/supabase/client');
-      
       // Check if already inscribed
       const { data: existing } = await supabase
         .from('lead_pipeline_entries')
@@ -149,8 +190,6 @@ export function CRMProvider({ children }: CRMProviderProps) {
 
   const transferLeadBetweenPipelines = async (entryId: string, newPipelineId: string, newStageId: string, reason: string): Promise<boolean> => {
     try {
-      const { supabase } = await import('@/integrations/supabase/client');
-      
       // Archive old entry
       const { error: archiveError } = await supabase
         .from('lead_pipeline_entries')
@@ -201,8 +240,6 @@ export function CRMProvider({ children }: CRMProviderProps) {
 
   const advanceLeadStage = async (entryId: string, newStageId: string): Promise<boolean> => {
     try {
-      const { supabase } = await import('@/integrations/supabase/client');
-      
       const { error } = await supabase
         .from('lead_pipeline_entries')
         .update({
@@ -231,8 +268,6 @@ export function CRMProvider({ children }: CRMProviderProps) {
 
   const archiveLeadEntry = async (entryId: string, reason = 'Arquivado manualmente'): Promise<boolean> => {
     try {
-      const { supabase } = await import('@/integrations/supabase/client');
-      
       const { error } = await supabase
         .from('lead_pipeline_entries')
         .update({ status_inscricao: 'Arquivado' })
@@ -256,34 +291,23 @@ export function CRMProvider({ children }: CRMProviderProps) {
     }
   };
 
-  // Helper function for stages (kept for backwards compatibility)
-  // Deprecated helper functions removed - use direct Supabase hooks instead:
-  // - getLeadsByPipeline → use useSupabaseLeadPipelineEntries
-  // - getEntriesByPipeline → use useSupabaseLeadPipelineEntries
-  // - getEntriesByLead → use useSupabaseLeadPipelineEntries
-
   const getStagesByPipeline = (pipelineId: string): PipelineStage[] => {
     return stages.filter(stage => stage.pipeline_id === pipelineId);
   };
 
   const refetchAll = async (): Promise<void> => {
     await Promise.all([
-      refetchLeads(),
       refetchPipelines(),
       refetchStages()
     ]);
   };
 
   const contextValue: CRMContextType = {
-    leads,
     pipelines,
     stages,
-    entries: [], // No longer fetched globally
     loading: {
-      leads: leadsLoading,
       pipelines: pipelinesLoading,
       stages: stagesLoading,
-      entries: false,
     },
     createLead,
     updateLead,
@@ -302,7 +326,6 @@ export function CRMProvider({ children }: CRMProviderProps) {
   );
 }
 
-// Hook to use CRM Context
 export function useCRM() {
   const context = useContext(CRMContext);
   if (context === undefined) {
