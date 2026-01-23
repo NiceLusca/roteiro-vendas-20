@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { PipelineDisplayConfig, AVAILABLE_DISPLAY_FIELDS, DEFAULT_DISPLAY_CONFIG } from '@/types/pipelineDisplay';
-import { Loader2, LayoutGrid, TableProperties, Eye, Info, User, Calendar, ChevronRight, DollarSign, FileText, Clock, Paperclip } from 'lucide-react';
+import { Loader2, LayoutGrid, TableProperties, Eye, Info, User, Calendar, ChevronRight, DollarSign, FileText, Clock, Paperclip, ArrowRightLeft } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatters';
 
 interface Pipeline {
@@ -248,16 +248,16 @@ function TablePreview({ selectedColumns }: { selectedColumns: string[] }) {
   );
 }
 
-// Mini dialog preview component - shows which tabs will be visible
+// Mini dialog preview component - shows which tabs will be visible (realistic layout)
 function DialogPreview({ showAppointments, showDeals }: { showAppointments: boolean; showDeals: boolean }) {
   const tabs = [
-    { key: 'info', label: 'Info', always: true, icon: User },
-    { key: 'resp', label: 'Resp.', always: true, icon: User },
-    { key: 'notas', label: 'Notas', always: true, icon: FileText },
-    { key: 'agenda', label: 'Agenda', always: false, show: showAppointments, icon: Calendar },
-    { key: 'vendas', label: 'Vendas', always: false, show: showDeals, icon: DollarSign },
-    { key: 'anexos', label: 'Anexos', always: true, icon: Paperclip },
-    { key: 'log', label: 'Log', always: true, icon: Clock },
+    { key: 'info', label: 'Info', always: true, badge: null },
+    { key: 'resp', label: 'Resp.', always: true, badge: 1 },
+    { key: 'notas', label: 'Notas', always: true, badge: 4 },
+    { key: 'agenda', label: 'Agenda', always: false, show: showAppointments, badge: null, icon: Calendar },
+    { key: 'vendas', label: 'Vendas', always: false, show: showDeals, badge: null, icon: DollarSign },
+    { key: 'anexos', label: 'Anexos', always: true, badge: null },
+    { key: 'log', label: 'Log', always: true, badge: null, icon: Clock },
   ];
   
   const visibleTabs = tabs.filter(t => t.always || t.show);
@@ -267,41 +267,77 @@ function DialogPreview({ showAppointments, showDeals }: { showAppointments: bool
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
         <Eye className="w-3 h-3" />
-        Dialog de Edição
+        Dialog de Edição (card aberto)
       </div>
-      <div className="border rounded-lg p-3 bg-background min-w-[200px]">
-        {/* Header simulado */}
-        <div className="flex items-center gap-2 pb-2 border-b mb-2">
+      <div className="border rounded-lg bg-background overflow-hidden min-w-[260px]">
+        {/* Header - como o real */}
+        <div className="flex items-center gap-2 px-3 py-2.5 border-b bg-muted/30">
           <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-            <User className="w-3 h-3 text-primary" />
+            <User className="w-3.5 h-3.5 text-primary" />
           </div>
-          <span className="text-sm font-medium truncate">{PREVIEW_DATA.nome}</span>
+          <div className="flex-1 min-w-0">
+            <span className="text-sm font-medium truncate block">Editar Lead: {PREVIEW_DATA.nome}</span>
+          </div>
         </div>
         
-        {/* Tab bar simulado */}
-        <div className="flex gap-1 flex-wrap">
+        {/* Tab bar - layout horizontal como o real */}
+        <div className="flex items-center gap-1 px-3 py-2 border-b bg-background overflow-x-auto">
           {visibleTabs.map((tab, i) => {
+            const isActive = i === 0;
             const Icon = tab.icon;
             return (
               <div
                 key={tab.key}
-                className={`px-2 py-1 text-[10px] rounded-md border flex items-center gap-1 ${
-                  i === 0 ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/50'
+                className={`flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium rounded-full whitespace-nowrap transition-colors ${
+                  isActive 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-muted/60 text-muted-foreground'
                 }`}
               >
-                <Icon className="w-2.5 h-2.5" />
+                {Icon && <Icon className="w-3 h-3" />}
                 {tab.label}
+                {tab.badge && (
+                  <span className={`ml-0.5 text-[9px] px-1 py-0 rounded-full ${
+                    isActive ? 'bg-primary-foreground/20' : 'bg-background'
+                  }`}>
+                    {tab.badge}
+                  </span>
+                )}
               </div>
             );
           })}
         </div>
         
+        {/* Content preview - etapa atual */}
+        <div className="p-3 space-y-2">
+          <div className="flex items-center justify-between p-2 border rounded-md bg-muted/20">
+            <div className="flex items-center gap-2 text-xs">
+              <ArrowRightLeft className="w-3.5 h-3.5 text-muted-foreground" />
+              <span>Etapa atual: <strong className="text-foreground">Qualificação</strong></span>
+            </div>
+            <Button variant="outline" size="sm" className="h-6 text-[10px] px-2">
+              Transferir
+            </Button>
+          </div>
+          
+          {/* Simulação de conteúdo */}
+          <div className="space-y-1.5">
+            <div className="h-6 bg-muted/40 rounded w-full" />
+            <div className="h-6 bg-muted/30 rounded w-3/4" />
+          </div>
+        </div>
+        
         {/* Indicador de abas ocultas */}
         {hiddenTabs.length > 0 && (
-          <p className="text-[9px] text-muted-foreground mt-2 flex items-center gap-1">
-            <Info className="w-2.5 h-2.5" />
-            {hiddenTabs.map(t => `"${t.label}"`).join(' e ')} oculta{hiddenTabs.length > 1 ? 's' : ''}
-          </p>
+          <div className="px-3 pb-2">
+            <p className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <Info className="w-3 h-3" />
+              {hiddenTabs.length === 2 
+                ? 'Abas "Agenda" e "Vendas" não aparecerão'
+                : `Aba "${hiddenTabs[0].label}" não aparecerá`
+              }
+            </p>
+          </div>
         )}
       </div>
     </div>
@@ -420,7 +456,7 @@ export function PipelineDisplayConfigDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="shrink-0">
           <DialogTitle>Configurar Visualização</DialogTitle>
           <DialogDescription>
