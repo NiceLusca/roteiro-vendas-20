@@ -781,6 +781,7 @@ function PipelinesContent({ slug }: { slug: string }) {
               handleJumpToStage(entry.id);
             }
           }}
+          displayConfig={currentPipeline?.display_config}
         />
       )}
 
