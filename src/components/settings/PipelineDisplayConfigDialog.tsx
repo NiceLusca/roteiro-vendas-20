@@ -155,7 +155,7 @@ export function PipelineDisplayConfigDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 pr-4">
+        <ScrollArea className="max-h-[50vh] pr-4">
           <div className="space-y-6 py-4">
             {/* Tab Control Section - Most Important, at the top */}
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
@@ -225,7 +225,7 @@ export function PipelineDisplayConfigDialog({
           </div>
         </ScrollArea>
 
-        <DialogFooter className="mt-4">
+        <DialogFooter className="shrink-0 mt-4 border-t pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
