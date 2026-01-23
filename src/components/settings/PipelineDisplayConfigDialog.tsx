@@ -147,15 +147,15 @@ export function PipelineDisplayConfigDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Configurar Visualização</DialogTitle>
           <DialogDescription>
             Escolha quais campos exibir no Kanban e na tabela do pipeline "{pipeline?.nome}"
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="flex-1 min-h-0 pr-4">
           <div className="space-y-6 py-4">
             {/* Tab Control Section - Most Important, at the top */}
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
