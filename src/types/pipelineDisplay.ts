@@ -57,7 +57,7 @@ export const DEFAULT_DISPLAY_CONFIG: PipelineDisplayConfig = {
   table_columns: ['nome', 'contato', 'etapa', 'dias', 'sla', 'saude', 'score', 'responsavel', 'tags'],
   show_deals: false,
   show_orders: false,
-  show_appointments: true,
+  show_appointments: false,
 };
 
 export const COMERCIAL_DISPLAY_CONFIG: PipelineDisplayConfig = {
