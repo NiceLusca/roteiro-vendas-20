@@ -136,11 +136,10 @@ function CardPreview({ selectedFields }: { selectedFields: string[] }) {
           )}
         </div>
         
-        {/* Dynamic fields */}
+        {/* Dynamic fields - show ALL selected fields */}
         <div className="space-y-1.5">
           {fieldsToShow
             .filter(f => f !== 'origem' && f !== 'tags' && f !== 'responsavel' && f !== 'sla')
-            .slice(0, 3)
             .map(field => (
               <div key={field}>{renderFieldValue(field)}</div>
             ))}
@@ -172,7 +171,7 @@ function CardPreview({ selectedFields }: { selectedFields: string[] }) {
 
 // Mini table preview component
 function TablePreview({ selectedColumns }: { selectedColumns: string[] }) {
-  const columnsToShow = selectedColumns.slice(0, 6); // Limit for preview
+  const columnsToShow = selectedColumns; // Show ALL columns with horizontal scroll
   
   const renderCellValue = (key: string) => {
     const value = PREVIEW_DATA[key];
@@ -223,12 +222,12 @@ function TablePreview({ selectedColumns }: { selectedColumns: string[] }) {
         <TableProperties className="w-3 h-3" />
         Linha da Tabela
       </div>
-      <div className="border rounded-md overflow-hidden">
-        <table className="w-full text-[10px]">
+      <div className="border rounded-md overflow-x-auto max-w-full">
+        <table className="w-max text-[10px]">
           <thead className="bg-muted/50">
             <tr>
               {columnsToShow.map(col => (
-                <th key={col} className="px-2 py-1 text-left font-medium text-muted-foreground truncate max-w-[60px]">
+                <th key={col} className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">
                   {AVAILABLE_DISPLAY_FIELDS[col]?.label || col}
                 </th>
               ))}
@@ -237,7 +236,7 @@ function TablePreview({ selectedColumns }: { selectedColumns: string[] }) {
           <tbody>
             <tr className="border-t">
               {columnsToShow.map(col => (
-                <td key={col} className="px-2 py-1.5 truncate max-w-[60px]">
+                <td key={col} className="px-2 py-1.5 whitespace-nowrap">
                   {renderCellValue(col)}
                 </td>
               ))}
