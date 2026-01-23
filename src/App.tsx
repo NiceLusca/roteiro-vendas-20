@@ -29,12 +29,11 @@ const Agenda = lazy(() => import('./pages/Agenda'));
 const Deals = lazy(() => import('./pages/Deals'));
 const Orders = lazy(() => import('./pages/Orders'));
 const Reports = lazy(() => import('./pages/Reports'));
-const Analytics = lazy(() => import('./pages/Analytics'));
 const Settings = lazy(() => import('./pages/Settings'));
 const LeadDetail = lazy(() => import('./pages/LeadDetail'));
-const Intelligence = lazy(() => import('./pages/Intelligence'));
 const Help = lazy(() => import('./pages/Help'));
 const Security = lazy(() => import('./pages/Security'));
+// Production page hidden from sidebar but still accessible via direct URL for admins
 const Production = lazy(() => import('./pages/Production'));
 
 const queryClient = new QueryClient({
@@ -118,16 +117,8 @@ function AppContent() {
               <Reports />
             </Suspense>
           } />
-          <Route path="analytics" element={
-            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-              <Analytics />
-            </Suspense>
-          } />
-          <Route path="intelligence" element={
-            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-              <Intelligence />
-            </Suspense>
-          } />
+          {/* Analytics route redirects to reports for backwards compatibility */}
+          <Route path="analytics" element={<Navigate to="/reports" replace />} />
           <Route path="settings" element={
             <AdminRoute requireAdmin={false}>
               <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>

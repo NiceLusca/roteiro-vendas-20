@@ -114,25 +114,25 @@ export const Dashboard = memo(function Dashboard() {
           title="Leads Ativos"
           value={metrics.leads_por_status.lead}
           icon={Users}
-          trend={{ value: 8, positive: true, label: "+8%" }}
+          description="em prospecção"
         />
         <MetricCard
           title="Sessões Hoje"
           value={metrics.sessoes_hoje}
           icon={Calendar}
-          trend={{ value: 2, positive: true, label: "+2" }}
+          description="agendadas para hoje"
         />
         <MetricCard
           title="Deals Abertas"
           value={metrics.deals_abertas}
           icon={TrendingUp}
-          trend={{ value: 5, positive: true, label: "+5" }}
+          description="em negociação"
         />
         <MetricCard
           title="Receita do Mês"
           value={formatCurrency(metrics.receita_mes)}
           icon={DollarSign}
-          trend={{ value: 12, positive: true, label: "+12%" }}
+          description="pedidos pagos"
         />
       </div>
 
