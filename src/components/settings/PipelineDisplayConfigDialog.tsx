@@ -6,8 +6,11 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { PipelineDisplayConfig, AVAILABLE_DISPLAY_FIELDS, DEFAULT_DISPLAY_CONFIG } from '@/types/pipelineDisplay';
-import { Loader2, LayoutGrid, TableProperties, Eye, Info } from 'lucide-react';
+import { Loader2, LayoutGrid, TableProperties, Eye, Info, User, Calendar, ChevronRight } from 'lucide-react';
+import { formatCurrency } from '@/utils/formatters';
 
 interface Pipeline {
   id: string;
@@ -35,6 +38,216 @@ const FIELD_GROUPS = {
 const DEAL_FIELDS = ['valor_deal', 'valor_recorrente', 'closer', 'objecao'];
 // Fields that require appointments data
 const APPOINTMENT_FIELDS = ['data_sessao'];
+
+// Preview dummy data
+const PREVIEW_DATA: Record<string, string | number | string[]> = {
+  nome: 'João Silva',
+  contato: '(11) 99999-0000',
+  origem: 'LinkedIn',
+  segmento: 'Tecnologia',
+  lead_score: 85,
+  etapa: 'Qualificação',
+  dias: 3,
+  sla: '4d',
+  saude: 'Saudável',
+  score: 75,
+  valor_deal: 15000,
+  valor_recorrente: 1200,
+  closer: 'Maria S.',
+  objecao: 'Preço',
+  data_sessao: '25/01 14:30',
+  responsavel: 'Ana Paula',
+  tags: ['VIP', 'Quente'],
+};
+
+// Mini card preview component
+function CardPreview({ selectedFields }: { selectedFields: string[] }) {
+  const fieldsToShow = selectedFields.filter(f => f !== 'nome'); // nome always shows
+  
+  const renderFieldValue = (key: string) => {
+    const value = PREVIEW_DATA[key];
+    const field = AVAILABLE_DISPLAY_FIELDS[key];
+    
+    if (!field || value === undefined) return null;
+    
+    if (key === 'tags' && Array.isArray(value)) {
+      return (
+        <div className="flex gap-1 flex-wrap">
+          {value.slice(0, 2).map(tag => (
+            <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      );
+    }
+    
+    if (key === 'responsavel') {
+      return (
+        <div className="flex items-center gap-1">
+          <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+            <User className="w-3 h-3 text-primary" />
+          </div>
+          <span className="text-[10px] text-muted-foreground">{value}</span>
+        </div>
+      );
+    }
+    
+    if (key === 'data_sessao') {
+      return (
+        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+          <Calendar className="w-3 h-3" />
+          {value}
+        </div>
+      );
+    }
+    
+    if (key === 'valor_deal' || key === 'valor_recorrente') {
+      return (
+        <span className="text-xs font-semibold text-primary">
+          {formatCurrency(value as number)}
+        </span>
+      );
+    }
+    
+    if (key === 'sla') {
+      return (
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-emerald-500 text-emerald-600">
+          {value}
+        </Badge>
+      );
+    }
+    
+    return <span className="text-[10px] text-muted-foreground">{value}</span>;
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <LayoutGrid className="w-3 h-3" />
+        Card Kanban
+      </div>
+      <Card className="p-3 w-48 space-y-2 border-l-2 border-l-primary shadow-sm">
+        {/* Header with name */}
+        <div className="space-y-0.5">
+          <p className="font-medium text-sm leading-tight truncate">{PREVIEW_DATA.nome}</p>
+          {fieldsToShow.includes('origem') && (
+            <p className="text-[10px] text-muted-foreground">{PREVIEW_DATA.origem}</p>
+          )}
+        </div>
+        
+        {/* Dynamic fields */}
+        <div className="space-y-1.5">
+          {fieldsToShow
+            .filter(f => f !== 'origem' && f !== 'tags' && f !== 'responsavel' && f !== 'sla')
+            .slice(0, 3)
+            .map(field => (
+              <div key={field}>{renderFieldValue(field)}</div>
+            ))}
+        </div>
+        
+        {/* Bottom section: tags, responsavel, sla */}
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {fieldsToShow.includes('tags') && renderFieldValue('tags')}
+            {fieldsToShow.includes('responsavel') && renderFieldValue('responsavel')}
+          </div>
+          {fieldsToShow.includes('sla') && renderFieldValue('sla')}
+        </div>
+        
+        {/* Advance button simulation */}
+        <Button size="sm" className="w-full h-6 text-[10px]" variant="outline">
+          Avançar <ChevronRight className="w-3 h-3 ml-1" />
+        </Button>
+        
+        {fieldsToShow.length === 0 && (
+          <p className="text-[10px] text-muted-foreground text-center py-2">
+            Selecione campos para visualizar
+          </p>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+// Mini table preview component
+function TablePreview({ selectedColumns }: { selectedColumns: string[] }) {
+  const columnsToShow = selectedColumns.slice(0, 6); // Limit for preview
+  
+  const renderCellValue = (key: string) => {
+    const value = PREVIEW_DATA[key];
+    const field = AVAILABLE_DISPLAY_FIELDS[key];
+    
+    if (!field || value === undefined) return '-';
+    
+    if (key === 'tags' && Array.isArray(value)) {
+      return (
+        <div className="flex gap-0.5">
+          {value.slice(0, 1).map(tag => (
+            <Badge key={tag} variant="secondary" className="text-[9px] px-1 py-0">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      );
+    }
+    
+    if (key === 'valor_deal' || key === 'valor_recorrente') {
+      return formatCurrency(value as number);
+    }
+    
+    if (key === 'saude') {
+      return <Badge variant="outline" className="text-[9px] px-1 py-0 border-emerald-500 text-emerald-600">●</Badge>;
+    }
+    
+    return String(value);
+  };
+
+  if (columnsToShow.length === 0) {
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+          <TableProperties className="w-3 h-3" />
+          Linha da Tabela
+        </div>
+        <div className="border rounded-md p-3 text-[10px] text-muted-foreground text-center">
+          Selecione colunas para visualizar
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <TableProperties className="w-3 h-3" />
+        Linha da Tabela
+      </div>
+      <div className="border rounded-md overflow-hidden">
+        <table className="w-full text-[10px]">
+          <thead className="bg-muted/50">
+            <tr>
+              {columnsToShow.map(col => (
+                <th key={col} className="px-2 py-1 text-left font-medium text-muted-foreground truncate max-w-[60px]">
+                  {AVAILABLE_DISPLAY_FIELDS[col]?.label || col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-t">
+              {columnsToShow.map(col => (
+                <td key={col} className="px-2 py-1.5 truncate max-w-[60px]">
+                  {renderCellValue(col)}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export function PipelineDisplayConfigDialog({ 
   pipeline, 
@@ -147,7 +360,7 @@ export function PipelineDisplayConfigDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="shrink-0">
           <DialogTitle>Configurar Visualização</DialogTitle>
           <DialogDescription>
@@ -155,7 +368,23 @@ export function PipelineDisplayConfigDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[50vh] pr-4">
+        {/* Preview Section - Fixed at top */}
+        <div className="shrink-0 bg-muted/30 rounded-lg p-4 border">
+          <div className="flex items-center gap-2 mb-3">
+            <Eye className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium">Preview em tempo real</span>
+          </div>
+          <div className="flex gap-6 items-start flex-wrap">
+            <CardPreview selectedFields={cardFields} />
+            <div className="flex-1 min-w-[250px]">
+              <TablePreview selectedColumns={tableColumns} />
+            </div>
+          </div>
+        </div>
+
+        <Separator className="shrink-0" />
+
+        <ScrollArea className="max-h-[35vh] pr-4">
           <div className="space-y-6 py-4">
             {/* Tab Control Section - Most Important, at the top */}
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
