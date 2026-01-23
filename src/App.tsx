@@ -30,7 +30,7 @@ const Deals = lazy(() => import('./pages/Deals'));
 const Orders = lazy(() => import('./pages/Orders'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Settings = lazy(() => import('./pages/Settings'));
-const LeadDetail = lazy(() => import('./pages/LeadDetail'));
+// LeadDetail page deprecated - redirects to leads list (use LeadEditDialog instead)
 const Help = lazy(() => import('./pages/Help'));
 const Security = lazy(() => import('./pages/Security'));
 // Production page hidden from sidebar but still accessible via direct URL for admins
@@ -140,11 +140,8 @@ function AppContent() {
               </Suspense>
             </AdminRoute>
           } />
-          <Route path="leads/:id" element={
-            <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
-              <LeadDetail />
-            </Suspense>
-          } />
+          {/* LeadDetail deprecated - redirect to leads list */}
+          <Route path="leads/:id" element={<Navigate to="/leads" replace />} />
           <Route path="help" element={
             <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
               <Help />

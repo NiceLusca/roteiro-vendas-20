@@ -24,11 +24,11 @@ const mainMenuItems = [{
 }];
 
 const salesItems = [{
-  title: 'Negociações',
+  title: 'Oportunidades',
   url: '/deals',
   icon: Handshake
 }, {
-  title: 'Vendas',
+  title: 'Pedidos',
   url: '/orders',
   icon: Receipt
 }];
@@ -112,9 +112,9 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Vendas */}
+        {/* Comercial */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Vendas</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Comercial</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {salesItems.map(item => <SidebarMenuItem key={item.title}>
@@ -192,7 +192,7 @@ export function AppSidebar() {
             <span className="text-[10px] text-muted-foreground/70 font-medium">
               Powered by
             </span>
-            <span className="text-sm font-bold text-blue-600">
+            <span className="text-sm font-bold text-primary">
               Oceano Azul
             </span>
           </div>}
