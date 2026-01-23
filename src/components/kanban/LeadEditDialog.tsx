@@ -524,7 +524,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="comments" className="text-xs px-2">
-                  Notas
+                  Comentários
                   {notes.length > 0 && (
                     <Badge variant="secondary" className="ml-1 text-[10px] px-1">
                       {notes.length}
@@ -563,7 +563,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
                 </TabsTrigger>
                 <TabsTrigger value="history" className="text-xs px-2">
                   <History className="h-3 w-3 mr-1" />
-                  Log
+                  Histórico
                 </TabsTrigger>
               </TabsList>
             );
