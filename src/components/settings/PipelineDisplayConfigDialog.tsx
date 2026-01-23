@@ -470,10 +470,14 @@ export function PipelineDisplayConfigDialog({
             <Eye className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium">Preview em tempo real</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
-            <CardPreview selectedFields={cardFields} />
-            <DialogPreview showAppointments={showAppointments} showDeals={showDeals} />
-            <div className="md:col-span-1">
+          <div className="flex flex-col lg:flex-row gap-4 items-start">
+            <div className="shrink-0">
+              <CardPreview selectedFields={cardFields} />
+            </div>
+            <div className="shrink-0">
+              <DialogPreview showAppointments={showAppointments} showDeals={showDeals} />
+            </div>
+            <div className="flex-1 min-w-0 w-full lg:w-auto overflow-x-auto">
               <TablePreview selectedColumns={tableColumns} />
             </div>
           </div>
