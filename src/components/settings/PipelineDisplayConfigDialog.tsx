@@ -384,8 +384,10 @@ export function PipelineDisplayConfigDialog({
 
         <Separator className="shrink-0" />
 
-        <ScrollArea className="flex-1 min-h-0 max-h-[40vh] pr-4">
-          <div className="space-y-6 py-4">
+        {/* Wrapper with fixed height to make ScrollArea work */}
+        <div className="h-[300px] overflow-hidden">
+          <ScrollArea className="h-full pr-4">
+            <div className="space-y-6 py-4">
             {/* Tab Control Section - Most Important, at the top */}
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
               <div className="flex items-center gap-2">
@@ -453,6 +455,7 @@ export function PipelineDisplayConfigDialog({
             </div>
           </div>
         </ScrollArea>
+        </div>
 
         <DialogFooter className="shrink-0 mt-4 border-t pt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
