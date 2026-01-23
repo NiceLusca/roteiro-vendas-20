@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { PipelineDisplayConfig, AVAILABLE_DISPLAY_FIELDS, DEFAULT_DISPLAY_CONFIG } from '@/types/pipelineDisplay';
-import { Loader2, LayoutGrid, TableProperties, Eye, Info, User, Calendar, ChevronRight } from 'lucide-react';
+import { Loader2, LayoutGrid, TableProperties, Eye, Info, User, Calendar, ChevronRight, DollarSign, FileText, Clock, Paperclip } from 'lucide-react';
 import { formatCurrency } from '@/utils/formatters';
 
 interface Pipeline {
@@ -248,6 +248,66 @@ function TablePreview({ selectedColumns }: { selectedColumns: string[] }) {
   );
 }
 
+// Mini dialog preview component - shows which tabs will be visible
+function DialogPreview({ showAppointments, showDeals }: { showAppointments: boolean; showDeals: boolean }) {
+  const tabs = [
+    { key: 'info', label: 'Info', always: true, icon: User },
+    { key: 'resp', label: 'Resp.', always: true, icon: User },
+    { key: 'notas', label: 'Notas', always: true, icon: FileText },
+    { key: 'agenda', label: 'Agenda', always: false, show: showAppointments, icon: Calendar },
+    { key: 'vendas', label: 'Vendas', always: false, show: showDeals, icon: DollarSign },
+    { key: 'anexos', label: 'Anexos', always: true, icon: Paperclip },
+    { key: 'log', label: 'Log', always: true, icon: Clock },
+  ];
+  
+  const visibleTabs = tabs.filter(t => t.always || t.show);
+  const hiddenTabs = tabs.filter(t => !t.always && !t.show);
+  
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <Eye className="w-3 h-3" />
+        Dialog de Edição
+      </div>
+      <div className="border rounded-lg p-3 bg-background min-w-[200px]">
+        {/* Header simulado */}
+        <div className="flex items-center gap-2 pb-2 border-b mb-2">
+          <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+            <User className="w-3 h-3 text-primary" />
+          </div>
+          <span className="text-sm font-medium truncate">{PREVIEW_DATA.nome}</span>
+        </div>
+        
+        {/* Tab bar simulado */}
+        <div className="flex gap-1 flex-wrap">
+          {visibleTabs.map((tab, i) => {
+            const Icon = tab.icon;
+            return (
+              <div
+                key={tab.key}
+                className={`px-2 py-1 text-[10px] rounded-md border flex items-center gap-1 ${
+                  i === 0 ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/50'
+                }`}
+              >
+                <Icon className="w-2.5 h-2.5" />
+                {tab.label}
+              </div>
+            );
+          })}
+        </div>
+        
+        {/* Indicador de abas ocultas */}
+        {hiddenTabs.length > 0 && (
+          <p className="text-[9px] text-muted-foreground mt-2 flex items-center gap-1">
+            <Info className="w-2.5 h-2.5" />
+            {hiddenTabs.map(t => `"${t.label}"`).join(' e ')} oculta{hiddenTabs.length > 1 ? 's' : ''}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function PipelineDisplayConfigDialog({ 
   pipeline, 
   open, 
@@ -374,9 +434,10 @@ export function PipelineDisplayConfigDialog({
             <Eye className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium">Preview em tempo real</span>
           </div>
-          <div className="flex gap-6 items-start flex-wrap">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
             <CardPreview selectedFields={cardFields} />
-            <div className="flex-1 min-w-[250px]">
+            <DialogPreview showAppointments={showAppointments} showDeals={showDeals} />
+            <div className="md:col-span-1">
               <TablePreview selectedColumns={tableColumns} />
             </div>
           </div>
