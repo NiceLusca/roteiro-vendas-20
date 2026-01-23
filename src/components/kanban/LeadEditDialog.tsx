@@ -13,7 +13,7 @@ import { Lead, Appointment } from '@/types/crm';
 import { PipelineDisplayConfig } from '@/types/pipelineDisplay';
 import { useLeadNotes } from '@/hooks/useLeadNotes';
 import { useLeadAttachments } from '@/hooks/useLeadAttachments';
-import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useLeadSave } from '@/hooks/useLeadSave';
 import { useLeadResponsibles } from '@/hooks/useLeadResponsibles';
 import { useLeadActivityLog } from '@/hooks/useLeadActivityLog';
 import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
@@ -130,7 +130,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
     deleteAttachment,
     downloadAttachment 
   } = useLeadAttachments(lead.id);
-  const { saveLead } = useSupabaseLeads();
+  const { saveLead } = useLeadSave();
   const { responsibles, history } = useLeadResponsibles(lead.id);
   const { activities } = useLeadActivityLog(lead.id, pipelineEntryId);
   const { getLeadTags, removeTagFromLead } = useLeadTags();
