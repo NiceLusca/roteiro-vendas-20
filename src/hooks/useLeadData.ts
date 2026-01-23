@@ -1,22 +1,20 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { Lead, Appointment, Interaction, Deal, Order } from '@/types/crm';
-import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useLeadSave } from '@/hooks/useLeadSave';
 import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
 import { useSupabaseDeals } from '@/hooks/useSupabaseDeals';
 import { useSupabaseOrders } from '@/hooks/useSupabaseOrders';
 import { useSupabaseInteractions } from '@/hooks/useSupabaseInteractions';
 import { useAudit } from '@/contexts/AuditContext';
-import { useToast } from '@/hooks/use-toast';
 
 // Hook for managing lead data operations
 export function useLeadData() {
   const { logChange } = useAudit();
-  const { saveLead: saveLeadToSupabase } = useSupabaseLeads();
+  const { saveLead: saveLeadToSupabase } = useLeadSave();
   const { saveAppointment: saveAppointmentToSupabase } = useSupabaseAppointments();
   const { saveDeal: saveDealToSupabase } = useSupabaseDeals();
   const { saveOrder: saveOrderToSupabase } = useSupabaseOrders();
   const { saveInteraction: saveInteractionToSupabase } = useSupabaseInteractions();
-  const { toast } = useToast();
 
   const saveLead = useCallback(async (leadData: Partial<Lead> & { id?: string }) => {
     const result = await saveLeadToSupabase(leadData);

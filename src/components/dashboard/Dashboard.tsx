@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MetricCard } from './MetricCard';
 import { formatCurrency, formatDateTime } from '@/utils/formatters';
-import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
 import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabaseDeals } from '@/hooks/useSupabaseDeals';
@@ -25,25 +25,21 @@ import {
 import { cn } from '@/lib/utils';
 
 export const Dashboard = memo(function Dashboard() {
-  const { leads, loading: leadsLoading } = useSupabaseLeads();
+  const { data: dashboardMetrics, isLoading: metricsLoading } = useDashboardMetrics();
   const { appointments, loading: appointmentsLoading } = useSupabaseAppointments();
   const { pipelines, loading: pipelinesLoading } = useSupabasePipelines();
   const { deals, loading: dealsLoading } = useSupabaseDeals();
   const { orders, loading: ordersLoading } = useSupabaseOrders();
   const { entries, loading: entriesLoading } = useSupabaseLeadPipelineEntries();
 
-  const isLoading = leadsLoading || appointmentsLoading || pipelinesLoading || dealsLoading || ordersLoading || entriesLoading;
+  const isLoading = metricsLoading || appointmentsLoading || pipelinesLoading || dealsLoading || ordersLoading || entriesLoading;
 
   // Calculate metrics from real data
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   
   const metrics = {
-    leads_por_status: {
-      lead: leads.filter(l => l.status_geral === 'lead').length,
-      cliente: leads.filter(l => l.status_geral === 'cliente').length,
-      perdido: leads.filter(l => l.status_geral === 'perdido').length
-    },
+    leads_por_status: dashboardMetrics?.leads_por_status || { lead: 0, cliente: 0, perdido: 0 },
     sessoes_hoje: appointments.filter(a => {
       const today = new Date();
       const aptDate = new Date(a.start_at);
@@ -76,19 +72,18 @@ export const Dashboard = memo(function Dashboard() {
     .sort((a, b) => (b.dias_em_atraso || 0) - (a.dias_em_atraso || 0))
     .slice(0, 5)
     .map(entry => {
-      const lead = leads.find(l => l.id === entry.lead_id);
       const pipeline = pipelines.find(p => p.id === entry.pipeline_id);
       
-      // Buscar stages via API se necessário ou usar dados já carregados
+      // Usar dados do JOIN (entry.leads)
       const stage = {
         id: entry.etapa_atual_id,
-        nome: 'Etapa Atual', // Placeholder - idealmente buscar do banco
+        nome: 'Etapa Atual',
         proximo_passo_label: 'Próximo passo'
       };
       
       return {
         ...entry,
-        lead,
+        lead: entry.leads, // Usar dados do JOIN
         stage
       };
     });
@@ -209,7 +204,9 @@ export const Dashboard = memo(function Dashboard() {
               />
             ) : (
               proximosAgendamentos.map((appointment) => {
-                const lead = leads.find(l => l.id === appointment.lead_id);
+                // Find lead name from entries (using JOIN data)
+                const entry = entries.find(e => e.lead_id === appointment.lead_id);
+                const leadName = entry?.leads?.nome || 'Lead não encontrado';
                 return (
                   <div key={appointment.id} className="list-item-hover flex items-center justify-between p-3 border">
                     <div className="flex items-center space-x-3">
@@ -217,7 +214,7 @@ export const Dashboard = memo(function Dashboard() {
                         <Calendar className="w-4 h-4 text-primary" />
                       </div>
                       <div>
-                        <p className="font-medium">{lead?.nome || 'Lead não encontrado'}</p>
+                        <p className="font-medium">{leadName}</p>
                         <p className="text-sm text-muted-foreground">
                           {formatDateTime(new Date(appointment.start_at))}
                         </p>
@@ -242,10 +239,10 @@ export const Dashboard = memo(function Dashboard() {
             <CardTitle>Status dos Leads</CardTitle>
           </CardHeader>
           <CardContent>
-            {leads.filter(l => l.status_geral === 'lead').length > 0 ? (
+            {totalLeads > 0 ? (
               <div className="space-y-4">
-                {['lead', 'cliente', 'perdido'].map((status) => {
-                  const count = leads.filter(l => l.status_geral === status).length;
+                {(['lead', 'cliente', 'perdido'] as const).map((status) => {
+                  const count = metrics.leads_por_status[status];
                   const label = status === 'lead' ? 'Leads' : status === 'cliente' ? 'Clientes' : 'Perdidos';
                   const badgeClass = status === 'cliente' ? 'status-badge-success' : 
                                status === 'lead' ? 'status-badge-info' : 'status-badge-danger';
@@ -279,42 +276,30 @@ export const Dashboard = memo(function Dashboard() {
           <div className="card-header-gradient absolute top-0 left-0 right-0" />
           <CardHeader className="pt-4">
             <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-warning" />
-              Principais Objeções
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Pipeline Ativo
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {(() => {
-                const objections = leads
-                  .filter(l => l.objecao_principal)
-                  .reduce((acc, lead) => {
-                    const objecao = lead.objecao_principal;
-                    acc[objecao] = (acc[objecao] || 0) + 1;
-                    return acc;
-                  }, {} as Record<string, number>);
-                
-                const topObjections = Object.entries(objections)
-                  .sort(([,a], [,b]) => b - a)
-                  .slice(0, 5);
-                
-                if (topObjections.length === 0) {
-                  return (
-                    <EmptyState
-                      title="Nenhuma objeção registrada"
-                      description="As objeções aparecerão aqui conforme você registra leads"
-                      icon={<AlertTriangle className="w-12 h-12" />}
-                    />
-                  );
-                }
-                
-                return topObjections.map(([objecao, count]) => (
-                  <div key={objecao} className="list-item-hover flex items-center justify-between p-2">
-                    <span className="text-sm font-medium">{objecao}</span>
-                    <Badge className="status-badge status-badge-warning">{count}</Badge>
+              {entries.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Leads em pipeline</span>
+                    <Badge>{entries.filter(e => e.status_inscricao === 'Ativo').length}</Badge>
                   </div>
-                ));
-              })()}
+                  <div className="flex justify-between text-sm">
+                    <span>Em atraso</span>
+                    <Badge variant="destructive">{entries.filter(e => e.dias_em_atraso > 0).length}</Badge>
+                  </div>
+                </div>
+              ) : (
+                <EmptyState
+                  title="Nenhum lead em pipeline"
+                  description="Inscreva leads em pipelines para acompanhar"
+                  icon={<TrendingUp className="w-12 h-12" />}
+                />
+              )}
             </div>
           </CardContent>
         </Card>

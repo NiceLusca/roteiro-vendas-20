@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -7,7 +7,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useLeadSearch } from '@/hooks/useLeadSearch';
 import { Appointment, StatusAppointment } from '@/types/crm';
 
 const appointmentSchema = z.object({
@@ -27,7 +27,8 @@ interface AppointmentFormProps {
 }
 
 export function AppointmentForm({ initialData, onSave, onCancel }: AppointmentFormProps) {
-  const { leads } = useSupabaseLeads();
+  const [leadSearch, setLeadSearch] = useState('');
+  const { data: leads = [] } = useLeadSearch({ searchTerm: leadSearch, limit: 20 });
 
   const form = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentSchema),

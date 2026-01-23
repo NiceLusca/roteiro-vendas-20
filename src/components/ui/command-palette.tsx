@@ -31,7 +31,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContextSecure';
-import { useSupabaseLeads } from '@/hooks/useSupabaseLeads';
+import { useLeadSearch } from '@/hooks/useLeadSearch';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 
 interface CommandPaletteProps {
@@ -52,9 +52,11 @@ interface CommandAction {
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { leads } = useSupabaseLeads();
-  const { pipelines } = useSupabasePipelines();
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Only fetch leads when palette is open
+  const { data: leads = [] } = useLeadSearch({ searchTerm, limit: 5, enabled: open });
+  const { pipelines } = useSupabasePipelines();
 
   // Navigation actions
   const navigationActions: CommandAction[] = [
@@ -227,12 +229,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   // Dynamic data actions (recent leads, pipelines, etc.)
   const dataActions: CommandAction[] = [
-    ...leads.slice(0, 5).map(lead => ({
+    ...leads.map(lead => ({
       id: `lead-${lead.id}`,
       label: `Lead: ${lead.nome}`,
       icon: User,
       group: 'Leads Recentes',
-      action: () => navigate(`/leads/${lead.id}`),
+      action: () => navigate(`/leads`), // Navigate to leads page (detail page deprecated)
       keywords: [lead.nome, lead.email || '', 'lead']
     })),
     ...pipelines.slice(0, 3).map(pipeline => ({
