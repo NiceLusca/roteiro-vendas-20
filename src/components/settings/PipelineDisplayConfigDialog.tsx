@@ -25,9 +25,9 @@ interface PipelineDisplayConfigDialogProps {
   onSave: (pipelineId: string, config: PipelineDisplayConfig) => Promise<boolean>;
 }
 
-// Group fields by category for better UX
+// Group fields by category for better UX - 'nome' is mandatory and always shown
 const FIELD_GROUPS = {
-  'Lead': ['nome', 'contato', 'origem', 'segmento', 'lead_score'],
+  'Lead': ['contato', 'origem', 'segmento', 'lead_score'],
   'Vendas': ['valor_deal', 'valor_recorrente', 'closer', 'objecao'],
   'Pipeline': ['etapa', 'dias', 'sla', 'saude', 'score'],
   'Agendamentos': ['data_sessao'],
@@ -298,12 +298,13 @@ export function PipelineDisplayConfigDialog({
     }
   }, [cardFields, tableColumns]);
 
-  const toggleField = (field: string, list: string[], setList: (v: string[]) => void) => {
-    if (list.includes(field)) {
-      setList(list.filter(f => f !== field));
-    } else {
-      setList([...list, field]);
-    }
+  // Use callback pattern to avoid stale state issues
+  const toggleField = (field: string, setList: React.Dispatch<React.SetStateAction<string[]>>) => {
+    setList(prev => 
+      prev.includes(field) 
+        ? prev.filter(f => f !== field) 
+        : [...prev, field]
+    );
   };
 
   const handleSave = async () => {
@@ -332,7 +333,7 @@ export function PipelineDisplayConfigDialog({
     groupName: string, 
     fields: readonly string[], 
     selectedFields: string[], 
-    setSelectedFields: (v: string[]) => void
+    setSelectedFields: React.Dispatch<React.SetStateAction<string[]>>
   ) => (
     <div key={groupName} className="space-y-2">
       <h4 className="text-sm font-medium text-muted-foreground">{groupName}</h4>
@@ -348,7 +349,7 @@ export function PipelineDisplayConfigDialog({
             >
               <Checkbox 
                 checked={selectedFields.includes(fieldKey)}
-                onCheckedChange={() => toggleField(fieldKey, selectedFields, setSelectedFields)}
+                onCheckedChange={() => toggleField(fieldKey, setSelectedFields)}
               />
               <span className="text-sm">{field.label}</span>
             </label>
@@ -384,77 +385,87 @@ export function PipelineDisplayConfigDialog({
 
         <Separator className="shrink-0" />
 
-        {/* Wrapper with fixed height to make ScrollArea work */}
-        <div className="h-[300px] overflow-hidden">
-          <ScrollArea className="h-full pr-4">
-            <div className="space-y-6 py-4">
-            {/* Tab Control Section - Most Important, at the top */}
-            <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Eye className="w-4 h-4 text-primary" />
-                <h3 className="font-semibold">Abas no Dialog de Edição</h3>
-              </div>
-              <p className="text-xs text-muted-foreground flex items-start gap-1.5">
-                <Info className="w-3 h-3 mt-0.5 shrink-0" />
-                Controle quais abas aparecem ao clicar em um lead deste pipeline
-              </p>
-              
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div className="flex items-center justify-between p-3 rounded-md border bg-background">
-                  <Label htmlFor="show-appointments-tab" className="font-medium cursor-pointer">
-                    Aba "Agenda"
-                  </Label>
-                  <Switch 
-                    id="show-appointments-tab"
-                    checked={showAppointments}
-                    onCheckedChange={setShowAppointments}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-md border bg-background">
-                  <Label htmlFor="show-deals-tab" className="font-medium cursor-pointer">
-                    Aba "Vendas"
-                  </Label>
-                  <Switch 
-                    id="show-deals-tab"
-                    checked={showDeals}
-                    onCheckedChange={setShowDeals}
-                  />
-                </div>
-              </div>
+        {/* Scrollable content with native overflow */}
+        <div className="max-h-[300px] overflow-y-auto pr-2 space-y-6 py-2">
+          {/* Tab Control Section - Most Important, at the top */}
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Eye className="w-4 h-4 text-primary" />
+              <h3 className="font-semibold">Abas no Dialog de Edição</h3>
             </div>
-
-            <Separator />
-
-            {/* Card Fields Section */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <LayoutGrid className="w-4 h-4 text-primary" />
-                <h3 className="font-semibold">Campos no Card Kanban</h3>
+            <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+              <Info className="w-3 h-3 mt-0.5 shrink-0" />
+              Controle quais abas aparecem ao clicar em um lead deste pipeline
+            </p>
+            
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="flex items-center justify-between p-3 rounded-md border bg-background">
+                <Label htmlFor="show-appointments-tab" className="font-medium cursor-pointer">
+                  Aba "Agenda"
+                </Label>
+                <Switch 
+                  id="show-appointments-tab"
+                  checked={showAppointments}
+                  onCheckedChange={setShowAppointments}
+                />
               </div>
-              <div className="pl-6 space-y-4">
-                {Object.entries(FIELD_GROUPS).map(([groupName, fields]) => 
-                  renderFieldGroup(groupName, fields, cardFields, setCardFields)
-                )}
-              </div>
-            </div>
 
-            <Separator />
-
-            {/* Table Columns Section */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <TableProperties className="w-4 h-4 text-primary" />
-                <h3 className="font-semibold">Colunas na Tabela</h3>
-              </div>
-              <div className="pl-6 space-y-4">
-                {Object.entries(FIELD_GROUPS).map(([groupName, fields]) => 
-                  renderFieldGroup(groupName, fields, tableColumns, setTableColumns)
-                )}
+              <div className="flex items-center justify-between p-3 rounded-md border bg-background">
+                <Label htmlFor="show-deals-tab" className="font-medium cursor-pointer">
+                  Aba "Vendas"
+                </Label>
+                <Switch 
+                  id="show-deals-tab"
+                  checked={showDeals}
+                  onCheckedChange={setShowDeals}
+                />
               </div>
             </div>
           </div>
-        </ScrollArea>
+
+          <Separator />
+
+          {/* Card Fields Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <LayoutGrid className="w-4 h-4 text-primary" />
+              <h3 className="font-semibold">Campos no Card Kanban</h3>
+            </div>
+            
+            {/* Mandatory field indicator */}
+            <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded ml-6 flex items-center gap-2">
+              <Checkbox checked disabled className="opacity-50" />
+              <span><strong>Nome</strong> sempre é exibido (obrigatório)</span>
+            </div>
+            
+            <div className="pl-6 space-y-4">
+              {Object.entries(FIELD_GROUPS).map(([groupName, fields]) => 
+                renderFieldGroup(groupName, fields, cardFields, setCardFields)
+              )}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Table Columns Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <TableProperties className="w-4 h-4 text-primary" />
+              <h3 className="font-semibold">Colunas na Tabela</h3>
+            </div>
+            
+            {/* Mandatory field indicator */}
+            <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded ml-6 flex items-center gap-2">
+              <Checkbox checked disabled className="opacity-50" />
+              <span><strong>Nome</strong> sempre é exibido (obrigatório)</span>
+            </div>
+            
+            <div className="pl-6 space-y-4">
+              {Object.entries(FIELD_GROUPS).map(([groupName, fields]) => 
+                renderFieldGroup(groupName, fields, tableColumns, setTableColumns)
+              )}
+            </div>
+          </div>
         </div>
 
         <DialogFooter className="shrink-0 mt-4 border-t pt-4">
