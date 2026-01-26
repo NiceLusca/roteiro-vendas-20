@@ -1,138 +1,209 @@
 
-# Plano: Corrigir Visualização de Grupos Expandidos no Kanban
 
-## Problema Identificado
+# Plano: Restaurar Ordem Natural das Colunas e Manter Colapso Discreto
 
-Na imagem fornecida, o grupo "Captação e Formalização do Con..." mostra o header com "(5 etapas)", mas apenas a primeira etapa "Entrada" aparece diretamente abaixo dele. As outras 4 etapas (PRIMEIRA CALL, Grupo Criado + BOAS VINDAS!, etc.) aparecem como colunas soltas sem conexão visual com o grupo.
+## Problema
 
-**Causa raiz**: No `KanbanBoard.tsx`, cada coluna de um grupo expandido é renderizada em uma `<div>` separada. O header do grupo só aparece na primeira coluna (`showGroupHeader: isFirstInGroup`), deixando as outras colunas visualmente desconectadas.
+A implementação atual do `expanded-group` no `KanbanBoard.tsx` (linhas 295-308) agrupa TODAS as etapas de um grupo na posição da primeira etapa encontrada, reordenando o pipeline visualmente.
 
-```text
-ATUAL (problema):
-┌─────────────────────┐
-│ ▼ Captação (5 et.)  │   
-│ ───────────         │   ┌───────────┐  ┌───────────┐  ┌───────────┐
-│ Entrada             │   │PRIMEIRA   │  │Grupo Cria.│  │Aguard.    │
-│   0                 │   │CALL    0  │  │+ BOAS   0 │  │Assinat. 1 │
-└─────────────────────┘   └───────────┘  └───────────┘  └───────────┘
-                           ↑ SEM HEADER DE GRUPO!
-```
+**Exemplo do bug**:
+- Pipeline real: `[1-Entrada, 2-CALL, 3-Grupo, 4-Definição, 5-Ativação, 6-..., 8-Contrato]`
+- Se etapas 1,2,3,8 pertencem ao grupo "Captação"
+- O código atual junta 1,2,3,8 em um container único na posição 1
+- Resultado: `[container(1,2,3,8), 4-Definição, 5-Ativação, 6-...]` — etapa 8 "pulou" para o começo!
 
-## Solução Proposta
+## Solução
 
-Agrupar todas as colunas de um grupo expandido dentro de um container visual único, mantendo o header do grupo acima de todas as colunas do grupo.
+Remover completamente o tipo `expanded-group` e voltar ao comportamento simples:
 
-```text
-CORRIGIDO:
-┌────────────────────────────────────────────────────────────────────────────┐
-│ ▼ Captação e Formalização do Contrato    👤 1    (5 etapas)               │
-│ ══════════════════════════════════════════════════════════════════════════│
-│ ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐ │
-│ │ Entrada   │  │PRIMEIRA   │  │Grupo Cria.│  │Aguardando │  │Contrato   │ │
-│ │    0      │  │CALL    0  │  │+ BOAS   0 │  │Assinat. 1 │  │Assinado 0 │ │
-│ └───────────┘  └───────────┘  └───────────┘  └───────────┘  └───────────┘ │
-└────────────────────────────────────────────────────────────────────────────┘
-```
+1. **Etapa sem grupo**: renderiza como coluna normal
+2. **Etapa de grupo colapsado**: só a primeira etapa do grupo renderiza o card colapsado, demais são omitidas
+3. **Etapa de grupo expandido**: renderiza como coluna normal NA SUA POSIÇÃO ORIGINAL
+
+O `KanbanColumn` já possui a barra de cor do grupo (`stage.cor_grupo`), então a identidade visual está garantida.
+
+Para colapsar/expandir de forma discreta, vou adicionar um pequeno ícone de toggle na barra de cor de cada coluna que pertence a um grupo.
+
+---
 
 ## Alterações Técnicas
 
 ### Arquivo: `src/components/kanban/KanbanBoard.tsx`
 
-#### 1. Nova lógica de agrupamento para renderização
+#### 1. Simplificar o tipo `RenderItem` (remover expanded-group)
 
-Modificar o `renderData` useMemo para agrupar itens de forma diferente:
-
-**Em vez de**:
+**Antes (linha 265-268)**:
 ```typescript
-items.push({ type: 'column', entry, groupName, showGroupHeader: isFirstInGroup });
+type RenderItem = 
+  | { type: 'column'; entry: typeof stageEntries[0] }
+  | { type: 'collapsed-group'; groupName: string; color: string | null; totalLeads: number; stageCount: number; stageNames: string[] }
+  | { type: 'expanded-group'; groupName: string; color: string | null; entries: typeof stageEntries; isFragmented: boolean; fragmentRanges: string };
 ```
 
-**Usar**:
+**Depois**:
 ```typescript
-// Agrupar todas as colunas de um grupo expandido em um único item
-items.push({ 
-  type: 'expanded-group', 
-  groupName, 
-  entries: allEntriesInGroup,
-  color: groupColor 
+type RenderItem = 
+  | { type: 'column'; entry: typeof stageEntries[0]; groupName?: string }
+  | { type: 'collapsed-group'; groupName: string; color: string | null; totalLeads: number; stageCount: number; stageNames: string[] };
+```
+
+#### 2. Corrigir a lógica do loop (linhas 273-309)
+
+**Antes** (problema - pula etapas do grupo expandido):
+```typescript
+stageEntries.forEach((entry) => {
+  const groupName = entry.stage.grupo;
+  
+  if (!groupName) {
+    items.push({ type: 'column', entry });
+  } else if (processedGroups.has(groupName)) {
+    return; // PULA as demais etapas do grupo!
+  } else if (collapsedGroups.includes(groupName)) {
+    // ...collapsed-group
+    processedGroups.add(groupName);
+  } else {
+    // expanded-group com TODAS as entries
+    items.push({ type: 'expanded-group', ... });
+    processedGroups.add(groupName);
+  }
 });
 ```
 
-#### 2. Nova estrutura de renderização
-
-O render passará a ter 3 tipos de itens:
-- `column`: coluna sem grupo (renderiza normalmente)
-- `collapsed-group`: grupo colapsado (card vertical compacto)
-- `expanded-group`: **NOVO** - grupo expandido (container com header + múltiplas colunas)
-
+**Depois** (correto - mantém ordem natural):
 ```typescript
-type RenderItem = 
-  | { type: 'column'; entry: StageEntry }
-  | { type: 'collapsed-group'; groupName: string; ... }
-  | { type: 'expanded-group'; groupName: string; entries: StageEntry[]; color: string | null };
+stageEntries.forEach((entry) => {
+  const groupName = entry.stage.grupo;
+  
+  if (!groupName) {
+    // Etapa sem grupo → coluna normal
+    items.push({ type: 'column', entry });
+  } else if (collapsedGroups.includes(groupName)) {
+    // Grupo COLAPSADO → só adiciona card de resumo uma vez
+    if (!processedGroups.has(groupName)) {
+      const info = groupInfo.get(groupName)!;
+      items.push({
+        type: 'collapsed-group',
+        groupName,
+        color: info.color,
+        totalLeads: info.entries.reduce((sum, e) => sum + e.entries.length, 0),
+        stageCount: info.entries.length,
+        stageNames: info.stageNames
+      });
+      processedGroups.add(groupName);
+    }
+    // Não adiciona colunas individuais de grupos colapsados
+  } else {
+    // Grupo EXPANDIDO → coluna normal na posição natural!
+    items.push({ type: 'column', entry, groupName });
+  }
+});
 ```
 
-#### 3. Container visual para grupo expandido
+#### 3. Simplificar a renderização (linhas 351-400)
+
+**Remover** o bloco `if (item.type === 'expanded-group')` inteiro (linhas 368-394).
+
+**Depois**:
+```typescript
+{renderData.items.map((item) => {
+  if (item.type === 'collapsed-group') {
+    return (
+      <KanbanCollapsedGroup
+        key={`collapsed-${item.groupName}`}
+        groupName={item.groupName}
+        groupColor={item.color}
+        totalLeads={item.totalLeads}
+        stageCount={item.stageCount}
+        stageNames={item.stageNames}
+        onToggleCollapse={() => toggleGroupCollapse(item.groupName)}
+      />
+    );
+  }
+  
+  // Coluna individual (com ou sem grupo)
+  return (
+    <KanbanColumn 
+      key={item.entry.stage.id} 
+      {...getColumnProps(item.entry)}
+      // Toggle discreto será adicionado ao KanbanColumn
+      groupName={item.groupName}
+      onToggleGroupCollapse={item.groupName ? () => toggleGroupCollapse(item.groupName!) : undefined}
+    />
+  );
+})}
+```
+
+---
+
+### Arquivo: `src/components/kanban/KanbanColumn.tsx`
+
+#### Adicionar botão discreto de colapso no header (se tiver grupo)
+
+Adicionar novas props:
+```typescript
+interface KanbanColumnProps {
+  // ... props existentes
+  groupName?: string;
+  onToggleGroupCollapse?: () => void;
+}
+```
+
+No header da coluna (linha ~200), se `groupName` existir, adicionar um ícone pequeno na barra de cor:
 
 ```tsx
-{item.type === 'expanded-group' && (
-  <div className="flex flex-col rounded-lg border border-border/40 bg-muted/10 p-2">
-    {/* Header do grupo */}
-    <KanbanStageGroupHeader
-      groupName={item.groupName}
-      groupColor={item.color}
-      totalLeads={item.entries.reduce((sum, e) => sum + e.entries.length, 0)}
-      stageCount={item.entries.length}
-      pipelineId={selectedPipelineId}
-      onToggleCollapse={() => toggleGroupCollapse(item.groupName)}
-      isCollapsed={false}
-    />
-    
-    {/* Barra de cor */}
-    <KanbanGroupColorBar color={item.color || '#10b981'} />
-    
-    {/* Colunas do grupo lado a lado */}
-    <div className="flex gap-2">
-      {item.entries.map(entry => (
-        <KanbanColumn key={entry.stage.id} {...getColumnProps(entry)} />
-      ))}
-    </div>
-  </div>
-)}
+{/* Barra de cor com toggle discreto */}
+<div className="relative">
+  <div 
+    className="h-1 rounded-full mb-2" 
+    style={{ 
+      background: stage.cor_grupo 
+        ? `linear-gradient(to right, ${stage.cor_grupo}cc, ${stage.cor_grupo}99)` 
+        : 'linear-gradient(to right, #10b981cc, #10b98199)' 
+    }} 
+  />
+  {groupName && onToggleGroupCollapse && (
+    <button
+      onClick={(e) => { e.stopPropagation(); onToggleGroupCollapse(); }}
+      className="absolute -top-0.5 right-0 p-0.5 rounded hover:bg-muted/50 transition-colors"
+      title={`Colapsar grupo "${groupName}"`}
+    >
+      <ChevronLeft className="h-3 w-3 text-muted-foreground" />
+    </button>
+  )}
+</div>
 ```
 
-### Arquivo: `src/components/kanban/KanbanStageGroup.tsx`
+---
 
-Ajustes menores no `KanbanStageGroupHeader`:
-- Garantir que o header ocupe largura total do container pai
-- Ajustar padding para acomodar múltiplas colunas abaixo
-
-## Fluxo Visual Final
+## Resultado Visual
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│ ▼ Captação e Formalização do Contrato                     👤 1    (5 etapas)       │
-│ ════════════════════════════════════════════════════════════════════════════════════│
-│  Entrada      PRIMEIRA CALL    Grupo Criado    Aguardando     Contrato Assinado    │
-│     0              0          + BOAS VINDAS    Assinatura           0               │
-│                                     0               1                               │
-└─────────────────────────────────────────────────────────────────────────────────────┘
+EXPANDIDO (ordem natural preservada):
+│ 1-Entrada │ │ 2-CALL │ │ 3-Grupo │ │ 4-Definição │ │ 5-Ativação │ │... │ │ 8-Contrato │
+    ═══ ◁       ═══ ◁       ═══ ◁         ───              ───               ═══ ◁
+   Azul        Azul        Azul          Roxo             Roxo              Azul
+   
+◁ = ícone discreto para colapsar grupo "Captação"
 
-│ ▸ Definição da Promessa │   ← Grupo colapsado (clicável para expandir)
-│         1               │
+COLAPSADO (grupo "Captação" fechado):
+│ ▸ Captação (4et) │ │ 4-Definição │ │ 5-Ativação │ │...│
+      12 leads
 ```
 
-## Resumo das Mudanças
+---
+
+## Resumo das Alterações
 
 | # | Arquivo | Alteração |
 |---|---------|-----------|
-| 1 | `KanbanBoard.tsx` | Refatorar `renderData` para agrupar colunas de grupos expandidos |
-| 2 | `KanbanBoard.tsx` | Adicionar renderização de container visual para grupos expandidos |
-| 3 | `KanbanStageGroup.tsx` | Ajustar `KanbanStageGroupHeader` para ocupar largura total |
+| 1 | `KanbanBoard.tsx` | Remover tipo `expanded-group`, corrigir loop para manter ordem natural |
+| 2 | `KanbanBoard.tsx` | Passar `groupName` e `onToggleGroupCollapse` para `KanbanColumn` |
+| 3 | `KanbanColumn.tsx` | Adicionar ícone discreto de colapso na barra de cor (se tiver grupo) |
 
 ## Benefícios
 
-1. **Conexão visual clara** entre etapas do mesmo grupo
-2. **Header do grupo** sempre visível acima de todas as suas etapas
-3. **Experiência consistente** entre grupos expandidos e colapsados
-4. **Mantém funcionalidade** de drag-and-drop entre colunas
+1. **Ordem preservada**: cada etapa fica exatamente na sua posição original do pipeline
+2. **Toggle discreto**: ícone pequeno na barra de cor para colapsar grupo
+3. **Código mais simples**: apenas 2 tipos de item (column, collapsed-group)
+4. **Identidade visual mantida**: barra de cor indica pertencimento ao grupo
+
