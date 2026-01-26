@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Palette, 
   Plus, 
@@ -13,9 +13,7 @@ import {
   Edit2, 
   Check, 
   X, 
-  GripVertical,
   Layers,
-  ChevronDown
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -36,7 +34,6 @@ interface StageGroupUpdate {
 interface GroupDefinition {
   nome: string;
   cor: string;
-  stageIds: string[];
 }
 
 interface StageGroupConfigDialogProps {
@@ -101,28 +98,26 @@ export function StageGroupConfigDialog({
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   
-  // Local state for editing
-  const [groups, setGroups] = useState<GroupDefinition[]>(() => {
-    // Initialize from existing stage groups
-    const groupMap = new Map<string, GroupDefinition>();
+  // Local state: stage assignments (stageId -> groupName or null)
+  const [stageAssignments, setStageAssignments] = useState<Record<string, string | null>>(() => {
+    const assignments: Record<string, string | null> = {};
     stages.forEach(stage => {
-      if (stage.grupo) {
-        const existing = groupMap.get(stage.grupo);
-        if (existing) {
-          existing.stageIds.push(stage.id);
-        } else {
-          groupMap.set(stage.grupo, {
-            nome: stage.grupo,
-            cor: stage.cor_grupo || "#6B7280",
-            stageIds: [stage.id]
-          });
-        }
-      }
+      assignments[stage.id] = stage.grupo || null;
     });
-    return Array.from(groupMap.values());
+    return assignments;
   });
   
-  const [selectedStageIds, setSelectedStageIds] = useState<string[]>([]);
+  // Local state: group definitions (name + color)
+  const [groups, setGroups] = useState<GroupDefinition[]>(() => {
+    const groupMap = new Map<string, string>();
+    stages.forEach(stage => {
+      if (stage.grupo && !groupMap.has(stage.grupo)) {
+        groupMap.set(stage.grupo, stage.cor_grupo || "#6B7280");
+      }
+    });
+    return Array.from(groupMap.entries()).map(([nome, cor]) => ({ nome, cor }));
+  });
+  
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupColor, setNewGroupColor] = useState(PRESET_COLORS[0].value);
   const [editingGroup, setEditingGroup] = useState<string | null>(null);
@@ -130,39 +125,31 @@ export function StageGroupConfigDialog({
   const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
 
   // Reset state when dialog opens
-  const handleOpenChange = (open: boolean) => {
-    if (open) {
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
       // Reinitialize from stages
-      const groupMap = new Map<string, GroupDefinition>();
+      const assignments: Record<string, string | null> = {};
+      const groupMap = new Map<string, string>();
       stages.forEach(stage => {
-        if (stage.grupo) {
-          const existing = groupMap.get(stage.grupo);
-          if (existing) {
-            existing.stageIds.push(stage.id);
-          } else {
-            groupMap.set(stage.grupo, {
-              nome: stage.grupo,
-              cor: stage.cor_grupo || "#6B7280",
-              stageIds: [stage.id]
-            });
-          }
+        assignments[stage.id] = stage.grupo || null;
+        if (stage.grupo && !groupMap.has(stage.grupo)) {
+          groupMap.set(stage.grupo, stage.cor_grupo || "#6B7280");
         }
       });
-      setGroups(Array.from(groupMap.values()));
-      setSelectedStageIds([]);
+      setStageAssignments(assignments);
+      setGroups(Array.from(groupMap.entries()).map(([nome, cor]) => ({ nome, cor })));
       setNewGroupName("");
       setNewGroupColor(PRESET_COLORS[0].value);
+      setEditingGroup(null);
+      setShowColorPicker(null);
     }
-    onOpenChange(open);
+    onOpenChange(isOpen);
   };
 
-  // Stages not in any group
-  const unassignedStages = useMemo(() => {
-    const assignedIds = new Set(groups.flatMap(g => g.stageIds));
-    return stages
-      .filter(s => !assignedIds.has(s.id))
-      .sort((a, b) => a.ordem - b.ordem);
-  }, [stages, groups]);
+  // Sorted stages
+  const sortedStages = useMemo(() => {
+    return [...stages].sort((a, b) => a.ordem - b.ordem);
+  }, [stages]);
 
   // Create new group
   const handleCreateGroup = () => {
@@ -184,56 +171,30 @@ export function StageGroupConfigDialog({
       return;
     }
     
-    setGroups([...groups, {
-      nome: newGroupName.trim(),
-      cor: newGroupColor,
-      stageIds: []
-    }]);
+    setGroups(prev => [...prev, { nome: newGroupName.trim(), cor: newGroupColor }]);
     setNewGroupName("");
   };
 
-  // Move selected stages to group
-  const handleMoveToGroup = (groupNome: string) => {
-    if (selectedStageIds.length === 0) return;
-    
-    setGroups(prev => prev.map(g => {
-      if (g.nome === groupNome) {
-        return {
-          ...g,
-          stageIds: [...new Set([...g.stageIds, ...selectedStageIds])]
-        };
-      }
-      // Remove from other groups
-      return {
-        ...g,
-        stageIds: g.stageIds.filter(id => !selectedStageIds.includes(id))
-      };
-    }));
-    setSelectedStageIds([]);
-  };
-
-  // Remove stage from group
-  const handleRemoveFromGroup = (groupNome: string, stageId: string) => {
-    setGroups(prev => prev.map(g => {
-      if (g.nome === groupNome) {
-        return {
-          ...g,
-          stageIds: g.stageIds.filter(id => id !== stageId)
-        };
-      }
-      return g;
-    }));
-  };
-
-  // Delete group (stages return to unassigned)
-  const handleDeleteGroup = (groupNome: string) => {
-    setGroups(prev => prev.filter(g => g.nome !== groupNome));
+  // Delete group
+  const handleDeleteGroup = (groupName: string) => {
+    // Remove group from definitions
+    setGroups(prev => prev.filter(g => g.nome !== groupName));
+    // Remove assignments for this group
+    setStageAssignments(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(stageId => {
+        if (updated[stageId] === groupName) {
+          updated[stageId] = null;
+        }
+      });
+      return updated;
+    });
   };
 
   // Start editing group name
-  const startEditingGroup = (groupNome: string) => {
-    setEditingGroup(groupNome);
-    setEditingGroupName(groupNome);
+  const startEditingGroup = (groupName: string) => {
+    setEditingGroup(groupName);
+    setEditingGroupName(groupName);
   };
 
   // Save group name edit
@@ -243,25 +204,42 @@ export function StageGroupConfigDialog({
       return;
     }
     
-    setGroups(prev => prev.map(g => {
-      if (g.nome === oldName) {
-        return { ...g, nome: editingGroupName.trim() };
-      }
-      return g;
-    }));
+    const newName = editingGroupName.trim();
+    
+    // Update group definition
+    setGroups(prev => prev.map(g => 
+      g.nome === oldName ? { ...g, nome: newName } : g
+    ));
+    
+    // Update stage assignments
+    setStageAssignments(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(stageId => {
+        if (updated[stageId] === oldName) {
+          updated[stageId] = newName;
+        }
+      });
+      return updated;
+    });
+    
     setEditingGroup(null);
     setEditingGroupName("");
   };
 
   // Change group color
-  const changeGroupColor = (groupNome: string, newColor: string) => {
-    setGroups(prev => prev.map(g => {
-      if (g.nome === groupNome) {
-        return { ...g, cor: newColor };
-      }
-      return g;
-    }));
+  const changeGroupColor = (groupName: string, newColor: string) => {
+    setGroups(prev => prev.map(g => 
+      g.nome === groupName ? { ...g, cor: newColor } : g
+    ));
     setShowColorPicker(null);
+  };
+
+  // Assign stage to group
+  const assignStageToGroup = (stageId: string, groupName: string | null) => {
+    setStageAssignments(prev => ({
+      ...prev,
+      [stageId]: groupName
+    }));
   };
 
   // Apply template
@@ -270,44 +248,39 @@ export function StageGroupConfigDialog({
     if (!template) return;
     
     // Create groups from template
-    const newGroups = template.groups.map(g => ({
-      nome: g.nome,
-      cor: g.cor,
-      stageIds: [] as string[]
-    }));
+    setGroups(template.groups.map(g => ({ nome: g.nome, cor: g.cor })));
     
-    setGroups(newGroups);
+    // Clear all assignments
+    setStageAssignments(prev => {
+      const updated: Record<string, string | null> = {};
+      Object.keys(prev).forEach(stageId => {
+        updated[stageId] = null;
+      });
+      return updated;
+    });
+    
     toast({
       title: "Template aplicado",
-      description: `Grupos do template "${template.name}" foram criados. Agora arraste as etapas para os grupos.`
+      description: `Grupos do template "${template.name}" foram criados. Agora selecione o grupo de cada etapa.`
     });
+  };
+
+  // Get group color
+  const getGroupColor = (groupName: string): string => {
+    return groups.find(g => g.nome === groupName)?.cor || "#6B7280";
   };
 
   // Save all changes
   const handleSave = async () => {
     setIsSaving(true);
     
-    // Build updates array
-    const updates: StageGroupUpdate[] = [];
-    
-    // Stages in groups
-    groups.forEach(group => {
-      group.stageIds.forEach(stageId => {
-        updates.push({
-          stageId,
-          grupo: group.nome,
-          cor_grupo: group.cor
-        });
-      });
-    });
-    
-    // Unassigned stages (remove group)
-    unassignedStages.forEach(stage => {
-      updates.push({
+    const updates: StageGroupUpdate[] = stages.map(stage => {
+      const groupName = stageAssignments[stage.id];
+      return {
         stageId: stage.id,
-        grupo: null,
-        cor_grupo: null
-      });
+        grupo: groupName,
+        cor_grupo: groupName ? getGroupColor(groupName) : null
+      };
     });
     
     const success = await onSave(updates);
@@ -322,348 +295,270 @@ export function StageGroupConfigDialog({
     }
   };
 
-  // Toggle stage selection
-  const toggleStageSelection = (stageId: string) => {
-    setSelectedStageIds(prev => 
-      prev.includes(stageId) 
-        ? prev.filter(id => id !== stageId)
-        : [...prev, stageId]
-    );
-  };
-
-  // Select all unassigned
-  const selectAllUnassigned = () => {
-    setSelectedStageIds(unassignedStages.map(s => s.id));
-  };
-
-  // Clear selection
-  const clearSelection = () => {
-    setSelectedStageIds([]);
-  };
-
-  // Get stage name by id
-  const getStageName = (stageId: string) => {
-    return stages.find(s => s.id === stageId)?.nome || "Etapa desconhecida";
-  };
+  // Count stages per group for preview
+  const groupCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    groups.forEach(g => { counts[g.nome] = 0; });
+    Object.values(stageAssignments).forEach(groupName => {
+      if (groupName && counts[groupName] !== undefined) {
+        counts[groupName]++;
+      }
+    });
+    return counts;
+  }, [groups, stageAssignments]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" data-size="full">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" data-size="full">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Palette className="w-5 h-5" />
             Configurar Grupos - {pipelineName}
           </DialogTitle>
           <DialogDescription>
-            Organize as etapas do pipeline em grupos visuais para facilitar a navegação no Kanban.
+            Atribua cada etapa a um grupo visual. No Kanban, grupos podem ser colapsados para melhor visualização.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 overflow-hidden">
-          <div className="grid grid-cols-2 gap-4 h-full">
-            {/* Left Column: Unassigned Stages */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium text-sm flex items-center gap-2">
-                  <Layers className="w-4 h-4" />
-                  Etapas Sem Grupo ({unassignedStages.length})
-                </h3>
-                <div className="flex gap-1">
-                  <Button size="sm" variant="ghost" onClick={selectAllUnassigned} disabled={unassignedStages.length === 0}>
-                    Selecionar Todas
+        <div className="flex-1 overflow-hidden flex flex-col gap-4">
+          {/* Group Management Section */}
+          <div className="p-3 border rounded-md space-y-3 shrink-0">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Layers className="w-4 h-4" />
+                Grupos ({groups.length})
+              </Label>
+              <div className="flex gap-2">
+                {GROUP_TEMPLATES.map((template, i) => (
+                  <Button
+                    key={template.name}
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => applyTemplate(i)}
+                    className="text-xs"
+                  >
+                    {template.name}
                   </Button>
-                  {selectedStageIds.length > 0 && (
-                    <Button size="sm" variant="ghost" onClick={clearSelection}>
-                      Limpar
-                    </Button>
-                  )}
-                </div>
+                ))}
               </div>
-              
-              <ScrollArea className="h-[200px] border rounded-md p-2">
-                {unassignedStages.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Todas as etapas estão em grupos!
-                  </p>
-                ) : (
-                  <div className="space-y-1">
-                    {unassignedStages.map(stage => (
-                      <div 
-                        key={stage.id}
-                        className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-accent transition-colors ${
-                          selectedStageIds.includes(stage.id) ? "bg-primary/10 border border-primary" : ""
-                        }`}
-                        onClick={() => toggleStageSelection(stage.id)}
-                      >
-                        <Checkbox 
-                          checked={selectedStageIds.includes(stage.id)}
-                          onCheckedChange={() => toggleStageSelection(stage.id)}
-                        />
-                        <GripVertical className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm">{stage.nome}</span>
-                        <Badge variant="outline" className="text-xs ml-auto">
-                          #{stage.ordem}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-
-              {/* Quick Action */}
-              {selectedStageIds.length > 0 && groups.length > 0 && (
-                <div className="p-3 bg-muted rounded-md space-y-2">
-                  <p className="text-sm font-medium">
-                    ⚡ Mover {selectedStageIds.length} etapa(s) para:
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {groups.map(group => (
-                      <Button
-                        key={group.nome}
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleMoveToGroup(group.nome)}
-                        className="gap-1"
-                      >
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: group.cor }}
-                        />
-                        {group.nome}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Create New Group */}
-              <div className="p-3 border rounded-md space-y-2">
-                <Label className="text-sm font-medium">+ Novo Grupo</Label>
-                <div className="flex gap-2">
-                  <Input 
-                    placeholder="Nome do grupo..."
-                    value={newGroupName}
-                    onChange={(e) => setNewGroupName(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
-                    className="flex-1"
-                  />
+            </div>
+            
+            {/* Existing Groups */}
+            <div className="flex flex-wrap gap-2">
+              {groups.map(group => (
+                <div 
+                  key={group.nome}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md border"
+                  style={{ borderColor: group.cor, backgroundColor: `${group.cor}15` }}
+                >
                   <div className="relative">
                     <button
-                      onClick={() => setShowColorPicker(showColorPicker === "new" ? null : "new")}
-                      className="w-10 h-10 rounded-md border flex items-center justify-center"
-                      style={{ backgroundColor: newGroupColor }}
+                      className="w-4 h-4 rounded-full border"
+                      style={{ backgroundColor: group.cor }}
+                      onClick={() => setShowColorPicker(showColorPicker === group.nome ? null : group.nome)}
                     />
-                    {showColorPicker === "new" && (
-                      <div className="absolute z-50 top-full mt-1 right-0 p-2 bg-popover border rounded-md shadow-lg grid grid-cols-4 gap-1">
+                    {showColorPicker === group.nome && (
+                      <div className="absolute z-50 top-full mt-1 left-0 p-2 bg-popover border rounded-md shadow-lg grid grid-cols-4 gap-1">
                         {PRESET_COLORS.map(color => (
                           <button
                             key={color.value}
                             className="w-6 h-6 rounded-full border-2 border-transparent hover:border-foreground"
                             style={{ backgroundColor: color.value }}
-                            onClick={() => {
-                              setNewGroupColor(color.value);
-                              setShowColorPicker(null);
-                            }}
+                            onClick={() => changeGroupColor(group.nome, color.value)}
                             title={color.name}
                           />
                         ))}
                       </div>
                     )}
                   </div>
-                  <Button size="icon" onClick={handleCreateGroup}>
-                    <Plus className="w-4 h-4" />
-                  </Button>
+                  
+                  {editingGroup === group.nome ? (
+                    <div className="flex items-center gap-1">
+                      <Input
+                        value={editingGroupName}
+                        onChange={(e) => setEditingGroupName(e.target.value)}
+                        className="h-6 w-24 text-xs"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveGroupEdit(group.nome);
+                          if (e.key === "Escape") setEditingGroup(null);
+                        }}
+                      />
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-5 w-5"
+                        onClick={() => saveGroupEdit(group.nome)}
+                      >
+                        <Check className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-5 w-5"
+                        onClick={() => setEditingGroup(null)}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="text-sm font-medium">{group.nome}</span>
+                      <Badge variant="secondary" className="text-xs ml-1">
+                        {groupCounts[group.nome] || 0}
+                      </Badge>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-5 w-5"
+                        onClick={() => startEditingGroup(group.nome)}
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-5 w-5 text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteGroup(group.nome)}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </>
+                  )}
                 </div>
-              </div>
-
-              {/* Templates */}
-              <div className="p-3 border rounded-md space-y-2">
-                <Label className="text-sm font-medium flex items-center gap-2">
-                  📋 Aplicar Template
-                </Label>
-                <div className="flex flex-wrap gap-2">
-                  {GROUP_TEMPLATES.map((template, i) => (
-                    <Button
-                      key={template.name}
-                      size="sm"
-                      variant="outline"
-                      onClick={() => applyTemplate(i)}
-                    >
-                      {template.name}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Defined Groups */}
-            <div className="space-y-3">
-              <h3 className="font-medium text-sm flex items-center gap-2">
-                <Palette className="w-4 h-4" />
-                Grupos Definidos ({groups.length})
-              </h3>
+              ))}
               
-              <ScrollArea className="h-[400px] border rounded-md p-2">
-                {groups.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-sm text-muted-foreground">
-                      Nenhum grupo definido ainda.
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Crie um grupo ou aplique um template.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {groups.map(group => (
-                      <div 
-                        key={group.nome}
-                        className="border rounded-md overflow-hidden"
-                      >
-                        {/* Group Header */}
-                        <div 
-                          className="flex items-center gap-2 p-2 text-white"
-                          style={{ backgroundColor: group.cor }}
-                        >
-                          <div className="relative">
-                            <button
-                              className="w-6 h-6 rounded border-2 border-white/50 hover:border-white"
-                              style={{ backgroundColor: group.cor }}
-                              onClick={() => setShowColorPicker(showColorPicker === group.nome ? null : group.nome)}
-                            />
-                            {showColorPicker === group.nome && (
-                              <div className="absolute z-50 top-full mt-1 left-0 p-2 bg-popover border rounded-md shadow-lg grid grid-cols-4 gap-1">
-                                {PRESET_COLORS.map(color => (
-                                  <button
-                                    key={color.value}
-                                    className="w-6 h-6 rounded-full border-2 border-transparent hover:border-foreground"
-                                    style={{ backgroundColor: color.value }}
-                                    onClick={() => changeGroupColor(group.nome, color.value)}
-                                    title={color.name}
-                                  />
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          
-                          {editingGroup === group.nome ? (
-                            <div className="flex items-center gap-1 flex-1">
-                              <Input
-                                value={editingGroupName}
-                                onChange={(e) => setEditingGroupName(e.target.value)}
-                                className="h-6 text-sm bg-white/20 border-white/30 text-white placeholder:text-white/50"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") saveGroupEdit(group.nome);
-                                  if (e.key === "Escape") setEditingGroup(null);
-                                }}
-                              />
-                              <Button 
-                                size="icon" 
-                                variant="ghost" 
-                                className="h-6 w-6 text-white hover:bg-white/20"
-                                onClick={() => saveGroupEdit(group.nome)}
-                              >
-                                <Check className="w-3 h-3" />
-                              </Button>
-                              <Button 
-                                size="icon" 
-                                variant="ghost" 
-                                className="h-6 w-6 text-white hover:bg-white/20"
-                                onClick={() => setEditingGroup(null)}
-                              >
-                                <X className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <>
-                              <span className="font-medium flex-1">{group.nome}</span>
-                              <Badge variant="secondary" className="text-xs">
-                                {group.stageIds.length}
-                              </Badge>
-                              <Button 
-                                size="icon" 
-                                variant="ghost" 
-                                className="h-6 w-6 text-white hover:bg-white/20"
-                                onClick={() => startEditingGroup(group.nome)}
-                              >
-                                <Edit2 className="w-3 h-3" />
-                              </Button>
-                              <Button 
-                                size="icon" 
-                                variant="ghost" 
-                                className="h-6 w-6 text-white hover:bg-white/20"
-                                onClick={() => handleDeleteGroup(group.nome)}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                        
-                        {/* Group Stages */}
-                        <div className="p-2 space-y-1 min-h-[40px]">
-                          {group.stageIds.length === 0 ? (
-                            <p className="text-xs text-muted-foreground text-center py-2">
-                              Arraste etapas aqui ou selecione e clique no grupo
-                            </p>
-                          ) : (
-                            group.stageIds
-                              .map(id => stages.find(s => s.id === id))
-                              .filter(Boolean)
-                              .sort((a, b) => (a?.ordem || 0) - (b?.ordem || 0))
-                              .map(stage => stage && (
-                                <div 
-                                  key={stage.id}
-                                  className="flex items-center gap-2 p-1.5 bg-muted/50 rounded text-sm group"
-                                >
-                                  <span className="flex-1">{stage.nome}</span>
-                                  <Badge variant="outline" className="text-xs">
-                                    #{stage.ordem}
-                                  </Badge>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => handleRemoveFromGroup(group.nome, stage.id)}
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              ))
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-
-              {/* Preview */}
-              {groups.length > 0 && (
-                <div className="p-3 bg-muted rounded-md space-y-2">
-                  <p className="text-sm font-medium flex items-center gap-2">
-                    <ChevronDown className="w-4 h-4" />
-                    Preview do Kanban
-                  </p>
-                  <div className="flex gap-1 overflow-x-auto pb-2">
-                    {groups.map(group => (
-                      <div 
-                        key={group.nome}
-                        className="flex items-center gap-1 px-2 py-1 rounded text-white text-xs whitespace-nowrap"
-                        style={{ backgroundColor: group.cor }}
-                      >
-                        {group.nome} ({group.stageIds.length})
-                      </div>
-                    ))}
-                  </div>
+              {/* New Group Input */}
+              <div className="flex items-center gap-1">
+                <div className="relative">
+                  <button
+                    onClick={() => setShowColorPicker(showColorPicker === "new" ? null : "new")}
+                    className="w-6 h-6 rounded-full border"
+                    style={{ backgroundColor: newGroupColor }}
+                  />
+                  {showColorPicker === "new" && (
+                    <div className="absolute z-50 top-full mt-1 left-0 p-2 bg-popover border rounded-md shadow-lg grid grid-cols-4 gap-1">
+                      {PRESET_COLORS.map(color => (
+                        <button
+                          key={color.value}
+                          className="w-6 h-6 rounded-full border-2 border-transparent hover:border-foreground"
+                          style={{ backgroundColor: color.value }}
+                          onClick={() => {
+                            setNewGroupColor(color.value);
+                            setShowColorPicker(null);
+                          }}
+                          title={color.name}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
+                <Input 
+                  placeholder="Novo grupo..."
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
+                  className="h-7 w-32 text-sm"
+                />
+                <Button size="icon" variant="outline" className="h-7 w-7" onClick={handleCreateGroup}>
+                  <Plus className="w-3 h-3" />
+                </Button>
+              </div>
             </div>
           </div>
+
+          {/* Stage List */}
+          <div className="flex-1 min-h-0">
+            <Label className="text-sm font-medium mb-2 block">
+              Etapas do Pipeline ({sortedStages.length})
+            </Label>
+            <ScrollArea className="h-[300px] border rounded-md">
+              <div className="divide-y">
+                {sortedStages.map(stage => {
+                  const currentGroup = stageAssignments[stage.id];
+                  const groupColor = currentGroup ? getGroupColor(currentGroup) : null;
+                  
+                  return (
+                    <div 
+                      key={stage.id}
+                      className="flex items-center gap-3 p-3 hover:bg-muted/50"
+                      style={groupColor ? { borderLeftWidth: 3, borderLeftColor: groupColor } : undefined}
+                    >
+                      <Badge variant="outline" className="text-xs shrink-0 w-8 justify-center">
+                        {stage.ordem}
+                      </Badge>
+                      
+                      <span className="flex-1 text-sm font-medium truncate">
+                        {stage.nome}
+                      </span>
+                      
+                      <Select
+                        value={currentGroup || "__none__"}
+                        onValueChange={(value) => assignStageToGroup(stage.id, value === "__none__" ? null : value)}
+                      >
+                        <SelectTrigger className="w-40 h-8">
+                          <SelectValue placeholder="Sem grupo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">
+                            <span className="text-muted-foreground">Sem grupo</span>
+                          </SelectItem>
+                          {groups.map(group => (
+                            <SelectItem key={group.nome} value={group.nome}>
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full" 
+                                  style={{ backgroundColor: group.cor }}
+                                />
+                                {group.nome}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      {currentGroup && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 shrink-0"
+                          onClick={() => assignStageToGroup(stage.id, null)}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </div>
+
+          {/* Preview */}
+          {groups.length > 0 && (
+            <div className="p-3 bg-muted rounded-md space-y-2 shrink-0">
+              <p className="text-sm font-medium">Preview do Kanban</p>
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {groups.map(group => (
+                  <div 
+                    key={group.nome}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded text-white text-xs whitespace-nowrap"
+                    style={{ backgroundColor: group.cor }}
+                  >
+                    {group.nome} ({groupCounts[group.nome] || 0})
+                  </div>
+                ))}
+                {Object.values(stageAssignments).some(g => g === null) && (
+                  <div className="flex items-center gap-1 px-3 py-1.5 rounded bg-muted-foreground/20 text-muted-foreground text-xs whitespace-nowrap">
+                    Sem grupo ({Object.values(stageAssignments).filter(g => g === null).length})
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
-        <DialogFooter className="mt-4">
+        <DialogFooter className="mt-4 shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>

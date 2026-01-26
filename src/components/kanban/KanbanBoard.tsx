@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { KanbanColumn } from './KanbanColumn';
-import { KanbanStageGroup } from './KanbanStageGroup';
+import { KanbanStageGroupHeader, KanbanCollapsedGroup, KanbanGroupColorBar } from './KanbanStageGroup';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { useSupabaseChecklistItems } from '@/hooks/useSupabaseChecklistItems';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
@@ -11,6 +11,50 @@ import { logger } from '@/utils/logger';
 import { useToast } from '@/hooks/use-toast';
 
 export type SortOption = 'chronological' | 'alphabetical' | 'delay' | 'score';
+
+const COLLAPSED_STORAGE_KEY_PREFIX = 'kanban-collapsed-groups-';
+
+// Helper to get/set collapsed groups from localStorage
+const getCollapsedGroups = (pipelineId: string): string[] => {
+  try {
+    const saved = localStorage.getItem(`${COLLAPSED_STORAGE_KEY_PREFIX}${pipelineId}`);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+};
+
+const setCollapsedGroups = (pipelineId: string, groups: string[]) => {
+  try {
+    localStorage.setItem(`${COLLAPSED_STORAGE_KEY_PREFIX}${pipelineId}`, JSON.stringify(groups));
+  } catch {
+    // Ignore localStorage errors
+  }
+};
+
+// Helper to detect fragmented groups (non-consecutive stages)
+const detectFragmentation = (stageOrders: number[]): { isFragmented: boolean; ranges: string } => {
+  if (stageOrders.length <= 1) return { isFragmented: false, ranges: '' };
+  
+  const sorted = [...stageOrders].sort((a, b) => a - b);
+  const ranges: string[] = [];
+  let rangeStart = sorted[0];
+  let rangeEnd = sorted[0];
+  
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] === rangeEnd + 1) {
+      rangeEnd = sorted[i];
+    } else {
+      ranges.push(rangeStart === rangeEnd ? `${rangeStart}` : `${rangeStart}-${rangeEnd}`);
+      rangeStart = sorted[i];
+      rangeEnd = sorted[i];
+    }
+  }
+  ranges.push(rangeStart === rangeEnd ? `${rangeStart}` : `${rangeStart}-${rangeEnd}`);
+  
+  const isFragmented = ranges.length > 1;
+  return { isFragmented, ranges: ranges.join(', ') };
+};
 
 interface KanbanBoardProps {
   selectedPipelineId: string;
@@ -39,14 +83,15 @@ interface KanbanBoardProps {
   onRegressStage?: (entryId: string) => void;
   onTransferPipeline?: (leadId: string) => void;
   onUnsubscribeFromPipeline?: (entryId: string, leadId: string) => void;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  loadingMore?: boolean;
 }
 
 /**
- * KanbanBoard simplificado com HTML5 Drag-and-Drop nativo:
- * - Sem @dnd-kit, sem Zustand
- * - HTML5 nativo para drag-and-drop
- * - Delega movimentação para useLeadMovement
- * - Sincronização via Supabase Realtime
+ * KanbanBoard com suporte a grupos não-consecutivos:
+ * - Expandido: colunas na ordem natural do pipeline
+ * - Colapsado: todas as etapas do grupo se agregam em um único card
  */
 export function KanbanBoard({
   selectedPipelineId,
@@ -73,13 +118,28 @@ export function KanbanBoard({
   hasMore,
   onLoadMore,
   loadingMore
-}: KanbanBoardProps & { hasMore?: boolean; onLoadMore?: () => void; loadingMore?: boolean }) {
+}: KanbanBoardProps) {
   const [draggingEntryId, setDraggingEntryId] = useState<string | null>(null);
   const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null);
+  const [collapsedGroups, setCollapsedGroupsState] = useState<string[]>(() => 
+    getCollapsedGroups(selectedPipelineId)
+  );
+  
   const { moveLead, isMoving } = useLeadMovement();
   const { checklistItems } = useSupabaseChecklistItems();
   const { batchUpdateStages } = useSupabasePipelineStages(selectedPipelineId);
   const { toast } = useToast();
+
+  // Toggle group collapse
+  const toggleGroupCollapse = useCallback((groupName: string) => {
+    setCollapsedGroupsState(prev => {
+      const newState = prev.includes(groupName)
+        ? prev.filter(g => g !== groupName)
+        : [...prev, groupName];
+      setCollapsedGroups(selectedPipelineId, newState);
+      return newState;
+    });
+  }, [selectedPipelineId]);
 
   const handleDropLead = useCallback(async (entryId: string, toStageId: string) => {
     logger.debug('handleDropLead', {
@@ -115,12 +175,10 @@ export function KanbanBoard({
       return;
     }
 
-    // Buscar checklist items da etapa de origem
     const stageChecklistItems = checklistItems.filter(
       item => item.etapa_id === fromStageEntry.stage.id
     );
 
-    // Executar movimentação
     await moveLead({
       entry,
       fromStage: fromStageEntry.stage,
@@ -136,7 +194,6 @@ export function KanbanBoard({
     });
   }, [stageEntries, checklistItems, moveLead, isMoving, onRefresh]);
 
-  // Handler para reordenar colunas via drag-and-drop
   const handleColumnDrop = useCallback(async (fromStageId: string, toStageId: string) => {
     const stages = stageEntries.map(s => s.stage);
     const fromStage = stages.find(s => s.id === fromStageId);
@@ -144,18 +201,15 @@ export function KanbanBoard({
 
     if (!fromStage || !toStage) return;
 
-    // Calcular nova ordem
     const sortedStages = [...stages].sort((a, b) => a.ordem - b.ordem);
     const fromIndex = sortedStages.findIndex(s => s.id === fromStageId);
     const toIndex = sortedStages.findIndex(s => s.id === toStageId);
 
     if (fromIndex === toIndex) return;
 
-    // Reordenar array
     const [moved] = sortedStages.splice(fromIndex, 1);
     sortedStages.splice(toIndex, 0, moved);
 
-    // Criar updates com novas ordens
     const updates = sortedStages.map((stage, index) => ({
       id: stage.id,
       ordem: index + 1
@@ -178,20 +232,85 @@ export function KanbanBoard({
     }
   }, [stageEntries, batchUpdateStages, toast, onRefresh]);
 
-  // Agrupar etapas por grupo (NULL = sem grupo = renderização individual)
-  const groupedStages = useMemo(() => {
-    const groups = new Map<string | null, typeof stageEntries>();
+  // Build render data based on collapse state
+  const renderData = useMemo(() => {
+    // Get all unique group names and their info
+    const groupInfo = new Map<string, {
+      color: string | null;
+      stageOrders: number[];
+      entries: typeof stageEntries;
+      stageNames: string[];
+    }>();
     
     stageEntries.forEach(entry => {
-      const groupName = entry.stage.grupo || null;
-      if (!groups.has(groupName)) {
-        groups.set(groupName, []);
+      const groupName = entry.stage.grupo;
+      if (groupName) {
+        const existing = groupInfo.get(groupName);
+        if (existing) {
+          existing.stageOrders.push(entry.stage.ordem);
+          existing.entries.push(entry);
+          existing.stageNames.push(entry.stage.nome);
+        } else {
+          groupInfo.set(groupName, {
+            color: entry.stage.cor_grupo || null,
+            stageOrders: [entry.stage.ordem],
+            entries: [entry],
+            stageNames: [entry.stage.nome]
+          });
+        }
       }
-      groups.get(groupName)!.push(entry);
+    });
+
+    // Build render items
+    type RenderItem = 
+      | { type: 'column'; entry: typeof stageEntries[0]; groupName?: string; showGroupHeader?: boolean; showColorBar?: boolean }
+      | { type: 'collapsed-group'; groupName: string; color: string | null; totalLeads: number; stageCount: number; stageNames: string[] };
+    
+    const items: RenderItem[] = [];
+    const processedGroups = new Set<string>();
+    let currentExpandedGroup: string | null = null;
+    
+    stageEntries.forEach((entry, index) => {
+      const groupName = entry.stage.grupo;
+      
+      if (!groupName) {
+        // Stage without group - render normally
+        currentExpandedGroup = null;
+        items.push({ type: 'column', entry });
+      } else if (collapsedGroups.includes(groupName)) {
+        // Group is collapsed - add collapsed card only once (at first occurrence)
+        if (!processedGroups.has(groupName)) {
+          currentExpandedGroup = null;
+          const info = groupInfo.get(groupName)!;
+          const totalLeads = info.entries.reduce((sum, e) => sum + e.entries.length, 0);
+          items.push({
+            type: 'collapsed-group',
+            groupName,
+            color: info.color,
+            totalLeads,
+            stageCount: info.entries.length,
+            stageNames: info.stageNames
+          });
+          processedGroups.add(groupName);
+        }
+        // Skip individual columns for collapsed groups
+      } else {
+        // Group is expanded - render with header
+        const isFirstInGroup = currentExpandedGroup !== groupName;
+        currentExpandedGroup = groupName;
+        
+        items.push({ 
+          type: 'column', 
+          entry, 
+          groupName,
+          showGroupHeader: isFirstInGroup,
+          showColorBar: isFirstInGroup
+        });
+      }
     });
     
-    return Array.from(groups.entries());
-  }, [stageEntries]);
+    return { items, groupInfo };
+  }, [stageEntries, collapsedGroups]);
 
   // Props comuns para KanbanColumn
   const getColumnProps = (stageEntry: typeof stageEntries[0]) => ({
@@ -232,37 +351,50 @@ export function KanbanBoard({
 
   return (
     <div className="flex gap-2 md:gap-3 lg:gap-4 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
-      {groupedStages.map(([groupName, stages]) => {
-        // Etapas SEM grupo = renderização individual (comportamento atual)
-        if (!groupName) {
-          return stages.map(stageEntry => (
-            <KanbanColumn
-              key={stageEntry.stage.id}
-              {...getColumnProps(stageEntry)}
+      {renderData.items.map((item, index) => {
+        if (item.type === 'collapsed-group') {
+          return (
+            <KanbanCollapsedGroup
+              key={`collapsed-${item.groupName}`}
+              groupName={item.groupName}
+              groupColor={item.color}
+              totalLeads={item.totalLeads}
+              stageCount={item.stageCount}
+              stageNames={item.stageNames}
+              onToggleCollapse={() => toggleGroupCollapse(item.groupName)}
             />
-          ));
+          );
         }
         
-        // Etapas COM grupo = wrapper com fold
-        const totalLeads = stages.reduce((sum, s) => sum + s.entries.length, 0);
-        const groupColor = stages[0]?.stage.cor_grupo;
+        // Expanded column
+        const { entry, groupName, showGroupHeader, showColorBar } = item;
+        const groupInfoData = groupName ? renderData.groupInfo.get(groupName) : null;
+        const fragmentation = groupInfoData 
+          ? detectFragmentation(groupInfoData.stageOrders)
+          : { isFragmented: false, ranges: '' };
         
         return (
-          <KanbanStageGroup 
-            key={groupName}
-            groupName={groupName}
-            groupColor={groupColor}
-            totalLeads={totalLeads}
-            stageCount={stages.length}
-            pipelineId={selectedPipelineId}
-          >
-            {stages.map(stageEntry => (
-              <KanbanColumn
-                key={stageEntry.stage.id}
-                {...getColumnProps(stageEntry)}
-              />
-            ))}
-          </KanbanStageGroup>
+          <div key={entry.stage.id} className="flex flex-col">
+            {showGroupHeader && groupName && groupInfoData && (
+              <>
+                <KanbanStageGroupHeader
+                  groupName={groupName}
+                  groupColor={groupInfoData.color}
+                  totalLeads={groupInfoData.entries.reduce((sum, e) => sum + e.entries.length, 0)}
+                  stageCount={groupInfoData.entries.length}
+                  pipelineId={selectedPipelineId}
+                  isFragmented={fragmentation.isFragmented}
+                  fragmentRanges={fragmentation.ranges}
+                  onToggleCollapse={() => toggleGroupCollapse(groupName)}
+                  isCollapsed={false}
+                />
+                {showColorBar && (
+                  <KanbanGroupColorBar color={groupInfoData.color || '#10b981'} />
+                )}
+              </>
+            )}
+            <KanbanColumn {...getColumnProps(entry)} />
+          </div>
         );
       })}
     </div>
