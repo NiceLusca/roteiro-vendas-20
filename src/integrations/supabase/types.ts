@@ -990,11 +990,13 @@ export type Database = {
         Row: {
           ativo: boolean | null
           closer_padrao: string | null
+          cor_grupo: string | null
           created_at: string | null
           criterios_avanco: Json | null
           duracao_minutos: number | null
           entrada_criteria: Json | null
           gerar_agendamento_auto: boolean | null
+          grupo: string | null
           horarios_preferenciais: Json | null
           id: string
           nome: string
@@ -1015,11 +1017,13 @@ export type Database = {
         Insert: {
           ativo?: boolean | null
           closer_padrao?: string | null
+          cor_grupo?: string | null
           created_at?: string | null
           criterios_avanco?: Json | null
           duracao_minutos?: number | null
           entrada_criteria?: Json | null
           gerar_agendamento_auto?: boolean | null
+          grupo?: string | null
           horarios_preferenciais?: Json | null
           id?: string
           nome: string
@@ -1040,11 +1044,13 @@ export type Database = {
         Update: {
           ativo?: boolean | null
           closer_padrao?: string | null
+          cor_grupo?: string | null
           created_at?: string | null
           criterios_avanco?: Json | null
           duracao_minutos?: number | null
           entrada_criteria?: Json | null
           gerar_agendamento_auto?: boolean | null
+          grupo?: string | null
           horarios_preferenciais?: Json | null
           id?: string
           nome?: string

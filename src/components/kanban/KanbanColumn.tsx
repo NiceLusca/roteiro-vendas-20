@@ -259,8 +259,15 @@ export const KanbanColumn = memo(function KanbanColumn({
         onDragLeave={handleColumnDragLeave}
         onDrop={handleColumnDrop}
       >
-        {/* Linha sutil separadora */}
-        <div className="h-1 rounded-full bg-gradient-to-r from-emerald-500/80 to-emerald-400/60 mb-2" />
+        {/* Linha sutil separadora com cor dinâmica */}
+        <div 
+          className="h-1 rounded-full mb-2" 
+          style={{ 
+            background: stage.cor_grupo 
+              ? `linear-gradient(to right, ${stage.cor_grupo}cc, ${stage.cor_grupo}99)` 
+              : 'linear-gradient(to right, #10b981cc, #10b98199)' 
+          }} 
+        />
         
         {/* Título e contador */}
         <div className="flex items-start justify-between px-1 py-1">

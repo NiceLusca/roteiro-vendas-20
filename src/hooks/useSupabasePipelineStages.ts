@@ -18,6 +18,8 @@ interface PipelineStage {
   saida_criteria?: string;
   duracao_minutos?: number;
   proxima_etapa_id?: string | null;
+  grupo?: string | null;
+  cor_grupo?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -58,6 +60,8 @@ export function useSupabasePipelineStages(pipelineId?: string) {
           closer_padrao,
           ativo,
           proxima_etapa_id,
+          grupo,
+          cor_grupo,
           created_at,
           updated_at
         `);
