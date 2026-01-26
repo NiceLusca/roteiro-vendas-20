@@ -39,19 +39,22 @@ export function useLeadActivityLog(leadId?: string, pipelineEntryId?: string) {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
-  // Buscar atividades de um lead (opcionalmente filtrado por pipeline)
-  const fetchActivities = useCallback(async (id: string, _entryId?: string) => {
+  // Buscar atividades de um lead filtrado por pipeline
+  const fetchActivities = useCallback(async (id: string, entryId?: string) => {
     if (!id) return;
     
     setLoading(true);
     try {
-      // Busca TODOS os logs do lead, sem filtro por pipeline entry
-      // para garantir visibilidade completa do histórico
-      const query = supabase
+      let query = supabase
         .from('lead_activity_log')
         .select('*')
         .eq('lead_id', id)
         .order('created_at', { ascending: false });
+
+      // Filtrar apenas atividades do pipeline específico
+      if (entryId) {
+        query = query.eq('pipeline_entry_id', entryId);
+      }
 
       const { data, error } = await query;
 

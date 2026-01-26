@@ -207,13 +207,16 @@ export function LeadActivityTimeline({ leadId, pipelineEntryId, maxHeight = '500
             </p>
           </div>
         ) : (
-          <ScrollArea style={{ maxHeight }}>
-            <div className="space-y-2 pr-4">
+          <div 
+            className="overflow-y-auto pr-2" 
+            style={{ maxHeight }}
+          >
+            <div className="space-y-2">
               {activities.map(activity => (
                 <ActivityItem key={activity.id} activity={activity} />
               ))}
             </div>
-          </ScrollArea>
+          </div>
         )}
       </CardContent>
     </Card>
