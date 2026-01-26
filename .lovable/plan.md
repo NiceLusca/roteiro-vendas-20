@@ -1,222 +1,138 @@
 
-# Plano: Melhorar UX do Dialog de Configuração de Grupos
+# Plano: Corrigir Visualização de Grupos Expandidos no Kanban
 
-## Problemas Identificados
+## Problema Identificado
 
-### 1. Dropdown com nomes cortados
-O `SelectTrigger` tem largura fixa de `w-40` (160px), insuficiente para nomes longos como "Captação e Formalização do Contrato". O dropdown mostra texto truncado e confuso.
+Na imagem fornecida, o grupo "Captação e Formalização do Con..." mostra o header com "(5 etapas)", mas apenas a primeira etapa "Entrada" aparece diretamente abaixo dele. As outras 4 etapas (PRIMEIRA CALL, Grupo Criado + BOAS VINDAS!, etc.) aparecem como colunas soltas sem conexão visual com o grupo.
 
-### 2. Falta filtro para etapas sem grupo
-Com 30 etapas, o usuário precisa rolar toda a lista para encontrar quais ainda não têm grupo.
+**Causa raiz**: No `KanbanBoard.tsx`, cada coluna de um grupo expandido é renderizada em uma `<div>` separada. O header do grupo só aparece na primeira coluna (`showGroupHeader: isFirstInGroup`), deixando as outras colunas visualmente desconectadas.
 
----
+```text
+ATUAL (problema):
+┌─────────────────────┐
+│ ▼ Captação (5 et.)  │   
+│ ───────────         │   ┌───────────┐  ┌───────────┐  ┌───────────┐
+│ Entrada             │   │PRIMEIRA   │  │Grupo Cria.│  │Aguard.    │
+│   0                 │   │CALL    0  │  │+ BOAS   0 │  │Assinat. 1 │
+└─────────────────────┘   └───────────┘  └───────────┘  └───────────┘
+                           ↑ SEM HEADER DE GRUPO!
+```
 
 ## Solução Proposta
 
-### Mudança 1: Filtro de Visualização
-
-Adicionar toggle/tabs no topo da lista de etapas:
+Agrupar todas as colunas de um grupo expandido dentro de um container visual único, mantendo o header do grupo acima de todas as colunas do grupo.
 
 ```text
-┌──────────────────────────────────────────────────────┐
-│  Etapas do Pipeline                                  │
-│  ┌─────────────┬────────────────┬──────────────────┐ │
-│  │ ◉ Todas (30)│ ○ Sem grupo (8)│ ○ Com grupo (22) │ │
-│  └─────────────┴────────────────┴──────────────────┘ │
-│  ┌────────────────────────────────────────────────┐  │
-│  │ 8  BOAS VINDAS...    [Sem grupo ▼]    [✕]     │  │
-│  │ 9  AGUARDANDO...     [Sem grupo ▼]    [✕]     │  │
-│  └────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────┘
-```
-
-### Mudança 2: Redesenhar Seletor de Grupo
-
-Substituir o Select com dropdown problemático por uma interface com **botões de grupo** ou **Popover** mais amigável:
-
-**Opção A: Chips de grupo clicáveis**
-```text
-│ 8  │ BOAS VINDAS...  │ ● Grupo A  ● Grupo B  ○ Grupo C  [✕] │
-```
-
-**Opção B: Popover com grade de grupos** (mais escalável)
-```text
-│ 8  │ BOAS VINDAS...  │ [🔵 Captação... ▼]                   │
-                           ┌────────────────────────────┐
-                           │ 🔵 Captação e Form...      │
-                           │ 🟣 Definição da Prom...    │
-                           │ 🟢 Ativação da Página...   │
-                           │ ─────────────────────────  │
-                           │ ⭕ Sem grupo               │
-                           └────────────────────────────┘
-```
-
-**Escolha: Popover com largura maior e scroll interno**
-
-### Mudança 3: Melhorar largura do dropdown
-
-Se mantiver o Select, aumentar `w-40` para `w-56` ou `w-64` e adicionar `max-w-[240px] truncate` no conteúdo interno.
-
----
-
-## Implementação Técnica
-
-### Arquivo: `src/components/settings/StageGroupConfigDialog.tsx`
-
-#### 1. Adicionar estado de filtro
-```typescript
-const [stageFilter, setStageFilter] = useState<'all' | 'ungrouped' | 'grouped'>('all');
-```
-
-#### 2. Calcular contagens
-```typescript
-const ungroupedCount = useMemo(() => 
-  Object.values(stageAssignments).filter(g => g === null).length
-, [stageAssignments]);
-
-const groupedCount = useMemo(() => 
-  Object.values(stageAssignments).filter(g => g !== null).length
-, [stageAssignments]);
-```
-
-#### 3. Filtrar etapas exibidas
-```typescript
-const filteredStages = useMemo(() => {
-  switch (stageFilter) {
-    case 'ungrouped':
-      return sortedStages.filter(s => !stageAssignments[s.id]);
-    case 'grouped':
-      return sortedStages.filter(s => !!stageAssignments[s.id]);
-    default:
-      return sortedStages;
-  }
-}, [sortedStages, stageAssignments, stageFilter]);
-```
-
-#### 4. Redesenhar UI do seletor de grupo
-
-Substituir `Select` por `Popover` com lista scrollável:
-
-```typescript
-<Popover>
-  <PopoverTrigger asChild>
-    <Button variant="outline" className="w-56 h-8 justify-start text-left">
-      {currentGroup ? (
-        <div className="flex items-center gap-2 truncate">
-          <div 
-            className="w-3 h-3 rounded-full shrink-0" 
-            style={{ backgroundColor: getGroupColor(currentGroup) }}
-          />
-          <span className="truncate">{currentGroup}</span>
-        </div>
-      ) : (
-        <span className="text-muted-foreground">Sem grupo</span>
-      )}
-    </Button>
-  </PopoverTrigger>
-  <PopoverContent className="w-64 p-2" align="start">
-    <div className="space-y-1 max-h-48 overflow-y-auto">
-      <button 
-        onClick={() => assignStageToGroup(stage.id, null)}
-        className="w-full text-left px-2 py-1.5 rounded hover:bg-muted"
-      >
-        <span className="text-muted-foreground">Sem grupo</span>
-      </button>
-      {groups.map(group => (
-        <button 
-          key={group.nome}
-          onClick={() => assignStageToGroup(stage.id, group.nome)}
-          className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted"
-        >
-          <div 
-            className="w-3 h-3 rounded-full shrink-0" 
-            style={{ backgroundColor: group.cor }}
-          />
-          <span className="truncate">{group.nome}</span>
-        </button>
-      ))}
-    </div>
-  </PopoverContent>
-</Popover>
-```
-
-#### 5. Adicionar tabs de filtro no header da lista
-
-```typescript
-<div className="flex items-center justify-between mb-2">
-  <Label className="text-sm font-medium">
-    Etapas do Pipeline ({sortedStages.length})
-  </Label>
-  <div className="flex gap-1">
-    <Button 
-      size="sm" 
-      variant={stageFilter === 'all' ? 'default' : 'ghost'}
-      onClick={() => setStageFilter('all')}
-      className="h-7 text-xs"
-    >
-      Todas ({sortedStages.length})
-    </Button>
-    <Button 
-      size="sm" 
-      variant={stageFilter === 'ungrouped' ? 'default' : 'ghost'}
-      onClick={() => setStageFilter('ungrouped')}
-      className="h-7 text-xs"
-    >
-      Sem grupo ({ungroupedCount})
-    </Button>
-    <Button 
-      size="sm" 
-      variant={stageFilter === 'grouped' ? 'default' : 'ghost'}
-      onClick={() => setStageFilter('grouped')}
-      className="h-7 text-xs"
-    >
-      Com grupo ({groupedCount})
-    </Button>
-  </div>
-</div>
-```
-
----
-
-## Resultado Final
-
-```text
+CORRIGIDO:
 ┌────────────────────────────────────────────────────────────────────────────┐
-│  🎨 Configurar Grupos - Pipeline Comercial                              [X] │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                            │
-│  ⚙️ Grupos (3)                    [Comercial] [Prospecção] [Onboarding]    │
-│  ┌──────────────────────────────────────────────────────────────────────┐ │
-│  │ 🟢 Captação e Form... (5)  🟣 Definição... (8)  🟠 Ativação... (8)   │ │
-│  │ [●cor] [Novo grupo...______] [+]                                     │ │
-│  └──────────────────────────────────────────────────────────────────────┘ │
-│                                                                            │
-│  Etapas                          [Todas (30)] [Sem grupo (9)] [Com (21)]   │
-│  ┌──────────────────────────────────────────────────────────────────────┐ │
-│  │  8 │ BOAS VINDAS DA PAGINA...   │ [🟣 Definição da Prom... ▼]    [✕] │ │
-│  │  9 │ AGUARDANDO ACESSO...       │ [🟣 Definição da Prom... ▼]    [✕] │ │
-│  │ 10 │ IGOR AVALIA O PRODUTO      │ [🟣 Definição da Prom... ▼]    [✕] │ │
-│  │ 11 │ Igor Aprovou Produto       │ [🟣 Definição da Prom... ▼]    [✕] │ │
-│  │ 12 │ IGOR URGENTE               │ [Sem grupo ▼]                  [✕] │ │
-│  └──────────────────────────────────────────────────────────────────────┘ │
-│                                                                            │
-│  Preview: [🟢 Captação (5)] [🟣 Definição (8)] [🟠 Ativação (8)] [9 s/g]  │
-│                                                                            │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                               [Cancelar]  [Salvar Grupos]  │
+│ ▼ Captação e Formalização do Contrato    👤 1    (5 etapas)               │
+│ ══════════════════════════════════════════════════════════════════════════│
+│ ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐ │
+│ │ Entrada   │  │PRIMEIRA   │  │Grupo Cria.│  │Aguardando │  │Contrato   │ │
+│ │    0      │  │CALL    0  │  │+ BOAS   0 │  │Assinat. 1 │  │Assinado 0 │ │
+│ └───────────┘  └───────────┘  └───────────┘  └───────────┘  └───────────┘ │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
----
+## Alterações Técnicas
 
-## Resumo das Alterações
+### Arquivo: `src/components/kanban/KanbanBoard.tsx`
 
-| Mudança | Descrição |
-|---------|-----------|
-| **Filtro de etapas** | Tabs "Todas / Sem grupo / Com grupo" para focar nas pendentes |
-| **Popover para grupos** | Substituir Select por Popover com largura maior e scroll interno |
-| **Largura do trigger** | Aumentar de `w-40` para `w-56` para acomodar nomes longos |
-| **Truncate com tooltip** | Adicionar tooltip no hover para ver nome completo do grupo |
+#### 1. Nova lógica de agrupamento para renderização
 
-### Arquivo a modificar
-- `src/components/settings/StageGroupConfigDialog.tsx`
+Modificar o `renderData` useMemo para agrupar itens de forma diferente:
+
+**Em vez de**:
+```typescript
+items.push({ type: 'column', entry, groupName, showGroupHeader: isFirstInGroup });
+```
+
+**Usar**:
+```typescript
+// Agrupar todas as colunas de um grupo expandido em um único item
+items.push({ 
+  type: 'expanded-group', 
+  groupName, 
+  entries: allEntriesInGroup,
+  color: groupColor 
+});
+```
+
+#### 2. Nova estrutura de renderização
+
+O render passará a ter 3 tipos de itens:
+- `column`: coluna sem grupo (renderiza normalmente)
+- `collapsed-group`: grupo colapsado (card vertical compacto)
+- `expanded-group`: **NOVO** - grupo expandido (container com header + múltiplas colunas)
+
+```typescript
+type RenderItem = 
+  | { type: 'column'; entry: StageEntry }
+  | { type: 'collapsed-group'; groupName: string; ... }
+  | { type: 'expanded-group'; groupName: string; entries: StageEntry[]; color: string | null };
+```
+
+#### 3. Container visual para grupo expandido
+
+```tsx
+{item.type === 'expanded-group' && (
+  <div className="flex flex-col rounded-lg border border-border/40 bg-muted/10 p-2">
+    {/* Header do grupo */}
+    <KanbanStageGroupHeader
+      groupName={item.groupName}
+      groupColor={item.color}
+      totalLeads={item.entries.reduce((sum, e) => sum + e.entries.length, 0)}
+      stageCount={item.entries.length}
+      pipelineId={selectedPipelineId}
+      onToggleCollapse={() => toggleGroupCollapse(item.groupName)}
+      isCollapsed={false}
+    />
+    
+    {/* Barra de cor */}
+    <KanbanGroupColorBar color={item.color || '#10b981'} />
+    
+    {/* Colunas do grupo lado a lado */}
+    <div className="flex gap-2">
+      {item.entries.map(entry => (
+        <KanbanColumn key={entry.stage.id} {...getColumnProps(entry)} />
+      ))}
+    </div>
+  </div>
+)}
+```
+
+### Arquivo: `src/components/kanban/KanbanStageGroup.tsx`
+
+Ajustes menores no `KanbanStageGroupHeader`:
+- Garantir que o header ocupe largura total do container pai
+- Ajustar padding para acomodar múltiplas colunas abaixo
+
+## Fluxo Visual Final
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│ ▼ Captação e Formalização do Contrato                     👤 1    (5 etapas)       │
+│ ════════════════════════════════════════════════════════════════════════════════════│
+│  Entrada      PRIMEIRA CALL    Grupo Criado    Aguardando     Contrato Assinado    │
+│     0              0          + BOAS VINDAS    Assinatura           0               │
+│                                     0               1                               │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+│ ▸ Definição da Promessa │   ← Grupo colapsado (clicável para expandir)
+│         1               │
+```
+
+## Resumo das Mudanças
+
+| # | Arquivo | Alteração |
+|---|---------|-----------|
+| 1 | `KanbanBoard.tsx` | Refatorar `renderData` para agrupar colunas de grupos expandidos |
+| 2 | `KanbanBoard.tsx` | Adicionar renderização de container visual para grupos expandidos |
+| 3 | `KanbanStageGroup.tsx` | Ajustar `KanbanStageGroupHeader` para ocupar largura total |
+
+## Benefícios
+
+1. **Conexão visual clara** entre etapas do mesmo grupo
+2. **Header do grupo** sempre visível acima de todas as suas etapas
+3. **Experiência consistente** entre grupos expandidos e colapsados
+4. **Mantém funcionalidade** de drag-and-drop entre colunas
