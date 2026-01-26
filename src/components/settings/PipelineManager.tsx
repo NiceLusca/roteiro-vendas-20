@@ -68,7 +68,7 @@ export function PipelineManager() {
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
   
   const { pipelines, loading, savePipeline, saveComplexPipeline, duplicatePipeline, deletePipeline, updateDisplayConfig } = useSupabasePipelines();
-  const { stages, saveStage, deleteStage, batchUpdateStages, batchUpdateStageGroups, refetch: refetchStages } = useSupabasePipelineStages();
+  const { stages, saveStage, deleteStage, batchUpdateStages, batchUpdateStageGroups, setupComercialPipeline, refetch: refetchStages } = useSupabasePipelineStages();
   const { checklistItems, refetch: refetchChecklistItems } = useSupabaseChecklistItems();
   const { toast } = useToast();
 
@@ -337,6 +337,23 @@ export function PipelineManager() {
             </div>
             
             <div className="flex items-center gap-2">
+              {pipeline.nome.toLowerCase().includes('comercial') && (
+                <Button 
+                  size="sm" 
+                  variant="default"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (window.confirm('Aplicar estrutura completa ao pipeline Comercial?\n\n• 5 etapas no Pré-Sessão (+ Closer Ausente)\n• Sessão Realizada\n• 3 etapas de Decisão\n• 5 etapas de Recuperação (D+2 a D+15 com labels)\n• 3 etapas de Desfecho\n\nEtapas existentes serão atualizadas.')) {
+                      await setupComercialPipeline(pipeline.id);
+                      refetchStages();
+                    }
+                  }}
+                  title="Aplicar estrutura completa com 17 etapas em 5 grupos"
+                >
+                  <Zap className="w-3 h-3 mr-1" />
+                  Setup Completo
+                </Button>
+              )}
               <Button 
                 size="sm" 
                 variant="outline"
