@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { 
   Palette, 
   Plus, 
@@ -14,6 +15,8 @@ import {
   Check, 
   X, 
   Layers,
+  ChevronDown,
+  Filter,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -123,6 +126,8 @@ export function StageGroupConfigDialog({
   const [editingGroup, setEditingGroup] = useState<string | null>(null);
   const [editingGroupName, setEditingGroupName] = useState("");
   const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
+  const [stageFilter, setStageFilter] = useState<'all' | 'ungrouped' | 'grouped'>('all');
+  const [openPopovers, setOpenPopovers] = useState<Record<string, boolean>>({});
 
   // Reset state when dialog opens
   const handleOpenChange = (isOpen: boolean) => {
@@ -150,6 +155,27 @@ export function StageGroupConfigDialog({
   const sortedStages = useMemo(() => {
     return [...stages].sort((a, b) => a.ordem - b.ordem);
   }, [stages]);
+
+  // Filter counts
+  const ungroupedCount = useMemo(() => 
+    Object.values(stageAssignments).filter(g => g === null).length
+  , [stageAssignments]);
+
+  const groupedCount = useMemo(() => 
+    Object.values(stageAssignments).filter(g => g !== null).length
+  , [stageAssignments]);
+
+  // Filtered stages based on current filter
+  const filteredStages = useMemo(() => {
+    switch (stageFilter) {
+      case 'ungrouped':
+        return sortedStages.filter(s => !stageAssignments[s.id]);
+      case 'grouped':
+        return sortedStages.filter(s => !!stageAssignments[s.id]);
+      default:
+        return sortedStages;
+    }
+  }, [sortedStages, stageAssignments, stageFilter]);
 
   // Create new group
   const handleCreateGroup = () => {
@@ -469,68 +495,161 @@ export function StageGroupConfigDialog({
 
           {/* Stage List */}
           <div className="flex-1 min-h-0">
-            <Label className="text-sm font-medium mb-2 block">
-              Etapas do Pipeline ({sortedStages.length})
-            </Label>
-            <ScrollArea className="h-[300px] border rounded-md">
-              <div className="divide-y">
-                {sortedStages.map(stage => {
-                  const currentGroup = stageAssignments[stage.id];
-                  const groupColor = currentGroup ? getGroupColor(currentGroup) : null;
-                  
-                  return (
-                    <div 
-                      key={stage.id}
-                      className="flex items-center gap-3 p-3 hover:bg-muted/50"
-                      style={groupColor ? { borderLeftWidth: 3, borderLeftColor: groupColor } : undefined}
-                    >
-                      <Badge variant="outline" className="text-xs shrink-0 w-8 justify-center">
-                        {stage.ordem}
-                      </Badge>
-                      
-                      <span className="flex-1 text-sm font-medium truncate">
-                        {stage.nome}
-                      </span>
-                      
-                      <Select
-                        value={currentGroup || "__none__"}
-                        onValueChange={(value) => assignStageToGroup(stage.id, value === "__none__" ? null : value)}
-                      >
-                        <SelectTrigger className="w-40 h-8">
-                          <SelectValue placeholder="Sem grupo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">
-                            <span className="text-muted-foreground">Sem grupo</span>
-                          </SelectItem>
-                          {groups.map(group => (
-                            <SelectItem key={group.nome} value={group.nome}>
-                              <div className="flex items-center gap-2">
-                                <div 
-                                  className="w-3 h-3 rounded-full" 
-                                  style={{ backgroundColor: group.cor }}
-                                />
-                                {group.nome}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      
-                      {currentGroup && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 shrink-0"
-                          onClick={() => assignStageToGroup(stage.id, null)}
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      )}
-                    </div>
-                  );
-                })}
+            {/* Filter Tabs */}
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Filter className="w-4 h-4" />
+                Etapas do Pipeline
+              </Label>
+              <div className="flex gap-1">
+                <Button 
+                  size="sm" 
+                  variant={stageFilter === 'all' ? 'default' : 'ghost'}
+                  onClick={() => setStageFilter('all')}
+                  className="h-7 text-xs"
+                >
+                  Todas ({sortedStages.length})
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={stageFilter === 'ungrouped' ? 'default' : 'ghost'}
+                  onClick={() => setStageFilter('ungrouped')}
+                  className="h-7 text-xs"
+                >
+                  Sem grupo ({ungroupedCount})
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={stageFilter === 'grouped' ? 'default' : 'ghost'}
+                  onClick={() => setStageFilter('grouped')}
+                  className="h-7 text-xs"
+                >
+                  Com grupo ({groupedCount})
+                </Button>
               </div>
+            </div>
+
+            <ScrollArea className="h-[300px] border rounded-md">
+              <TooltipProvider>
+                <div className="divide-y">
+                  {filteredStages.length === 0 ? (
+                    <div className="p-8 text-center text-muted-foreground">
+                      {stageFilter === 'ungrouped' 
+                        ? "Todas as etapas já têm grupo! 🎉" 
+                        : stageFilter === 'grouped'
+                        ? "Nenhuma etapa com grupo ainda."
+                        : "Nenhuma etapa encontrada."}
+                    </div>
+                  ) : (
+                    filteredStages.map(stage => {
+                      const currentGroup = stageAssignments[stage.id];
+                      const groupColor = currentGroup ? getGroupColor(currentGroup) : null;
+                      
+                      return (
+                        <div 
+                          key={stage.id}
+                          className="flex items-center gap-3 p-3 hover:bg-muted/50"
+                          style={groupColor ? { borderLeftWidth: 3, borderLeftColor: groupColor } : undefined}
+                        >
+                          <Badge variant="outline" className="text-xs shrink-0 w-8 justify-center">
+                            {stage.ordem}
+                          </Badge>
+                          
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="flex-1 text-sm font-medium truncate max-w-[200px]">
+                                {stage.nome}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[300px]">
+                              {stage.nome}
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          {/* Popover for Group Selection */}
+                          <Popover 
+                            open={openPopovers[stage.id] || false} 
+                            onOpenChange={(open) => setOpenPopovers(prev => ({ ...prev, [stage.id]: open }))}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                className="w-56 h-8 justify-between text-left font-normal"
+                              >
+                                {currentGroup ? (
+                                  <div className="flex items-center gap-2 truncate">
+                                    <div 
+                                      className="w-3 h-3 rounded-full shrink-0" 
+                                      style={{ backgroundColor: groupColor || undefined }}
+                                    />
+                                    <span className="truncate">{currentGroup}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">Sem grupo</span>
+                                )}
+                                <ChevronDown className="w-4 h-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-2" align="start">
+                              <div className="space-y-1 max-h-48 overflow-y-auto">
+                                <button 
+                                  onClick={() => {
+                                    assignStageToGroup(stage.id, null);
+                                    setOpenPopovers(prev => ({ ...prev, [stage.id]: false }));
+                                  }}
+                                  className={`w-full text-left px-2 py-1.5 rounded hover:bg-muted flex items-center gap-2 ${!currentGroup ? 'bg-muted' : ''}`}
+                                >
+                                  <div className="w-3 h-3 rounded-full border-2 border-dashed border-muted-foreground shrink-0" />
+                                  <span className="text-muted-foreground">Sem grupo</span>
+                                </button>
+                                {groups.length > 0 && (
+                                  <div className="h-px bg-border my-1" />
+                                )}
+                                {groups.map(group => (
+                                  <Tooltip key={group.nome}>
+                                    <TooltipTrigger asChild>
+                                      <button 
+                                        onClick={() => {
+                                          assignStageToGroup(stage.id, group.nome);
+                                          setOpenPopovers(prev => ({ ...prev, [stage.id]: false }));
+                                        }}
+                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted ${currentGroup === group.nome ? 'bg-muted' : ''}`}
+                                      >
+                                        <div 
+                                          className="w-3 h-3 rounded-full shrink-0" 
+                                          style={{ backgroundColor: group.cor }}
+                                        />
+                                        <span className="truncate text-left">{group.nome}</span>
+                                        {currentGroup === group.nome && (
+                                          <Check className="w-3 h-3 ml-auto shrink-0 text-primary" />
+                                        )}
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right" className="max-w-[250px]">
+                                      {group.nome}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ))}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                          
+                          {currentGroup && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 shrink-0"
+                              onClick={() => assignStageToGroup(stage.id, null)}
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </TooltipProvider>
             </ScrollArea>
           </div>
 
