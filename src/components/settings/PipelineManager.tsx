@@ -7,12 +7,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight, Zap, Layers, Copy, GripVertical, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Settings as SettingsIcon, Star, ChevronRight, Zap, Layers, Copy, GripVertical, Eye, Palette } from 'lucide-react';
 import { SimplePipelineForm } from '@/components/forms/SimplePipelineForm';
 import { PipelineWizardForm } from '@/components/forms/PipelineWizardForm';
 import { StageForm } from '@/components/forms/StageForm';
 import { StageChecklistManager } from '@/components/settings/StageChecklistManager';
 import { PipelineDisplayConfigDialog } from '@/components/settings/PipelineDisplayConfigDialog';
+import { StageGroupConfigDialog } from '@/components/settings/StageGroupConfigDialog';
 import { useSupabasePipelines } from '@/hooks/useSupabasePipelines';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
 import { useSupabaseChecklistItems } from '@/hooks/useSupabaseChecklistItems';
@@ -53,8 +54,10 @@ export function PipelineManager() {
   const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [isDisplayConfigDialogOpen, setIsDisplayConfigDialogOpen] = useState(false);
+  const [isGroupConfigDialogOpen, setIsGroupConfigDialogOpen] = useState(false);
   const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(null);
   const [selectedPipelineForConfig, setSelectedPipelineForConfig] = useState<Pipeline | null>(null);
+  const [selectedPipelineForGroups, setSelectedPipelineForGroups] = useState<Pipeline | null>(null);
   const [pipelineToDuplicate, setPipelineToDuplicate] = useState<Pipeline | null>(null);
   const [duplicateName, setDuplicateName] = useState('');
   const [selectedStage, setSelectedStage] = useState<StageData | null>(null);
@@ -65,7 +68,7 @@ export function PipelineManager() {
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
   
   const { pipelines, loading, savePipeline, saveComplexPipeline, duplicatePipeline, deletePipeline, updateDisplayConfig } = useSupabasePipelines();
-  const { stages, saveStage, deleteStage, batchUpdateStages, refetch: refetchStages } = useSupabasePipelineStages();
+  const { stages, saveStage, deleteStage, batchUpdateStages, batchUpdateStageGroups, refetch: refetchStages } = useSupabasePipelineStages();
   const { checklistItems, refetch: refetchChecklistItems } = useSupabaseChecklistItems();
   const { toast } = useToast();
 
@@ -334,6 +337,19 @@ export function PipelineManager() {
             </div>
             
             <div className="flex items-center gap-2">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedPipelineForGroups(pipeline);
+                  setIsGroupConfigDialogOpen(true);
+                }}
+                title="Configurar agrupamento visual das etapas"
+              >
+                <Palette className="w-3 h-3 mr-1" />
+                Grupos
+              </Button>
               <Button 
                 size="sm" 
                 variant="outline"
@@ -686,6 +702,27 @@ export function PipelineManager() {
         }}
         onSave={updateDisplayConfig}
       />
+
+      {/* Stage Group Config Dialog */}
+      {selectedPipelineForGroups && (
+        <StageGroupConfigDialog
+          pipelineId={selectedPipelineForGroups.id}
+          pipelineName={selectedPipelineForGroups.nome}
+          stages={getPipelineStages(selectedPipelineForGroups.id)}
+          open={isGroupConfigDialogOpen}
+          onOpenChange={(open) => {
+            setIsGroupConfigDialogOpen(open);
+            if (!open) setSelectedPipelineForGroups(null);
+          }}
+          onSave={async (updates) => {
+            const success = await batchUpdateStageGroups(updates);
+            if (success) {
+              refetchStages();
+            }
+            return success;
+          }}
+        />
+      )}
     </div>
   );
 }

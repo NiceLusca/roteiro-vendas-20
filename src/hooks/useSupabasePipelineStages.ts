@@ -320,6 +320,56 @@ export function useSupabasePipelineStages(pipelineId?: string) {
     }
   }, [user, pipelineId]);
 
+  // Batch update stage groups (for group configurator)
+  const batchUpdateStageGroups = async (updates: Array<{ stageId: string; grupo: string | null; cor_grupo: string | null }>) => {
+    if (!user) return false;
+
+    try {
+      logger.debug('Batch updating stage groups', {
+        feature: 'pipeline-stages',
+        metadata: { count: updates.length }
+      });
+
+      const updatePromises = updates.map(({ stageId, grupo, cor_grupo }) =>
+        supabase
+          .from('pipeline_stages')
+          .update({ grupo, cor_grupo, updated_at: new Date().toISOString() })
+          .eq('id', stageId)
+      );
+
+      const results = await Promise.all(updatePromises);
+      
+      if (results.some(result => result.error)) {
+        const errors = results.filter(r => r.error).map(r => r.error);
+        logger.error('Errors updating stage groups', errors[0] as any, {
+          feature: 'pipeline-stages'
+        });
+        toast({
+          title: "Erro ao salvar grupos",
+          description: "Algumas etapas não foram atualizadas",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      logger.info('Stage groups updated successfully', { 
+        feature: 'pipeline-stages', 
+        metadata: { count: updates.length } 
+      });
+      
+      await fetchStages();
+      return true;
+    } catch (error) {
+      logger.error('Error updating stage groups', error as Error, { feature: 'pipeline-stages' });
+      toast({
+        title: "Erro ao salvar grupos",
+        description: "Ocorreu um erro inesperado",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   return {
     stages,
     loading,
@@ -328,6 +378,7 @@ export function useSupabasePipelineStages(pipelineId?: string) {
     getStageById,
     getStagesByPipeline,
     batchUpdateStages,
+    batchUpdateStageGroups,
     refetch: fetchStages
   };
 }
