@@ -85,7 +85,7 @@ function PipelinesContent({ slug }: { slug: string }) {
   // Ler filtros da URL (persistência)
   const searchTerm = searchParams.get('search') || '';
   
-  const filterScore = searchParams.get('score') || 'all';
+  
   const filterHealth = searchParams.get('health') || 'all';
   const filterResponsibleName = searchParams.get('responsible') || 'all';
   const filterTagName = searchParams.get('tag') || 'all';
@@ -211,10 +211,6 @@ function PipelinesContent({ slug }: { slug: string }) {
     }))
     // Aplicar filtros client-side (busca já é server-side)
     .filter(entry => {
-      // Filtro de score
-      if (filterScore !== 'all' && entry.leads?.lead_score_classification !== filterScore) {
-        return false;
-      }
       
       // Filtro de saúde
       if (filterHealth !== 'all' && entry.saude_etapa !== filterHealth) {
@@ -584,30 +580,6 @@ function PipelinesContent({ slug }: { slug: string }) {
             </SelectContent>
           </Select>
 
-          {/* Filtro Score com cores dinâmicas */}
-          <Select value={filterScore} onValueChange={(v) => updateFilter('score', v)}>
-            <SelectTrigger 
-              className={`w-32 h-9 ${
-                filterScore === 'Alto' ? 'border-green-500 text-green-600 font-medium' :
-                filterScore === 'Médio' ? 'border-yellow-500 text-yellow-600 font-medium' :
-                filterScore === 'Baixo' ? 'border-red-500 text-red-600 font-medium' : ''
-              }`}
-            >
-              <SelectValue placeholder="Score" />
-            </SelectTrigger>
-            <SelectContent className="bg-popover z-50">
-              <SelectItem value="all">Todos scores</SelectItem>
-              <SelectItem value="Alto">
-                <span className="text-green-600">Alto</span>
-              </SelectItem>
-              <SelectItem value="Médio">
-                <span className="text-yellow-600">Médio</span>
-              </SelectItem>
-              <SelectItem value="Baixo">
-                <span className="text-red-600">Baixo</span>
-              </SelectItem>
-            </SelectContent>
-          </Select>
 
           {/* Filtro Saúde com cores dinâmicas */}
           <Select value={filterHealth} onValueChange={(v) => updateFilter('health', v)}>
@@ -678,7 +650,7 @@ function PipelinesContent({ slug }: { slug: string }) {
           </Select>
 
           {/* Limpar filtros */}
-          {(searchTerm || filterScore !== 'all' || filterHealth !== 'all' || filterResponsibleName !== 'all' || filterTagName !== 'all' || sortBy !== 'chronological') && (
+          {(searchTerm || filterHealth !== 'all' || filterResponsibleName !== 'all' || filterTagName !== 'all' || sortBy !== 'chronological') && (
             <Button
               variant="outline"
               size="sm"
