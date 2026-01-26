@@ -37,9 +37,9 @@ export function KanbanStageGroupHeader({
 
   return (
     <div 
-      className="flex items-center gap-2 mb-2 px-2 py-1.5 
-                 bg-muted/20 rounded-lg border border-border/30
-                 hover:bg-muted/30 transition-colors cursor-pointer select-none"
+      className="flex items-center gap-2 mb-2 px-3 py-2 w-full
+                 bg-muted/30 rounded-lg border border-border/30
+                 hover:bg-muted/40 transition-colors cursor-pointer select-none"
       onClick={onToggleCollapse}
       role="button"
       aria-expanded={!isCollapsed}
