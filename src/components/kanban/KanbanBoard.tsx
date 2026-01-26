@@ -261,14 +261,13 @@ export function KanbanBoard({
       }
     });
 
-    // Build render items with 3 types: column (ungrouped), collapsed-group, expanded-group
+    // Build render items: column (normal or grouped) and collapsed-group
     type RenderItem = 
-      | { type: 'column'; entry: typeof stageEntries[0] }
-      | { type: 'collapsed-group'; groupName: string; color: string | null; totalLeads: number; stageCount: number; stageNames: string[] }
-      | { type: 'expanded-group'; groupName: string; color: string | null; entries: typeof stageEntries; isFragmented: boolean; fragmentRanges: string };
+      | { type: 'column'; entry: typeof stageEntries[0]; groupName?: string }
+      | { type: 'collapsed-group'; groupName: string; color: string | null; totalLeads: number; stageCount: number; stageNames: string[] };
     
     const items: RenderItem[] = [];
-    const processedGroups = new Set<string>();
+    const processedCollapsedGroups = new Set<string>();
     
     stageEntries.forEach((entry) => {
       const groupName = entry.stage.grupo;
@@ -276,35 +275,25 @@ export function KanbanBoard({
       if (!groupName) {
         // Stage without group - render normally
         items.push({ type: 'column', entry });
-      } else if (processedGroups.has(groupName)) {
-        // Already processed this group, skip
-        return;
       } else if (collapsedGroups.includes(groupName)) {
-        // Group is collapsed - add collapsed card
-        const info = groupInfo.get(groupName)!;
-        const totalLeads = info.entries.reduce((sum, e) => sum + e.entries.length, 0);
-        items.push({
-          type: 'collapsed-group',
-          groupName,
-          color: info.color,
-          totalLeads,
-          stageCount: info.entries.length,
-          stageNames: info.stageNames
-        });
-        processedGroups.add(groupName);
+        // Group is collapsed - add collapsed card only once
+        if (!processedCollapsedGroups.has(groupName)) {
+          const info = groupInfo.get(groupName)!;
+          const totalLeads = info.entries.reduce((sum, e) => sum + e.entries.length, 0);
+          items.push({
+            type: 'collapsed-group',
+            groupName,
+            color: info.color,
+            totalLeads,
+            stageCount: info.entries.length,
+            stageNames: info.stageNames
+          });
+          processedCollapsedGroups.add(groupName);
+        }
+        // Skip individual columns for collapsed groups
       } else {
-        // Group is expanded - add as expanded-group with all entries
-        const info = groupInfo.get(groupName)!;
-        const fragmentation = detectFragmentation(info.stageOrders);
-        items.push({
-          type: 'expanded-group',
-          groupName,
-          color: info.color,
-          entries: info.entries,
-          isFragmented: fragmentation.isFragmented,
-          fragmentRanges: fragmentation.ranges
-        });
-        processedGroups.add(groupName);
+        // Group is expanded - render as normal column in natural position!
+        items.push({ type: 'column', entry, groupName });
       }
     });
     
@@ -365,37 +354,14 @@ export function KanbanBoard({
           );
         }
         
-        if (item.type === 'expanded-group') {
-          const totalLeads = item.entries.reduce((sum, e) => sum + e.entries.length, 0);
-          return (
-            <div 
-              key={`expanded-${item.groupName}`} 
-              className="flex flex-col rounded-lg border border-border/40 bg-muted/10 p-2"
-            >
-              <KanbanStageGroupHeader
-                groupName={item.groupName}
-                groupColor={item.color}
-                totalLeads={totalLeads}
-                stageCount={item.entries.length}
-                pipelineId={selectedPipelineId}
-                isFragmented={item.isFragmented}
-                fragmentRanges={item.fragmentRanges}
-                onToggleCollapse={() => toggleGroupCollapse(item.groupName)}
-                isCollapsed={false}
-              />
-              <KanbanGroupColorBar color={item.color || '#10b981'} />
-              <div className="flex gap-2 md:gap-3">
-                {item.entries.map(entry => (
-                  <KanbanColumn key={entry.stage.id} {...getColumnProps(entry)} />
-                ))}
-              </div>
-            </div>
-          );
-        }
-        
-        // Ungrouped column
+        // Column (with or without group) - renders in natural position
         return (
-          <KanbanColumn key={item.entry.stage.id} {...getColumnProps(item.entry)} />
+          <KanbanColumn 
+            key={item.entry.stage.id} 
+            {...getColumnProps(item.entry)}
+            groupName={item.groupName}
+            onToggleGroupCollapse={item.groupName ? () => toggleGroupCollapse(item.groupName!) : undefined}
+          />
         );
       })}
     </div>
