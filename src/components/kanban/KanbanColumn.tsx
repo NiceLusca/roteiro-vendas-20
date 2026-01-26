@@ -265,10 +265,10 @@ export const KanbanColumn = memo(function KanbanColumn({
         onDragLeave={handleColumnDragLeave}
         onDrop={handleColumnDrop}
       >
-        {/* Linha sutil separadora com cor dinâmica e toggle discreto */}
-        <div className="relative">
+        {/* Linha sutil separadora com cor dinâmica e toggle de grupo */}
+        <div className="relative flex items-center gap-1 mb-2">
           <div 
-            className="h-1 rounded-full mb-2" 
+            className="h-1.5 rounded-full flex-1" 
             style={{ 
               background: stage.cor_grupo 
                 ? `linear-gradient(to right, ${stage.cor_grupo}cc, ${stage.cor_grupo}99)` 
@@ -276,13 +276,23 @@ export const KanbanColumn = memo(function KanbanColumn({
             }} 
           />
           {groupName && onToggleGroupCollapse && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onToggleGroupCollapse(); }}
-              className="absolute -top-0.5 right-0 p-0.5 rounded hover:bg-muted/50 transition-colors opacity-60 hover:opacity-100"
-              title={`Colapsar grupo "${groupName}"`}
-            >
-              <ChevronsLeftRight className="h-3 w-3 text-muted-foreground" />
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onToggleGroupCollapse(); }}
+                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors"
+                  style={{ 
+                    backgroundColor: `${stage.cor_grupo || '#10b981'}20`,
+                    color: stage.cor_grupo || '#10b981'
+                  }}
+                >
+                  <ChevronsLeftRight className="h-3 w-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs z-[60]">
+                Colapsar grupo "{groupName}"
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
         
