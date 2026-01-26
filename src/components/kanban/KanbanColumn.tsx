@@ -6,7 +6,7 @@ import { KanbanCard } from './KanbanCard';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
 import { PipelineDisplayConfig, DealDisplayInfo, AppointmentDisplayInfo } from '@/types/pipelineDisplay';
 import { LeadTag } from '@/types/bulkImport';
-import { AlertTriangle, Loader2, GripVertical } from 'lucide-react';
+import { AlertTriangle, Loader2, GripVertical, ChevronsLeftRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
 import { SortOption } from './KanbanBoard';
@@ -49,6 +49,9 @@ interface KanbanColumnProps {
   onColumnDragEnd?: () => void;
   onColumnDrop?: (stageId: string, targetStageId: string) => void;
   isColumnDragging?: boolean;
+  // Group collapse toggle
+  groupName?: string;
+  onToggleGroupCollapse?: () => void;
 }
 
 export const KanbanColumn = memo(function KanbanColumn({
@@ -88,7 +91,10 @@ export const KanbanColumn = memo(function KanbanColumn({
   onColumnDragStart,
   onColumnDragEnd,
   onColumnDrop,
-  isColumnDragging = false
+  isColumnDragging = false,
+  // Group collapse toggle
+  groupName,
+  onToggleGroupCollapse
 }: KanbanColumnProps) {
   const [isOver, setIsOver] = useState(false);
   const [isColumnOver, setIsColumnOver] = useState(false);
@@ -259,15 +265,26 @@ export const KanbanColumn = memo(function KanbanColumn({
         onDragLeave={handleColumnDragLeave}
         onDrop={handleColumnDrop}
       >
-        {/* Linha sutil separadora com cor dinâmica */}
-        <div 
-          className="h-1 rounded-full mb-2" 
-          style={{ 
-            background: stage.cor_grupo 
-              ? `linear-gradient(to right, ${stage.cor_grupo}cc, ${stage.cor_grupo}99)` 
-              : 'linear-gradient(to right, #10b981cc, #10b98199)' 
-          }} 
-        />
+        {/* Linha sutil separadora com cor dinâmica e toggle discreto */}
+        <div className="relative">
+          <div 
+            className="h-1 rounded-full mb-2" 
+            style={{ 
+              background: stage.cor_grupo 
+                ? `linear-gradient(to right, ${stage.cor_grupo}cc, ${stage.cor_grupo}99)` 
+                : 'linear-gradient(to right, #10b981cc, #10b98199)' 
+            }} 
+          />
+          {groupName && onToggleGroupCollapse && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleGroupCollapse(); }}
+              className="absolute -top-0.5 right-0 p-0.5 rounded hover:bg-muted/50 transition-colors opacity-60 hover:opacity-100"
+              title={`Colapsar grupo "${groupName}"`}
+            >
+              <ChevronsLeftRight className="h-3 w-3 text-muted-foreground" />
+            </button>
+          )}
+        </div>
         
         {/* Título e contador */}
         <div className="flex items-start justify-between px-1 py-1">
