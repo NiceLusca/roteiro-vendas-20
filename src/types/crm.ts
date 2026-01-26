@@ -89,6 +89,8 @@ export interface PipelineStage {
   template_agendamento?: string;
   duracao_minutos?: number;
   proxima_etapa_id?: string | null; // ID da próxima etapa customizada (permite fluxos cíclicos)
+  grupo?: string | null; // Nome do grupo visual (opcional)
+  cor_grupo?: string | null; // Cor hex do grupo (opcional, padrão emerald)
 }
 
 export interface StageChecklistItem {

@@ -10,6 +10,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RefreshCcw, Loader2 } from 'lucide-react';
 
+// Cores pré-definidas para grupos
+const GROUP_COLOR_PRESETS = [
+  { label: 'Azul', value: '#3B82F6' },
+  { label: 'Violeta', value: '#8B5CF6' },
+  { label: 'Púrpura', value: '#A855F7' },
+  { label: 'Laranja', value: '#F97316' },
+  { label: 'Verde', value: '#10B981' },
+  { label: 'Vermelho', value: '#EF4444' },
+  { label: 'Amarelo', value: '#EAB308' },
+  { label: 'Ciano', value: '#06B6D4' },
+];
+
 const stageSchema = z.object({
   pipeline_id: z.string().uuid(),
   nome: z.string().min(1, 'Nome é obrigatório'),
@@ -23,6 +35,8 @@ const stageSchema = z.object({
   gerar_agendamento_auto: z.boolean().default(false),
   duracao_minutos: z.number().optional(),
   proxima_etapa_id: z.string().uuid().nullable().optional(),
+  grupo: z.string().optional().nullable(),
+  cor_grupo: z.string().optional().nullable(),
 });
 
 type StageFormData = z.infer<typeof stageSchema>;
@@ -58,6 +72,8 @@ export function StageForm({ stage, pipelineStages = [], onSave, onCancel }: Stag
       gerar_agendamento_auto: stage?.gerar_agendamento_auto || false,
       duracao_minutos: stage?.duracao_minutos || undefined,
       proxima_etapa_id: stage?.proxima_etapa_id || null,
+      grupo: stage?.grupo || null,
+      cor_grupo: stage?.cor_grupo || null,
     },
   });
 
@@ -134,6 +150,71 @@ export function StageForm({ stage, pipelineStages = [], onSave, onCancel }: Stag
                     onChange={(e) => field.onChange(Number(e.target.value))}
                   />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {/* Campos de Agrupamento Visual */}
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="grupo"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Grupo Visual</FormLabel>
+                <FormControl>
+                  <Input 
+                    {...field} 
+                    value={field.value || ''}
+                    onChange={(e) => field.onChange(e.target.value || null)}
+                    placeholder="Ex: Pré-Sessão, Recuperação..."
+                  />
+                </FormControl>
+                <FormDescription>
+                  Opcional - agrupa etapas visualmente no Kanban
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="cor_grupo"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Cor do Grupo</FormLabel>
+                <Select 
+                  onValueChange={(value) => field.onChange(value === 'none' ? null : value)} 
+                  value={field.value || 'none'}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma cor" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      <span className="text-muted-foreground">Padrão (verde)</span>
+                    </SelectItem>
+                    {GROUP_COLOR_PRESETS.map((preset) => (
+                      <SelectItem key={preset.value} value={preset.value}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: preset.value }}
+                          />
+                          {preset.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  Cor da barra superior das colunas do grupo
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}

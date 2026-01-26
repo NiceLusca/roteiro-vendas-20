@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { KanbanColumn } from './KanbanColumn';
+import { KanbanStageGroup } from './KanbanStageGroup';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { useSupabaseChecklistItems } from '@/hooks/useSupabaseChecklistItems';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
@@ -177,47 +178,93 @@ export function KanbanBoard({
     }
   }, [stageEntries, batchUpdateStages, toast, onRefresh]);
 
+  // Agrupar etapas por grupo (NULL = sem grupo = renderização individual)
+  const groupedStages = useMemo(() => {
+    const groups = new Map<string | null, typeof stageEntries>();
+    
+    stageEntries.forEach(entry => {
+      const groupName = entry.stage.grupo || null;
+      if (!groups.has(groupName)) {
+        groups.set(groupName, []);
+      }
+      groups.get(groupName)!.push(entry);
+    });
+    
+    return Array.from(groups.entries());
+  }, [stageEntries]);
+
+  // Props comuns para KanbanColumn
+  const getColumnProps = (stageEntry: typeof stageEntries[0]) => ({
+    stage: stageEntry.stage,
+    nextStage: stageEntry.nextStage,
+    entries: stageEntry.entries,
+    tagsMap,
+    sortBy,
+    wipExceeded: stageEntry.wipExceeded,
+    displayConfig,
+    dealsByLeadId,
+    appointmentsByLeadId,
+    hasMore,
+    onLoadMore,
+    loadingMore,
+    checklistItems,
+    onAddLead,
+    onViewLead,
+    onEditLead,
+    onCreateAppointment,
+    onManageDeal,
+    onAdvanceStage,
+    onJumpToStage,
+    onRegisterInteraction,
+    onOpenChecklist,
+    onRegressStage,
+    onTransferPipeline,
+    onUnsubscribeFromPipeline,
+    onDropLead: handleDropLead,
+    onDragStart: (entryId: string) => setDraggingEntryId(entryId),
+    onDragEnd: () => setDraggingEntryId(null),
+    onTagsChange,
+    onColumnDragStart: (stageId: string) => setDraggingColumnId(stageId),
+    onColumnDragEnd: () => setDraggingColumnId(null),
+    onColumnDrop: handleColumnDrop,
+    isColumnDragging: draggingColumnId === stageEntry.stage.id
+  });
+
   return (
     <div className="flex gap-2 md:gap-3 lg:gap-4 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
-      {stageEntries.map(({ stage, nextStage, entries, wipExceeded }) => (
-        <KanbanColumn
-          key={stage.id}
-          stage={stage}
-          nextStage={nextStage}
-          entries={entries}
-          tagsMap={tagsMap}
-          sortBy={sortBy}
-          wipExceeded={wipExceeded}
-          displayConfig={displayConfig}
-          dealsByLeadId={dealsByLeadId}
-          appointmentsByLeadId={appointmentsByLeadId}
-          hasMore={hasMore}
-          onLoadMore={onLoadMore}
-          loadingMore={loadingMore}
-          checklistItems={checklistItems}
-          onAddLead={onAddLead}
-          onViewLead={onViewLead}
-          onEditLead={onEditLead}
-          onCreateAppointment={onCreateAppointment}
-          onManageDeal={onManageDeal}
-          onAdvanceStage={onAdvanceStage}
-          onJumpToStage={onJumpToStage}
-          onRegisterInteraction={onRegisterInteraction}
-          onOpenChecklist={onOpenChecklist}
-          onRegressStage={onRegressStage}
-          onTransferPipeline={onTransferPipeline}
-          onUnsubscribeFromPipeline={onUnsubscribeFromPipeline}
-          onDropLead={handleDropLead}
-          onDragStart={(entryId) => setDraggingEntryId(entryId)}
-          onDragEnd={() => setDraggingEntryId(null)}
-          onTagsChange={onTagsChange}
-          // Drag de colunas
-          onColumnDragStart={(stageId) => setDraggingColumnId(stageId)}
-          onColumnDragEnd={() => setDraggingColumnId(null)}
-          onColumnDrop={handleColumnDrop}
-          isColumnDragging={draggingColumnId === stage.id}
-        />
-      ))}
+      {groupedStages.map(([groupName, stages]) => {
+        // Etapas SEM grupo = renderização individual (comportamento atual)
+        if (!groupName) {
+          return stages.map(stageEntry => (
+            <KanbanColumn
+              key={stageEntry.stage.id}
+              {...getColumnProps(stageEntry)}
+            />
+          ));
+        }
+        
+        // Etapas COM grupo = wrapper com fold
+        const totalLeads = stages.reduce((sum, s) => sum + s.entries.length, 0);
+        const groupColor = stages[0]?.stage.cor_grupo;
+        
+        return (
+          <KanbanStageGroup 
+            key={groupName}
+            groupName={groupName}
+            groupColor={groupColor}
+            totalLeads={totalLeads}
+            stageCount={stages.length}
+            pipelineId={selectedPipelineId}
+          >
+            {stages.map(stageEntry => (
+              <KanbanColumn
+                key={stageEntry.stage.id}
+                {...getColumnProps(stageEntry)}
+              />
+            ))}
+          </KanbanStageGroup>
+        );
+      })}
     </div>
   );
 }
