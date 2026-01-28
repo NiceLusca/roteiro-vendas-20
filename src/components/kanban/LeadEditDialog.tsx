@@ -259,6 +259,54 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
         await setDealProducts(selectedProductIds);
       }
 
+      // SE VENDA CONFIRMADA: criar/atualizar order com closer do responsável principal
+      if (vendaConfirmada && result?.id) {
+        // Buscar responsável principal para usar como closer
+        const { data: primaryResp } = await supabase
+          .from('lead_responsibles')
+          .select('profiles(nome, full_name)')
+          .eq('lead_id', lead.id)
+          .eq('is_primary', true)
+          .maybeSingle();
+        
+        const closerName = (primaryResp?.profiles as any)?.nome 
+          || (primaryResp?.profiles as any)?.full_name 
+          || 'Não atribuído';
+        
+        // Verificar se já existe order para este deal
+        const { data: existingOrder } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('deal_id', result.id)
+          .maybeSingle();
+        
+        if (existingOrder?.id) {
+          // Atualizar order existente
+          await supabase
+            .from('orders')
+            .update({
+              valor_total: parsedValor,
+              closer: closerName,
+              status_pagamento: 'pago',
+              data_venda: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingOrder.id);
+        } else {
+          // Criar nova order
+          await supabase
+            .from('orders')
+            .insert({
+              lead_id: lead.id,
+              deal_id: result.id,
+              valor_total: parsedValor,
+              closer: closerName,
+              status_pagamento: 'pago',
+              data_venda: new Date().toISOString()
+            });
+        }
+      }
+
       toast.success(existingDeal ? 'Negociação atualizada!' : 'Negociação criada!');
       onUpdate?.();
     } catch (error) {
