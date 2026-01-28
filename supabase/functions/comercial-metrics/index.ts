@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
         id,
         lead_id,
         etapa_atual_id,
-        leads!inner(origem, closer)
+        leads!inner(origem)
       `)
       .eq("pipeline_id", pipeline.id)
       .eq("status_inscricao", "Ativo");
@@ -120,16 +120,45 @@ Deno.serve(async (req) => {
 
     console.log(`[comercial-metrics] ${entries?.length || 0} entries ativos`);
 
-    // Process entries with stage info
+    // 3b. Get all lead responsibles with profiles for pipeline leads
+    const leadIds = (entries || []).map((e: any) => e.lead_id);
+    const { data: responsibles, error: respError } = await supabase
+      .from("lead_responsibles")
+      .select(`
+        lead_id,
+        is_primary,
+        profiles!lead_responsibles_user_id_fkey(nome, full_name)
+      `)
+      .in("lead_id", leadIds)
+      .eq("is_primary", true);
+
+    if (respError) {
+      console.error("[comercial-metrics] Erro ao buscar responsibles:", respError);
+    }
+
+    // Create a map of lead_id -> closer name
+    const closerMap = new Map<string, string>();
+    (responsibles || []).forEach((r: any) => {
+      const name = r.profiles?.nome || r.profiles?.full_name || null;
+      if (name) {
+        closerMap.set(r.lead_id, name);
+      }
+    });
+
+    console.log(`[comercial-metrics] ${closerMap.size} leads com closer atribuído`);
+
+    // Process entries with stage info - get closer from closerMap
     const leadEntries: LeadEntry[] = (entries || []).map((e: any) => {
       const stage = e.etapa_atual_id ? stageMap.get(e.etapa_atual_id) : null;
+      const closerName = closerMap.get(e.lead_id) || null;
+      
       return {
         lead_id: e.lead_id,
         etapa_nome: stage?.nome || "Sem etapa",
         etapa_ordem: stage?.ordem || 0,
         etapa_grupo: stage?.grupo || null,
         origem: e.leads?.origem || "Outro",
-        closer: e.leads?.closer || null,
+        closer: closerName,
       };
     });
 
