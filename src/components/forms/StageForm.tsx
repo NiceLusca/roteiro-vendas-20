@@ -26,7 +26,7 @@ const stageSchema = z.object({
   pipeline_id: z.string().uuid(),
   nome: z.string().min(1, 'Nome é obrigatório'),
   ordem: z.number().min(1),
-  prazo_em_dias: z.number().min(1),
+  prazo_em_dias: z.number().min(1).nullable().optional(),
   proximo_passo_label: z.string().optional(),
   proximo_passo_tipo: z.enum(['Humano', 'Agendamento', 'Mensagem', 'Outro']),
   entrada_criteria: z.string().optional(),
@@ -34,7 +34,8 @@ const stageSchema = z.object({
   wip_limit: z.number().optional(),
   gerar_agendamento_auto: z.boolean().default(false),
   duracao_minutos: z.number().optional(),
-  proxima_etapa_id: z.string().uuid().nullable().optional(),
+  proxima_etapa_id: z.string().nullable().optional(), // 'final' ou UUID
+  is_final_stage: z.boolean().default(false),
   grupo: z.string().optional().nullable(),
   cor_grupo: z.string().optional().nullable(),
 });
@@ -57,13 +58,16 @@ interface StageFormProps {
 export function StageForm({ stage, pipelineStages = [], onSave, onCancel }: StageFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Detect if this is a final stage (proxima_etapa_id === 'final' marker)
+  const isFinalStage = stage?.proxima_etapa_id === 'final';
+  
   const form = useForm<StageFormData>({
     resolver: zodResolver(stageSchema),
     defaultValues: {
       pipeline_id: stage?.pipeline_id || '',
       nome: stage?.nome || '',
       ordem: stage?.ordem || 1,
-      prazo_em_dias: stage?.prazo_em_dias || 3,
+      prazo_em_dias: stage?.prazo_em_dias ?? null,
       proximo_passo_label: stage?.proximo_passo_label || '',
       proximo_passo_tipo: stage?.proximo_passo_tipo || 'Humano',
       entrada_criteria: stage?.entrada_criteria || '',
@@ -71,7 +75,8 @@ export function StageForm({ stage, pipelineStages = [], onSave, onCancel }: Stag
       wip_limit: stage?.wip_limit || undefined,
       gerar_agendamento_auto: stage?.gerar_agendamento_auto || false,
       duracao_minutos: stage?.duracao_minutos || undefined,
-      proxima_etapa_id: stage?.proxima_etapa_id || null,
+      proxima_etapa_id: isFinalStage ? 'final' : (stage?.proxima_etapa_id || null),
+      is_final_stage: isFinalStage,
       grupo: stage?.grupo || null,
       cor_grupo: stage?.cor_grupo || null,
     },
@@ -141,15 +146,20 @@ export function StageForm({ stage, pipelineStages = [], onSave, onCancel }: Stag
             name="prazo_em_dias"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Prazo (dias) *</FormLabel>
+                <FormLabel>Prazo SLA (dias)</FormLabel>
                 <FormControl>
                   <Input 
                     {...field} 
                     type="number" 
                     min="1"
-                    onChange={(e) => field.onChange(Number(e.target.value))}
+                    placeholder="Sem prazo"
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
                   />
                 </FormControl>
+                <FormDescription>
+                  Deixe vazio para etapas sem SLA (ex: finais)
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -231,7 +241,16 @@ export function StageForm({ stage, pipelineStages = [], onSave, onCancel }: Stag
                 Próxima Etapa
               </FormLabel>
               <Select 
-                onValueChange={(value) => field.onChange(value === 'auto' ? null : value)} 
+                onValueChange={(value) => {
+                  field.onChange(value === 'auto' ? null : value);
+                  // If marking as final, also clear SLA
+                  if (value === 'final') {
+                    form.setValue('is_final_stage', true);
+                    form.setValue('prazo_em_dias', null);
+                  } else {
+                    form.setValue('is_final_stage', false);
+                  }
+                }} 
                 value={field.value || 'auto'}
               >
                 <FormControl>
@@ -243,6 +262,9 @@ export function StageForm({ stage, pipelineStages = [], onSave, onCancel }: Stag
                   <SelectItem value="auto">
                     <span className="text-muted-foreground">Automático (próxima na ordem)</span>
                   </SelectItem>
+                  <SelectItem value="final">
+                    <span className="text-warning font-medium">🏁 Etapa Final (sem próximo passo)</span>
+                  </SelectItem>
                   {availableNextStages.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {s.ordem}. {s.nome}
@@ -251,7 +273,7 @@ export function StageForm({ stage, pipelineStages = [], onSave, onCancel }: Stag
                 </SelectContent>
               </Select>
               <FormDescription>
-                Permite criar fluxos cíclicos selecionando uma etapa anterior como próximo passo.
+                Use "Etapa Final" para etapas de conclusão (ganho, perdido, etc.)
               </FormDescription>
               <FormMessage />
             </FormItem>

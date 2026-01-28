@@ -158,11 +158,19 @@ export const KanbanCard = memo(function KanbanCard({
     ? Math.floor((Date.now() - new Date(entry.data_entrada_etapa).getTime()) / (1000 * 60 * 60 * 24))
     : 0;
 
+  // Verifica se a etapa tem SLA definido e não é etapa final
+  const hasSLA = stage.prazo_em_dias != null && stage.prazo_em_dias > 0 && stage.proxima_etapa_id !== 'final';
+  
   // Cálculo de urgência baseado no SLA (prazo_em_dias)
-  const prazo = stage.prazo_em_dias || 7;
+  const prazo = stage.prazo_em_dias || 0;
   const diasRestantes = prazo - daysInStage;
   
   const slaStatus = (() => {
+    // Se não tem SLA, não mostra badge de urgência
+    if (!hasSLA) {
+      return null;
+    }
+    
     if (diasRestantes < 0) {
       return {
         status: 'overdue' as const,
@@ -218,23 +226,25 @@ export const KanbanCard = memo(function KanbanCard({
         "hover:shadow-xl hover:-translate-y-0.5 hover:border-l-primary",
         stageClass,
         (isLocalDragging || isDragging) && "opacity-50 rotate-1 scale-105 shadow-xl z-50",
-        slaStatus.ringClass
+        slaStatus?.ringClass
       )}
     >
       <CardContent className="p-3 pt-4 space-y-2 relative">
         {/* SLA Badge e Menu - Posição absoluta no canto superior direito */}
         <div className="absolute top-1 right-1 flex items-center gap-0.5">
-          <Badge
-            variant="outline" 
-            className={cn(
-              "text-[9px] font-semibold px-1.5 py-0.5 h-5 border-0 rounded-full shadow-sm",
-              slaStatus.color,
-              slaStatus.pulse && "animate-pulse"
-            )}
-          >
-            {slaStatus.icon && <slaStatus.icon className="w-2.5 h-2.5 mr-0.5" />}
-            {slaStatus.label}
-          </Badge>
+          {slaStatus && (
+            <Badge
+              variant="outline" 
+              className={cn(
+                "text-[9px] font-semibold px-1.5 py-0.5 h-5 border-0 rounded-full shadow-sm",
+                slaStatus.color,
+                slaStatus.pulse && "animate-pulse"
+              )}
+            >
+              {slaStatus.icon && <slaStatus.icon className="w-2.5 h-2.5 mr-0.5" />}
+              {slaStatus.label}
+            </Badge>
+          )}
           <div 
             className="opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-auto"
             onMouseDown={(e) => e.stopPropagation()}

@@ -136,6 +136,10 @@ export function PipelineManager() {
   };
 
   const getNextStageName = (stage: StageData, pipelineId: string): string => {
+    // Etapa final marcada explicitamente
+    if (stage.proxima_etapa_id === 'final') {
+      return '🏁 Etapa Final';
+    }
     if (stage.proxima_etapa_id) {
       const nextStage = stages.find(s => s.id === stage.proxima_etapa_id);
       return nextStage ? nextStage.nome : 'Etapa não encontrada';

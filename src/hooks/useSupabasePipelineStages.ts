@@ -9,7 +9,7 @@ interface PipelineStage {
   pipeline_id: string;
   nome: string;
   ordem: number;
-  prazo_em_dias: number;
+  prazo_em_dias: number | null;
   proximo_passo_tipo: 'Humano' | 'Agendamento' | 'Mensagem' | 'Outro';
   proximo_passo_label?: string;
   gerar_agendamento_auto: boolean;
@@ -17,7 +17,7 @@ interface PipelineStage {
   entrada_criteria?: string;
   saida_criteria?: string;
   duracao_minutos?: number;
-  proxima_etapa_id?: string | null;
+  proxima_etapa_id?: string | null; // null = auto, 'final' = etapa final
   grupo?: string | null;
   cor_grupo?: string | null;
   created_at: string;
@@ -147,8 +147,16 @@ export function useSupabasePipelineStages(pipelineId?: string) {
       const payload: any = {};
       
       Object.keys(stageData).forEach(key => {
-        if (key !== 'id' && stageData[key as keyof typeof stageData] !== undefined) {
-          payload[key] = stageData[key as keyof typeof stageData];
+        if (key !== 'id' && key !== 'is_final_stage' && stageData[key as keyof typeof stageData] !== undefined) {
+          const value = stageData[key as keyof typeof stageData];
+          
+          // Handle 'final' marker for proxima_etapa_id - store as 'final' in DB
+          // The DB allows text values, we use 'final' as a special marker
+          if (key === 'proxima_etapa_id' && value === 'final') {
+            payload[key] = 'final';
+          } else {
+            payload[key] = value;
+          }
         }
       });
       
