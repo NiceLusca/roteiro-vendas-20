@@ -47,7 +47,9 @@ import {
   Loader2,
   RefreshCw,
   Check as CheckIcon,
-  Package
+  Package,
+  MapPin,
+  Plus
 } from 'lucide-react';
 import { TagPopover } from './TagPopover';
 import { useLeadTags } from '@/hooks/useLeadTags';
@@ -96,6 +98,13 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
   const [appointmentDuration, setAppointmentDuration] = useState('60');
   const [appointmentNotes, setAppointmentNotes] = useState('');
   const [savingAppointment, setSavingAppointment] = useState(false);
+
+  // Estados para origem do lead
+  const [origens, setOrigens] = useState<string[]>([]);
+  const [selectedOrigem, setSelectedOrigem] = useState<string>(lead.origem || '');
+  const [newOrigem, setNewOrigem] = useState('');
+  const [addingOrigem, setAddingOrigem] = useState(false);
+  const [savingOrigem, setSavingOrigem] = useState(false);
 
   // Estados para deal
   const [dealValor, setDealValor] = useState('');
@@ -279,6 +288,53 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
       fetchTags();
     }
   }, [lead.id, open, getLeadTags]);
+
+  // Buscar origens existentes
+  useEffect(() => {
+    const fetchOrigens = async () => {
+      const { data } = await supabase
+        .from('leads')
+        .select('origem')
+        .not('origem', 'is', null);
+      
+      const unique = [...new Set(data?.map(d => d.origem).filter(Boolean) as string[])];
+      setOrigens(unique.sort());
+    };
+    if (open) {
+      fetchOrigens();
+      setSelectedOrigem(lead.origem || '');
+    }
+  }, [open, lead.origem]);
+
+  // Handler para salvar origem
+  const handleSaveOrigem = async () => {
+    const origemToSave = newOrigem.trim() || selectedOrigem;
+    if (!origemToSave) return;
+    
+    try {
+      setSavingOrigem(true);
+      await saveLead({
+        id: lead.id,
+        origem: origemToSave
+      });
+      
+      // Adicionar nova origem à lista se for nova
+      if (newOrigem.trim() && !origens.includes(newOrigem.trim())) {
+        setOrigens(prev => [...prev, newOrigem.trim()].sort());
+      }
+      
+      setSelectedOrigem(origemToSave);
+      setNewOrigem('');
+      setAddingOrigem(false);
+      toast.success('Origem atualizada');
+      onUpdate?.();
+    } catch (error) {
+      console.error('Erro ao salvar origem:', error);
+      toast.error('Erro ao salvar origem');
+    } finally {
+      setSavingOrigem(false);
+    }
+  };
 
   const handleRemoveTag = async (tagId: string) => {
     await removeTagFromLead(lead.id, tagId);
@@ -979,6 +1035,73 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
 
           {/* Tab de Agendamentos */}
           <TabsContent value="appointments" className="space-y-4 mt-4">
+            {/* Seletor de Origem do Lead */}
+            <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
+              <h4 className="font-medium flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Origem do Lead
+              </h4>
+              
+              <div className="flex gap-2">
+                <Select 
+                  value={selectedOrigem} 
+                  onValueChange={(v) => {
+                    setSelectedOrigem(v);
+                    setAddingOrigem(false);
+                    setNewOrigem('');
+                  }}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecione a origem" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {origens.map(o => (
+                      <SelectItem key={o} value={o}>{o}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => setAddingOrigem(!addingOrigem)}
+                  title="Adicionar nova origem"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {addingOrigem && (
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="Nova origem..." 
+                    value={newOrigem}
+                    onChange={(e) => setNewOrigem(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSaveOrigem()}
+                  />
+                </div>
+              )}
+              
+              <Button 
+                onClick={handleSaveOrigem} 
+                disabled={(!selectedOrigem && !newOrigem.trim()) || savingOrigem}
+                className="w-full"
+                variant="secondary"
+              >
+                {savingOrigem ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <CheckIcon className="h-4 w-4 mr-2" />
+                    Salvar Origem
+                  </>
+                )}
+              </Button>
+            </div>
+
             {/* Formulário de novo agendamento */}
             <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
               <h4 className="font-medium flex items-center gap-2">
@@ -1142,10 +1265,18 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
                   Produtos Vendidos
                 </Label>
                 <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
-                  {products.length === 0 ? (
-                    <p className="p-3 text-sm text-muted-foreground text-center">
-                      Nenhum produto cadastrado
-                    </p>
+                {products.length === 0 ? (
+                    <div className="p-3 text-center">
+                      <p className="text-sm text-muted-foreground mb-2">Nenhum produto cadastrado</p>
+                      <Button 
+                        variant="link" 
+                        size="sm"
+                        onClick={() => window.open('/settings?tab=products', '_blank')}
+                        className="h-auto p-0"
+                      >
+                        Cadastrar produtos →
+                      </Button>
+                    </div>
                   ) : (
                     products.filter(p => p.ativo).map(product => (
                       <div 
@@ -1224,9 +1355,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
                   <div>
                     <p className="font-medium text-sm">Venda Recorrente</p>
                     <p className="text-xs text-muted-foreground">
-                      {vendaRecorrente 
-                        ? 'Mensalidade / Assinatura' 
-                        : 'Pagamento à vista (única vez)'}
+                      Marque se esta venda é recorrente (assinatura/mensalidade)
                     </p>
                   </div>
                 </div>
