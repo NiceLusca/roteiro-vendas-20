@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.agenda-webhook]
 verify_jwt = false
+
+[functions.comercial-metrics]
+verify_jwt = false
