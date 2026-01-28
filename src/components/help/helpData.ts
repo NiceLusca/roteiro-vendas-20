@@ -326,9 +326,9 @@ export const helpSections: HelpSection[] = [
           
           <p><strong>Ações Rápidas:</strong></p>
           <ul>
-            <li>Clique duplo para abrir detalhes</li>
-            <li>Botão direito para menu contextual</li>
-            <li>Hover para ações rápidas</li>
+            <li>Clique no card para abrir detalhes</li>
+            <li>Menu de contexto para ações rápidas</li>
+            <li>Hover para ver informações adicionais</li>
           </ul>
           
           <h4>🔍 Filtros e Visualização</h4>
@@ -356,6 +356,75 @@ export const helpSections: HelpSection[] = [
         keywords: ['kanban', 'board', 'arrastar', 'navegação', 'filtros'],
       },
       {
+        id: 'kanban-stage-groups',
+        title: 'Grupos de Etapas',
+        description: 'Organize etapas do Kanban em grupos colapsáveis',
+        type: 'guide',
+        content: `
+          <h3>Usando Grupos de Etapas</h3>
+          
+          <p>Grupos de etapas permitem organizar seu Kanban de forma mais eficiente, agrupando etapas relacionadas para uma visualização mais limpa.</p>
+          
+          <h4>📦 O que são Grupos?</h4>
+          <p>Grupos reúnem etapas que fazem parte de uma mesma fase do processo:</p>
+          <ul>
+            <li><strong>Captação:</strong> etapas iniciais de entrada de leads</li>
+            <li><strong>Qualificação:</strong> etapas de análise e triagem</li>
+            <li><strong>Negociação:</strong> etapas de proposta e fechamento</li>
+            <li><strong>Pós-venda:</strong> etapas de onboarding e suporte</li>
+          </ul>
+          
+          <h4>🎨 Identificação Visual</h4>
+          <p>Etapas de um mesmo grupo compartilham:</p>
+          <ul>
+            <li>Barra colorida no topo da coluna</li>
+            <li>Ícone de toggle para colapsar/expandir</li>
+            <li>Cor consistente entre todas as etapas do grupo</li>
+          </ul>
+          
+          <h4>📌 Como Colapsar/Expandir</h4>
+          <p><strong>Para colapsar um grupo:</strong></p>
+          <ol>
+            <li>Localize a barra colorida no topo de qualquer coluna do grupo</li>
+            <li>Clique no ícone <code>⇄</code> ao lado da barra</li>
+            <li>Todas as etapas do grupo serão substituídas por um card resumo</li>
+          </ol>
+          
+          <p><strong>Para expandir um grupo:</strong></p>
+          <ol>
+            <li>Clique no card de grupo colapsado</li>
+            <li>As etapas voltarão às suas posições originais</li>
+          </ol>
+          
+          <h4>📊 Card de Grupo Colapsado</h4>
+          <p>Quando colapsado, o card exibe:</p>
+          <ul>
+            <li>Nome do grupo</li>
+            <li>Número total de leads no grupo</li>
+            <li>Quantidade de etapas agrupadas</li>
+            <li>Lista de nomes das etapas</li>
+          </ul>
+          
+          <div style="background: #e3f2fd; padding: 16px; border-radius: 8px; margin: 16px 0;">
+            <strong>💡 Dica:</strong> O estado de colapso é salvo automaticamente por pipeline. Ao retornar, você verá a mesma configuração de antes.
+          </div>
+          
+          <h4>⚙️ Configurando Grupos</h4>
+          <p>Para configurar quais etapas pertencem a qual grupo:</p>
+          <ol>
+            <li>Acesse <strong>Configurações → Pipelines</strong></li>
+            <li>Clique em "🎨 Configurar Grupos" no pipeline desejado</li>
+            <li>Atribua cada etapa a um grupo e cor</li>
+            <li>Use os filtros para gerenciar etapas sem grupo</li>
+          </ol>
+        `,
+        keywords: ['grupos', 'etapas', 'colapsar', 'expandir', 'organização', 'kanban'],
+        relatedLinks: [
+          { title: 'Navegação no Kanban', url: '#kanban-navigation' },
+          { title: 'Personalização do Kanban', url: '#kanban-customization' }
+        ]
+      },
+      {
         id: 'kanban-customization',
         title: 'Personalização do Kanban',
         description: 'Configure o board para atender suas necessidades específicas',
@@ -366,10 +435,10 @@ export const helpSections: HelpSection[] = [
           <h4>🎨 Layout e Aparência</h4>
           <p>Customize a visualização:</p>
           <ul>
-            <li>Cores por etapa ou prioridade</li>
-            <li>Tamanho dos cards (compacto/detalhado)</li>
+            <li>Cores por etapa ou grupo</li>
+            <li>Tamanho dos cards</li>
             <li>Campos exibidos nos cards</li>
-            <li>Agrupamentos visuais</li>
+            <li>Grupos de etapas colapsáveis</li>
           </ul>
           
           <h4>📋 Campos nos Cards</h4>
@@ -391,16 +460,16 @@ export const helpSections: HelpSection[] = [
             <li>Tarefas pendentes</li>
           </ul>
           
-          <h4>⚙️ Automações Visuais</h4>
-          <p>Configure ações automáticas:</p>
+          <h4>⚙️ Configurações por Pipeline</h4>
+          <p>Cada pipeline pode ter:</p>
           <ul>
-            <li>Mudança de cor por tempo na etapa</li>
-            <li>Badges automáticas por critérios</li>
-            <li>Ordenação dinâmica</li>
-            <li>Agrupamento inteligente</li>
+            <li>Configuração de exibição personalizada</li>
+            <li>Grupos de etapas específicos</li>
+            <li>Cores e identidade visual próprias</li>
+            <li>Campos visíveis diferentes</li>
           </ul>
         `,
-        keywords: ['personalização', 'customização', 'layout', 'campos', 'automação'],
+        keywords: ['personalização', 'customização', 'layout', 'campos', 'grupos'],
       }
     ]
   },
