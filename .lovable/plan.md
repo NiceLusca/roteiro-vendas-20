@@ -1,88 +1,39 @@
 
+# Plano: Criar Order Automática e Preencher Closer ao Confirmar Venda
 
-# Plano: Corrigir Aba de Vendas e Adicionar Seletor de Origem na Agenda
+## Problema Identificado
 
-## Problemas Identificados
+Ao marcar "Venda Confirmada" no LeadEditDialog:
+1. **Só o deal é salvo** - nenhum registro é criado na tabela `orders`
+2. **Closer não é preenchido** - nem no deal nem no order
+3. **comercial-metrics busca de orders** - por isso não aparece no Clarity
 
-### 1. Legenda do checkbox "Venda Recorrente" invertida
-A legenda atual mostra:
-- Quando **desmarcado**: "Pagamento à vista (única vez)"
-- Quando **marcado**: "Mensalidade / Assinatura"
-
-O problema é que quando desmarcado aparece "à vista", mas semanticamente isso não faz sentido com "Venda Recorrente". A legenda deveria indicar claramente o estado atual.
-
-### 2. Nenhum produto cadastrado
-A lista de produtos está vazia porque a tabela `products` não tem registros. O ProductManager existe em Configuracoes > Produtos, mas o usuario precisa cadastrar produtos antes de poder selecioná-los nas vendas.
-
-### 3. Sem seletor de origem na aba Agenda
-A aba Agenda não possui campo para selecionar/editar a origem do lead. É necessario adicionar um dropdown com as origens existentes e a opcao de criar novas.
+### Dados da venda da Jeane:
+- Deal: R$ 1.497, status "ganho" ✓
+- Order: NÃO EXISTE ✗
+- Closer: NULL ✗
+- Responsável principal: Lucas Nascimento ✓
 
 ---
 
-## Solucoes
+## Solução
 
-### 1. Corrigir legenda do checkbox "Venda Recorrente"
+### 1. Modificar handleSaveDeal para criar order automaticamente
 
-**Arquivo:** `src/components/kanban/LeadEditDialog.tsx`
+Quando `vendaConfirmada = true`:
+1. Salvar o deal (como já faz)
+2. **Buscar o responsável principal** do lead
+3. **Criar/atualizar order** com:
+   - `lead_id`: do lead
+   - `deal_id`: do deal salvo
+   - `valor_total`: igual ao deal
+   - `closer`: nome do responsável principal
+   - `status_pagamento`: 'pago'
+   - `data_venda`: timestamp atual
 
-Alterar a logica da legenda (linhas 1225-1229):
+### 2. Usar responsável principal como closer
 
-```text
-DE:
-{vendaRecorrente 
-  ? 'Mensalidade / Assinatura' 
-  : 'Pagamento à vista (única vez)'}
-
-PARA:
-Marque se esta venda é recorrente (assinatura/mensalidade)
-```
-
-A nova legenda será fixa e descritiva, semelhante ao checkbox "Venda Confirmada".
-
-### 2. Adicionar link para cadastrar produtos
-
-Na secao de produtos do formulario de vendas, quando nao houver produtos, mostrar link para ir às Configuracoes > Produtos.
-
-**Arquivo:** `src/components/kanban/LeadEditDialog.tsx`
-
-```text
-DE:
-<p className="p-3 text-sm text-muted-foreground text-center">
-  Nenhum produto cadastrado
-</p>
-
-PARA:
-<div className="p-3 text-center">
-  <p className="text-sm text-muted-foreground mb-2">Nenhum produto cadastrado</p>
-  <Button variant="link" size="sm" onClick={() => window.open('/settings?tab=products', '_blank')}>
-    Cadastrar produtos
-  </Button>
-</div>
-```
-
-### 3. Adicionar seletor de origem na aba Agenda
-
-**Arquivo:** `src/components/kanban/LeadEditDialog.tsx`
-
-Criar novo campo na aba Agenda com:
-- Dropdown mostrando origens existentes (buscadas do banco)
-- Input para adicionar nova origem
-- Botao para criar nova origem
-
-Dados necessarios:
-- Buscar origens distintas: `SELECT DISTINCT origem FROM leads WHERE origem IS NOT NULL`
-- As origens existentes sao: "Agenda Oceano", "Mentoria Society - GAB", "No plan b", "Outro", etc.
-
-Layout proposto na aba Agenda:
-```text
-+--------------------------------------------------+
-| Origem do Lead                                   |
-|  [Dropdown: Agenda Oceano ▼]  [+ Nova]           |
-+--------------------------------------------------+
-| Novo Agendamento                                 |
-| ...campos existentes...                          |
-+--------------------------------------------------+
-```
+O closer no contexto comercial é quem fechou a venda - que deve ser o **responsável principal** atribuído ao lead, não um campo texto livre.
 
 ---
 
@@ -90,106 +41,163 @@ Layout proposto na aba Agenda:
 
 | # | Arquivo | Alteracao |
 |---|---------|-----------|
-| 1 | `src/components/kanban/LeadEditDialog.tsx` | - Corrigir legenda do checkbox recorrente |
-|   |                                            | - Adicionar link para cadastrar produtos |
-|   |                                            | - Adicionar seletor de origem na aba Agenda |
+| 1 | `src/components/kanban/LeadEditDialog.tsx` | Modificar `handleSaveDeal` para criar order e buscar closer |
 
 ---
 
 ## Detalhes Tecnicos
 
-### Estados adicionais necessarios no LeadEditDialog:
-```typescript
-const [origens, setOrigens] = useState<string[]>([]);
-const [selectedOrigem, setSelectedOrigem] = useState<string>(lead.origem || '');
-const [newOrigem, setNewOrigem] = useState('');
-const [addingOrigem, setAddingOrigem] = useState(false);
-```
+### Logica do handleSaveDeal atualizado:
 
-### Query para buscar origens:
 ```typescript
-const fetchOrigens = async () => {
-  const { data } = await supabase
-    .from('leads')
-    .select('origem')
-    .not('origem', 'is', null);
+const handleSaveDeal = async () => {
+  const parsedValor = parseFloat(dealValor.replace(/\D/g, '')) / 100 || 0;
   
-  const unique = [...new Set(data?.map(d => d.origem).filter(Boolean))];
-  setOrigens(unique.sort());
+  if (parsedValor <= 0) {
+    toast.error('Informe o valor da venda');
+    return;
+  }
+
+  try {
+    setSavingDeal(true);
+    const status = vendaConfirmada ? 'ganho' : 'aberto';
+
+    // 1. Salvar o deal
+    const result = await saveDeal({
+      ...(existingDeal?.id ? { id: existingDeal.id } : {}),
+      lead_id: lead.id,
+      valor_proposto: parsedValor,
+      recorrente: vendaRecorrente,
+      status: status as any,
+      data_fechamento: vendaConfirmada ? new Date().toISOString() : null
+    });
+
+    // 2. Salvar produtos associados
+    if (result?.id && selectedProductIds.length > 0) {
+      await setDealProducts(selectedProductIds);
+    }
+
+    // 3. SE VENDA CONFIRMADA: criar/atualizar order
+    if (vendaConfirmada && result?.id) {
+      // Buscar responsavel principal para usar como closer
+      const { data: primaryResp } = await supabase
+        .from('lead_responsibles')
+        .select('profiles(nome, full_name)')
+        .eq('lead_id', lead.id)
+        .eq('is_primary', true)
+        .single();
+      
+      const closerName = primaryResp?.profiles?.nome 
+        || primaryResp?.profiles?.full_name 
+        || 'Não atribuído';
+      
+      // Verificar se ja existe order para este deal
+      const { data: existingOrder } = await supabase
+        .from('orders')
+        .select('id')
+        .eq('deal_id', result.id)
+        .single();
+      
+      if (existingOrder?.id) {
+        // Atualizar order existente
+        await supabase
+          .from('orders')
+          .update({
+            valor_total: parsedValor,
+            closer: closerName,
+            status_pagamento: 'pago',
+            data_venda: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingOrder.id);
+      } else {
+        // Criar nova order
+        await supabase
+          .from('orders')
+          .insert({
+            lead_id: lead.id,
+            deal_id: result.id,
+            valor_total: parsedValor,
+            closer: closerName,
+            status_pagamento: 'pago',
+            data_venda: new Date().toISOString()
+          });
+      }
+    }
+
+    toast.success(existingDeal ? 'Negociação atualizada!' : 'Negociação criada!');
+    onUpdate?.();
+  } catch (error) {
+    console.error('Erro ao salvar deal:', error);
+    toast.error('Erro ao salvar negociação');
+  } finally {
+    setSavingDeal(false);
+  }
 };
 ```
 
-### Handler para salvar origem:
-```typescript
-const handleSaveOrigem = async () => {
-  const origemToSave = selectedOrigem || newOrigem;
-  if (!origemToSave) return;
-  
-  await saveLead({
-    id: lead.id,
-    origem: origemToSave
-  });
-  
-  toast.success('Origem atualizada');
-  onUpdate?.();
-};
-```
+---
 
-### UI do seletor de origem:
-```tsx
-<div className="p-4 border rounded-lg bg-muted/30 space-y-4 mb-4">
-  <h4 className="font-medium flex items-center gap-2">
-    <MapPin className="h-4 w-4" />
-    Origem do Lead
-  </h4>
-  
-  <div className="flex gap-2">
-    <Select value={selectedOrigem} onValueChange={(v) => {
-      setSelectedOrigem(v);
-      setAddingOrigem(false);
-    }}>
-      <SelectTrigger className="flex-1">
-        <SelectValue placeholder="Selecione a origem" />
-      </SelectTrigger>
-      <SelectContent>
-        {origens.map(o => (
-          <SelectItem key={o} value={o}>{o}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-    
-    <Button variant="outline" size="icon" onClick={() => setAddingOrigem(!addingOrigem)}>
-      <Plus className="h-4 w-4" />
-    </Button>
-  </div>
-  
-  {addingOrigem && (
-    <div className="flex gap-2">
-      <Input 
-        placeholder="Nova origem..." 
-        value={newOrigem}
-        onChange={(e) => setNewOrigem(e.target.value)}
-      />
-      <Button onClick={handleAddOrigem}>Adicionar</Button>
-    </div>
-  )}
-  
-  <Button onClick={handleSaveOrigem} className="w-full">
-    Salvar Origem
-  </Button>
-</div>
+## Migracao de Dados
+
+Para a venda da Jeane (e outras ja confirmadas), criar order retroativamente:
+
+```sql
+INSERT INTO orders (lead_id, deal_id, valor_total, closer, status_pagamento, data_venda)
+SELECT 
+  d.lead_id,
+  d.id as deal_id,
+  d.valor_proposto as valor_total,
+  COALESCE(p.nome, p.full_name, 'Não atribuído') as closer,
+  'pago' as status_pagamento,
+  d.data_fechamento as data_venda
+FROM deals d
+LEFT JOIN lead_responsibles lr ON lr.lead_id = d.lead_id AND lr.is_primary = true
+LEFT JOIN profiles p ON lr.user_id = p.user_id
+WHERE d.status = 'ganho'
+  AND NOT EXISTS (SELECT 1 FROM orders o WHERE o.deal_id = d.id);
 ```
 
 ---
 
 ## Resultado Esperado
 
-1. **Checkbox Recorrente**: Legenda clara "Marque se esta venda é recorrente (assinatura/mensalidade)"
+1. **Venda confirmada** cria deal + order automaticamente
+2. **Closer = responsavel principal** do lead
+3. **comercial-metrics** mostra receita e conversao por closer corretamente
+4. **Clarity** recebe os dados de vendas com atribuicao correta
 
-2. **Produtos**: Quando vazio, mostra link "Cadastrar produtos" que abre Configuracoes em nova aba
+---
 
-3. **Origem na Agenda**: 
-   - Dropdown com origens existentes
-   - Botao para adicionar nova origem
-   - Salva automaticamente no lead
+## Fluxo Visual
 
+```text
+Usuario marca "Venda Confirmada" (R$ 1.497)
+        |
+        v
++------------------+
+|   Salva DEAL     |
+|   status: ganho  |
++------------------+
+        |
+        v
++------------------+
+| Busca responsavel|
+| principal        |
+| -> "Lucas"       |
++------------------+
+        |
+        v
++------------------+
+|   Cria ORDER     |
+|   closer: Lucas  |
+|   valor: 1497    |
+|   status: pago   |
++------------------+
+        |
+        v
+comercial-metrics API
+        |
+        v
+Clarity Dashboard: Lucas - R$ 1.497
+```
