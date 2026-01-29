@@ -45,17 +45,21 @@ export default function PipelineSelector() {
       
       setMetricsLoading(true);
       
-      // Buscar TODAS as entries sem paginação, apenas campos necessários
-      const { data: entries, error } = await supabase
+      // Buscar TODAS as entries sem limite - Supabase tem limite padrão de 1000
+      // Usamos range(0, 9999) para garantir que buscamos todos
+      const { data: entries, error, count } = await supabase
         .from('lead_pipeline_entries')
-        .select('pipeline_id, saude_etapa')
-        .eq('status_inscricao', 'Ativo');
+        .select('pipeline_id, saude_etapa', { count: 'exact' })
+        .eq('status_inscricao', 'Ativo')
+        .range(0, 9999);
       
       if (error) {
-        console.error('Erro ao buscar métricas:', error);
+        console.error('[PipelineSelector] Erro ao buscar métricas:', error);
         setMetricsLoading(false);
         return;
       }
+      
+      console.log(`[PipelineSelector] Entries: ${entries?.length}, Count DB: ${count}`);
       
       // Calcular métricas por pipeline
       const metrics: Record<string, { totalLeads: number; leadsAtrasados: number }> = {};
