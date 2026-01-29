@@ -256,6 +256,29 @@ Deno.serve(async (req) => {
 
     console.log(`[comercial-metrics] ${orders?.length || 0} orders encontrados`);
 
+    // Get lead responsibles for all order lead_ids to map closer correctly
+    const orderLeadIds = (orders || []).map((o: any) => o.lead_id).filter(Boolean);
+    const { data: orderResponsibles } = orderLeadIds.length > 0 ? await supabase
+      .from("lead_responsibles")
+      .select(`
+        lead_id,
+        is_primary,
+        profiles!lead_responsibles_user_id_fkey(nome, full_name)
+      `)
+      .in("lead_id", orderLeadIds)
+      .eq("is_primary", true) : { data: [] };
+
+    // Create a map of order lead_id -> closer name (from lead_responsibles)
+    const orderCloserMap = new Map<string, string>();
+    (orderResponsibles || []).forEach((r: any) => {
+      const name = r.profiles?.nome || r.profiles?.full_name || null;
+      if (name) {
+        orderCloserMap.set(r.lead_id, name);
+      }
+    });
+
+    console.log(`[comercial-metrics] ${orderCloserMap.size} orders com closer via lead_responsibles`);
+
     // Get products for orders
     const orderIds = (orders || []).map((o: any) => o.id);
     const { data: orderItems } = orderIds.length > 0 ? await supabase
@@ -271,10 +294,10 @@ Deno.serve(async (req) => {
       }
     });
 
-    // Process order data
+    // Process order data - USE orderCloserMap to get closer from lead_responsibles, not orders.closer
     const processedOrders: OrderData[] = (orders || []).map((o: any) => ({
       id: o.id,
-      closer: o.closer,
+      closer: orderCloserMap.get(o.lead_id) || o.closer || null, // Prioritize lead_responsibles
       valor_total: Number(o.valor_total) || 0,
       lead_origem: o.leads?.origem || "Outro",
       recorrente: o.deals?.recorrente || false,
