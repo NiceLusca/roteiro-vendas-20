@@ -20,6 +20,7 @@ import { useSupabaseAppointments } from '@/hooks/useSupabaseAppointments';
 import { useSupabaseDeals } from '@/hooks/useSupabaseDeals';
 import { useSupabaseProducts } from '@/hooks/useSupabaseProducts';
 import { useSupabaseDealProducts } from '@/hooks/useSupabaseDealProducts';
+import { useQueryClient } from '@tanstack/react-query';
 import { ResponsibleSelector } from '@/components/leads/ResponsibleSelector';
 import { LeadActivityTimeline } from '@/components/timeline/LeadActivityTimeline';
 import { NoteContent } from './NoteContent';
@@ -149,6 +150,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
   const { appointments, saveAppointment, getUpcomingAppointments } = useSupabaseAppointments();
   const { deals, saveDeal, getDealsByLeadId } = useSupabaseDeals();
   const { products } = useSupabaseProducts();
+  const queryClient = useQueryClient();
 
   // Filtrar dados do lead atual
   const leadAppointments = appointments.filter(a => a.lead_id === lead.id);
@@ -306,6 +308,9 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
             });
         }
       }
+
+      // Invalidar cache de deals para forçar atualização no Kanban
+      queryClient.invalidateQueries({ queryKey: ['pipeline-deals'] });
 
       toast.success(existingDeal ? 'Negociação atualizada!' : 'Negociação criada!');
       onUpdate?.();
