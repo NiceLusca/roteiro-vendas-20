@@ -35,7 +35,7 @@ export default function PipelineSelector() {
     }
   }, [pipelinesLoading, activePipelines, navigate]);
 
-  // Buscar métricas de todos os pipelines sem paginação
+  // Buscar métricas de todos os pipelines com paginação para superar limite de 1000 rows
   useEffect(() => {
     const fetchPipelineMetrics = async () => {
       if (!activePipelines.length) {
@@ -45,35 +45,58 @@ export default function PipelineSelector() {
       
       setMetricsLoading(true);
       
-      // Buscar TODAS as entries sem limite - Supabase tem limite padrão de 1000
-      // Usamos range(0, 9999) para garantir que buscamos todos
-      const { data: entries, error, count } = await supabase
-        .from('lead_pipeline_entries')
-        .select('pipeline_id, saude_etapa', { count: 'exact' })
-        .eq('status_inscricao', 'Ativo')
-        .range(0, 9999);
-      
-      if (error) {
-        console.error('[PipelineSelector] Erro ao buscar métricas:', error);
+      try {
+        // Supabase tem limite de 1000 rows por query
+        // Precisamos paginar para buscar todos os registros
+        const PAGE_SIZE = 1000;
+        let allEntries: { pipeline_id: string; saude_etapa: string | null }[] = [];
+        let page = 0;
+        let hasMore = true;
+        
+        while (hasMore) {
+          const from = page * PAGE_SIZE;
+          const to = from + PAGE_SIZE - 1;
+          
+          const { data: entries, error } = await supabase
+            .from('lead_pipeline_entries')
+            .select('pipeline_id, saude_etapa')
+            .eq('status_inscricao', 'Ativo')
+            .range(from, to);
+          
+          if (error) {
+            console.error('[PipelineSelector] Erro ao buscar métricas:', error);
+            setMetricsLoading(false);
+            return;
+          }
+          
+          if (entries && entries.length > 0) {
+            allEntries = [...allEntries, ...entries];
+            hasMore = entries.length === PAGE_SIZE;
+            page++;
+          } else {
+            hasMore = false;
+          }
+        }
+        
+        console.log(`[PipelineSelector] Total entries carregados: ${allEntries.length}`);
+        
+        // Calcular métricas por pipeline
+        const metrics: Record<string, { totalLeads: number; leadsAtrasados: number }> = {};
+        
+        activePipelines.forEach(pipeline => {
+          const pipelineEntries = allEntries.filter(e => e.pipeline_id === pipeline.id);
+          metrics[pipeline.id] = {
+            totalLeads: pipelineEntries.length,
+            leadsAtrasados: pipelineEntries.filter(e => e.saude_etapa === 'Vermelho').length
+          };
+        });
+        
+        setPipelineMetrics(metrics);
+      } catch (err) {
+        console.error('[PipelineSelector] Erro inesperado:', err);
+      } finally {
         setMetricsLoading(false);
-        return;
       }
-      
-      console.log(`[PipelineSelector] Entries: ${entries?.length}, Count DB: ${count}`);
-      
-      // Calcular métricas por pipeline
-      const metrics: Record<string, { totalLeads: number; leadsAtrasados: number }> = {};
-      
-      activePipelines.forEach(pipeline => {
-        const pipelineEntries = entries?.filter(e => e.pipeline_id === pipeline.id) || [];
-        metrics[pipeline.id] = {
-          totalLeads: pipelineEntries.length,
-          leadsAtrasados: pipelineEntries.filter(e => e.saude_etapa === 'Vermelho').length
-        };
-      });
-      
-      setPipelineMetrics(metrics);
-      setMetricsLoading(false);
     };
     
     fetchPipelineMetrics();
