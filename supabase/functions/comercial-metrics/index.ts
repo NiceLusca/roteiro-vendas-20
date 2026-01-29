@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
       dataFim = now.toISOString().split("T")[0];
     }
 
-    console.log(`[comercial-metrics] Período: ${periodo}, Início: ${dataInicio}, Fim: ${dataFim}`);
+    console.log(`[comercial-metrics] v2.1 - Período: ${periodo}, Início: ${dataInicio}, Fim: ${dataFim}`);
 
     // 1. Get comercial pipeline
     const { data: pipeline, error: pipelineError } = await supabase
@@ -212,9 +212,10 @@ Deno.serve(async (req) => {
       } else if (ordem >= 6) {
         compareceram++;
         
-        if (nome === "fechou" && !nome.includes("recuperação") && !nome.includes("recuperacao")) {
+        // CORREÇÃO: usar startsWith para evitar que "Não Fechou" seja contado como fechamento
+        if (nome.startsWith("fechou") && !nome.includes("recuperação") && !nome.includes("recuperacao")) {
           fechamentosDiretos++;
-        } else if (nome.includes("fechou") && (nome.includes("recuperação") || nome.includes("recuperacao") || nome.includes("pós"))) {
+        } else if (nome.startsWith("fechou") && (nome.includes("recuperação") || nome.includes("recuperacao") || nome.includes("pós"))) {
           fechamentosRecuperacao++;
         } else if (nome.includes("perdido") && nome.includes("sessão") || nome.includes("perdido pós") || nome.includes("perdido pos")) {
           perdidosPossSessao++;
@@ -350,7 +351,10 @@ Deno.serve(async (req) => {
       if (e.etapa_ordem >= 6 && nome !== "mentorado" && !nome.includes("perdido sem sessão")) {
         stats.compareceu++;
       }
-      if (nome.includes("fechou")) {
+      // CORREÇÃO: "Não Fechou" contém "fechou" mas NÃO é fechamento!
+      // Contar apenas etapas que começam com "fechou" (ex: "fechou", "fechou (pós-recuperação)")
+      const isFechamento = nome.startsWith("fechou");
+      if (isFechamento) {
         stats.fechou++;
       }
     });
@@ -450,7 +454,8 @@ Deno.serve(async (req) => {
       if (e.etapa_ordem >= 6 && nome !== "mentorado" && !nome.includes("perdido sem sessão")) {
         stats.compareceu++;
       }
-      if (nome.includes("fechou")) {
+      // CORREÇÃO: usar startsWith para evitar "Não Fechou"
+      if (nome.startsWith("fechou")) {
         stats.fechou++;
       }
     });
