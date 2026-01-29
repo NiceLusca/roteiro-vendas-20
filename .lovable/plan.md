@@ -1,195 +1,136 @@
 
+# Plano: Corrigir Exibicao de Valor do Deal no Card de Jeane
 
-# Plano: Corrigir Atribuicao de Closer na API comercial-metrics
+## Problema Identificado
 
-## Problema Raiz Identificado
+O valor do deal (R$ 1.497) de **Jeane Vieira Santana** nao aparece no card do Kanban, embora exista no banco de dados. O problema esta no hook `usePipelineDisplayData` que usa uma **cache key truncada** baseada apenas nos primeiros 10 IDs de leads.
 
-A edge function `comercial-metrics` usa o campo legado `leads.closer` (texto livre) para atribuir leads aos closers, mas o sistema atual usa a tabela `lead_responsibles` para gerenciar responsaveis.
+### Causa Raiz
 
-### Evidencia do Problema:
+No arquivo `src/hooks/usePipelineDisplayData.ts` (linha 22):
 
-| Dado | Valor Atual | Deveria Ser |
-|------|-------------|-------------|
-| `leads.closer` (campo legado) | `NULL` | - |
-| `lead_responsibles.is_primary` | `true` | ✓ |
-| `profiles.nome` | `Lucas Nascimento` | ✓ |
-| `orders.closer` | `Lucas Nascimento` | ✓ |
-| **API: leads** | `0` | `1` |
-| **API: fechou** | `0` | `1` |
-| **API: taxa_conversao** | `0` | Deveria calcular |
-
-### Fluxo Atual (Incorreto):
-```text
-lead_pipeline_entries 
-    → leads.closer (NULL!)
-        → closerStats.leads = 0
-        → closerStats.fechou = 0
+```typescript
+queryKey: ['pipeline-deals', pipelineId, leadIds.slice(0, 10).join(',')],
 ```
 
-### Fluxo Correto:
-```text
-lead_pipeline_entries 
-    → lead_responsibles (is_primary=true)
-        → profiles.nome ("Lucas Nascimento")
-            → closerStats.leads = 1
-            → closerStats.fechou = 1
-```
+Este codigo:
+1. Gera uma cache key usando apenas os **primeiros 10** lead IDs
+2. Mas a query real (linha 29) busca **todos** os leadIds: `.in('lead_id', leadIds)`
+3. Quando um novo deal e criado para um lead fora dos 10 primeiros, a cache key nao muda
+4. O React Query retorna dados em cache **sem o novo deal**
+
+### Evidencia
+
+Os primeiros 10 leads (por `data_entrada_etapa DESC`) sao:
+1. Valerio Cunha
+2. renascertransfertur@gmail.com
+3. Elaine Alencar
+4. ... (outros)
+
+**Jeane nao esta nesta lista**, mesmo sendo a 2a lead mais antiga. O deal de Kelly (criado hoje) aparece porque Kelly provavelmente esta entre os 10 mais recentes.
 
 ---
 
 ## Solucao
 
-### Modificar a edge function `comercial-metrics`
+Modificar a **cache key** para ser mais abrangente e garantir invalidacao correta.
 
-**Arquivo:** `supabase/functions/comercial-metrics/index.ts`
+### Opcao A: Usar hash/contagem ao inves de IDs truncados (Recomendada)
 
-### 1. Alterar query de entries para incluir responsaveis
+Usar `leadIds.length` e um timestamp truncado como cache key, em vez de IDs especificos:
 
-DE (linha 105-114):
 ```typescript
-const { data: entries } = await supabase
-  .from("lead_pipeline_entries")
-  .select(`
-    id,
-    lead_id,
-    etapa_atual_id,
-    leads!inner(origem, closer)  // ❌ usa campo texto legado
-  `)
+// DE:
+queryKey: ['pipeline-deals', pipelineId, leadIds.slice(0, 10).join(',')],
+
+// PARA:
+queryKey: ['pipeline-deals', pipelineId, leadIds.length],
 ```
 
-PARA:
+**Vantagem**: Invalida cache quando a quantidade de leads muda
+**Desvantagem**: Nao invalida quando apenas um deal e criado (quantidade permanece igual)
+
+### Opcao B: Forcar refetch com staleTime menor + invalidacao manual
+
+Reduzir `staleTime` para 5 segundos e adicionar invalidacao apos criar deal:
+
 ```typescript
-const { data: entries } = await supabase
-  .from("lead_pipeline_entries")
-  .select(`
-    id,
-    lead_id,
-    etapa_atual_id,
-    leads!inner(
-      origem,
-      lead_responsibles!inner(
-        is_primary,
-        profiles!inner(nome, full_name)
-      )
-    )
-  `)
+staleTime: 5000, // 5 segundos em vez de 30
 ```
 
-### 2. Atualizar processamento de entries para usar responsavel
+### Opcao C: Usar todos os IDs na cache key (Preferida - precisao maxima)
 
-DE (linha 124-134):
+Gerar um hash dos IDs para evitar colisoes:
+
 ```typescript
-const leadEntries = (entries || []).map((e) => {
-  const stage = e.etapa_atual_id ? stageMap.get(e.etapa_atual_id) : null;
-  return {
-    lead_id: e.lead_id,
-    etapa_nome: stage?.nome || "Sem etapa",
-    etapa_ordem: stage?.ordem || 0,
-    etapa_grupo: stage?.grupo || null,
-    origem: e.leads?.origem || "Outro",
-    closer: e.leads?.closer || null,  // ❌ usa campo texto
-  };
+queryKey: ['pipeline-deals', pipelineId, JSON.stringify(leadIds.sort())],
+```
+
+**Problema**: Strings muito longas para 97+ leads
+
+### Opcao D: Invalidar cache apos edicao de lead (Abordagem hibrida)
+
+Manter cache key atual mas invalidar queries de deals quando um lead e editado:
+
+```typescript
+queryClient.invalidateQueries({ queryKey: ['pipeline-deals'] });
+```
+
+---
+
+## Implementacao Recomendada (Opcao A + D)
+
+### Arquivo: `src/hooks/usePipelineDisplayData.ts`
+
+#### Mudanca 1: Cache key baseada na quantidade de leads
+
+```typescript
+// Linha 21-22: Alterar query key para usar contagem + hash simples
+const { data: deals = [], isLoading: loadingDeals } = useQuery({
+  queryKey: ['pipeline-deals', pipelineId, leadIds.length, leadIds[0], leadIds[leadIds.length - 1]],
+  // ...resto mantido
 });
 ```
 
-PARA:
+Esta abordagem:
+- Invalida quando a quantidade de leads muda
+- Invalida quando o primeiro ou ultimo lead muda
+- Mantém cache eficiente para navegacao rapida
+
+#### Mudanca 2: Reduzir staleTime para maior responsividade
+
 ```typescript
-const leadEntries = (entries || []).map((e) => {
-  const stage = e.etapa_atual_id ? stageMap.get(e.etapa_atual_id) : null;
-  
-  // Buscar responsavel principal via lead_responsibles
-  const primaryResp = e.leads?.lead_responsibles?.find((r: any) => r.is_primary);
-  const closerName = primaryResp?.profiles?.nome 
-    || primaryResp?.profiles?.full_name 
-    || null;
-  
-  return {
-    lead_id: e.lead_id,
-    etapa_nome: stage?.nome || "Sem etapa",
-    etapa_ordem: stage?.ordem || 0,
-    etapa_grupo: stage?.grupo || null,
-    origem: e.leads?.origem || "Outro",
-    closer: closerName,  // ✓ usa responsavel principal
-  };
-});
+staleTime: 10000, // 10 segundos (antes: 30 segundos)
 ```
 
-### 3. Problema adicional: !inner exclui leads sem responsavel
+### Arquivo: `src/components/kanban/LeadEditDialog.tsx`
 
-Se usarmos `!inner` para lead_responsibles, leads sem responsavel serao excluidos. Precisamos usar JOIN normal (sem !inner) e filtrar no codigo.
+#### Mudanca 3: Invalidar cache de deals apos salvar
 
-Query corrigida:
+Apos salvar um deal na aba Vendas, invalidar a cache:
+
 ```typescript
-const { data: entries } = await supabase
-  .from("lead_pipeline_entries")
-  .select(`
-    id,
-    lead_id,
-    etapa_atual_id,
-    leads!inner(
-      origem,
-      lead_responsibles(
-        is_primary,
-        profiles(nome, full_name)
-      )
-    )
-  `)
-  .eq("pipeline_id", pipeline.id)
-  .eq("status_inscricao", "Ativo");
+import { useQueryClient } from '@tanstack/react-query';
+
+// Na funcao de salvar deal:
+const queryClient = useQueryClient();
+queryClient.invalidateQueries({ queryKey: ['pipeline-deals'] });
 ```
 
 ---
 
-## Resultado Esperado Apos Correcao
+## Resumo das Alteracoes
 
-```json
-{
-  "por_closer": [
-    {
-      "closer": "Lucas Nascimento",
-      "leads": 1,
-      "compareceu": 1,
-      "fechou": 1,
-      "receita": 1497,
-      "recorrente": 0,
-      "avista": 1,
-      "taxa_conversao": 100
-    }
-  ]
-}
-```
+| Arquivo | Alteracao |
+|---------|-----------|
+| `src/hooks/usePipelineDisplayData.ts` | Cache key mais abrangente + staleTime menor |
+| `src/components/kanban/LeadEditDialog.tsx` | Invalidar cache apos salvar deal |
 
 ---
 
-## Logica de Calculo Correta
+## Resultado Esperado
 
-| Metrica | Formula | Descricao |
-|---------|---------|-----------|
-| `leads` | Count de entries com este closer | Total de leads atribuidos |
-| `compareceu` | Count onde ordem >= 6 e !perdido_sem_sessao e !mentorado | Leads que fizeram sessao |
-| `fechou` | `recorrente + avista` | Total de vendas |
-| `receita` | Sum de orders.valor_total | Faturamento gerado |
-| `taxa_conversao` | `(fechou / compareceu) * 100` | % de conversao |
-
----
-
-## Arquivo a Modificar
-
-| # | Arquivo | Alteracao |
-|---|---------|-----------|
-| 1 | `supabase/functions/comercial-metrics/index.ts` | - Alterar query para usar lead_responsibles |
-|   |                                                 | - Atualizar mapeamento de entries |
-|   |                                                 | - Garantir calculo correto de fechou e taxa_conversao |
-
----
-
-## Impacto
-
-Apos a correcao, o dashboard Clarity tera:
-
-- ✅ Ranking de Closers por Faturamento
-- ✅ Taxa de Conversao por Closer  
-- ✅ Participacao na Receita por Closer
-- ✅ Comparativo de Performance entre Closers
-- ✅ Analise por Produto
-
+Apos implementar:
+1. O card de Jeane exibira **R$ 1.497**
+2. Novos deals criados aparecerao em ate 10 segundos
+3. Deals salvos via edicao de lead aparecerao imediatamente
