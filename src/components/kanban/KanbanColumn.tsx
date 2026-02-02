@@ -11,6 +11,12 @@ import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
 import { SortOption } from './KanbanBoard';
 
+interface SlaAppointmentData {
+  id: string;
+  data_hora: string;
+  start_at?: string;
+}
+
 interface KanbanColumnProps {
   stage: PipelineStage;
   nextStage?: PipelineStage | null;
@@ -26,6 +32,7 @@ interface KanbanColumnProps {
   displayConfig?: PipelineDisplayConfig | null;
   dealsByLeadId?: Record<string, DealDisplayInfo>;
   appointmentsByLeadId?: Record<string, AppointmentDisplayInfo>;
+  slaAppointmentsById?: Record<string, SlaAppointmentData>; // Agendamentos vinculados ao SLA
   
   checklistItems?: Array<{ id: string; etapa_id: string; obrigatorio: boolean }>;
   onAddLead?: (stageId: string) => void;
@@ -69,6 +76,7 @@ export const KanbanColumn = memo(function KanbanColumn({
   displayConfig,
   dealsByLeadId = {},
   appointmentsByLeadId = {},
+  slaAppointmentsById = {},
   
   checklistItems = [],
   onAddLead,
@@ -350,6 +358,7 @@ export const KanbanColumn = memo(function KanbanColumn({
                   displayConfig={displayConfig}
                   dealInfo={dealsByLeadId[entry.lead_id]}
                   appointmentInfo={appointmentsByLeadId[entry.lead_id]}
+                  slaAppointment={entry.agendamento_sla_id ? slaAppointmentsById[entry.agendamento_sla_id] : null}
                   onViewLead={() => onViewLead?.(entry.lead.id)}
                   onEditLead={() => onEditLead?.(entry.lead.id)}
                   onCreateAppointment={() => onCreateAppointment?.(entry.lead.id)}

@@ -91,6 +91,9 @@ export interface PipelineStage {
   proxima_etapa_id?: string | null; // ID da próxima etapa customizada (permite fluxos cíclicos)
   grupo?: string | null; // Nome do grupo visual (opcional)
   cor_grupo?: string | null; // Cor hex do grupo (opcional, padrão emerald)
+  // Configuração de SLA baseado em agendamento
+  sla_baseado_em?: 'entrada' | 'agendamento'; // Define se SLA conta da entrada ou do agendamento
+  requer_agendamento?: boolean; // Se true, bloqueia movimentação sem agendamento
 }
 
 export interface StageChecklistItem {
@@ -120,6 +123,7 @@ export interface LeadPipelineEntry {
   tempo_em_etapa_dias?: number; // Computed field
   dias_em_atraso?: number; // Computed field
   checklist_state?: Record<string, boolean>; // Computed field
+  agendamento_sla_id?: string | null; // ID do agendamento vinculado ao SLA
   [key: string]: any; // Index signature for checklist state
 }
 
