@@ -20,6 +20,8 @@ interface PipelineStage {
   proxima_etapa_id?: string | null; // null = auto, 'final' = etapa final
   grupo?: string | null;
   cor_grupo?: string | null;
+  sla_baseado_em?: 'entrada' | 'agendamento';
+  requer_agendamento?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -62,6 +64,8 @@ export function useSupabasePipelineStages(pipelineId?: string) {
           proxima_etapa_id,
           grupo,
           cor_grupo,
+          sla_baseado_em,
+          requer_agendamento,
           created_at,
           updated_at
         `);
