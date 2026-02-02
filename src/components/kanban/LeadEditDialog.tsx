@@ -362,9 +362,12 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
   }, [open, lead.origem]);
 
   // Handler para salvar origem
-  const handleSaveOrigem = async () => {
-    const origemToSave = newOrigem.trim() || selectedOrigem;
+  const handleSaveOrigem = async (origemValue?: string) => {
+    const origemToSave = origemValue || newOrigem.trim() || selectedOrigem;
     if (!origemToSave) return;
+    
+    // Não salvar se for o mesmo valor atual
+    if (origemToSave === lead.origem && !newOrigem.trim()) return;
     
     try {
       setSavingOrigem(true);
@@ -1109,6 +1112,10 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
                     setSelectedOrigem(v);
                     setAddingOrigem(false);
                     setNewOrigem('');
+                    // Salvar automaticamente ao selecionar uma origem diferente
+                    if (v !== lead.origem) {
+                      handleSaveOrigem(v);
+                    }
                   }}
                 >
                   <SelectTrigger className="flex-1">
@@ -1143,7 +1150,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
               )}
               
               <Button 
-                onClick={handleSaveOrigem} 
+                onClick={() => handleSaveOrigem()} 
                 disabled={(!selectedOrigem && !newOrigem.trim()) || savingOrigem}
                 className="w-full"
                 variant="secondary"
