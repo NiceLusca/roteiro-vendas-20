@@ -63,21 +63,14 @@ export async function validateAppointmentRequirement(
       };
     }
 
-    // 1 agendamento - vincular automaticamente
-    if (appointments.length === 1) {
-      return {
-        valid: true,
-        appointments,
-        requiresSelection: false
-      };
-    }
-
-    // Múltiplos agendamentos - solicitar seleção
+    // 1 ou mais agendamentos - sempre solicitar confirmação
     return {
       valid: true,
       appointments,
       requiresSelection: true,
-      message: 'Selecione qual agendamento usar para o prazo SLA'
+      message: appointments.length === 1 
+        ? 'Confirme o agendamento para o prazo SLA'
+        : 'Selecione qual agendamento usar para o prazo SLA'
     };
 
   } catch (error) {
