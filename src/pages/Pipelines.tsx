@@ -28,11 +28,14 @@ import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
 import { StageJumpDialog } from '@/components/pipeline/StageJumpDialog';
 import { UnsubscribeConfirmDialog } from '@/components/pipeline/UnsubscribeConfirmDialog';
 import { Lead } from '@/types/crm';
+import { validateAppointmentRequirement } from '@/lib/appointmentValidator';
+import { useToast } from '@/hooks/use-toast';
 
 // Componente que usa hooks do CRM (já está dentro do CRMProviderWrapper do App.tsx)
 function PipelinesContent({ slug }: { slug: string }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { toast } = useToast();
   const { pipelines, getPipelineBySlug } = useSupabasePipelines();
   const { isAdmin, canAccessPipeline, canEditPipeline, getAccessLevel, loading: accessLoading } = usePipelineAccess();
   const [currentPipeline, setCurrentPipeline] = useState<any>(null);
@@ -246,7 +249,13 @@ function PipelinesContent({ slug }: { slug: string }) {
     });
   }, [pipelineId]);
 
-  // Handler para avançar etapa via botão
+  // Handler para abrir modal de edição (declarado antes dos handlers de avanço/retrocesso que o usam)
+  const handleViewOrEditLead = useCallback((leadId: string, options?: { initialTab?: string }) => {
+    const entry = allEntries.find(e => e.lead_id === leadId);
+    if (entry?.leads) {
+      setEditingLead({ lead: entry.leads as any, initialTab: options?.initialTab });
+    }
+  }, [allEntries]);
   const handleAdvanceStage = useCallback(async (entryId: string) => {
     const entry = allEntries.find(e => e.id === entryId);
     if (!entry) return;
@@ -262,6 +271,42 @@ function PipelinesContent({ slug }: { slug: string }) {
     
     if (!currentStage || !nextStage) return;
     
+    // Validar agendamento se etapa requer
+    if (nextStage.requer_agendamento) {
+      const validation = await validateAppointmentRequirement(entry.lead_id, nextStage);
+      
+      if (!validation.valid) {
+        toast({
+          title: 'Agendamento necessário',
+          description: validation.message || 'Defina um agendamento para mover para esta etapa',
+          variant: 'destructive'
+        });
+        handleViewOrEditLead(entry.lead_id, { initialTab: 'appointments' });
+        return;
+      }
+      
+      if (validation.requiresSelection) {
+        toast({
+          title: 'Múltiplos agendamentos',
+          description: 'Selecione o agendamento ao mover pelo Kanban (drag & drop)',
+          variant: 'default'
+        });
+        return;
+      }
+      
+      // 1 agendamento - vincular automaticamente
+      await moveLead({
+        entry,
+        fromStage: currentStage,
+        toStage: nextStage,
+        checklistItems: [],
+        currentEntriesInTargetStage: 0,
+        appointmentSlaId: validation.appointments[0]?.id,
+        onSuccess: handleRefresh
+      });
+      return;
+    }
+    
     await moveLead({
       entry,
       fromStage: currentStage,
@@ -270,7 +315,7 @@ function PipelinesContent({ slug }: { slug: string }) {
       currentEntriesInTargetStage: 0,
       onSuccess: handleRefresh
     });
-  }, [allEntries, pipelineStages, moveLead, handleRefresh]);
+  }, [allEntries, pipelineStages, moveLead, handleRefresh, toast, handleViewOrEditLead]);
 
   // Pipeline já foi carregado pelo useEffect acima (currentPipeline)
   const activePipelines = pipelines.filter(p => p.ativo);
@@ -286,6 +331,41 @@ function PipelinesContent({ slug }: { slug: string }) {
     
     if (!currentStage || !previousStage) return;
     
+    // Validar agendamento se etapa requer
+    if (previousStage.requer_agendamento) {
+      const validation = await validateAppointmentRequirement(entry.lead_id, previousStage);
+      
+      if (!validation.valid) {
+        toast({
+          title: 'Agendamento necessário',
+          description: validation.message || 'Defina um agendamento para mover para esta etapa',
+          variant: 'destructive'
+        });
+        handleViewOrEditLead(entry.lead_id, { initialTab: 'appointments' });
+        return;
+      }
+      
+      if (validation.requiresSelection) {
+        toast({
+          title: 'Múltiplos agendamentos',
+          description: 'Selecione o agendamento ao mover pelo Kanban (drag & drop)',
+          variant: 'default'
+        });
+        return;
+      }
+      
+      await moveLead({
+        entry,
+        fromStage: currentStage,
+        toStage: previousStage,
+        checklistItems: [],
+        currentEntriesInTargetStage: 0,
+        appointmentSlaId: validation.appointments[0]?.id,
+        onSuccess: handleRefresh
+      });
+      return;
+    }
+    
     await moveLead({
       entry,
       fromStage: currentStage,
@@ -294,7 +374,7 @@ function PipelinesContent({ slug }: { slug: string }) {
       currentEntriesInTargetStage: 0,
       onSuccess: handleRefresh
     });
-  }, [allEntries, pipelineStages, moveLead, handleRefresh]);
+  }, [allEntries, pipelineStages, moveLead, handleRefresh, toast, handleViewOrEditLead]);
 
   // Handler para abrir modal de pulo de etapas
   const handleJumpToStage = useCallback((entryId: string) => {
@@ -313,6 +393,46 @@ function PipelinesContent({ slug }: { slug: string }) {
     
     if (!fromStage || !toStage) return;
     
+    // Validar agendamento se etapa requer
+    if (toStage.requer_agendamento) {
+      const validation = await validateAppointmentRequirement(entry.lead_id, toStage);
+      
+      if (!validation.valid) {
+        toast({
+          title: 'Agendamento necessário',
+          description: validation.message || 'Defina um agendamento para mover para esta etapa',
+          variant: 'destructive'
+        });
+        setStageJumpDialogState({ open: false, entryId: null });
+        handleViewOrEditLead(entry.lead_id, { initialTab: 'appointments' });
+        return;
+      }
+      
+      if (validation.requiresSelection) {
+        toast({
+          title: 'Múltiplos agendamentos',
+          description: 'Selecione o agendamento ao mover pelo Kanban (drag & drop)',
+          variant: 'default'
+        });
+        setStageJumpDialogState({ open: false, entryId: null });
+        return;
+      }
+      
+      await moveLead({
+        entry,
+        fromStage,
+        toStage,
+        checklistItems: [],
+        currentEntriesInTargetStage: allEntries.filter(e => e.etapa_atual_id === targetStageId).length,
+        appointmentSlaId: validation.appointments[0]?.id,
+        onSuccess: () => {
+          setStageJumpDialogState({ open: false, entryId: null });
+          handleRefresh();
+        }
+      });
+      return;
+    }
+    
     await moveLead({
       entry,
       fromStage,
@@ -324,15 +444,7 @@ function PipelinesContent({ slug }: { slug: string }) {
         handleRefresh();
       }
     });
-  }, [stageJumpDialogState.entryId, allEntries, pipelineStages, moveLead, handleRefresh]);
-
-  // Handler para abrir modal de edição
-  const handleViewOrEditLead = useCallback((leadId: string, options?: { initialTab?: string }) => {
-    const entry = allEntries.find(e => e.lead_id === leadId);
-    if (entry?.leads) {
-      setEditingLead({ lead: entry.leads as any, initialTab: options?.initialTab });
-    }
-  }, [allEntries]);
+  }, [stageJumpDialogState.entryId, allEntries, pipelineStages, moveLead, handleRefresh, toast, handleViewOrEditLead]);
 
   // Handler para abrir modal de descadastro
   const handleUnsubscribeFromPipeline = useCallback((entryId: string, leadId: string) => {

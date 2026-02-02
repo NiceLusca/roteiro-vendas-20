@@ -368,10 +368,15 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
     
     try {
       setSavingOrigem(true);
-      await saveLead({
+      const result = await saveLead({
         id: lead.id,
         origem: origemToSave
-      });
+      }, { silent: true }); // Silent to avoid duplicate toasts
+      
+      if (!result) {
+        toast.error('Erro ao salvar origem - verifique se está logado');
+        return;
+      }
       
       // Adicionar nova origem à lista se for nova
       if (newOrigem.trim() && !origens.includes(newOrigem.trim())) {
