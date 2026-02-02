@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, Loader2 } from 'lucide-react';
+import { Calendar, Clock, Loader2, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -32,6 +32,7 @@ interface AppointmentSelectorDialogProps {
   leadName: string;
   onConfirm: (appointmentId: string) => void;
   onCancel: () => void;
+  onCreateNew?: () => void;
   isLoading?: boolean;
 }
 
@@ -43,6 +44,7 @@ export function AppointmentSelectorDialog({
   leadName,
   onConfirm,
   onCancel,
+  onCreateNew,
   isLoading = false
 }: AppointmentSelectorDialogProps) {
   const [selectedId, setSelectedId] = useState<string>(appointments[0]?.id || '');
@@ -56,6 +58,11 @@ export function AppointmentSelectorDialog({
   const handleCancel = () => {
     onCancel();
     onOpenChange(false);
+  };
+
+  const handleCreateNew = () => {
+    onOpenChange(false);
+    onCreateNew?.();
   };
 
   const formatAppointmentDate = (dateStr: string) => {
@@ -146,6 +153,12 @@ export function AppointmentSelectorDialog({
           <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
             Cancelar
           </Button>
+          {onCreateNew && (
+            <Button variant="ghost" onClick={handleCreateNew} disabled={isLoading}>
+              <Plus className="w-4 h-4 mr-2" />
+              Criar novo prazo
+            </Button>
+          )}
           <Button onClick={handleConfirm} disabled={!selectedId || isLoading}>
             {isLoading ? (
               <>
