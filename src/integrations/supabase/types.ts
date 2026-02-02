@@ -461,6 +461,7 @@ export type Database = {
       }
       lead_pipeline_entries: {
         Row: {
+          agendamento_sla_id: string | null
           created_at: string | null
           data_conclusao: string | null
           data_entrada_etapa: string | null
@@ -474,6 +475,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          agendamento_sla_id?: string | null
           created_at?: string | null
           data_conclusao?: string | null
           data_entrada_etapa?: string | null
@@ -487,6 +489,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          agendamento_sla_id?: string | null
           created_at?: string | null
           data_conclusao?: string | null
           data_entrada_etapa?: string | null
@@ -519,6 +522,13 @@ export type Database = {
             columns: ["etapa_atual_id"]
             isOneToOne: false
             referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_pipeline_entries_agendamento_sla_id_fkey"
+            columns: ["agendamento_sla_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
             referencedColumns: ["id"]
           },
         ]
@@ -1007,7 +1017,9 @@ export type Database = {
           proximo_passo_label: string | null
           proximo_passo_template: string | null
           proximo_passo_tipo: string | null
+          requer_agendamento: boolean | null
           saida_criteria: Json | null
+          sla_baseado_em: string | null
           sla_horas: number | null
           template_agendamento: string | null
           tipo_agendamento: string | null
@@ -1034,7 +1046,9 @@ export type Database = {
           proximo_passo_label?: string | null
           proximo_passo_template?: string | null
           proximo_passo_tipo?: string | null
+          requer_agendamento?: boolean | null
           saida_criteria?: Json | null
+          sla_baseado_em?: string | null
           sla_horas?: number | null
           template_agendamento?: string | null
           tipo_agendamento?: string | null
@@ -1061,7 +1075,9 @@ export type Database = {
           proximo_passo_label?: string | null
           proximo_passo_template?: string | null
           proximo_passo_tipo?: string | null
+          requer_agendamento?: boolean | null
           saida_criteria?: Json | null
+          sla_baseado_em?: string | null
           sla_horas?: number | null
           template_agendamento?: string | null
           tipo_agendamento?: string | null

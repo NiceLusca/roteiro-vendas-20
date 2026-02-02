@@ -1,9 +1,11 @@
 import { useState, useCallback, useMemo } from 'react';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanStageGroupHeader, KanbanCollapsedGroup, KanbanGroupColorBar } from './KanbanStageGroup';
+import { AppointmentSelectorDialog, AppointmentOption } from './AppointmentSelectorDialog';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { useSupabaseChecklistItems } from '@/hooks/useSupabaseChecklistItems';
 import { useSupabasePipelineStages } from '@/hooks/useSupabasePipelineStages';
+import { validateAppointmentRequirement } from '@/lib/appointmentValidator';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
 import { PipelineDisplayConfig, DealDisplayInfo, AppointmentDisplayInfo } from '@/types/pipelineDisplay';
 import { LeadTag } from '@/types/bulkImport';
@@ -69,6 +71,7 @@ interface KanbanBoardProps {
   displayConfig?: PipelineDisplayConfig | null;
   dealsByLeadId?: Record<string, DealDisplayInfo>;
   appointmentsByLeadId?: Record<string, AppointmentDisplayInfo>;
+  slaAppointmentsById?: Record<string, { id: string; data_hora: string; start_at?: string }>;
   onRefresh?: () => void;
   onTagsChange?: () => void;
   onAddLead?: (stageId: string) => void;
@@ -101,6 +104,7 @@ export function KanbanBoard({
   displayConfig,
   dealsByLeadId = {},
   appointmentsByLeadId = {},
+  slaAppointmentsById = {},
   onRefresh,
   onTagsChange,
   onAddLead,
@@ -125,6 +129,30 @@ export function KanbanBoard({
     getCollapsedGroups(selectedPipelineId)
   );
   
+  // Estado para seleção de agendamento
+  const [appointmentSelectorState, setAppointmentSelectorState] = useState<{
+    open: boolean;
+    appointments: AppointmentOption[];
+    entryId: string;
+    leadName: string;
+    stageName: string;
+    pendingMove: {
+      entry: LeadPipelineEntry & { lead: Lead };
+      fromStage: PipelineStage;
+      toStage: PipelineStage;
+      checklistItems: any[];
+      currentEntriesInTargetStage: number;
+    } | null;
+  }>({
+    open: false,
+    appointments: [],
+    entryId: '',
+    leadName: '',
+    stageName: '',
+    pendingMove: null
+  });
+  const [isMovingWithAppointment, setIsMovingWithAppointment] = useState(false);
+
   const { moveLead, isMoving } = useLeadMovement();
   const { checklistItems } = useSupabaseChecklistItems();
   const { batchUpdateStages } = useSupabasePipelineStages(selectedPipelineId);
@@ -147,7 +175,7 @@ export function KanbanBoard({
       metadata: { entryId, toStageId }
     });
 
-    if (isMoving) {
+    if (isMoving || isMovingWithAppointment) {
       logger.debug('Movimentação já em andamento', { feature: 'kanban' });
       return;
     }
@@ -179,6 +207,66 @@ export function KanbanBoard({
       item => item.etapa_id === fromStageEntry.stage.id
     );
 
+    // Verificar se a etapa de destino requer agendamento
+    if (toStageEntry.stage.requer_agendamento) {
+      logger.debug('Etapa requer agendamento, validando...', { feature: 'kanban' });
+      
+      const validation = await validateAppointmentRequirement(entry.lead_id, toStageEntry.stage);
+      
+      if (!validation.valid) {
+        // Sem agendamentos - abrir dialog do lead na aba de agenda
+        toast({
+          title: 'Agendamento necessário',
+          description: validation.message || 'Defina um agendamento para mover para esta etapa',
+          variant: 'destructive',
+          duration: 5000
+        });
+        
+        // Abrir o dialog de edição do lead na aba agenda
+        if (onEditLead) {
+          onEditLead(entry.lead_id);
+        }
+        return;
+      }
+      
+      if (validation.requiresSelection) {
+        // Múltiplos agendamentos - abrir seletor
+        setAppointmentSelectorState({
+          open: true,
+          appointments: validation.appointments,
+          entryId,
+          leadName: entry.lead?.nome || 'Lead',
+          stageName: toStageEntry.stage.nome,
+          pendingMove: {
+            entry,
+            fromStage: fromStageEntry.stage,
+            toStage: toStageEntry.stage,
+            checklistItems: stageChecklistItems,
+            currentEntriesInTargetStage: toStageEntry.entries.length
+          }
+        });
+        return;
+      }
+      
+      // 1 agendamento - mover com vínculo automático
+      await moveLead({
+        entry,
+        fromStage: fromStageEntry.stage,
+        toStage: toStageEntry.stage,
+        checklistItems: stageChecklistItems,
+        currentEntriesInTargetStage: toStageEntry.entries.length,
+        appointmentSlaId: validation.appointments[0]?.id,
+        onSuccess: () => {
+          onRefresh?.();
+        },
+        onError: () => {
+          onRefresh?.();
+        }
+      });
+      return;
+    }
+
+    // Movimento normal sem requisito de agendamento
     await moveLead({
       entry,
       fromStage: fromStageEntry.stage,
@@ -192,7 +280,40 @@ export function KanbanBoard({
         onRefresh?.();
       }
     });
-  }, [stageEntries, checklistItems, moveLead, isMoving, onRefresh]);
+  }, [stageEntries, checklistItems, moveLead, isMoving, isMovingWithAppointment, onRefresh, onEditLead, toast]);
+
+  // Handler para confirmar seleção de agendamento
+  const handleAppointmentSelected = useCallback(async (appointmentId: string) => {
+    const { pendingMove } = appointmentSelectorState;
+    
+    if (!pendingMove) return;
+    
+    setIsMovingWithAppointment(true);
+    
+    try {
+      await moveLead({
+        entry: pendingMove.entry,
+        fromStage: pendingMove.fromStage,
+        toStage: pendingMove.toStage,
+        checklistItems: pendingMove.checklistItems,
+        currentEntriesInTargetStage: pendingMove.currentEntriesInTargetStage,
+        appointmentSlaId: appointmentId,
+        onSuccess: () => {
+          onRefresh?.();
+        },
+        onError: () => {
+          onRefresh?.();
+        }
+      });
+    } finally {
+      setIsMovingWithAppointment(false);
+      setAppointmentSelectorState(prev => ({ ...prev, open: false, pendingMove: null }));
+    }
+  }, [appointmentSelectorState, moveLead, onRefresh]);
+
+  const handleAppointmentSelectorCancel = useCallback(() => {
+    setAppointmentSelectorState(prev => ({ ...prev, open: false, pendingMove: null }));
+  }, []);
 
   const handleColumnDrop = useCallback(async (fromStageId: string, toStageId: string) => {
     const stages = stageEntries.map(s => s.stage);
@@ -311,6 +432,7 @@ export function KanbanBoard({
     displayConfig,
     dealsByLeadId,
     appointmentsByLeadId,
+    slaAppointmentsById,
     hasMore,
     onLoadMore,
     loadingMore,
@@ -338,32 +460,46 @@ export function KanbanBoard({
   });
 
   return (
-    <div className="flex gap-2 md:gap-3 lg:gap-4 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
-      {renderData.items.map((item) => {
-        if (item.type === 'collapsed-group') {
+    <>
+      <div className="flex gap-2 md:gap-3 lg:gap-4 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+        {renderData.items.map((item) => {
+          if (item.type === 'collapsed-group') {
+            return (
+              <KanbanCollapsedGroup
+                key={`collapsed-${item.groupName}`}
+                groupName={item.groupName}
+                groupColor={item.color}
+                totalLeads={item.totalLeads}
+                stageCount={item.stageCount}
+                stageNames={item.stageNames}
+                onToggleCollapse={() => toggleGroupCollapse(item.groupName)}
+              />
+            );
+          }
+          
+          // Column (with or without group) - renders in natural position
           return (
-            <KanbanCollapsedGroup
-              key={`collapsed-${item.groupName}`}
+            <KanbanColumn 
+              key={item.entry.stage.id} 
+              {...getColumnProps(item.entry)}
               groupName={item.groupName}
-              groupColor={item.color}
-              totalLeads={item.totalLeads}
-              stageCount={item.stageCount}
-              stageNames={item.stageNames}
-              onToggleCollapse={() => toggleGroupCollapse(item.groupName)}
+              onToggleGroupCollapse={item.groupName ? () => toggleGroupCollapse(item.groupName!) : undefined}
             />
           );
-        }
-        
-        // Column (with or without group) - renders in natural position
-        return (
-          <KanbanColumn 
-            key={item.entry.stage.id} 
-            {...getColumnProps(item.entry)}
-            groupName={item.groupName}
-            onToggleGroupCollapse={item.groupName ? () => toggleGroupCollapse(item.groupName!) : undefined}
-          />
-        );
-      })}
-    </div>
+        })}
+      </div>
+      
+      {/* Dialog para seleção de agendamento quando há múltiplos */}
+      <AppointmentSelectorDialog
+        open={appointmentSelectorState.open}
+        onOpenChange={(open) => setAppointmentSelectorState(prev => ({ ...prev, open }))}
+        appointments={appointmentSelectorState.appointments}
+        stageName={appointmentSelectorState.stageName}
+        leadName={appointmentSelectorState.leadName}
+        onConfirm={handleAppointmentSelected}
+        onCancel={handleAppointmentSelectorCancel}
+        isLoading={isMovingWithAppointment}
+      />
+    </>
   );
 }

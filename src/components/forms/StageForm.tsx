@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { RefreshCcw, Loader2 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { RefreshCcw, Loader2, Calendar, Info } from 'lucide-react';
 
 // Cores pré-definidas para grupos
 const GROUP_COLOR_PRESETS = [
@@ -38,6 +39,9 @@ const stageSchema = z.object({
   is_final_stage: z.boolean().default(false),
   grupo: z.string().optional().nullable(),
   cor_grupo: z.string().optional().nullable(),
+  // Novos campos para SLA baseado em agendamento
+  sla_baseado_em: z.enum(['entrada', 'agendamento']).default('entrada'),
+  requer_agendamento: z.boolean().default(false),
 });
 
 type StageFormData = z.infer<typeof stageSchema>;
@@ -79,6 +83,8 @@ export function StageForm({ stage, pipelineStages = [], onSave, onCancel }: Stag
       is_final_stage: isFinalStage,
       grupo: stage?.grupo || null,
       cor_grupo: stage?.cor_grupo || null,
+      sla_baseado_em: (stage as any)?.sla_baseado_em || 'entrada',
+      requer_agendamento: (stage as any)?.requer_agendamento || false,
     },
   });
 
@@ -164,6 +170,88 @@ export function StageForm({ stage, pipelineStages = [], onSave, onCancel }: Stag
               </FormItem>
             )}
           />
+        </div>
+
+        {/* Configuração de SLA baseado em Agendamento */}
+        <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-primary" />
+            <span className="font-medium text-sm">Configuração de SLA</span>
+          </div>
+          
+          <FormField
+            control={form.control}
+            name="sla_baseado_em"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Base do cálculo SLA</FormLabel>
+                <Select 
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    // Se baseado em agendamento, habilitar requer_agendamento por padrão
+                    if (value === 'agendamento') {
+                      form.setValue('requer_agendamento', true);
+                    }
+                  }} 
+                  value={field.value || 'entrada'}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="entrada">
+                      📅 Data de entrada na etapa (padrão)
+                    </SelectItem>
+                    <SelectItem value="agendamento">
+                      🗓️ Data do agendamento vinculado
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  {field.value === 'agendamento' 
+                    ? 'O prazo SLA será contado a partir da data do agendamento selecionado'
+                    : 'O prazo SLA será contado a partir do momento que o lead entra na etapa'}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {form.watch('sla_baseado_em') === 'agendamento' && (
+            <FormField
+              control={form.control}
+              name="requer_agendamento"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 bg-background">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="flex items-center gap-1.5">
+                      Bloquear movimentação sem agendamento
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[250px] text-xs">
+                          Se ativado, o lead só poderá ser movido para esta etapa se tiver um agendamento definido. 
+                          Caso tenha múltiplos agendamentos, será solicitado escolher qual usar para o SLA.
+                        </TooltipContent>
+                      </Tooltip>
+                    </FormLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Exige que o lead tenha um agendamento ao entrar nesta etapa
+                    </p>
+                  </div>
+                </FormItem>
+              )}
+            />
+          )}
         </div>
 
         {/* Campos de Agrupamento Visual */}

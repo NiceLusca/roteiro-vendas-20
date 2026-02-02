@@ -24,6 +24,12 @@ interface AppointmentInfo {
   closer_responsavel?: string;
 }
 
+interface SlaAppointmentData {
+  id: string;
+  data_hora: string;
+  start_at?: string;
+}
+
 interface KanbanCardProps {
   entry: LeadPipelineEntry;
   lead: Lead | null | undefined;
@@ -37,6 +43,7 @@ interface KanbanCardProps {
   displayConfig?: PipelineDisplayConfig | null;
   dealInfo?: DealDisplayInfo | null;
   appointmentInfo?: AppointmentDisplayInfo | null;
+  slaAppointment?: SlaAppointmentData | null; // Agendamento vinculado ao SLA
   onViewLead?: () => void;
   onEditLead?: () => void;
   onCreateAppointment?: () => void;
@@ -77,6 +84,7 @@ export const KanbanCard = memo(function KanbanCard({
   displayConfig,
   dealInfo,
   appointmentInfo,
+  slaAppointment,
   onViewLead,
   onEditLead,
   onCreateAppointment,
@@ -122,50 +130,29 @@ export const KanbanCard = memo(function KanbanCard({
   const showResponsavel = cardFields.includes('responsavel');
   const showOrigem = cardFields.includes('origem');
 
-  // Early return if lead is not loaded yet
-  if (!lead) {
-    return (
-      <Card className="kanban-card opacity-50">
-        <CardContent className="p-4">
-          <div className="animate-pulse">
-            <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-            <div className="h-3 bg-muted rounded w-1/2"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Calcular data base do SLA (entrada na etapa ou agendamento vinculado)
+  // IMPORTANTE: Este useMemo precisa estar antes do early return
+  const slaBaseDate = useMemo(() => {
+    // Se a etapa usa SLA baseado em agendamento E tem agendamento vinculado
+    if (stage.sla_baseado_em === 'agendamento' && entry.agendamento_sla_id && slaAppointment) {
+      const appointmentDate = slaAppointment.start_at || slaAppointment.data_hora;
+      return new Date(appointmentDate);
+    }
+    // Padrão: SLA conta a partir da entrada na etapa
+    return entry.data_entrada_etapa ? new Date(entry.data_entrada_etapa) : new Date();
+  }, [stage.sla_baseado_em, entry.agendamento_sla_id, entry.data_entrada_etapa, slaAppointment]);
 
-  // HTML5 Native Drag Handlers
-  const handleDragStart = (e: DragEvent<HTMLDivElement>) => {
-    setIsLocalDragging(true);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('application/json', JSON.stringify({
-      entryId: entry.id,
-      fromStageId: entry.etapa_atual_id,
-      leadName: lead?.nome
-    }));
-    onDragStart?.(entry.id);
-  };
-
-  const handleDragEnd = () => {
-    setIsLocalDragging(false);
-    onDragEnd?.();
-  };
-
-  // Cálculo direto sem memoização para garantir atualização diária
-  const daysInStage = entry.data_entrada_etapa 
-    ? Math.floor((Date.now() - new Date(entry.data_entrada_etapa).getTime()) / (1000 * 60 * 60 * 24))
-    : 0;
+  // Cálculo de dias desde a data base do SLA
+  const daysFromSlaBase = Math.floor((Date.now() - slaBaseDate.getTime()) / (1000 * 60 * 60 * 24));
 
   // Verifica se a etapa tem SLA definido e não é etapa final
   const hasSLA = stage.prazo_em_dias != null && stage.prazo_em_dias > 0 && stage.proxima_etapa_id !== 'final';
   
   // Cálculo de urgência baseado no SLA (prazo_em_dias)
   const prazo = stage.prazo_em_dias || 0;
-  const diasRestantes = prazo - daysInStage;
+  const diasRestantes = prazo - daysFromSlaBase;
   
-  const slaStatus = (() => {
+  const slaStatus = useMemo(() => {
     // Se não tem SLA, não mostra badge de urgência
     if (!hasSLA) {
       return null;
@@ -212,7 +199,38 @@ export const KanbanCard = memo(function KanbanCard({
       pulse: false,
       icon: null
     };
-  })();
+  }, [hasSLA, diasRestantes, prazo]);
+
+  // Early return if lead is not loaded yet
+  if (!lead) {
+    return (
+      <Card className="kanban-card opacity-50">
+        <CardContent className="p-4">
+          <div className="animate-pulse">
+            <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+            <div className="h-3 bg-muted rounded w-1/2"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // HTML5 Native Drag Handlers
+  const handleDragStart = (e: DragEvent<HTMLDivElement>) => {
+    setIsLocalDragging(true);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      entryId: entry.id,
+      fromStageId: entry.etapa_atual_id,
+      leadName: lead?.nome
+    }));
+    onDragStart?.(entry.id);
+  };
+
+  const handleDragEnd = () => {
+    setIsLocalDragging(false);
+    onDragEnd?.();
+  };
 
   return (
     <Card 
@@ -434,9 +452,11 @@ export const KanbanCard = memo(function KanbanCard({
   return (
     prevProps.entry.id === nextProps.entry.id &&
     prevProps.entry.updated_at === nextProps.entry.updated_at &&
+    prevProps.entry.agendamento_sla_id === nextProps.entry.agendamento_sla_id &&
     prevProps.lead?.id === nextProps.lead?.id &&
     prevProps.lead?.nome === nextProps.lead?.nome &&
     prevProps.stage.id === nextProps.stage.id &&
+    prevProps.stage.sla_baseado_em === nextProps.stage.sla_baseado_em &&
     prevProps.checklistComplete === nextProps.checklistComplete &&
     prevProps.isDragging === nextProps.isDragging &&
     prevProps.responsibles?.length === nextProps.responsibles?.length &&
@@ -450,6 +470,8 @@ export const KanbanCard = memo(function KanbanCard({
     prevProps.dealInfo?.id === nextProps.dealInfo?.id &&
     prevProps.dealInfo?.valor_proposto === nextProps.dealInfo?.valor_proposto &&
     prevProps.appointmentInfo?.id === nextProps.appointmentInfo?.id &&
+    prevProps.slaAppointment?.id === nextProps.slaAppointment?.id &&
+    prevProps.slaAppointment?.data_hora === nextProps.slaAppointment?.data_hora &&
     JSON.stringify(prevProps.displayConfig) === JSON.stringify(nextProps.displayConfig)
   );
 });

@@ -14,6 +14,7 @@ interface MoveLeadParams {
   toStage: PipelineStage;
   checklistItems: StageChecklistItem[];
   currentEntriesInTargetStage: number;
+  appointmentSlaId?: string; // ID do agendamento vinculado ao SLA
   onSuccess?: () => void;
   onError?: () => void;
 }
@@ -43,6 +44,7 @@ export function useLeadMovement() {
     toStage,
     checklistItems,
     currentEntriesInTargetStage,
+    appointmentSlaId,
     onSuccess,
     onError
   }: MoveLeadParams): Promise<MoveResult> => {
@@ -112,12 +114,17 @@ export function useLeadMovement() {
       setIsMoving(true);
 
       // Preparar dados de update
-      const updateData = {
+      const updateData: Record<string, any> = {
         etapa_atual_id: toStage.id,
         data_entrada_etapa: new Date().toISOString(),
         saude_etapa: 'Verde' as const,
         updated_at: new Date().toISOString()
       };
+      
+      // Vincular agendamento ao SLA se fornecido
+      if (appointmentSlaId) {
+        updateData.agendamento_sla_id = appointmentSlaId;
+      }
 
       logger.debug('Executando update no banco', {
         feature: 'lead-movement',
