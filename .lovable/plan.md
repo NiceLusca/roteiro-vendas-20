@@ -1,179 +1,153 @@
 
-# Plano: Sempre abrir dialog de confirmação de agendamento
 
-## Objetivo
+# Plano: Adicionar opção "Criar novo prazo" e Otimizar carregamento do Pipeline
 
-Modificar o comportamento para que o dialog de seleção de agendamento **sempre** abra quando a etapa requer agendamento, mesmo quando há apenas 1 agendamento. Isso permite ao usuário:
-1. Confirmar se deseja usar o agendamento existente
-2. Ver claramente qual data será usada como deadline do SLA
-3. Optar por cancelar e criar um novo agendamento se preferir
+## Problemas Identificados
 
-## Alterações Necessárias
+### Problema 1: Falta opção para criar novo agendamento no dialog
 
-### 1. Modificar validação para sempre requerer seleção
+Quando o usuário abre o dialog de confirmação de agendamento (ao mover para etapa que requer agendamento), só é possível:
+- Confirmar o agendamento existente
+- Cancelar
 
-**Arquivo:** `src/lib/appointmentValidator.ts`
+**Falta**: Uma opção para criar um novo agendamento/prazo quando o usuário não quer usar o existente.
 
-Alterar a lógica de 1 agendamento para também requerer seleção:
+### Problema 2: Carregamento lento dos leads
 
-```typescript
-// ANTES (linhas 66-73):
-// 1 agendamento - vincular automaticamente
-if (appointments.length === 1) {
-  return {
-    valid: true,
-    appointments,
-    requiresSelection: false  // ← Não abre dialog
-  };
-}
+O pipeline "Comercial" tem 147 leads ativos. O carregamento está lento por conta de:
+1. **Query principal** busca todos os 147 leads com JOINs para `leads` e `pipeline_stages`
+2. **Queries adicionais** em paralelo:
+   - `usePipelineDisplayData` busca deals e appointments para todos os leads
+   - `useMultipleLeadResponsibles` busca responsáveis de todos os leads
+   - `useMultipleLeadTags` busca tags de todos os leads
+3. **Sem paginação** quando `noPagination=true` (que é o padrão para pipelines específicos)
 
-// DEPOIS:
-// 1 ou mais agendamentos - sempre solicitar confirmação
-if (appointments.length >= 1) {
-  return {
-    valid: true,
-    appointments,
-    requiresSelection: true,  // ← Sempre abre dialog
-    message: appointments.length === 1 
-      ? 'Confirme o agendamento para o prazo SLA'
-      : 'Selecione qual agendamento usar para o prazo SLA'
-  };
-}
-```
+## Correções Propostas
 
-### 2. Adaptar handlers de avanço/retrocesso
-
-**Arquivo:** `src/pages/Pipelines.tsx`
-
-Os handlers `handleAdvanceStage` e `handleRegressStage` atualmente bloqueiam quando `requiresSelection: true`, pedindo para usar drag & drop. Precisamos permitir que abram o seletor diretamente:
-
-```typescript
-// ANTES (linhas 288-295):
-if (validation.requiresSelection) {
-  toast({
-    title: 'Múltiplos agendamentos',
-    description: 'Selecione o agendamento ao mover pelo Kanban (drag & drop)',
-    variant: 'default'
-  });
-  return;
-}
-
-// DEPOIS:
-if (validation.requiresSelection) {
-  // Abrir seletor de agendamento
-  setPendingAppointmentSelection({
-    entryId,
-    entry,
-    fromStage: currentStage,
-    toStage: nextStage,
-    appointments: validation.appointments,
-    leadName: entry.leads?.nome || 'Lead',
-    stageName: nextStage.nome
-  });
-  return;
-}
-```
-
-### 3. Adicionar estado e dialog de seleção no Pipelines.tsx
-
-**Arquivo:** `src/pages/Pipelines.tsx`
-
-Adicionar:
-- Estado para controlar o dialog de seleção
-- O componente `AppointmentSelectorDialog`
-- Handler para confirmar a seleção
-
-```typescript
-// Novo estado
-const [pendingAppointmentSelection, setPendingAppointmentSelection] = useState<{
-  entryId: string;
-  entry: LeadPipelineEntry;
-  fromStage: PipelineStage;
-  toStage: PipelineStage;
-  appointments: AppointmentOption[];
-  leadName: string;
-  stageName: string;
-} | null>(null);
-
-// Handler de confirmação
-const handleAppointmentSelected = async (appointmentId: string) => {
-  if (!pendingAppointmentSelection) return;
-  
-  await moveLead({
-    entry: pendingAppointmentSelection.entry,
-    fromStage: pendingAppointmentSelection.fromStage,
-    toStage: pendingAppointmentSelection.toStage,
-    checklistItems: [],
-    currentEntriesInTargetStage: 0,
-    appointmentSlaId: appointmentId,
-    onSuccess: handleRefresh
-  });
-  
-  setPendingAppointmentSelection(null);
-};
-
-// No JSX, adicionar o dialog
-<AppointmentSelectorDialog
-  open={!!pendingAppointmentSelection}
-  onOpenChange={(open) => !open && setPendingAppointmentSelection(null)}
-  appointments={pendingAppointmentSelection?.appointments || []}
-  stageName={pendingAppointmentSelection?.stageName || ''}
-  leadName={pendingAppointmentSelection?.leadName || ''}
-  onConfirm={handleAppointmentSelected}
-  onCancel={() => setPendingAppointmentSelection(null)}
-/>
-```
-
-### 4. Atualizar mensagem do dialog
+### Correção 1: Adicionar botão "Criar novo prazo" no dialog
 
 **Arquivo:** `src/components/kanban/AppointmentSelectorDialog.tsx`
 
-Ajustar a descrição para cobrir o caso de 1 agendamento:
+Adicionar:
+- Novo prop `onCreateNew` para callback de criação
+- Botão "Criar novo prazo" que cancela a movimentação e abre o dialog do lead na aba Agenda
 
 ```typescript
-<DialogDescription>
-  A etapa <strong>"{stageName}"</strong> calcula o SLA baseado na data do agendamento.
-  <br />
-  {appointments.length === 1 
-    ? <>Confirme se este é o agendamento correto para <strong>{leadName}</strong>:</>
-    : <>Selecione qual agendamento de <strong>{leadName}</strong> usar:</>
-  }
-</DialogDescription>
+interface AppointmentSelectorDialogProps {
+  // ... props existentes
+  onCreateNew?: () => void;  // Novo callback
+}
 ```
 
-## Fluxo Corrigido
+No footer do dialog, adicionar botão entre Cancelar e Confirmar:
+```tsx
+<DialogFooter className="gap-2 sm:gap-0">
+  <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
+    Cancelar
+  </Button>
+  {onCreateNew && (
+    <Button variant="ghost" onClick={onCreateNew} disabled={isLoading}>
+      <Plus className="w-4 h-4 mr-2" />
+      Criar novo prazo
+    </Button>
+  )}
+  <Button onClick={handleConfirm} disabled={!selectedId || isLoading}>
+    Confirmar e Mover
+  </Button>
+</DialogFooter>
+```
 
-```text
-Etapa requer agendamento?
-         │
-        Sim
-         │
-         ▼
-  Quantos agendamentos?
-         │
-    ┌────┴────┐
-    0         ≥1
-    │          │
-    ▼          ▼
- Bloquear   Abrir dialog
- + Abrir    de confirmação
- aba Agenda     │
-                ▼
-         Usuário confirma
-         ou cancela
+**Arquivo:** `src/pages/Pipelines.tsx`
+
+Adicionar handler `onCreateNew` no `AppointmentSelectorDialog`:
+```typescript
+onCreateNew={() => {
+  if (pendingAppointmentSelection) {
+    setPendingAppointmentSelection(null);
+    handleViewOrEditLead(pendingAppointmentSelection.entry.lead_id, { initialTab: 'appointments' });
+  }
+}}
+```
+
+### Correção 2: Otimizar carregamento com campos selecionados
+
+**Arquivo:** `src/hooks/useSupabaseLeadPipelineEntries.ts`
+
+Reduzir campos no SELECT para trazer apenas o necessário:
+```typescript
+// ANTES - busca muitos campos
+leads!fk_lead_pipeline_entries_lead(
+  id, nome, email, whatsapp, status_geral,
+  closer, lead_score, lead_score_classification,
+  valor_lead, user_id, created_at, updated_at
+)
+
+// DEPOIS - apenas campos exibidos no Kanban
+leads!fk_lead_pipeline_entries_lead(
+  id, nome, email, whatsapp, closer, lead_score, origem
+)
+```
+
+### Correção 3: Adicionar loading progressivo
+
+**Arquivo:** `src/hooks/useSupabaseLeadPipelineEntries.ts`
+
+Implementar carregamento em duas fases:
+1. **Fase 1**: Carregar apenas campos essenciais para exibição inicial (id, nome, etapa)
+2. **Fase 2**: Carregar dados adicionais em background
+
+```typescript
+// Fase 1: Dados mínimos para renderizar Kanban imediatamente
+const quickQuery = supabase
+  .from('lead_pipeline_entries')
+  .select(`
+    id, lead_id, pipeline_id, etapa_atual_id, data_entrada_etapa,
+    leads!fk_lead_pipeline_entries_lead(id, nome)
+  `)
+  .eq('status_inscricao', 'Ativo')
+  .eq('pipeline_id', effectivePipelineId);
+```
+
+### Correção 4: Otimizar hooks auxiliares para uso de batch
+
+**Arquivo:** `src/hooks/usePipelineDisplayData.ts`
+
+Aumentar staleTime e adicionar cache mais agressivo:
+```typescript
+staleTime: 30000, // 30 seconds (era 10s)
+cacheTime: 60000, // 1 minuto de cache
 ```
 
 ## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/lib/appointmentValidator.ts` | Alterar lógica para sempre requerer seleção quando há agendamentos |
-| `src/pages/Pipelines.tsx` | Adicionar estado e dialog de seleção, adaptar handlers |
-| `src/components/kanban/AppointmentSelectorDialog.tsx` | Ajustar mensagem para caso de 1 agendamento |
+| `src/components/kanban/AppointmentSelectorDialog.tsx` | Adicionar prop `onCreateNew` e botão "Criar novo prazo" |
+| `src/pages/Pipelines.tsx` | Passar handler `onCreateNew` para o dialog |
+| `src/hooks/useSupabaseLeadPipelineEntries.ts` | Reduzir campos no SELECT + adicionar campo `origem` |
+| `src/hooks/usePipelineDisplayData.ts` | Aumentar staleTime para melhor cache |
+
+## Fluxo do Dialog Atualizado
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                   Confirme o agendamento                        │
+├─────────────────────────────────────────────────────────────────┤
+│  A etapa "Não Fechou (quente)" calcula o SLA baseado na data... │
+├─────────────────────────────────────────────────────────────────┤
+│  ◉ 28/01/2026 às 13:15  [Passado]                               │
+│    Sessão Estratégica-Gênios da Oceano Azul - Gabriel...        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  [Cancelar]    [+ Criar novo prazo]    [Confirmar e Mover]      │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ## Benefícios
 
-1. Transparência para o usuário sobre qual data será o deadline
-2. Oportunidade de cancelar e criar novo agendamento se necessário
-3. Comportamento consistente independente do número de agendamentos
-4. Evita movimentações acidentais com agendamento incorreto
+1. **Novo prazo**: Usuário pode criar um novo agendamento em vez de usar um passado
+2. **Carregamento mais rápido**: Menos campos = menos dados = resposta mais rápida
+3. **Cache otimizado**: Reduz chamadas repetidas ao servidor
+4. **Campo origem**: Corrige o bug de origem não aparecer ao reabrir o lead
+
