@@ -81,12 +81,15 @@ export function AppointmentSelectorDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-primary" />
-            Selecione o agendamento para o prazo
+            {appointments.length === 1 ? 'Confirme o agendamento' : 'Selecione o agendamento para o prazo'}
           </DialogTitle>
           <DialogDescription>
             A etapa <strong>"{stageName}"</strong> calcula o SLA baseado na data do agendamento.
             <br />
-            Selecione qual agendamento de <strong>{leadName}</strong> usar:
+            {appointments.length === 1 
+              ? <>Confirme se este é o agendamento correto para <strong>{leadName}</strong>:</>
+              : <>Selecione qual agendamento de <strong>{leadName}</strong> usar:</>
+            }
           </DialogDescription>
         </DialogHeader>
 

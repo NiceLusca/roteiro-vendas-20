@@ -27,7 +27,8 @@ import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
 import { StageJumpDialog } from '@/components/pipeline/StageJumpDialog';
 import { UnsubscribeConfirmDialog } from '@/components/pipeline/UnsubscribeConfirmDialog';
-import { Lead } from '@/types/crm';
+import { AppointmentSelectorDialog, AppointmentOption } from '@/components/kanban/AppointmentSelectorDialog';
+import { Lead, LeadPipelineEntry, PipelineStage } from '@/types/crm';
 import { validateAppointmentRequirement } from '@/lib/appointmentValidator';
 import { useToast } from '@/hooks/use-toast';
 
@@ -81,6 +82,18 @@ function PipelinesContent({ slug }: { slug: string }) {
     leadId: string | null;
     leadName: string;
   }>({ open: false, entryId: null, leadId: null, leadName: '' });
+  
+  // Estado para seleção de agendamento durante movimentação
+  const [pendingAppointmentSelection, setPendingAppointmentSelection] = useState<{
+    entryId: string;
+    entry: LeadPipelineEntry;
+    fromStage: PipelineStage;
+    toStage: PipelineStage;
+    appointments: AppointmentOption[];
+    leadName: string;
+    stageName: string;
+  } | null>(null);
+  const [isMovingWithAppointment, setIsMovingWithAppointment] = useState(false);
   
   // Estado da visualização (kanban ou tabela)
   const viewMode = searchParams.get('view') || 'kanban';
@@ -286,25 +299,18 @@ function PipelinesContent({ slug }: { slug: string }) {
       }
       
       if (validation.requiresSelection) {
-        toast({
-          title: 'Múltiplos agendamentos',
-          description: 'Selecione o agendamento ao mover pelo Kanban (drag & drop)',
-          variant: 'default'
+        // Abrir seletor de agendamento
+        setPendingAppointmentSelection({
+          entryId,
+          entry: entry as LeadPipelineEntry,
+          fromStage: currentStage,
+          toStage: nextStage,
+          appointments: validation.appointments as AppointmentOption[],
+          leadName: entry.leads?.nome || 'Lead',
+          stageName: nextStage.nome
         });
         return;
       }
-      
-      // 1 agendamento - vincular automaticamente
-      await moveLead({
-        entry,
-        fromStage: currentStage,
-        toStage: nextStage,
-        checklistItems: [],
-        currentEntriesInTargetStage: 0,
-        appointmentSlaId: validation.appointments[0]?.id,
-        onSuccess: handleRefresh
-      });
-      return;
     }
     
     await moveLead({
@@ -346,24 +352,18 @@ function PipelinesContent({ slug }: { slug: string }) {
       }
       
       if (validation.requiresSelection) {
-        toast({
-          title: 'Múltiplos agendamentos',
-          description: 'Selecione o agendamento ao mover pelo Kanban (drag & drop)',
-          variant: 'default'
+        // Abrir seletor de agendamento
+        setPendingAppointmentSelection({
+          entryId,
+          entry: entry as LeadPipelineEntry,
+          fromStage: currentStage,
+          toStage: previousStage,
+          appointments: validation.appointments as AppointmentOption[],
+          leadName: entry.leads?.nome || 'Lead',
+          stageName: previousStage.nome
         });
         return;
       }
-      
-      await moveLead({
-        entry,
-        fromStage: currentStage,
-        toStage: previousStage,
-        checklistItems: [],
-        currentEntriesInTargetStage: 0,
-        appointmentSlaId: validation.appointments[0]?.id,
-        onSuccess: handleRefresh
-      });
-      return;
     }
     
     await moveLead({
@@ -409,28 +409,19 @@ function PipelinesContent({ slug }: { slug: string }) {
       }
       
       if (validation.requiresSelection) {
-        toast({
-          title: 'Múltiplos agendamentos',
-          description: 'Selecione o agendamento ao mover pelo Kanban (drag & drop)',
-          variant: 'default'
-        });
+        // Fechar dialog de jump e abrir seletor de agendamento
         setStageJumpDialogState({ open: false, entryId: null });
+        setPendingAppointmentSelection({
+          entryId: stageJumpDialogState.entryId,
+          entry: entry as LeadPipelineEntry,
+          fromStage,
+          toStage,
+          appointments: validation.appointments as AppointmentOption[],
+          leadName: entry.leads?.nome || 'Lead',
+          stageName: toStage.nome
+        });
         return;
       }
-      
-      await moveLead({
-        entry,
-        fromStage,
-        toStage,
-        checklistItems: [],
-        currentEntriesInTargetStage: allEntries.filter(e => e.etapa_atual_id === targetStageId).length,
-        appointmentSlaId: validation.appointments[0]?.id,
-        onSuccess: () => {
-          setStageJumpDialogState({ open: false, entryId: null });
-          handleRefresh();
-        }
-      });
-      return;
     }
     
     await moveLead({
@@ -864,6 +855,35 @@ function PipelinesContent({ slug }: { slug: string }) {
         leadName={unsubscribeDialogState.leadName}
         pipelineName={currentPipeline?.nome || ''}
         onConfirm={handleConfirmUnsubscribe}
+      />
+
+      <AppointmentSelectorDialog
+        open={!!pendingAppointmentSelection}
+        onOpenChange={(open) => !open && setPendingAppointmentSelection(null)}
+        appointments={pendingAppointmentSelection?.appointments || []}
+        stageName={pendingAppointmentSelection?.stageName || ''}
+        leadName={pendingAppointmentSelection?.leadName || ''}
+        onConfirm={async (appointmentId) => {
+          if (!pendingAppointmentSelection) return;
+          
+          setIsMovingWithAppointment(true);
+          try {
+            await moveLead({
+              entry: pendingAppointmentSelection.entry,
+              fromStage: pendingAppointmentSelection.fromStage,
+              toStage: pendingAppointmentSelection.toStage,
+              checklistItems: [],
+              currentEntriesInTargetStage: allEntries.filter(e => e.etapa_atual_id === pendingAppointmentSelection.toStage.id).length,
+              appointmentSlaId: appointmentId,
+              onSuccess: handleRefresh
+            });
+          } finally {
+            setIsMovingWithAppointment(false);
+            setPendingAppointmentSelection(null);
+          }
+        }}
+        onCancel={() => setPendingAppointmentSelection(null)}
+        isLoading={isMovingWithAppointment}
       />
     </div>
   );
