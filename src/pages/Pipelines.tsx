@@ -67,7 +67,7 @@ function PipelinesContent({ slug }: { slug: string }) {
   const { stages } = useSupabasePipelineStages(pipelineId);
   const { fetchNextAppointments, getNextAppointmentForLead } = useKanbanAppointments();
   const { moveLead } = useLeadMovement();
-  const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [editingLead, setEditingLead] = useState<{ lead: Lead; initialTab?: string } | null>(null);
   const [stageJumpDialogState, setStageJumpDialogState] = useState<{
     open: boolean;
     entryId: string | null;
@@ -327,10 +327,10 @@ function PipelinesContent({ slug }: { slug: string }) {
   }, [stageJumpDialogState.entryId, allEntries, pipelineStages, moveLead, handleRefresh]);
 
   // Handler para abrir modal de edição
-  const handleViewOrEditLead = useCallback((leadId: string) => {
+  const handleViewOrEditLead = useCallback((leadId: string, options?: { initialTab?: string }) => {
     const entry = allEntries.find(e => e.lead_id === leadId);
     if (entry?.leads) {
-      setEditingLead(entry.leads as any);
+      setEditingLead({ lead: entry.leads as any, initialTab: options?.initialTab });
     }
   }, [allEntries]);
 
@@ -714,14 +714,15 @@ function PipelinesContent({ slug }: { slug: string }) {
         <LeadEditDialog
           open={!!editingLead}
           onOpenChange={(open) => !open && setEditingLead(null)}
-          lead={editingLead}
+          lead={editingLead.lead}
+          initialTab={editingLead.initialTab as any}
           onUpdate={handleRefresh}
-          pipelineEntryId={allEntries.find(e => e.lead_id === editingLead.id)?.id}
+          pipelineEntryId={allEntries.find(e => e.lead_id === editingLead.lead.id)?.id}
           currentStageName={pipelineStages.find(s => 
-            s.id === allEntries.find(e => e.lead_id === editingLead.id)?.etapa_atual_id
+            s.id === allEntries.find(e => e.lead_id === editingLead.lead.id)?.etapa_atual_id
           )?.nome}
           onJumpToStage={() => {
-            const entry = allEntries.find(e => e.lead_id === editingLead.id);
+            const entry = allEntries.find(e => e.lead_id === editingLead.lead.id);
             if (entry) {
               setEditingLead(null);
               handleJumpToStage(entry.id);

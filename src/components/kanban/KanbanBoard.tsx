@@ -76,7 +76,7 @@ interface KanbanBoardProps {
   onTagsChange?: () => void;
   onAddLead?: (stageId: string) => void;
   onViewLead?: (leadId: string) => void;
-  onEditLead?: (leadId: string) => void;
+  onEditLead?: (leadId: string, options?: { initialTab?: string }) => void;
   onCreateAppointment?: (leadId: string) => void;
   onManageDeal?: (leadId: string) => void;
   onAdvanceStage?: (entryId: string) => void;
@@ -224,7 +224,7 @@ export function KanbanBoard({
         
         // Abrir o dialog de edição do lead na aba agenda
         if (onEditLead) {
-          onEditLead(entry.lead_id);
+          onEditLead(entry.lead_id, { initialTab: 'appointments' });
         }
         return;
       }

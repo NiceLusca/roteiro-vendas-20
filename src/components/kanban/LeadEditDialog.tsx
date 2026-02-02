@@ -74,9 +74,11 @@ interface LeadEditDialogProps {
   pipelineEntryId?: string;
   // Config de exibição do pipeline (controla quais abas aparecem)
   displayConfig?: PipelineDisplayConfig;
+  // Aba inicial (para abrir diretamente em uma aba específica)
+  initialTab?: 'info' | 'responsibles' | 'comments' | 'appointments' | 'deals' | 'attachments' | 'history';
 }
 
-export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStageName, onJumpToStage, pipelineEntryId, displayConfig }: LeadEditDialogProps) {
+export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStageName, onJumpToStage, pipelineEntryId, displayConfig, initialTab }: LeadEditDialogProps) {
   const [formData, setFormData] = useState({
     nome: lead.nome,
     whatsapp: lead.whatsapp || '',
@@ -613,7 +615,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="comments" className="w-full">
+        <Tabs defaultValue={initialTab || "comments"} className="w-full">
           {/* Renderização condicional das abas baseado no displayConfig do pipeline */}
           {(() => {
             const showAppointments = displayConfig?.show_appointments !== false;
