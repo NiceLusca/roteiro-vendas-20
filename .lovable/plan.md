@@ -1,82 +1,190 @@
 
-# Correção: Campos SLA não sendo buscados do banco
+# Correção: Dialog não abre + Origem não salva
 
-## Diagnóstico
+## Problemas Identificados
 
-O problema foi identificado: a etapa "Não Fechou (quente)" **está corretamente configurada** no banco de dados com:
-- `requer_agendamento: true`
-- `sla_baseado_em: agendamento`
+### Problema 1: Dialog não abre ao mover para "Não Fechou (quente)"
 
-Porém, o hook `useSupabasePipelineStages.ts` que busca as etapas para o Kanban **não inclui esses campos no SELECT**, então os valores chegam como `undefined` no componente.
+**Diagnóstico:**
+Após análise do código e banco de dados, confirmei que:
+- A etapa "Não Fechou (quente)" está **corretamente configurada** com `requer_agendamento: true`
+- O hook `useSupabasePipelineStages` já busca os campos corretamente
+- Os tipos TypeScript estão corretos
 
-**Evidência do banco:**
-```
-nome: Não Fechou (quente)
-requer_agendamento: true
-sla_baseado_em: agendamento
-```
+**Causa provável:**
+A movimentação pode estar ocorrendo por um caminho alternativo que não passa pela validação. Há dois locais onde leads podem ser movidos:
+1. `KanbanBoard.handleDropLead` - tem a validação de agendamento ✓
+2. `Pipelines.handleAdvanceStage` - **NÃO** tem a validação de agendamento ✗
 
-**Query atual (linhas 41-67):**
+Quando o usuário clica no botão de avançar etapa (em vez de arrastar), a função `handleAdvanceStage` é chamada diretamente, **pulando a validação de agendamento**.
+
+### Problema 2: Origem não salva
+
+**Diagnóstico:**
+Ao analisar o fluxo de salvamento:
+1. `handleSaveOrigem` chama `saveLead({ id: lead.id, origem: origemToSave })`
+2. `saveLead` recebe o ID, identifica como update explícito
+3. O payload é criado corretamente
+
+**Causa provável:**
+O toast "Origem atualizada" usa `toast.success()` da biblioteca Sonner, mas o `useLeadSave` também dispara um toast interno com `toast()` do shadcn. Isso pode estar causando confusão visual.
+
+Porém, o problema real pode ser que o `saveLead` retorna `null` silenciosamente quando `!user`, ou há um erro não capturado.
+
+## Correções Necessárias
+
+### Correção 1: Adicionar validação de agendamento ao `handleAdvanceStage`
+
+**Arquivo:** `src/pages/Pipelines.tsx`
+
+Atualmente (linha 250-273):
 ```typescript
-.select(`
-  id, pipeline_id, nome, ordem, prazo_em_dias, 
-  proximo_passo_tipo, proximo_passo_label, ...
-  grupo, cor_grupo, created_at, updated_at
-`)
-// ❌ Faltam: sla_baseado_em, requer_agendamento
+const handleAdvanceStage = useCallback(async (entryId: string) => {
+  const entry = allEntries.find(e => e.id === entryId);
+  if (!entry) return;
+  
+  const currentStageIndex = pipelineStages.findIndex(s => s.id === entry.etapa_atual_id);
+  const currentStage = pipelineStages[currentStageIndex];
+  const nextStage = ...
+  
+  if (!currentStage || !nextStage) return;
+  
+  // ❌ PROBLEMA: Não valida se nextStage requer agendamento!
+  await moveLead({...});
+}, [...]);
 ```
 
-## Solução
-
-Adicionar os campos `sla_baseado_em` e `requer_agendamento` à query do hook.
-
-## Alteração
-
-### Arquivo: `src/hooks/useSupabasePipelineStages.ts`
-
-**Linhas 63-66**: Adicionar os novos campos na query SELECT:
+**Solução:** Adicionar validação antes de mover:
 
 ```typescript
-// Antes
-          proxima_etapa_id,
-          grupo,
-          cor_grupo,
-          created_at,
-
-// Depois
-          proxima_etapa_id,
-          grupo,
-          cor_grupo,
-          sla_baseado_em,
-          requer_agendamento,
-          created_at,
+const handleAdvanceStage = useCallback(async (entryId: string) => {
+  const entry = allEntries.find(e => e.id === entryId);
+  if (!entry) return;
+  
+  const currentStageIndex = pipelineStages.findIndex(s => s.id === entry.etapa_atual_id);
+  const currentStage = pipelineStages[currentStageIndex];
+  const nextStage = ...
+  
+  if (!currentStage || !nextStage) return;
+  
+  // ✅ NOVO: Validar agendamento se etapa requer
+  if (nextStage.requer_agendamento) {
+    const validation = await validateAppointmentRequirement(entry.lead_id, nextStage);
+    
+    if (!validation.valid) {
+      toast({
+        title: 'Agendamento necessário',
+        description: validation.message || 'Defina um agendamento para mover para esta etapa',
+        variant: 'destructive'
+      });
+      // Abrir dialog na aba agenda
+      handleViewOrEditLead(entry.lead_id, { initialTab: 'appointments' });
+      return;
+    }
+    
+    if (validation.requiresSelection) {
+      // TODO: Abrir seletor de agendamento (por enquanto, usar o primeiro)
+      toast({
+        title: 'Múltiplos agendamentos',
+        description: 'Selecione o agendamento ao mover pelo Kanban (drag & drop)',
+        variant: 'default'
+      });
+      return;
+    }
+    
+    // 1 agendamento - usar automaticamente
+    await moveLead({
+      entry,
+      fromStage: currentStage,
+      toStage: nextStage,
+      checklistItems: [],
+      currentEntriesInTargetStage: 0,
+      appointmentSlaId: validation.appointments[0]?.id,
+      onSuccess: handleRefresh
+    });
+    return;
+  }
+  
+  // Movimento normal
+  await moveLead({...});
+}, [...]);
 ```
 
-**Linhas 7-25**: Atualizar interface local do hook para incluir os tipos:
+A mesma lógica deve ser aplicada em `handleRegressStage` e `handleConfirmJump`.
+
+### Correção 2: Melhorar feedback de erro no salvamento de origem
+
+**Arquivo:** `src/components/kanban/LeadEditDialog.tsx`
+
+O problema pode ser que o `saveLead` retorna `null` quando há erro, mas o código atual não verifica isso:
 
 ```typescript
-interface PipelineStage {
-  // ... campos existentes ...
-  cor_grupo?: string | null;
-  sla_baseado_em?: 'entrada' | 'agendamento'; // NOVO
-  requer_agendamento?: boolean; // NOVO
-  created_at: string;
-  updated_at: string;
+// Atual (linha 371-374)
+await saveLead({
+  id: lead.id,
+  origem: origemToSave
+});
+
+// Corrigido - verificar resultado
+const result = await saveLead({
+  id: lead.id,
+  origem: origemToSave
+});
+
+if (!result) {
+  toast.error('Erro ao salvar origem - verifique se está logado');
+  return;
 }
 ```
 
-## Resultado Esperado
+### Correção 3: Evitar toast duplicado
 
-Após a correção:
-1. Os campos `sla_baseado_em` e `requer_agendamento` serão carregados do banco
-2. A validação em `KanbanBoard.tsx` (linha 211) receberá `requer_agendamento: true`
-3. Ao mover o lead para "Não Fechou (quente)", o sistema irá:
-   - Verificar se há agendamentos
-   - Bloquear se não houver
-   - Solicitar seleção se houver múltiplos
+O `useLeadSave` já dispara um toast interno. Devemos remover o toast do `handleSaveOrigem` ou modificar o `saveLead` para não disparar toast em updates parciais.
 
-## Resumo
+**Opção A:** Adicionar parâmetro `silent` ao `saveLead` para não mostrar toast
+**Opção B:** Remover o toast do `handleSaveOrigem` e confiar no toast interno
+
+## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/hooks/useSupabasePipelineStages.ts` | Adicionar `sla_baseado_em` e `requer_agendamento` à query SELECT e à interface local |
+| `src/pages/Pipelines.tsx` | Adicionar validação de agendamento em `handleAdvanceStage`, `handleRegressStage` e `handleConfirmJump` |
+| `src/components/kanban/LeadEditDialog.tsx` | Verificar resultado do `saveLead` e ajustar toast |
+
+## Fluxo Corrigido
+
+```text
+┌────────────────────────────────────────────────────────────────┐
+│ Usuário clica em "Avançar" ou arrasta lead                     │
+└────────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+        ┌───────────────────────────────────────┐
+        │ Etapa de destino requer agendamento?  │
+        └───────────────────────────────────────┘
+                 │                    │
+               Não                   Sim
+                 │                    │
+                 ▼                    ▼
+        ┌─────────────┐    ┌─────────────────────────────┐
+        │ Mover       │    │ Validar agendamentos        │
+        │ normalmente │    └─────────────────────────────┘
+        └─────────────┘                │
+                        ┌──────────────┼──────────────────┐
+                        │              │                  │
+                   0 agends        1 agend           2+ agends
+                        │              │                  │
+                        ▼              ▼                  ▼
+               ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐
+               │ Bloquear e   │  │ Vincular     │  │ Abrir seletor   │
+               │ abrir card   │  │ automatico   │  │ (apenas Kanban) │
+               │ na aba Agenda│  │ e mover      │  │ ou bloquear     │
+               └──────────────┘  └──────────────┘  └─────────────────┘
+```
+
+## Resumo Técnico
+
+1. A validação de agendamento estava implementada apenas no `handleDropLead` do KanbanBoard
+2. Os botões de avanço/retrocesso chamavam funções que não tinham essa validação
+3. Precisamos replicar a validação em todos os pontos de movimentação de leads
+4. O salvamento de origem provavelmente funciona, mas pode haver falta de feedback visual adequado
