@@ -1,190 +1,179 @@
 
-# Correção: Dialog não abre + Origem não salva
+# Plano: Sempre abrir dialog de confirmação de agendamento
 
-## Problemas Identificados
+## Objetivo
 
-### Problema 1: Dialog não abre ao mover para "Não Fechou (quente)"
+Modificar o comportamento para que o dialog de seleção de agendamento **sempre** abra quando a etapa requer agendamento, mesmo quando há apenas 1 agendamento. Isso permite ao usuário:
+1. Confirmar se deseja usar o agendamento existente
+2. Ver claramente qual data será usada como deadline do SLA
+3. Optar por cancelar e criar um novo agendamento se preferir
 
-**Diagnóstico:**
-Após análise do código e banco de dados, confirmei que:
-- A etapa "Não Fechou (quente)" está **corretamente configurada** com `requer_agendamento: true`
-- O hook `useSupabasePipelineStages` já busca os campos corretamente
-- Os tipos TypeScript estão corretos
+## Alterações Necessárias
 
-**Causa provável:**
-A movimentação pode estar ocorrendo por um caminho alternativo que não passa pela validação. Há dois locais onde leads podem ser movidos:
-1. `KanbanBoard.handleDropLead` - tem a validação de agendamento ✓
-2. `Pipelines.handleAdvanceStage` - **NÃO** tem a validação de agendamento ✗
+### 1. Modificar validação para sempre requerer seleção
 
-Quando o usuário clica no botão de avançar etapa (em vez de arrastar), a função `handleAdvanceStage` é chamada diretamente, **pulando a validação de agendamento**.
+**Arquivo:** `src/lib/appointmentValidator.ts`
 
-### Problema 2: Origem não salva
+Alterar a lógica de 1 agendamento para também requerer seleção:
 
-**Diagnóstico:**
-Ao analisar o fluxo de salvamento:
-1. `handleSaveOrigem` chama `saveLead({ id: lead.id, origem: origemToSave })`
-2. `saveLead` recebe o ID, identifica como update explícito
-3. O payload é criado corretamente
+```typescript
+// ANTES (linhas 66-73):
+// 1 agendamento - vincular automaticamente
+if (appointments.length === 1) {
+  return {
+    valid: true,
+    appointments,
+    requiresSelection: false  // ← Não abre dialog
+  };
+}
 
-**Causa provável:**
-O toast "Origem atualizada" usa `toast.success()` da biblioteca Sonner, mas o `useLeadSave` também dispara um toast interno com `toast()` do shadcn. Isso pode estar causando confusão visual.
+// DEPOIS:
+// 1 ou mais agendamentos - sempre solicitar confirmação
+if (appointments.length >= 1) {
+  return {
+    valid: true,
+    appointments,
+    requiresSelection: true,  // ← Sempre abre dialog
+    message: appointments.length === 1 
+      ? 'Confirme o agendamento para o prazo SLA'
+      : 'Selecione qual agendamento usar para o prazo SLA'
+  };
+}
+```
 
-Porém, o problema real pode ser que o `saveLead` retorna `null` silenciosamente quando `!user`, ou há um erro não capturado.
-
-## Correções Necessárias
-
-### Correção 1: Adicionar validação de agendamento ao `handleAdvanceStage`
+### 2. Adaptar handlers de avanço/retrocesso
 
 **Arquivo:** `src/pages/Pipelines.tsx`
 
-Atualmente (linha 250-273):
-```typescript
-const handleAdvanceStage = useCallback(async (entryId: string) => {
-  const entry = allEntries.find(e => e.id === entryId);
-  if (!entry) return;
-  
-  const currentStageIndex = pipelineStages.findIndex(s => s.id === entry.etapa_atual_id);
-  const currentStage = pipelineStages[currentStageIndex];
-  const nextStage = ...
-  
-  if (!currentStage || !nextStage) return;
-  
-  // ❌ PROBLEMA: Não valida se nextStage requer agendamento!
-  await moveLead({...});
-}, [...]);
-```
-
-**Solução:** Adicionar validação antes de mover:
+Os handlers `handleAdvanceStage` e `handleRegressStage` atualmente bloqueiam quando `requiresSelection: true`, pedindo para usar drag & drop. Precisamos permitir que abram o seletor diretamente:
 
 ```typescript
-const handleAdvanceStage = useCallback(async (entryId: string) => {
-  const entry = allEntries.find(e => e.id === entryId);
-  if (!entry) return;
-  
-  const currentStageIndex = pipelineStages.findIndex(s => s.id === entry.etapa_atual_id);
-  const currentStage = pipelineStages[currentStageIndex];
-  const nextStage = ...
-  
-  if (!currentStage || !nextStage) return;
-  
-  // ✅ NOVO: Validar agendamento se etapa requer
-  if (nextStage.requer_agendamento) {
-    const validation = await validateAppointmentRequirement(entry.lead_id, nextStage);
-    
-    if (!validation.valid) {
-      toast({
-        title: 'Agendamento necessário',
-        description: validation.message || 'Defina um agendamento para mover para esta etapa',
-        variant: 'destructive'
-      });
-      // Abrir dialog na aba agenda
-      handleViewOrEditLead(entry.lead_id, { initialTab: 'appointments' });
-      return;
-    }
-    
-    if (validation.requiresSelection) {
-      // TODO: Abrir seletor de agendamento (por enquanto, usar o primeiro)
-      toast({
-        title: 'Múltiplos agendamentos',
-        description: 'Selecione o agendamento ao mover pelo Kanban (drag & drop)',
-        variant: 'default'
-      });
-      return;
-    }
-    
-    // 1 agendamento - usar automaticamente
-    await moveLead({
-      entry,
-      fromStage: currentStage,
-      toStage: nextStage,
-      checklistItems: [],
-      currentEntriesInTargetStage: 0,
-      appointmentSlaId: validation.appointments[0]?.id,
-      onSuccess: handleRefresh
-    });
-    return;
-  }
-  
-  // Movimento normal
-  await moveLead({...});
-}, [...]);
-```
+// ANTES (linhas 288-295):
+if (validation.requiresSelection) {
+  toast({
+    title: 'Múltiplos agendamentos',
+    description: 'Selecione o agendamento ao mover pelo Kanban (drag & drop)',
+    variant: 'default'
+  });
+  return;
+}
 
-A mesma lógica deve ser aplicada em `handleRegressStage` e `handleConfirmJump`.
-
-### Correção 2: Melhorar feedback de erro no salvamento de origem
-
-**Arquivo:** `src/components/kanban/LeadEditDialog.tsx`
-
-O problema pode ser que o `saveLead` retorna `null` quando há erro, mas o código atual não verifica isso:
-
-```typescript
-// Atual (linha 371-374)
-await saveLead({
-  id: lead.id,
-  origem: origemToSave
-});
-
-// Corrigido - verificar resultado
-const result = await saveLead({
-  id: lead.id,
-  origem: origemToSave
-});
-
-if (!result) {
-  toast.error('Erro ao salvar origem - verifique se está logado');
+// DEPOIS:
+if (validation.requiresSelection) {
+  // Abrir seletor de agendamento
+  setPendingAppointmentSelection({
+    entryId,
+    entry,
+    fromStage: currentStage,
+    toStage: nextStage,
+    appointments: validation.appointments,
+    leadName: entry.leads?.nome || 'Lead',
+    stageName: nextStage.nome
+  });
   return;
 }
 ```
 
-### Correção 3: Evitar toast duplicado
+### 3. Adicionar estado e dialog de seleção no Pipelines.tsx
 
-O `useLeadSave` já dispara um toast interno. Devemos remover o toast do `handleSaveOrigem` ou modificar o `saveLead` para não disparar toast em updates parciais.
+**Arquivo:** `src/pages/Pipelines.tsx`
 
-**Opção A:** Adicionar parâmetro `silent` ao `saveLead` para não mostrar toast
-**Opção B:** Remover o toast do `handleSaveOrigem` e confiar no toast interno
+Adicionar:
+- Estado para controlar o dialog de seleção
+- O componente `AppointmentSelectorDialog`
+- Handler para confirmar a seleção
+
+```typescript
+// Novo estado
+const [pendingAppointmentSelection, setPendingAppointmentSelection] = useState<{
+  entryId: string;
+  entry: LeadPipelineEntry;
+  fromStage: PipelineStage;
+  toStage: PipelineStage;
+  appointments: AppointmentOption[];
+  leadName: string;
+  stageName: string;
+} | null>(null);
+
+// Handler de confirmação
+const handleAppointmentSelected = async (appointmentId: string) => {
+  if (!pendingAppointmentSelection) return;
+  
+  await moveLead({
+    entry: pendingAppointmentSelection.entry,
+    fromStage: pendingAppointmentSelection.fromStage,
+    toStage: pendingAppointmentSelection.toStage,
+    checklistItems: [],
+    currentEntriesInTargetStage: 0,
+    appointmentSlaId: appointmentId,
+    onSuccess: handleRefresh
+  });
+  
+  setPendingAppointmentSelection(null);
+};
+
+// No JSX, adicionar o dialog
+<AppointmentSelectorDialog
+  open={!!pendingAppointmentSelection}
+  onOpenChange={(open) => !open && setPendingAppointmentSelection(null)}
+  appointments={pendingAppointmentSelection?.appointments || []}
+  stageName={pendingAppointmentSelection?.stageName || ''}
+  leadName={pendingAppointmentSelection?.leadName || ''}
+  onConfirm={handleAppointmentSelected}
+  onCancel={() => setPendingAppointmentSelection(null)}
+/>
+```
+
+### 4. Atualizar mensagem do dialog
+
+**Arquivo:** `src/components/kanban/AppointmentSelectorDialog.tsx`
+
+Ajustar a descrição para cobrir o caso de 1 agendamento:
+
+```typescript
+<DialogDescription>
+  A etapa <strong>"{stageName}"</strong> calcula o SLA baseado na data do agendamento.
+  <br />
+  {appointments.length === 1 
+    ? <>Confirme se este é o agendamento correto para <strong>{leadName}</strong>:</>
+    : <>Selecione qual agendamento de <strong>{leadName}</strong> usar:</>
+  }
+</DialogDescription>
+```
+
+## Fluxo Corrigido
+
+```text
+Etapa requer agendamento?
+         │
+        Sim
+         │
+         ▼
+  Quantos agendamentos?
+         │
+    ┌────┴────┐
+    0         ≥1
+    │          │
+    ▼          ▼
+ Bloquear   Abrir dialog
+ + Abrir    de confirmação
+ aba Agenda     │
+                ▼
+         Usuário confirma
+         ou cancela
+```
 
 ## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/Pipelines.tsx` | Adicionar validação de agendamento em `handleAdvanceStage`, `handleRegressStage` e `handleConfirmJump` |
-| `src/components/kanban/LeadEditDialog.tsx` | Verificar resultado do `saveLead` e ajustar toast |
+| `src/lib/appointmentValidator.ts` | Alterar lógica para sempre requerer seleção quando há agendamentos |
+| `src/pages/Pipelines.tsx` | Adicionar estado e dialog de seleção, adaptar handlers |
+| `src/components/kanban/AppointmentSelectorDialog.tsx` | Ajustar mensagem para caso de 1 agendamento |
 
-## Fluxo Corrigido
+## Benefícios
 
-```text
-┌────────────────────────────────────────────────────────────────┐
-│ Usuário clica em "Avançar" ou arrasta lead                     │
-└────────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-        ┌───────────────────────────────────────┐
-        │ Etapa de destino requer agendamento?  │
-        └───────────────────────────────────────┘
-                 │                    │
-               Não                   Sim
-                 │                    │
-                 ▼                    ▼
-        ┌─────────────┐    ┌─────────────────────────────┐
-        │ Mover       │    │ Validar agendamentos        │
-        │ normalmente │    └─────────────────────────────┘
-        └─────────────┘                │
-                        ┌──────────────┼──────────────────┐
-                        │              │                  │
-                   0 agends        1 agend           2+ agends
-                        │              │                  │
-                        ▼              ▼                  ▼
-               ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐
-               │ Bloquear e   │  │ Vincular     │  │ Abrir seletor   │
-               │ abrir card   │  │ automatico   │  │ (apenas Kanban) │
-               │ na aba Agenda│  │ e mover      │  │ ou bloquear     │
-               └──────────────┘  └──────────────┘  └─────────────────┘
-```
-
-## Resumo Técnico
-
-1. A validação de agendamento estava implementada apenas no `handleDropLead` do KanbanBoard
-2. Os botões de avanço/retrocesso chamavam funções que não tinham essa validação
-3. Precisamos replicar a validação em todos os pontos de movimentação de leads
-4. O salvamento de origem provavelmente funciona, mas pode haver falta de feedback visual adequado
+1. Transparência para o usuário sobre qual data será o deadline
+2. Oportunidade de cancelar e criar novo agendamento se necessário
+3. Comportamento consistente independente do número de agendamentos
+4. Evita movimentações acidentais com agendamento incorreto
