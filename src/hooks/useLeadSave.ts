@@ -165,8 +165,11 @@ export function useLeadSave() {
   };
 
   // Save lead - Returns the created/updated lead with ID
-  const saveLead = async (leadData: Partial<Lead> & { id?: string }): Promise<Lead | null> => {
+  // Option `silent` prevents showing toast (useful for partial updates)
+  const saveLead = async (leadData: Partial<Lead> & { id?: string }, options?: { silent?: boolean }): Promise<Lead | null> => {
     if (!user) return null;
+    
+    const silent = options?.silent || false;
 
     try {
       const isExplicitUpdate = !!leadData.id;
@@ -237,26 +240,30 @@ export function useLeadSave() {
       }
 
       if (result.error) {
-        toast({
-          title: `Erro ao ${wasUpdate ? 'atualizar' : 'criar'} lead`,
-          description: result.error.message,
-          variant: "destructive"
-        });
+        if (!silent) {
+          toast({
+            title: `Erro ao ${wasUpdate ? 'atualizar' : 'criar'} lead`,
+            description: result.error.message,
+            variant: "destructive"
+          });
+        }
         return null;
       }
 
-      // Toast diferenciado para merge automático
-      if (existingLead && !isExplicitUpdate) {
-        toast({
-          title: "Lead atualizado com novos dados",
-          description: `Lead ${result.data?.nome} já existia e foi atualizado com as novas informações`,
-          variant: "default"
-        });
-      } else {
-        toast({
-          title: `Lead ${wasUpdate ? 'atualizado' : 'criado'} com sucesso`,
-          description: `Lead ${result.data?.nome} foi ${wasUpdate ? 'atualizado' : 'criado'}`
-        });
+      // Toast diferenciado para merge automático (only if not silent)
+      if (!silent) {
+        if (existingLead && !isExplicitUpdate) {
+          toast({
+            title: "Lead atualizado com novos dados",
+            description: `Lead ${result.data?.nome} já existia e foi atualizado com as novas informações`,
+            variant: "default"
+          });
+        } else {
+          toast({
+            title: `Lead ${wasUpdate ? 'atualizado' : 'criado'} com sucesso`,
+            description: `Lead ${result.data?.nome} foi ${wasUpdate ? 'atualizado' : 'criado'}`
+          });
+        }
       }
       
       return {
