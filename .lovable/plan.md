@@ -1,216 +1,183 @@
 
-# Plano: Período de Pesquisa Totalmente Customizável
+# Plano: SLA Vinculado a Agendamento com Seleção Manual
 
-## Situação Atual
+## Resumo da Solicitação
 
-A API já aceita alguns parâmetros:
-- `periodo`: mes_atual, mes_anterior, ultimos_30_dias, ultimos_7_dias
-- `data_inicio`: data específica (YYYY-MM-DD)
-- `data_fim`: data específica (YYYY-MM-DD)
+Quando um lead é movido para uma etapa com SLA baseado em agendamento:
+- **Se houver múltiplos agendamentos**: Exibir seletor para o usuário escolher qual agendamento usar
+- **Se o agendamento passar**: Continuar contando o atraso a partir da data original
 
-## Melhorias Propostas
+## Alterações Necessárias
 
-### Novos Períodos Pré-definidos
+### 1. Banco de Dados
 
-| Parâmetro | Descrição |
-|-----------|-----------|
-| `ano_atual` | 1º de janeiro até hoje |
-| `ano_anterior` | Todo o ano passado |
-| `trimestre_atual` | Início do trimestre até hoje |
-| `trimestre_anterior` | Trimestre anterior completo |
-| `semana_atual` | Segunda-feira até hoje |
-| `hoje` | Apenas o dia atual |
-| `ontem` | Apenas o dia anterior |
-| `personalizado` | Usar data_inicio e data_fim obrigatórios |
-
-### Parâmetros Relativos (Novo)
-
-| Parâmetro | Descrição | Exemplo |
-|-----------|-----------|---------|
-| `ultimos_dias` | Número de dias para trás | `ultimos_dias=15` |
-| `ultimos_meses` | Número de meses para trás | `ultimos_meses=3` |
-
-### Exemplos de Uso
-
-```
-# Últimos 90 dias
-/comercial-metrics?ultimos_dias=90
-
-# Últimos 6 meses
-/comercial-metrics?ultimos_meses=6
-
-# Período específico
-/comercial-metrics?data_inicio=2025-10-01&data_fim=2025-12-31
-
-# Trimestre atual
-/comercial-metrics?periodo=trimestre_atual
-
-# Ano inteiro de 2025
-/comercial-metrics?data_inicio=2025-01-01&data_fim=2025-12-31
+#### Tabela `pipeline_stages` (nova coluna)
+```sql
+ALTER TABLE pipeline_stages
+ADD COLUMN sla_baseado_em TEXT DEFAULT 'entrada' CHECK (sla_baseado_em IN ('entrada', 'agendamento')),
+ADD COLUMN requer_agendamento BOOLEAN DEFAULT false;
 ```
 
----
+#### Tabela `lead_pipeline_entries` (nova coluna)
+```sql
+ALTER TABLE lead_pipeline_entries
+ADD COLUMN agendamento_sla_id UUID REFERENCES appointments(id) ON DELETE SET NULL;
+```
 
-## Alterações Técnicas
+Esta nova coluna armazena o ID do agendamento específico que o usuário selecionou para calcular o SLA daquele card.
 
-### Arquivo: `supabase/functions/comercial-metrics/index.ts`
+### 2. Formulário de Etapas (StageForm.tsx)
 
-#### Linhas 44-65: Expandir lógica de parsing de período
+Adicionar nova seção de configuração:
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│ Configuração de SLA                                     │
+├─────────────────────────────────────────────────────────┤
+│ Prazo SLA (dias): [___]                                 │
+│                                                         │
+│ Base do cálculo:                                        │
+│ ○ Data de entrada na etapa (padrão)                     │
+│ ● Data do agendamento                                   │
+│   └── ☑ Bloquear movimentação se não houver agendamento │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 3. Fluxo de Movimentação
+
+Quando um lead é movido para uma etapa com `sla_baseado_em = 'agendamento'`:
+
+```text
+┌────────────────────────────────────────────────────────────────┐
+│ Usuário arrasta lead para etapa "Agendado"                     │
+└────────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+        ┌───────────────────────────────────────┐
+        │ Etapa requer agendamento?             │
+        └───────────────────────────────────────┘
+                 │                    │
+               Não                   Sim
+                 │                    │
+                 ▼                    ▼
+        ┌─────────────┐    ┌─────────────────────────────┐
+        │ Move normal │    │ Buscar agendamentos do lead │
+        └─────────────┘    └─────────────────────────────┘
+                                       │
+                    ┌──────────────────┼──────────────────┐
+                    │                  │                  │
+                0 agends          1 agend           2+ agends
+                    │                  │                  │
+                    ▼                  ▼                  ▼
+           ┌──────────────┐    ┌──────────────┐   ┌─────────────────┐
+           │ Bloquear e   │    │ Vincular     │   │ Abrir dialog    │
+           │ abrir card   │    │ automatico   │   │ para selecionar │
+           │ na aba Agenda│    │ e mover      │   │ qual agendamento│
+           └──────────────┘    └──────────────┘   └─────────────────┘
+```
+
+### 4. Novo Dialog: Seletor de Agendamento para SLA
+
+Quando houver múltiplos agendamentos, exibir dialog:
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│  Selecione o agendamento para o prazo                   │
+│─────────────────────────────────────────────────────────│
+│                                                         │
+│  A etapa "Agendado" calcula o SLA baseado na data do    │
+│  agendamento. Selecione qual usar:                      │
+│                                                         │
+│  ○ 📅 05/02/2026 às 14:00 - Sessão Estratégica         │
+│  ● 📅 10/02/2026 às 10:00 - Apresentação Comercial     │
+│  ○ 📅 15/02/2026 às 16:00 - Follow-up                  │
+│                                                         │
+│  [ Cancelar ]                     [ Confirmar e Mover ] │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 5. Cálculo de SLA no KanbanCard
+
+Alterar a lógica de cálculo:
 
 ```typescript
-// Parse query parameters
-const url = new URL(req.url);
-const periodo = url.searchParams.get("periodo") || "mes_atual";
-let dataInicio = url.searchParams.get("data_inicio");
-let dataFim = url.searchParams.get("data_fim");
-const ultimosDias = url.searchParams.get("ultimos_dias");
-const ultimosMeses = url.searchParams.get("ultimos_meses");
+// Atual: usa data_entrada_etapa
+const daysInStage = entry.data_entrada_etapa 
+  ? Math.floor((Date.now() - new Date(entry.data_entrada_etapa).getTime()) / (1000 * 60 * 60 * 24))
+  : 0;
 
-const now = new Date();
-const today = now.toISOString().split("T")[0];
-
-// Prioridade: datas específicas > ultimos_dias/meses > periodo pré-definido
-if (dataInicio && dataFim) {
-  // Usar datas fornecidas diretamente
-  console.log(`[comercial-metrics] Usando período customizado: ${dataInicio} a ${dataFim}`);
-} else if (ultimosDias) {
-  const dias = parseInt(ultimosDias, 10);
-  dataInicio = new Date(now.getTime() - dias * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-  dataFim = today;
-} else if (ultimosMeses) {
-  const meses = parseInt(ultimosMeses, 10);
-  const startDate = new Date(now.getFullYear(), now.getMonth() - meses, 1);
-  dataInicio = startDate.toISOString().split("T")[0];
-  dataFim = today;
-} else {
-  // Períodos pré-definidos
-  switch (periodo) {
-    case "mes_atual":
-      dataInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-      dataFim = today;
-      break;
-    case "mes_anterior":
-      dataInicio = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split("T")[0];
-      dataFim = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split("T")[0];
-      break;
-    case "ultimos_30_dias":
-      dataInicio = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-      dataFim = today;
-      break;
-    case "ultimos_7_dias":
-      dataInicio = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-      dataFim = today;
-      break;
-    case "hoje":
-      dataInicio = today;
-      dataFim = today;
-      break;
-    case "ontem":
-      const ontem = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      dataInicio = ontem.toISOString().split("T")[0];
-      dataFim = dataInicio;
-      break;
-    case "semana_atual":
-      const dayOfWeek = now.getDay();
-      const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      const monday = new Date(now.getTime() - diffToMonday * 24 * 60 * 60 * 1000);
-      dataInicio = monday.toISOString().split("T")[0];
-      dataFim = today;
-      break;
-    case "trimestre_atual":
-      const quarterMonth = Math.floor(now.getMonth() / 3) * 3;
-      dataInicio = new Date(now.getFullYear(), quarterMonth, 1).toISOString().split("T")[0];
-      dataFim = today;
-      break;
-    case "trimestre_anterior":
-      const prevQuarterMonth = Math.floor(now.getMonth() / 3) * 3 - 3;
-      const prevQuarterYear = prevQuarterMonth < 0 ? now.getFullYear() - 1 : now.getFullYear();
-      const adjustedMonth = prevQuarterMonth < 0 ? prevQuarterMonth + 12 : prevQuarterMonth;
-      dataInicio = new Date(prevQuarterYear, adjustedMonth, 1).toISOString().split("T")[0];
-      dataFim = new Date(prevQuarterYear, adjustedMonth + 3, 0).toISOString().split("T")[0];
-      break;
-    case "ano_atual":
-      dataInicio = new Date(now.getFullYear(), 0, 1).toISOString().split("T")[0];
-      dataFim = today;
-      break;
-    case "ano_anterior":
-      dataInicio = new Date(now.getFullYear() - 1, 0, 1).toISOString().split("T")[0];
-      dataFim = new Date(now.getFullYear() - 1, 11, 31).toISOString().split("T")[0];
-      break;
-    default:
-      // Fallback para mês atual
-      dataInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-      dataFim = today;
+// Novo: verifica se tem agendamento vinculado
+const slaBaseDate = useMemo(() => {
+  // Se a etapa usa SLA baseado em agendamento E tem agendamento vinculado
+  if (stage.sla_baseado_em === 'agendamento' && entry.agendamento_sla_id && appointmentInfo) {
+    // Usa a data do agendamento (mesmo que seja passada)
+    return new Date(appointmentInfo.data_hora);
   }
-}
+  // Senão, usa data de entrada na etapa
+  return new Date(entry.data_entrada_etapa);
+}, [stage.sla_baseado_em, entry.agendamento_sla_id, appointmentInfo, entry.data_entrada_etapa]);
+
+const daysFromSlaBase = Math.floor((Date.now() - slaBaseDate.getTime()) / (1000 * 60 * 60 * 24));
 ```
 
 ---
 
-## Validação de Parâmetros
-
-Adicionar validação para evitar erros:
-
-```typescript
-// Validar formato de datas
-const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-if (dataInicio && !dateRegex.test(dataInicio)) {
-  return new Response(
-    JSON.stringify({ error: "data_inicio deve estar no formato YYYY-MM-DD" }),
-    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
-}
-if (dataFim && !dateRegex.test(dataFim)) {
-  return new Response(
-    JSON.stringify({ error: "data_fim deve estar no formato YYYY-MM-DD" }),
-    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
-}
-
-// Validar que data_inicio <= data_fim
-if (dataInicio && dataFim && dataInicio > dataFim) {
-  return new Response(
-    JSON.stringify({ error: "data_inicio não pode ser maior que data_fim" }),
-    { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
-}
-```
-
----
-
-## Resposta Aprimorada
-
-Incluir informações do período na resposta:
-
-```typescript
-periodo: {
-  tipo: periodo,
-  inicio: dataInicio,
-  fim: dataFim,
-  dias_totais: Math.ceil((new Date(dataFim).getTime() - new Date(dataInicio).getTime()) / (1000 * 60 * 60 * 24)) + 1,
-},
-```
-
----
-
-## Resumo das Alterações
+## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `supabase/functions/comercial-metrics/index.ts` | Expandir parsing de período com novos tipos e parâmetros relativos |
+| Migração SQL | Adicionar colunas `sla_baseado_em`, `requer_agendamento` em `pipeline_stages` e `agendamento_sla_id` em `lead_pipeline_entries` |
+| `src/types/crm.ts` | Adicionar campos nos tipos `PipelineStage` e `LeadPipelineEntry` |
+| `src/components/forms/StageForm.tsx` | Adicionar seção de configuração de SLA baseado em agendamento |
+| `src/lib/leadMovementValidator.ts` | Adicionar validação assíncrona de agendamento obrigatório |
+| `src/hooks/useLeadMovement.ts` | Tratar casos de múltiplos agendamentos, retornar flag para abrir seletor |
+| `src/components/kanban/AppointmentSelectorDialog.tsx` | **Novo** - Dialog para selecionar agendamento quando houver múltiplos |
+| `src/components/kanban/KanbanBoard.tsx` | Interceptar movimentação e exibir dialog de seleção |
+| `src/components/kanban/KanbanCard.tsx` | Alterar cálculo de SLA para considerar `agendamento_sla_id` |
+| `src/hooks/usePipelineDisplayData.ts` | Incluir dados do agendamento vinculado ao SLA |
 
 ---
 
-## Resultado Esperado
+## Exemplo de Uso
 
-A API aceitará qualquer combinação de período:
+### Cenário: Lead com 2 agendamentos
 
-| URL | Período Resultante |
-|-----|-------------------|
-| `?periodo=trimestre_atual` | Q1 2026 (01/01 - hoje) |
-| `?ultimos_dias=45` | Últimos 45 dias |
-| `?ultimos_meses=3` | Últimos 3 meses |
-| `?data_inicio=2025-06-01&data_fim=2025-12-31` | 01/06/2025 a 31/12/2025 |
-| `?periodo=ano_anterior` | Todo o ano de 2025 |
+1. **Gabriel** (closer) arrasta o lead **Maria** para etapa "Agendado"
+2. O sistema detecta que Maria tem 2 agendamentos:
+   - 05/02 às 14:00 - Sessão Estratégica
+   - 10/02 às 10:00 - Apresentação Comercial
+3. Abre o dialog de seleção
+4. Gabriel escolhe o agendamento de 10/02
+5. Lead é movido com `agendamento_sla_id` = ID do agendamento de 10/02
+6. O card exibe SLA calculado a partir de 10/02:
+   - Hoje é 08/02 → "2d restantes"
+   - Hoje é 10/02 → "Vence hoje!"
+   - Hoje é 12/02 → "2d atrasado"
 
-O Clarity Dashboard poderá então enviar qualquer período desejado para análises históricas e comparativas.
+### Cenário: Lead sem agendamento
+
+1. **Gabriel** arrasta o lead **João** para etapa "Agendado"
+2. O sistema detecta que João não tem agendamentos
+3. O sistema bloqueia e abre o dialog do lead na aba "Agenda"
+4. Mensagem: "Defina um agendamento para mover para esta etapa"
+
+---
+
+## Considerações Técnicas
+
+### Vínculo Persiste Mesmo Se Agendamento Passar
+
+O campo `agendamento_sla_id` mantém a referência mesmo após a data do agendamento passar. Isso garante que:
+- O SLA continue mostrando "Xd atrasado" baseado na data original
+- O histórico do vínculo seja preservado
+- A contagem seja consistente
+
+### Performance
+
+A busca de agendamentos é feita apenas quando:
+1. A etapa de destino tem `requer_agendamento = true`
+2. O lead está sendo movido (não em cada render)
+
+### Migração de Dados Existentes
+
+Leads já nas etapas "Agendado", "Confirmado", etc. terão `agendamento_sla_id = null`, mantendo o comportamento atual (SLA baseado em entrada). O novo comportamento só se aplica a novas movimentações.
