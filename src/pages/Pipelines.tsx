@@ -883,6 +883,13 @@ function PipelinesContent({ slug }: { slug: string }) {
           }
         }}
         onCancel={() => setPendingAppointmentSelection(null)}
+        onCreateNew={() => {
+          if (pendingAppointmentSelection) {
+            const leadId = pendingAppointmentSelection.entry.lead_id;
+            setPendingAppointmentSelection(null);
+            handleViewOrEditLead(leadId, { initialTab: 'appointments' });
+          }
+        }}
         isLoading={isMovingWithAppointment}
       />
     </div>

@@ -77,6 +77,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         setLoading(true);
       }
       
+      // ✅ Otimização: SELECT apenas campos essenciais para Kanban
       let query = supabase
         .from('lead_pipeline_entries')
         .select(`
@@ -86,14 +87,9 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
             nome,
             email,
             whatsapp,
-            status_geral,
             closer,
             lead_score,
-            lead_score_classification,
-            valor_lead,
-            user_id,
-            created_at,
-            updated_at
+            origem
           ),
           pipeline_stages!fk_lead_pipeline_entries_stage(nome, ordem, pipeline_id)
         `)
@@ -522,14 +518,13 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
     });
     
     try {
+      // ✅ Otimização: SELECT apenas campos essenciais para Kanban
       const { data, error } = await supabase
         .from('lead_pipeline_entries')
         .select(`
           *,
           leads!fk_lead_pipeline_entries_lead(
-            id, nome, email, whatsapp, status_geral,
-            closer, lead_score, lead_score_classification,
-            valor_lead, user_id, created_at, updated_at
+            id, nome, email, whatsapp, closer, lead_score, origem
           ),
           pipeline_stages!fk_lead_pipeline_entries_stage(nome, ordem, pipeline_id)
         `)

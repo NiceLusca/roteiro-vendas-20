@@ -21,7 +21,8 @@ export function usePipelineDisplayData({
   const { data: deals = [], isLoading: loadingDeals } = useQuery({
     queryKey: ['pipeline-deals', pipelineId, leadIds.length, leadIds[0], leadIds[leadIds.length - 1]],
     enabled: !!shouldLoadDeals && !!pipelineId,
-    staleTime: 10000, // 10 seconds for better responsiveness
+    staleTime: 30000, // 30 seconds - otimização de cache
+    gcTime: 60000, // 1 minuto de cache
     queryFn: async () => {
       const { data, error } = await supabase
         .from('deals')
@@ -42,7 +43,8 @@ export function usePipelineDisplayData({
   const { data: appointments = [], isLoading: loadingAppointments } = useQuery({
     queryKey: ['pipeline-appointments', pipelineId, leadIds.length, leadIds[0], leadIds[leadIds.length - 1]],
     enabled: !!shouldLoadAppointments && !!pipelineId,
-    staleTime: 10000, // 10 seconds for better responsiveness
+    staleTime: 30000, // 30 seconds - otimização de cache
+    gcTime: 60000, // 1 minuto de cache
     queryFn: async () => {
       const { data, error } = await supabase
         .from('appointments')
