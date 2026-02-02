@@ -46,24 +46,133 @@ Deno.serve(async (req) => {
     const periodo = url.searchParams.get("periodo") || "mes_atual";
     let dataInicio = url.searchParams.get("data_inicio");
     let dataFim = url.searchParams.get("data_fim");
+    const ultimosDias = url.searchParams.get("ultimos_dias");
+    const ultimosMeses = url.searchParams.get("ultimos_meses");
 
-    // Calculate date range based on periodo
     const now = new Date();
-    if (periodo === "mes_atual" && !dataInicio) {
-      dataInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-      dataFim = now.toISOString().split("T")[0];
-    } else if (periodo === "mes_anterior" && !dataInicio) {
-      dataInicio = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split("T")[0];
-      dataFim = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split("T")[0];
-    } else if (periodo === "ultimos_30_dias" && !dataInicio) {
-      dataInicio = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-      dataFim = now.toISOString().split("T")[0];
-    } else if (periodo === "ultimos_7_dias" && !dataInicio) {
-      dataInicio = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-      dataFim = now.toISOString().split("T")[0];
+    const today = now.toISOString().split("T")[0];
+
+    // Validar formato de datas se fornecidas
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (dataInicio && !dateRegex.test(dataInicio)) {
+      return new Response(
+        JSON.stringify({ error: "data_inicio deve estar no formato YYYY-MM-DD" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (dataFim && !dateRegex.test(dataFim)) {
+      return new Response(
+        JSON.stringify({ error: "data_fim deve estar no formato YYYY-MM-DD" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    console.log(`[comercial-metrics] v2.1 - Período: ${periodo}, Início: ${dataInicio}, Fim: ${dataFim}`);
+    // Prioridade: datas específicas > ultimos_dias/meses > periodo pré-definido
+    if (dataInicio && dataFim) {
+      // Usar datas fornecidas diretamente
+      console.log(`[comercial-metrics] Usando período customizado: ${dataInicio} a ${dataFim}`);
+    } else if (ultimosDias) {
+      const dias = parseInt(ultimosDias, 10);
+      if (isNaN(dias) || dias <= 0) {
+        return new Response(
+          JSON.stringify({ error: "ultimos_dias deve ser um número positivo" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      dataInicio = new Date(now.getTime() - dias * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+      dataFim = today;
+    } else if (ultimosMeses) {
+      const meses = parseInt(ultimosMeses, 10);
+      if (isNaN(meses) || meses <= 0) {
+        return new Response(
+          JSON.stringify({ error: "ultimos_meses deve ser um número positivo" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const startDate = new Date(now.getFullYear(), now.getMonth() - meses, 1);
+      dataInicio = startDate.toISOString().split("T")[0];
+      dataFim = today;
+    } else {
+      // Períodos pré-definidos
+      switch (periodo) {
+        case "mes_atual":
+          dataInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+          dataFim = today;
+          break;
+        case "mes_anterior":
+          dataInicio = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split("T")[0];
+          dataFim = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split("T")[0];
+          break;
+        case "ultimos_30_dias":
+          dataInicio = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+          dataFim = today;
+          break;
+        case "ultimos_7_dias":
+          dataInicio = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+          dataFim = today;
+          break;
+        case "hoje":
+          dataInicio = today;
+          dataFim = today;
+          break;
+        case "ontem": {
+          const ontem = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          dataInicio = ontem.toISOString().split("T")[0];
+          dataFim = dataInicio;
+          break;
+        }
+        case "semana_atual": {
+          const dayOfWeek = now.getDay();
+          const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+          const monday = new Date(now.getTime() - diffToMonday * 24 * 60 * 60 * 1000);
+          dataInicio = monday.toISOString().split("T")[0];
+          dataFim = today;
+          break;
+        }
+        case "trimestre_atual": {
+          const quarterMonth = Math.floor(now.getMonth() / 3) * 3;
+          dataInicio = new Date(now.getFullYear(), quarterMonth, 1).toISOString().split("T")[0];
+          dataFim = today;
+          break;
+        }
+        case "trimestre_anterior": {
+          const currentQuarterMonth = Math.floor(now.getMonth() / 3) * 3;
+          const prevQuarterMonth = currentQuarterMonth - 3;
+          const prevQuarterYear = prevQuarterMonth < 0 ? now.getFullYear() - 1 : now.getFullYear();
+          const adjustedMonth = prevQuarterMonth < 0 ? prevQuarterMonth + 12 : prevQuarterMonth;
+          dataInicio = new Date(prevQuarterYear, adjustedMonth, 1).toISOString().split("T")[0];
+          dataFim = new Date(prevQuarterYear, adjustedMonth + 3, 0).toISOString().split("T")[0];
+          break;
+        }
+        case "ano_atual":
+          dataInicio = new Date(now.getFullYear(), 0, 1).toISOString().split("T")[0];
+          dataFim = today;
+          break;
+        case "ano_anterior":
+          dataInicio = new Date(now.getFullYear() - 1, 0, 1).toISOString().split("T")[0];
+          dataFim = new Date(now.getFullYear() - 1, 11, 31).toISOString().split("T")[0];
+          break;
+        default:
+          // Fallback para mês atual
+          dataInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+          dataFim = today;
+      }
+    }
+
+    // Validar que data_inicio <= data_fim
+    if (dataInicio && dataFim && dataInicio > dataFim) {
+      return new Response(
+        JSON.stringify({ error: "data_inicio não pode ser maior que data_fim" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Calcular dias totais do período
+    const diasTotais = Math.ceil(
+      (new Date(dataFim!).getTime() - new Date(dataInicio!).getTime()) / (1000 * 60 * 60 * 24)
+    ) + 1;
+
+    console.log(`[comercial-metrics] v2.2 - Período: ${periodo}, Início: ${dataInicio}, Fim: ${dataFim}, Dias: ${diasTotais}`);
 
     // 1. Get comercial pipeline
     const { data: pipeline, error: pipelineError } = await supabase
@@ -527,8 +636,10 @@ Deno.serve(async (req) => {
     // Build response
     const response = {
       periodo: {
+        tipo: periodo,
         inicio: dataInicio,
         fim: dataFim,
+        dias_totais: diasTotais,
       },
       pipeline: {
         id: pipeline.id,
@@ -558,7 +669,17 @@ Deno.serve(async (req) => {
         },
         financeiro: {
           receita_total: receitaTotal,
+          receita_recorrente: porTipoVenda.recorrente.receita,
+          receita_avista: porTipoVenda.avista.receita,
           ticket_medio: Number(ticketMedio.toFixed(2)),
+          ticket_medio_recorrente: porTipoVenda.recorrente.vendas > 0 
+            ? Number((porTipoVenda.recorrente.receita / porTipoVenda.recorrente.vendas).toFixed(2))
+            : 0,
+          ticket_medio_avista: porTipoVenda.avista.vendas > 0
+            ? Number((porTipoVenda.avista.receita / porTipoVenda.avista.vendas).toFixed(2))
+            : 0,
+          vendas_recorrente: porTipoVenda.recorrente.vendas,
+          vendas_avista: porTipoVenda.avista.vendas,
         },
         por_tipo_venda: porTipoVenda,
         por_etapa: Object.values(porEtapa).sort((a, b) => a.ordem - b.ordem),
