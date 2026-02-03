@@ -84,20 +84,18 @@ export function AppointmentSelectorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] max-w-[95vw]">
+      <DialogContent className="sm:max-w-md w-full">
         <DialogHeader className="text-left">
           <DialogTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-primary shrink-0" />
-            <span className="truncate">
-              {appointments.length === 1 ? 'Confirme o agendamento' : 'Selecione o agendamento'}
-            </span>
+            <Calendar className="w-5 h-5 text-primary" />
+            {appointments.length === 1 ? 'Confirme o agendamento' : 'Selecione o agendamento'}
           </DialogTitle>
           <DialogDescription className="text-left">
-            A etapa <strong className="break-words">"{stageName}"</strong> calcula o SLA baseado na data do agendamento.
+            A etapa <strong>"{stageName}"</strong> calcula o SLA baseado na data do agendamento.
             <br />
             {appointments.length === 1 
-              ? <>Confirme se este é o agendamento correto para <strong className="break-words">{leadName}</strong>:</>
-              : <>Selecione qual agendamento de <strong className="break-words">{leadName}</strong> usar:</>
+              ? <>Confirme se este é o agendamento correto para <strong>{leadName}</strong>:</>
+              : <>Selecione qual agendamento de <strong>{leadName}</strong> usar:</>
             }
           </DialogDescription>
         </DialogHeader>
@@ -115,21 +113,21 @@ export function AppointmentSelectorDialog({
               return (
                 <div 
                   key={apt.id}
-                  className={`flex items-start space-x-3 rounded-lg border p-3 transition-colors ${
+                  className={`flex items-start gap-3 rounded-lg border p-3 transition-colors overflow-hidden ${
                     selectedId === apt.id 
                       ? 'border-primary bg-primary/5' 
                       : 'hover:bg-muted/50'
                   } ${past ? 'opacity-70' : ''}`}
                 >
-                  <RadioGroupItem value={apt.id} id={apt.id} className="mt-1 shrink-0" />
+                  <RadioGroupItem value={apt.id} id={apt.id} className="mt-0.5 shrink-0" />
                   <Label 
                     htmlFor={apt.id} 
-                    className="flex-1 min-w-0 cursor-pointer"
+                    className="flex-1 min-w-0 cursor-pointer overflow-hidden"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <span className="font-medium whitespace-nowrap">
+                        <span className="font-medium">
                           {formatAppointmentDate(dateStr)}
                         </span>
                         {past && (
@@ -139,7 +137,7 @@ export function AppointmentSelectorDialog({
                         )}
                       </div>
                       {apt.titulo && (
-                        <p className="text-sm text-muted-foreground pl-6 break-words line-clamp-2">
+                        <p className="text-sm text-muted-foreground pl-6 truncate" title={apt.titulo}>
                           {apt.titulo}
                         </p>
                       )}
@@ -151,26 +149,26 @@ export function AppointmentSelectorDialog({
           </RadioGroup>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button variant="outline" onClick={handleCancel} disabled={isLoading} className="flex-1 sm:flex-none">
+        <DialogFooter className="flex flex-row justify-between gap-2 pt-2">
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleCancel} disabled={isLoading}>
               Cancelar
             </Button>
             {onCreateNew && (
-              <Button variant="ghost" onClick={handleCreateNew} disabled={isLoading} className="flex-1 sm:flex-none">
-                <Plus className="w-4 h-4 mr-2" />
-                Criar novo prazo
+              <Button variant="ghost" size="sm" onClick={handleCreateNew} disabled={isLoading}>
+                <Plus className="w-4 h-4 mr-1" />
+                Novo prazo
               </Button>
             )}
           </div>
-          <Button onClick={handleConfirm} disabled={!selectedId || isLoading} className="w-full sm:w-auto">
+          <Button size="sm" onClick={handleConfirm} disabled={!selectedId || isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Movendo...
               </>
             ) : (
-              'Confirmar e Mover'
+              'Confirmar'
             )}
           </Button>
         </DialogFooter>
