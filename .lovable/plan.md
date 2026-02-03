@@ -1,171 +1,173 @@
 
+# Plano: Completar Movimentação Após Criar Agendamento
 
-# Plano: Corrigir Layout do AppointmentSelectorDialog
+## Problema
 
-## Problemas Identificados
+Quando o usuário arrasta um lead para uma etapa que requer agendamento e clica em "Novo prazo":
+1. O dialog de seleção fecha e limpa os dados da movimentação pendente
+2. O LeadEditDialog abre na aba Agenda
+3. Após criar o agendamento e fechar o dialog, o lead permanece na etapa original
 
-1. **Titulo truncado incorretamente**: O `truncate` no titulo esta cortando "Confirme o agendamento" sem necessidade
-2. **Titulo do agendamento extrapolando**: O texto longo do titulo do appointment nao esta respeitando os limites do card
-3. **Dialog estreito demais**: 425px nao comporta bem nomes longos de etapas e leads
-4. **Layout do footer confuso**: A estrutura atual dos botoes esta desorganizada
+## Causa Raiz
 
-## Solucao
+O estado `pendingMove` está no **KanbanBoard** (componente filho), mas o **LeadEditDialog** é controlado pelo **Pipelines.tsx** (componente pai). Quando "Novo prazo" é clicado, os dados da movimentação são perdidos.
 
-### 1. Aumentar largura do dialog
-- Mudar de `sm:max-w-[425px]` para `sm:max-w-md` (448px) ou `sm:max-w-lg` (512px)
+## Solução Proposta
 
-### 2. Remover truncate do titulo
-- O titulo "Confirme o agendamento" ou "Selecione o agendamento" e curto e nao precisa de truncate
+Elevar a responsabilidade da movimentação pendente para o **Pipelines.tsx**, que já possui infraestrutura similar (`pendingAppointmentSelection`).
 
-### 3. Garantir overflow hidden no card
-- Adicionar `overflow-hidden` no container do card de agendamento
-- Garantir que o Label tenha `overflow-hidden` para conter o texto
+### Alterações
 
-### 4. Simplificar footer
-- Usar layout horizontal simples com `justify-between`
-- Agrupar botoes secundarios a esquerda e primario a direita
+#### 1. Pipelines.tsx - Novo estado para movimentação pendente do Kanban
 
-## Alteracoes no Arquivo
+Adicionar estado que armazena dados da movimentação quando o usuário opta por criar novo agendamento:
 
-`src/components/kanban/AppointmentSelectorDialog.tsx`
-
-### DialogContent (linha 87)
-De:
-```tsx
-<DialogContent className="sm:max-w-[425px] max-w-[95vw]">
-```
-Para:
-```tsx
-<DialogContent className="sm:max-w-md w-full">
+```typescript
+const [pendingKanbanMove, setPendingKanbanMove] = useState<{
+  entryId: string;
+  leadId: string;
+  toStageId: string;
+} | null>(null);
 ```
 
-### DialogTitle (linhas 89-94)
-De:
-```tsx
-<DialogTitle className="flex items-center gap-2">
-  <Calendar className="w-5 h-5 text-primary shrink-0" />
-  <span className="truncate">
-    {appointments.length === 1 ? 'Confirme o agendamento' : 'Selecione o agendamento'}
-  </span>
-</DialogTitle>
-```
-Para:
-```tsx
-<DialogTitle className="flex items-center gap-2">
-  <Calendar className="w-5 h-5 text-primary" />
-  {appointments.length === 1 ? 'Confirme o agendamento' : 'Selecione o agendamento'}
-</DialogTitle>
+#### 2. KanbanBoard - Nova prop para notificar movimentação pendente
+
+Passar callback `onPendingMoveForNewAppointment` que permite ao KanbanBoard informar ao Pipelines que há uma movimentação aguardando novo agendamento:
+
+```typescript
+interface KanbanBoardProps {
+  // ... props existentes
+  onPendingMoveForNewAppointment?: (data: { entryId: string; leadId: string; toStageId: string }) => void;
+}
 ```
 
-### Card do agendamento (linhas 116-149)
-De:
-```tsx
-<div 
-  key={apt.id}
-  className={`flex items-start space-x-3 rounded-lg border p-3 transition-colors ${...}`}
->
-  <RadioGroupItem value={apt.id} id={apt.id} className="mt-1 shrink-0" />
-  <Label 
-    htmlFor={apt.id} 
-    className="flex-1 min-w-0 cursor-pointer"
-  >
-```
-Para:
-```tsx
-<div 
-  key={apt.id}
-  className={`flex items-start gap-3 rounded-lg border p-3 transition-colors overflow-hidden ${...}`}
->
-  <RadioGroupItem value={apt.id} id={apt.id} className="mt-0.5 shrink-0" />
-  <Label 
-    htmlFor={apt.id} 
-    className="flex-1 min-w-0 cursor-pointer overflow-hidden"
-  >
+#### 3. KanbanBoard - onCreateNew atualizado
+
+Em vez de limpar `pendingMove`, chamar o callback antes de abrir o dialog:
+
+```typescript
+onCreateNew={() => {
+  const { pendingMove } = appointmentSelectorState;
+  if (pendingMove) {
+    onPendingMoveForNewAppointment?.({
+      entryId: appointmentSelectorState.entryId,
+      leadId: pendingMove.entry.lead_id,
+      toStageId: pendingMove.toStage.id
+    });
+  }
+  setAppointmentSelectorState(prev => ({ ...prev, open: false, pendingMove: null }));
+  if (onEditLead && pendingMove?.entry.lead_id) {
+    onEditLead(pendingMove.entry.lead_id, { initialTab: 'appointments' });
+  }
+}}
 ```
 
-### Titulo do agendamento (linhas 141-144)
-De:
-```tsx
-{apt.titulo && (
-  <p className="text-sm text-muted-foreground pl-6 break-words line-clamp-2">
-    {apt.titulo}
-  </p>
-)}
-```
-Para:
-```tsx
-{apt.titulo && (
-  <p className="text-sm text-muted-foreground pl-6 truncate" title={apt.titulo}>
-    {apt.titulo}
-  </p>
-)}
+#### 4. Pipelines.tsx - Detectar novo agendamento e completar movimentação
+
+Modificar o `onUpdate` do LeadEditDialog para verificar se há movimentação pendente:
+
+```typescript
+onUpdate={() => {
+  handleRefresh();
+  
+  // Se havia movimentação pendente para novo agendamento, tentar completar
+  if (pendingKanbanMove && editingLead?.lead.id === pendingKanbanMove.leadId) {
+    completePendingMove(pendingKanbanMove);
+  }
+}}
 ```
 
-### DialogFooter (linhas 154-176)
-De:
-```tsx
-<DialogFooter className="flex-col sm:flex-row gap-2">
-  <div className="flex gap-2 w-full sm:w-auto">
-    <Button variant="outline" onClick={handleCancel} disabled={isLoading} className="flex-1 sm:flex-none">
-      Cancelar
-    </Button>
-    {onCreateNew && (
-      <Button variant="ghost" onClick={handleCreateNew} disabled={isLoading} className="flex-1 sm:flex-none">
-        <Plus className="w-4 h-4 mr-2" />
-        Criar novo prazo
-      </Button>
-    )}
-  </div>
-  <Button onClick={handleConfirm} disabled={!selectedId || isLoading} className="w-full sm:w-auto">
-    ...
-  </Button>
-</DialogFooter>
-```
-Para:
-```tsx
-<DialogFooter className="flex flex-row justify-between gap-2 pt-2">
-  <div className="flex gap-2">
-    <Button variant="outline" size="sm" onClick={handleCancel} disabled={isLoading}>
-      Cancelar
-    </Button>
-    {onCreateNew && (
-      <Button variant="ghost" size="sm" onClick={handleCreateNew} disabled={isLoading}>
-        <Plus className="w-4 h-4 mr-1" />
-        Novo prazo
-      </Button>
-    )}
-  </div>
-  <Button size="sm" onClick={handleConfirm} disabled={!selectedId || isLoading}>
-    ...
-  </Button>
-</DialogFooter>
-```
+#### 5. Nova função completePendingMove
 
-## Layout Final Esperado
+Buscar agendamentos do lead e revalidar/executar a movimentação:
 
-```text
-+------------------------------------------+
-| [x] Confirme o agendamento            X  |
-|                                          |
-| A etapa "Nome da Etapa" calcula o SLA    |
-| baseado na data do agendamento.          |
-| Confirme se este é o agendamento         |
-| correto para Nome do Lead:               |
-|                                          |
-| +--------------------------------------+ |
-| | O  27/01/2026 às 16:15    [Passado]  | |
-| |    Sessão Estratégica-Gênios da O... | |
-| +--------------------------------------+ |
-|                                          |
-| [Cancelar] [+ Novo prazo]   [Confirmar]  |
-+------------------------------------------+
+```typescript
+const completePendingMove = useCallback(async (pending: typeof pendingKanbanMove) => {
+  if (!pending) return;
+  
+  const entry = allEntries.find(e => e.id === pending.entryId);
+  const toStage = pipelineStages.find(s => s.id === pending.toStageId);
+  const fromStage = pipelineStages.find(s => s.id === entry?.etapa_atual_id);
+  
+  if (!entry || !toStage || !fromStage) {
+    setPendingKanbanMove(null);
+    return;
+  }
+  
+  // Revalidar agendamento
+  const validation = await validateAppointmentRequirement(pending.leadId, toStage);
+  
+  if (!validation.valid) {
+    toast({ title: 'Agendamento ainda necessário', variant: 'destructive' });
+    setPendingKanbanMove(null);
+    return;
+  }
+  
+  if (validation.requiresSelection && validation.appointments.length > 1) {
+    // Múltiplos agendamentos - abrir seletor novamente
+    setPendingAppointmentSelection({
+      entryId: pending.entryId,
+      entry: entry as any,
+      fromStage,
+      toStage,
+      appointments: validation.appointments,
+      leadName: entry.leads?.nome || 'Lead',
+      stageName: toStage.nome
+    });
+  } else {
+    // 1 agendamento - mover automaticamente
+    await moveLead({
+      entry: entry as any,
+      fromStage,
+      toStage,
+      checklistItems: [],
+      currentEntriesInTargetStage: allEntries.filter(e => e.etapa_atual_id === toStage.id).length,
+      appointmentSlaId: validation.appointments[0]?.id,
+      onSuccess: handleRefresh
+    });
+    toast({ title: 'Lead movido com sucesso!' });
+  }
+  
+  setPendingKanbanMove(null);
+}, [allEntries, pipelineStages, moveLead, handleRefresh, toast]);
 ```
 
-## Resultado
+## Fluxo Esperado
 
-- Dialog com largura adequada para desktop
-- Titulo sem truncamento desnecessario
-- Texto do agendamento contido no card com truncate e tooltip
-- Botoes organizados: secundarios a esquerda, primario a direita
-- Botoes menores (size="sm") para caber melhor
+```
+Usuário arrasta lead → Etapa requer agendamento
+           ↓
+AppointmentSelectorDialog exibido
+           ↓
+Usuário clica "Novo prazo"
+           ↓
+KanbanBoard notifica Pipelines via callback
+Pipelines armazena pendingKanbanMove
+LeadEditDialog abre na aba Agenda
+           ↓
+Usuário cria agendamento e fecha dialog
+           ↓
+onUpdate chamado → detecta pendingKanbanMove
+           ↓
+completePendingMove revalida e move o lead
+           ↓
+Lead aparece na etapa destino ✓
+```
 
+## Arquivos a Modificar
+
+1. **src/components/kanban/KanbanBoard.tsx**
+   - Adicionar prop `onPendingMoveForNewAppointment`
+   - Atualizar lógica do `onCreateNew`
+
+2. **src/pages/Pipelines.tsx**
+   - Adicionar estado `pendingKanbanMove`
+   - Criar função `completePendingMove`
+   - Passar callback para KanbanBoard
+   - Modificar `onUpdate` do LeadEditDialog
+
+## Detalhes Técnicos
+
+- A revalidação é necessária porque o agendamento pode ter sido criado para data passada ou o usuário pode ter fechado sem criar
+- Se houver múltiplos agendamentos após criar o novo, o seletor reaparece para o usuário escolher qual usar
+- O estado `pendingKanbanMove` é limpo após a operação (sucesso ou falha)
