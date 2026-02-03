@@ -498,6 +498,12 @@ export function KanbanBoard({
         leadName={appointmentSelectorState.leadName}
         onConfirm={handleAppointmentSelected}
         onCancel={handleAppointmentSelectorCancel}
+        onCreateNew={() => {
+          setAppointmentSelectorState(prev => ({ ...prev, open: false, pendingMove: null }));
+          if (onEditLead && appointmentSelectorState.pendingMove?.entry.lead_id) {
+            onEditLead(appointmentSelectorState.pendingMove.entry.lead_id, { initialTab: 'appointments' });
+          }
+        }}
         isLoading={isMovingWithAppointment}
       />
     </>
