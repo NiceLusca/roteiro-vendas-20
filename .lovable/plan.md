@@ -1,153 +1,82 @@
 
 
-# Plano: Adicionar opção "Criar novo prazo" e Otimizar carregamento do Pipeline
+# Plano: Adicionar botão "Criar novo prazo" no dialog do KanbanBoard
 
-## Problemas Identificados
+## Problema Identificado
 
-### Problema 1: Falta opção para criar novo agendamento no dialog
+O `AppointmentSelectorDialog` existe em **dois lugares**:
 
-Quando o usuário abre o dialog de confirmação de agendamento (ao mover para etapa que requer agendamento), só é possível:
-- Confirmar o agendamento existente
-- Cancelar
+1. **`src/pages/Pipelines.tsx`** (linhas 860-894) - Usado para movimentações via botoes (Avançar, Recuar, Transferir)
+2. **`src/components/kanban/KanbanBoard.tsx`** (linhas 493-502) - Usado para movimentações via **drag-and-drop**
 
-**Falta**: Uma opção para criar um novo agendamento/prazo quando o usuário não quer usar o existente.
+A correção anterior adicionou a prop `onCreateNew` apenas na instancia do Pipelines.tsx.
+Quando o usuario arrasta o card, o dialog renderizado pelo KanbanBoard.tsx eh exibido, e este NAO possui a prop `onCreateNew`.
 
-### Problema 2: Carregamento lento dos leads
+## Solucao
 
-O pipeline "Comercial" tem 147 leads ativos. O carregamento está lento por conta de:
-1. **Query principal** busca todos os 147 leads com JOINs para `leads` e `pipeline_stages`
-2. **Queries adicionais** em paralelo:
-   - `usePipelineDisplayData` busca deals e appointments para todos os leads
-   - `useMultipleLeadResponsibles` busca responsáveis de todos os leads
-   - `useMultipleLeadTags` busca tags de todos os leads
-3. **Sem paginação** quando `noPagination=true` (que é o padrão para pipelines específicos)
+Adicionar a prop `onCreateNew` na instancia do `AppointmentSelectorDialog` dentro do `KanbanBoard.tsx`.
 
-## Correções Propostas
+## Arquivo a Modificar
 
-### Correção 1: Adicionar botão "Criar novo prazo" no dialog
+`src/components/kanban/KanbanBoard.tsx` - linhas 493-502
 
-**Arquivo:** `src/components/kanban/AppointmentSelectorDialog.tsx`
-
-Adicionar:
-- Novo prop `onCreateNew` para callback de criação
-- Botão "Criar novo prazo" que cancela a movimentação e abre o dialog do lead na aba Agenda
+### Codigo Atual (sem onCreateNew)
 
 ```typescript
-interface AppointmentSelectorDialogProps {
-  // ... props existentes
-  onCreateNew?: () => void;  // Novo callback
-}
+<AppointmentSelectorDialog
+  open={appointmentSelectorState.open}
+  onOpenChange={(open) => setAppointmentSelectorState(prev => ({ ...prev, open }))}
+  appointments={appointmentSelectorState.appointments}
+  stageName={appointmentSelectorState.stageName}
+  leadName={appointmentSelectorState.leadName}
+  onConfirm={handleAppointmentSelected}
+  onCancel={handleAppointmentSelectorCancel}
+  isLoading={isMovingWithAppointment}
+/>
 ```
 
-No footer do dialog, adicionar botão entre Cancelar e Confirmar:
-```tsx
-<DialogFooter className="gap-2 sm:gap-0">
-  <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
-    Cancelar
-  </Button>
-  {onCreateNew && (
-    <Button variant="ghost" onClick={onCreateNew} disabled={isLoading}>
-      <Plus className="w-4 h-4 mr-2" />
-      Criar novo prazo
-    </Button>
-  )}
-  <Button onClick={handleConfirm} disabled={!selectedId || isLoading}>
-    Confirmar e Mover
-  </Button>
-</DialogFooter>
-```
-
-**Arquivo:** `src/pages/Pipelines.tsx`
-
-Adicionar handler `onCreateNew` no `AppointmentSelectorDialog`:
-```typescript
-onCreateNew={() => {
-  if (pendingAppointmentSelection) {
-    setPendingAppointmentSelection(null);
-    handleViewOrEditLead(pendingAppointmentSelection.entry.lead_id, { initialTab: 'appointments' });
-  }
-}}
-```
-
-### Correção 2: Otimizar carregamento com campos selecionados
-
-**Arquivo:** `src/hooks/useSupabaseLeadPipelineEntries.ts`
-
-Reduzir campos no SELECT para trazer apenas o necessário:
-```typescript
-// ANTES - busca muitos campos
-leads!fk_lead_pipeline_entries_lead(
-  id, nome, email, whatsapp, status_geral,
-  closer, lead_score, lead_score_classification,
-  valor_lead, user_id, created_at, updated_at
-)
-
-// DEPOIS - apenas campos exibidos no Kanban
-leads!fk_lead_pipeline_entries_lead(
-  id, nome, email, whatsapp, closer, lead_score, origem
-)
-```
-
-### Correção 3: Adicionar loading progressivo
-
-**Arquivo:** `src/hooks/useSupabaseLeadPipelineEntries.ts`
-
-Implementar carregamento em duas fases:
-1. **Fase 1**: Carregar apenas campos essenciais para exibição inicial (id, nome, etapa)
-2. **Fase 2**: Carregar dados adicionais em background
+### Codigo Corrigido (com onCreateNew)
 
 ```typescript
-// Fase 1: Dados mínimos para renderizar Kanban imediatamente
-const quickQuery = supabase
-  .from('lead_pipeline_entries')
-  .select(`
-    id, lead_id, pipeline_id, etapa_atual_id, data_entrada_etapa,
-    leads!fk_lead_pipeline_entries_lead(id, nome)
-  `)
-  .eq('status_inscricao', 'Ativo')
-  .eq('pipeline_id', effectivePipelineId);
+<AppointmentSelectorDialog
+  open={appointmentSelectorState.open}
+  onOpenChange={(open) => setAppointmentSelectorState(prev => ({ ...prev, open }))}
+  appointments={appointmentSelectorState.appointments}
+  stageName={appointmentSelectorState.stageName}
+  leadName={appointmentSelectorState.leadName}
+  onConfirm={handleAppointmentSelected}
+  onCancel={handleAppointmentSelectorCancel}
+  onCreateNew={() => {
+    // Fechar o seletor de agendamento
+    setAppointmentSelectorState(prev => ({ ...prev, open: false, pendingMove: null }));
+    // Abrir o dialog de edicao do lead na aba Agenda
+    if (onEditLead && appointmentSelectorState.pendingMove?.entry.lead_id) {
+      onEditLead(appointmentSelectorState.pendingMove.entry.lead_id, { initialTab: 'appointments' });
+    }
+  }}
+  isLoading={isMovingWithAppointment}
+/>
 ```
 
-### Correção 4: Otimizar hooks auxiliares para uso de batch
-
-**Arquivo:** `src/hooks/usePipelineDisplayData.ts`
-
-Aumentar staleTime e adicionar cache mais agressivo:
-```typescript
-staleTime: 30000, // 30 seconds (era 10s)
-cacheTime: 60000, // 1 minuto de cache
-```
-
-## Arquivos a Modificar
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/kanban/AppointmentSelectorDialog.tsx` | Adicionar prop `onCreateNew` e botão "Criar novo prazo" |
-| `src/pages/Pipelines.tsx` | Passar handler `onCreateNew` para o dialog |
-| `src/hooks/useSupabaseLeadPipelineEntries.ts` | Reduzir campos no SELECT + adicionar campo `origem` |
-| `src/hooks/usePipelineDisplayData.ts` | Aumentar staleTime para melhor cache |
-
-## Fluxo do Dialog Atualizado
+## Fluxo Esperado Apos Correcao
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                   Confirme o agendamento                        │
-├─────────────────────────────────────────────────────────────────┤
-│  A etapa "Não Fechou (quente)" calcula o SLA baseado na data... │
-├─────────────────────────────────────────────────────────────────┤
-│  ◉ 28/01/2026 às 13:15  [Passado]                               │
-│    Sessão Estratégica-Gênios da Oceano Azul - Gabriel...        │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  [Cancelar]    [+ Criar novo prazo]    [Confirmar e Mover]      │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
+Usuario arrasta card para etapa com agendamento obrigatorio
+                    |
+                    v
+   AppointmentSelectorDialog (KanbanBoard.tsx)
+                    |
+  +--------+--------+----------------+
+  |        |        |                |
+  v        v        v                v
+Cancelar  Criar novo prazo   Confirmar e Mover
+            |                        |
+            v                        v
+   LeadEditDialog               Move lead com
+   (aba Agenda)              appointment vinculado
 ```
 
-## Benefícios
+## Resultado
 
-1. **Novo prazo**: Usuário pode criar um novo agendamento em vez de usar um passado
-2. **Carregamento mais rápido**: Menos campos = menos dados = resposta mais rápida
-3. **Cache otimizado**: Reduz chamadas repetidas ao servidor
-4. **Campo origem**: Corrige o bug de origem não aparecer ao reabrir o lead
+O botao "Criar novo prazo" aparecera no dialog quando o usuario arrastar um lead para uma etapa que requer agendamento, permitindo que ele cancele a movimentacao e abra o dialog do lead diretamente na aba Agenda para criar um novo agendamento.
 
