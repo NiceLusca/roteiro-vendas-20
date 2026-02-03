@@ -95,6 +95,13 @@ function PipelinesContent({ slug }: { slug: string }) {
   } | null>(null);
   const [isMovingWithAppointment, setIsMovingWithAppointment] = useState(false);
   
+  // Estado para movimentação pendente vinda do Kanban (quando usuário clica "Novo prazo")
+  const [pendingKanbanMove, setPendingKanbanMove] = useState<{
+    entryId: string;
+    leadId: string;
+    toStageId: string;
+  } | null>(null);
+  
   // Estado da visualização (kanban ou tabela)
   const viewMode = searchParams.get('view') || 'kanban';
   
@@ -534,6 +541,67 @@ function PipelinesContent({ slug }: { slug: string }) {
     navigate(`/leads?pipeline=${pipelineId}&stage=${stageId}&action=create`);
   }, [navigate, pipelineId]);
 
+  // Função para completar movimentação pendente após criar agendamento
+  const completePendingMove = useCallback(async (pending: typeof pendingKanbanMove) => {
+    if (!pending) return;
+    
+    const entry = allEntries.find(e => e.id === pending.entryId);
+    const toStage = pipelineStages.find(s => s.id === pending.toStageId);
+    const fromStage = pipelineStages.find(s => s.id === entry?.etapa_atual_id);
+    
+    if (!entry || !toStage || !fromStage) {
+      setPendingKanbanMove(null);
+      return;
+    }
+    
+    // Revalidar agendamento
+    const validation = await validateAppointmentRequirement(pending.leadId, toStage);
+    
+    if (!validation.valid) {
+      toast({ 
+        title: 'Agendamento ainda necessário', 
+        description: 'Crie um agendamento futuro para esta etapa',
+        variant: 'destructive' 
+      });
+      setPendingKanbanMove(null);
+      return;
+    }
+    
+    if (validation.requiresSelection && validation.appointments.length > 1) {
+      // Múltiplos agendamentos - abrir seletor novamente
+      setPendingAppointmentSelection({
+        entryId: pending.entryId,
+        entry: entry as any,
+        fromStage,
+        toStage,
+        appointments: validation.appointments as AppointmentOption[],
+        leadName: entry.leads?.nome || 'Lead',
+        stageName: toStage.nome
+      });
+      setPendingKanbanMove(null);
+    } else {
+      // 1 agendamento - mover automaticamente
+      await moveLead({
+        entry: entry as any,
+        fromStage,
+        toStage,
+        checklistItems: [],
+        currentEntriesInTargetStage: allEntries.filter(e => e.etapa_atual_id === toStage.id).length,
+        appointmentSlaId: validation.appointments[0]?.id,
+        onSuccess: () => {
+          handleRefresh();
+          toast({ title: 'Lead movido com sucesso!' });
+        }
+      });
+      setPendingKanbanMove(null);
+    }
+  }, [allEntries, pipelineStages, moveLead, handleRefresh, toast]);
+
+  // Handler para receber movimentação pendente do KanbanBoard
+  const handlePendingMoveForNewAppointment = useCallback((data: { entryId: string; leadId: string; toStageId: string }) => {
+    setPendingKanbanMove(data);
+  }, []);
+
 
   // Mostrar skeleton enquanto carrega
   if (loadingPipeline || accessLoading) {
@@ -797,6 +865,7 @@ function PipelinesContent({ slug }: { slug: string }) {
             onJumpToStage={handleJumpToStage}
             onRegressStage={handleRegressStage}
             onUnsubscribeFromPipeline={handleUnsubscribeFromPipeline}
+            onPendingMoveForNewAppointment={handlePendingMoveForNewAppointment}
             onRefresh={handleRefresh}
           />
         ) : (
@@ -819,7 +888,13 @@ function PipelinesContent({ slug }: { slug: string }) {
           onOpenChange={(open) => !open && setEditingLead(null)}
           lead={editingLead.lead}
           initialTab={editingLead.initialTab as any}
-          onUpdate={handleRefresh}
+          onUpdate={() => {
+            handleRefresh();
+            // Se havia movimentação pendente para novo agendamento, tentar completar
+            if (pendingKanbanMove && editingLead?.lead.id === pendingKanbanMove.leadId) {
+              completePendingMove(pendingKanbanMove);
+            }
+          }}
           pipelineEntryId={allEntries.find(e => e.lead_id === editingLead.lead.id)?.id}
           currentStageName={pipelineStages.find(s => 
             s.id === allEntries.find(e => e.lead_id === editingLead.lead.id)?.etapa_atual_id
