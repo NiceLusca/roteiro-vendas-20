@@ -14,7 +14,8 @@ export type ActivityType =
   | 'archive'
   | 'transfer'
   | 'lead_created'
-  | 'lead_updated';
+  | 'lead_updated'
+  | 'appointment_deleted';
 
 export interface LeadActivity {
   id: string;

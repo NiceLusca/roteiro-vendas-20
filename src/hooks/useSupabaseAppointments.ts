@@ -166,6 +166,45 @@ export function useSupabaseAppointments() {
     }
   };
 
+  const deleteAppointment = async (appointmentId: string): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      // Primeiro, limpar referências em lead_pipeline_entries
+      await supabase
+        .from('lead_pipeline_entries')
+        .update({ agendamento_sla_id: null })
+        .eq('agendamento_sla_id', appointmentId);
+
+      // Depois, deletar o agendamento
+      const { error } = await supabase
+        .from('appointments')
+        .delete()
+        .eq('id', appointmentId);
+
+      if (error) {
+        console.error('Erro ao deletar agendamento:', error);
+        toast({
+          title: "Erro ao deletar agendamento",
+          description: error.message,
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      toast({
+        title: "Agendamento removido",
+        description: "O agendamento foi removido permanentemente"
+      });
+
+      fetchAppointments();
+      return true;
+    } catch (error) {
+      console.error('Erro ao deletar agendamento:', error);
+      return false;
+    }
+  };
+
   const getUpcomingAppointments = (hours: number = 48): Appointment[] => {
     const now = new Date();
     const futureTime = new Date(now.getTime() + hours * 60 * 60 * 1000);
@@ -187,6 +226,7 @@ export function useSupabaseAppointments() {
     loading,
     saveAppointment,
     cancelAppointment,
+    deleteAppointment,
     getAppointmentById,
     getUpcomingAppointments,
     refetch: fetchAppointments

@@ -22,6 +22,7 @@ interface MoveLeadParams {
 interface MoveResult {
   success: boolean;
   message: string;
+  previousStageId?: string;
 }
 
 /**
@@ -193,7 +194,7 @@ export function useLeadMovement() {
         metadata: { entryId: entry.id, toStage: toStage.nome }
       });
 
-      return { success: true, message: successMsg };
+      return { success: true, message: successMsg, previousStageId: fromStage.id };
 
     } catch (error) {
       logger.error('Erro no update', error as Error, {
@@ -230,8 +231,56 @@ export function useLeadMovement() {
     }
   }, [user, toast, logChange, logActivity]);
 
+  // Função para desfazer movimentação
+  const undoMove = useCallback(async (entryId: string, previousStageId: string): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      setIsMoving(true);
+
+      const updateData = {
+        etapa_atual_id: previousStageId,
+        data_entrada_etapa: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('lead_pipeline_entries')
+        .update(updateData)
+        .eq('id', entryId);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      toast({
+        title: '↩️ Movimentação desfeita',
+        description: 'Lead retornou à etapa anterior',
+        duration: 3000
+      });
+
+      return true;
+    } catch (error) {
+      logger.error('Erro ao desfazer movimentação', error as Error, {
+        feature: 'lead-movement',
+        metadata: { entryId }
+      });
+
+      toast({
+        title: 'Erro ao desfazer',
+        description: 'Não foi possível desfazer a movimentação',
+        variant: 'destructive'
+      });
+
+      return false;
+    } finally {
+      setIsMoving(false);
+    }
+  }, [user, toast]);
+
   return {
     moveLead,
+    undoMove,
     isMoving
   };
 }

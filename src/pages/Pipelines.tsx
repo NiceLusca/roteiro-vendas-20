@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Search, RotateCcw, LayoutGrid, Table as TableIcon, ArrowUpDown, RefreshCw, Bug } from 'lucide-react';
+import { Search, RotateCcw, LayoutGrid, Table as TableIcon, ArrowUpDown, RefreshCw, Bug, Undo2, CalendarClock } from 'lucide-react';
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
@@ -70,7 +70,7 @@ function PipelinesContent({ slug }: { slug: string }) {
   const leadPipelineEntries = entries.entries;
   const { stages } = useSupabasePipelineStages(pipelineId);
   const { fetchNextAppointments, getNextAppointmentForLead } = useKanbanAppointments();
-  const { moveLead } = useLeadMovement();
+  const { moveLead, undoMove } = useLeadMovement();
   const [editingLead, setEditingLead] = useState<{ lead: Lead; initialTab?: string } | null>(null);
   const [stageJumpDialogState, setStageJumpDialogState] = useState<{
     open: boolean;
@@ -102,16 +102,24 @@ function PipelinesContent({ slug }: { slug: string }) {
     toStageId: string;
   } | null>(null);
   
+  // Estado para desfazer última ação
+  const [lastMoveAction, setLastMoveAction] = useState<{
+    entryId: string;
+    fromStageId: string;
+    toStageId: string;
+    leadName: string;
+    timestamp: number;
+  } | null>(null);
+  const [undoTimeLeft, setUndoTimeLeft] = useState(0);
+  
   // Estado da visualização (kanban ou tabela)
   const viewMode = searchParams.get('view') || 'kanban';
   
   // Ler filtros da URL (persistência)
   const searchTerm = searchParams.get('search') || '';
-  
-  
-  
   const filterResponsibleName = searchParams.get('responsible') || 'all';
   const filterTagName = searchParams.get('tag') || 'all';
+  const filterDelivery = searchParams.get('delivery') || 'all';
   const sortBy = (searchParams.get('sort') || 'chronological') as 'chronological' | 'alphabetical' | 'delay' | 'score';
 
   // Buscar todas as tags disponíveis
@@ -250,6 +258,29 @@ function PipelinesContent({ slug }: { slug: string }) {
         const hasTag = leadTags.some(t => t.id === filterTagId);
         if (!hasTag) {
           return false;
+        }
+      }
+
+      // Filtro de entrega/agendamento
+      if (filterDelivery !== 'all') {
+        const nextAppointment = getNextAppointmentForLead(entry.lead_id);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const in3Days = new Date(today);
+        in3Days.setDate(in3Days.getDate() + 3);
+
+        if (filterDelivery === 'today') {
+          if (!nextAppointment?.start_at) return false;
+          const aptDate = new Date(nextAppointment.start_at);
+          aptDate.setHours(0, 0, 0, 0);
+          if (aptDate.getTime() !== today.getTime()) return false;
+        } else if (filterDelivery === '3days') {
+          if (!nextAppointment?.start_at) return false;
+          const aptDate = new Date(nextAppointment.start_at);
+          aptDate.setHours(0, 0, 0, 0);
+          if (aptDate < today || aptDate >= in3Days) return false;
         }
       }
       
@@ -602,6 +633,47 @@ function PipelinesContent({ slug }: { slug: string }) {
     setPendingKanbanMove(data);
   }, []);
 
+  // Registrar movimentação para undo
+  const registerMoveForUndo = useCallback((entryId: string, fromStageId: string, toStageId: string, leadName: string) => {
+    setLastMoveAction({
+      entryId,
+      fromStageId,
+      toStageId,
+      leadName,
+      timestamp: Date.now()
+    });
+    setUndoTimeLeft(60);
+  }, []);
+
+  // Timer para expirar undo
+  useEffect(() => {
+    if (!lastMoveAction) return;
+    
+    const interval = setInterval(() => {
+      setUndoTimeLeft(prev => {
+        if (prev <= 1) {
+          setLastMoveAction(null);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [lastMoveAction?.timestamp]);
+
+  // Handler para desfazer última movimentação
+  const handleUndoLastMove = useCallback(async () => {
+    if (!lastMoveAction) return;
+    
+    const success = await undoMove(lastMoveAction.entryId, lastMoveAction.fromStageId);
+    if (success) {
+      setLastMoveAction(null);
+      setUndoTimeLeft(0);
+      handleRefresh();
+    }
+  }, [lastMoveAction, undoMove, handleRefresh]);
+
 
   // Mostrar skeleton enquanto carrega
   if (loadingPipeline || accessLoading) {
@@ -778,6 +850,25 @@ function PipelinesContent({ slug }: { slug: string }) {
             </SelectContent>
           </Select>
 
+          {/* Filtro de entrega */}
+          <Select value={filterDelivery} onValueChange={(v) => updateFilter('delivery', v)}>
+            <SelectTrigger 
+              className={`w-40 h-9 ${
+                filterDelivery !== 'all' 
+                  ? 'border-primary text-primary font-medium' 
+                  : ''
+              }`}
+            >
+              <CalendarClock className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Entrega" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="all">Todas entregas</SelectItem>
+              <SelectItem value="today">Entrega hoje</SelectItem>
+              <SelectItem value="3days">Próximos 3 dias</SelectItem>
+            </SelectContent>
+          </Select>
+
           {/* Ordenação */}
           <Select value={sortBy} onValueChange={(v) => updateFilter('sort', v)}>
             <SelectTrigger 
@@ -795,7 +886,7 @@ function PipelinesContent({ slug }: { slug: string }) {
           </Select>
 
           {/* Limpar filtros */}
-          {(searchTerm || filterResponsibleName !== 'all' || filterTagName !== 'all' || sortBy !== 'chronological') && (
+          {(searchTerm || filterResponsibleName !== 'all' || filterTagName !== 'all' || filterDelivery !== 'all' || sortBy !== 'chronological') && (
             <Button
               variant="outline"
               size="sm"
@@ -804,6 +895,19 @@ function PipelinesContent({ slug }: { slug: string }) {
             >
               <RotateCcw className="h-4 w-4 mr-2" />
               Limpar
+            </Button>
+          )}
+
+          {/* Botão de desfazer última ação */}
+          {lastMoveAction && undoTimeLeft > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleUndoLastMove}
+              className="h-9 border-warning text-warning-foreground bg-warning/10 hover:bg-warning/20 animate-pulse"
+            >
+              <Undo2 className="h-4 w-4 mr-2" />
+              Desfazer ({undoTimeLeft}s)
             </Button>
           )}
 
@@ -866,6 +970,7 @@ function PipelinesContent({ slug }: { slug: string }) {
             onRegressStage={handleRegressStage}
             onUnsubscribeFromPipeline={handleUnsubscribeFromPipeline}
             onPendingMoveForNewAppointment={handlePendingMoveForNewAppointment}
+            onMoveSuccess={(data) => registerMoveForUndo(data.entryId, data.fromStageId, data.toStageId, data.leadName)}
             onRefresh={handleRefresh}
           />
         ) : (
