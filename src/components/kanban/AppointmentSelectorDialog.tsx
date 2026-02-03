@@ -84,23 +84,25 @@ export function AppointmentSelectorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[425px] max-w-[95vw]">
+        <DialogHeader className="text-left">
           <DialogTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-primary" />
-            {appointments.length === 1 ? 'Confirme o agendamento' : 'Selecione o agendamento para o prazo'}
+            <Calendar className="w-5 h-5 text-primary shrink-0" />
+            <span className="truncate">
+              {appointments.length === 1 ? 'Confirme o agendamento' : 'Selecione o agendamento'}
+            </span>
           </DialogTitle>
-          <DialogDescription>
-            A etapa <strong>"{stageName}"</strong> calcula o SLA baseado na data do agendamento.
+          <DialogDescription className="text-left">
+            A etapa <strong className="break-words">"{stageName}"</strong> calcula o SLA baseado na data do agendamento.
             <br />
             {appointments.length === 1 
-              ? <>Confirme se este é o agendamento correto para <strong>{leadName}</strong>:</>
-              : <>Selecione qual agendamento de <strong>{leadName}</strong> usar:</>
+              ? <>Confirme se este é o agendamento correto para <strong className="break-words">{leadName}</strong>:</>
+              : <>Selecione qual agendamento de <strong className="break-words">{leadName}</strong> usar:</>
             }
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
+        <div className="py-4 max-h-[40vh] overflow-y-auto">
           <RadioGroup 
             value={selectedId} 
             onValueChange={setSelectedId}
@@ -113,31 +115,31 @@ export function AppointmentSelectorDialog({
               return (
                 <div 
                   key={apt.id}
-                  className={`flex items-center space-x-3 rounded-lg border p-3 transition-colors ${
+                  className={`flex items-start space-x-3 rounded-lg border p-3 transition-colors ${
                     selectedId === apt.id 
                       ? 'border-primary bg-primary/5' 
                       : 'hover:bg-muted/50'
                   } ${past ? 'opacity-70' : ''}`}
                 >
-                  <RadioGroupItem value={apt.id} id={apt.id} />
+                  <RadioGroupItem value={apt.id} id={apt.id} className="mt-1 shrink-0" />
                   <Label 
                     htmlFor={apt.id} 
-                    className="flex-1 cursor-pointer flex items-center justify-between"
+                    className="flex-1 min-w-0 cursor-pointer"
                   >
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-medium">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="font-medium whitespace-nowrap">
                           {formatAppointmentDate(dateStr)}
                         </span>
                         {past && (
-                          <Badge variant="outline" className="text-xs text-orange-600 border-orange-300">
+                          <Badge variant="outline" className="text-xs text-orange-600 border-orange-300 shrink-0">
                             Passado
                           </Badge>
                         )}
                       </div>
                       {apt.titulo && (
-                        <p className="text-sm text-muted-foreground pl-6">
+                        <p className="text-sm text-muted-foreground pl-6 break-words line-clamp-2">
                           {apt.titulo}
                         </p>
                       )}
