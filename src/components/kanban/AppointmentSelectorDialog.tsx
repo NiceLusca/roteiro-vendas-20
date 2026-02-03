@@ -149,17 +149,19 @@ export function AppointmentSelectorDialog({
           </RadioGroup>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
-            Cancelar
-          </Button>
-          {onCreateNew && (
-            <Button variant="ghost" onClick={handleCreateNew} disabled={isLoading}>
-              <Plus className="w-4 h-4 mr-2" />
-              Criar novo prazo
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={handleCancel} disabled={isLoading} className="flex-1 sm:flex-none">
+              Cancelar
             </Button>
-          )}
-          <Button onClick={handleConfirm} disabled={!selectedId || isLoading}>
+            {onCreateNew && (
+              <Button variant="ghost" onClick={handleCreateNew} disabled={isLoading} className="flex-1 sm:flex-none">
+                <Plus className="w-4 h-4 mr-2" />
+                Criar novo prazo
+              </Button>
+            )}
+          </div>
+          <Button onClick={handleConfirm} disabled={!selectedId || isLoading} className="w-full sm:w-auto">
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
