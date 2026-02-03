@@ -6,6 +6,7 @@ import { useLeadActivityLog } from './useLeadActivityLog';
 export interface LeadResponsible {
   id: string;
   lead_id: string;
+  pipeline_entry_id?: string | null;
   user_id: string;
   assigned_at: string;
   assigned_by: string | null;
@@ -38,24 +39,32 @@ export interface UserProfile {
   full_name: string | null;
 }
 
-export const useLeadResponsibles = (leadId?: string) => {
+export const useLeadResponsibles = (leadId?: string, pipelineEntryId?: string) => {
   const queryClient = useQueryClient();
   const { logActivity } = useLeadActivityLog();
 
-  // Buscar responsáveis de um lead específico
+  // Buscar responsáveis de um lead específico (por pipeline_entry_id se fornecido)
   const { data: responsibles = [], isLoading: loadingResponsibles } = useQuery({
-    queryKey: ['lead-responsibles', leadId],
+    queryKey: ['lead-responsibles', leadId, pipelineEntryId],
     queryFn: async () => {
       if (!leadId) return [];
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('lead_responsibles')
         .select(`
           *,
           profile:profiles!lead_responsibles_user_id_fkey(user_id, nome, email, full_name)
-        `)
-        .eq('lead_id', leadId)
-        .order('is_primary', { ascending: false });
+        `);
+      
+      // Se pipelineEntryId fornecido, filtrar por ele; senão, comportamento legado
+      if (pipelineEntryId) {
+        query = query.eq('pipeline_entry_id', pipelineEntryId);
+      } else {
+        // Comportamento legado: buscar por lead_id onde pipeline_entry_id é NULL
+        query = query.eq('lead_id', leadId).is('pipeline_entry_id', null);
+      }
+      
+      const { data, error } = await query.order('is_primary', { ascending: false });
 
       if (error) throw error;
       return data as LeadResponsible[];
@@ -101,28 +110,38 @@ export const useLeadResponsibles = (leadId?: string) => {
       leadId, 
       userId, 
       isPrimary = false,
-      performedByName 
+      performedByName,
+      pipelineEntryId: entryId
     }: { 
       leadId: string; 
       userId: string; 
       isPrimary?: boolean;
       performedByName?: string;
+      pipelineEntryId?: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       
-      // Se for primary, remover flag de outros
+      // Se for primary, remover flag de outros (no mesmo pipeline_entry)
       if (isPrimary) {
-        await supabase
+        let updateQuery = supabase
           .from('lead_responsibles')
-          .update({ is_primary: false })
-          .eq('lead_id', leadId);
+          .update({ is_primary: false });
+        
+        if (entryId) {
+          updateQuery = updateQuery.eq('pipeline_entry_id', entryId);
+        } else {
+          updateQuery = updateQuery.eq('lead_id', leadId).is('pipeline_entry_id', null);
+        }
+        
+        await updateQuery;
       }
 
-      // Inserir novo responsável
+      // Inserir novo responsável (com pipeline_entry_id se fornecido)
       const { error: insertError } = await supabase
         .from('lead_responsibles')
         .insert({
           lead_id: leadId,
+          pipeline_entry_id: entryId || null,
           user_id: userId,
           assigned_by: user?.id,
           is_primary: isPrimary,
@@ -163,8 +182,9 @@ export const useLeadResponsibles = (leadId?: string) => {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lead-responsibles', leadId] });
+      queryClient.invalidateQueries({ queryKey: ['lead-responsibles', leadId, pipelineEntryId] });
       queryClient.invalidateQueries({ queryKey: ['responsibility-history', leadId] });
+      queryClient.invalidateQueries({ queryKey: ['lead-responsibles-multiple'] });
       toast.success('Responsável atribuído');
     },
     onError: (error: Error) => {
@@ -222,8 +242,9 @@ export const useLeadResponsibles = (leadId?: string) => {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lead-responsibles', leadId] });
+      queryClient.invalidateQueries({ queryKey: ['lead-responsibles', leadId, pipelineEntryId] });
       queryClient.invalidateQueries({ queryKey: ['responsibility-history', leadId] });
+      queryClient.invalidateQueries({ queryKey: ['lead-responsibles-multiple'] });
       toast.success('Responsável removido');
     },
     onError: () => {
@@ -274,8 +295,9 @@ export const useLeadResponsibles = (leadId?: string) => {
         });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lead-responsibles', leadId] });
+      queryClient.invalidateQueries({ queryKey: ['lead-responsibles', leadId, pipelineEntryId] });
       queryClient.invalidateQueries({ queryKey: ['responsibility-history', leadId] });
+      queryClient.invalidateQueries({ queryKey: ['lead-responsibles-multiple'] });
       toast.success('Responsável principal definido');
     },
     onError: () => {
@@ -297,11 +319,17 @@ export const useLeadResponsibles = (leadId?: string) => {
 };
 
 // Hook para buscar responsáveis de múltiplos leads (para Kanban)
-export const useMultipleLeadResponsibles = (leadIds: string[]) => {
+// Aceita um mapa de leadId -> pipelineEntryId para buscar por pipeline específico
+export const useMultipleLeadResponsibles = (
+  entryMap: Record<string, string> // { leadId: pipelineEntryId }
+) => {
+  const entryIds = Object.values(entryMap);
+  const leadIds = Object.keys(entryMap);
+  
   return useQuery({
-    queryKey: ['lead-responsibles-multiple', leadIds],
+    queryKey: ['lead-responsibles-multiple', entryIds],
     queryFn: async () => {
-      if (!leadIds.length) return {};
+      if (!entryIds.length) return {};
       
       const { data, error } = await supabase
         .from('lead_responsibles')
@@ -309,23 +337,32 @@ export const useMultipleLeadResponsibles = (leadIds: string[]) => {
           *,
           profile:profiles!lead_responsibles_user_id_fkey(user_id, nome, email, full_name)
         `)
-        .in('lead_id', leadIds)
+        .in('pipeline_entry_id', entryIds)
         .order('is_primary', { ascending: false });
 
       if (error) throw error;
 
-      // Agrupar por lead_id
+      // Criar mapa invertido: pipelineEntryId -> leadId
+      const entryToLead: Record<string, string> = {};
+      Object.entries(entryMap).forEach(([leadId, entryId]) => {
+        entryToLead[entryId] = leadId;
+      });
+
+      // Agrupar por lead_id (usando o mapa invertido)
       const grouped: Record<string, LeadResponsible[]> = {};
       data?.forEach((item) => {
-        if (!grouped[item.lead_id]) {
-          grouped[item.lead_id] = [];
+        const leadId = item.pipeline_entry_id ? entryToLead[item.pipeline_entry_id] : item.lead_id;
+        if (leadId) {
+          if (!grouped[leadId]) {
+            grouped[leadId] = [];
+          }
+          grouped[leadId].push(item as LeadResponsible);
         }
-        grouped[item.lead_id].push(item as LeadResponsible);
       });
 
       return grouped;
     },
-    enabled: leadIds.length > 0,
+    enabled: entryIds.length > 0,
     staleTime: 30000, // Cache por 30 segundos
   });
 };
