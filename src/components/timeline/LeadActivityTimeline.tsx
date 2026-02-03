@@ -15,7 +15,8 @@ import {
   PlusCircle,
   Pencil,
   Clock,
-  History
+  History,
+  CalendarX
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -74,6 +75,10 @@ const activityConfig: Record<ActivityType, {
   lead_updated: {
     icon: Pencil,
     color: 'bg-muted/50 text-muted-foreground'
+  },
+  appointment_deleted: {
+    icon: CalendarX,
+    color: 'bg-destructive/10 text-destructive'
   }
 };
 
@@ -123,6 +128,10 @@ function formatActivityDescription(activity: LeadActivity): ReactNode {
     case 'lead_updated':
       const fields = details.fields_changed || [];
       return <><PerformerName /> atualizou {fields.length > 0 ? fields.slice(0, 2).join(', ') : 'dados'}</>;
+    
+    case 'appointment_deleted':
+      const aptDate = details.data_hora ? new Date(details.data_hora).toLocaleDateString('pt-BR') : '';
+      return <><PerformerName /> deletou agendamento{aptDate ? ` de ${aptDate}` : ''}{details.titulo ? `: "${details.titulo}"` : ''}</>;
     
     default:
       return 'Ação registrada';

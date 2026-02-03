@@ -87,6 +87,7 @@ interface KanbanBoardProps {
   onTransferPipeline?: (leadId: string) => void;
   onUnsubscribeFromPipeline?: (entryId: string, leadId: string) => void;
   onPendingMoveForNewAppointment?: (data: { entryId: string; leadId: string; toStageId: string }) => void;
+  onMoveSuccess?: (data: { entryId: string; fromStageId: string; toStageId: string; leadName: string }) => void;
   hasMore?: boolean;
   onLoadMore?: () => void;
   loadingMore?: boolean;
@@ -121,6 +122,7 @@ export function KanbanBoard({
   onTransferPipeline,
   onUnsubscribeFromPipeline,
   onPendingMoveForNewAppointment,
+  onMoveSuccess,
   hasMore,
   onLoadMore,
   loadingMore
@@ -251,7 +253,7 @@ export function KanbanBoard({
       }
       
       // 1 agendamento - mover com vínculo automático
-      await moveLead({
+      const result = await moveLead({
         entry,
         fromStage: fromStageEntry.stage,
         toStage: toStageEntry.stage,
@@ -265,11 +267,19 @@ export function KanbanBoard({
           onRefresh?.();
         }
       });
+      if (result.success && result.previousStageId) {
+        onMoveSuccess?.({
+          entryId: entry.id,
+          fromStageId: result.previousStageId,
+          toStageId: toStageEntry.stage.id,
+          leadName: entry.lead?.nome || 'Lead'
+        });
+      }
       return;
     }
 
     // Movimento normal sem requisito de agendamento
-    await moveLead({
+    const result = await moveLead({
       entry,
       fromStage: fromStageEntry.stage,
       toStage: toStageEntry.stage,
@@ -282,18 +292,26 @@ export function KanbanBoard({
         onRefresh?.();
       }
     });
-  }, [stageEntries, checklistItems, moveLead, isMoving, isMovingWithAppointment, onRefresh, onEditLead, toast]);
+    if (result.success && result.previousStageId) {
+      onMoveSuccess?.({
+        entryId: entry.id,
+        fromStageId: result.previousStageId,
+        toStageId: toStageEntry.stage.id,
+        leadName: entry.lead?.nome || 'Lead'
+      });
+    }
+  }, [stageEntries, checklistItems, moveLead, isMoving, isMovingWithAppointment, onRefresh, onEditLead, toast, onMoveSuccess]);
 
   // Handler para confirmar seleção de agendamento
   const handleAppointmentSelected = useCallback(async (appointmentId: string) => {
-    const { pendingMove } = appointmentSelectorState;
+    const { pendingMove, entryId } = appointmentSelectorState;
     
     if (!pendingMove) return;
     
     setIsMovingWithAppointment(true);
     
     try {
-      await moveLead({
+      const result = await moveLead({
         entry: pendingMove.entry,
         fromStage: pendingMove.fromStage,
         toStage: pendingMove.toStage,
@@ -307,11 +325,19 @@ export function KanbanBoard({
           onRefresh?.();
         }
       });
+      if (result.success && result.previousStageId) {
+        onMoveSuccess?.({
+          entryId: pendingMove.entry.id,
+          fromStageId: result.previousStageId,
+          toStageId: pendingMove.toStage.id,
+          leadName: pendingMove.entry.lead?.nome || 'Lead'
+        });
+      }
     } finally {
       setIsMovingWithAppointment(false);
       setAppointmentSelectorState(prev => ({ ...prev, open: false, pendingMove: null }));
     }
-  }, [appointmentSelectorState, moveLead, onRefresh]);
+  }, [appointmentSelectorState, moveLead, onRefresh, onMoveSuccess]);
 
   const handleAppointmentSelectorCancel = useCallback(() => {
     setAppointmentSelectorState(prev => ({ ...prev, open: false, pendingMove: null }));

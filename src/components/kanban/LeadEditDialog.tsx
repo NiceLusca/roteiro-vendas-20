@@ -101,6 +101,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
   const [appointmentDuration, setAppointmentDuration] = useState('60');
   const [appointmentNotes, setAppointmentNotes] = useState('');
   const [savingAppointment, setSavingAppointment] = useState(false);
+  const [deletingAppointmentId, setDeletingAppointmentId] = useState<string | null>(null);
 
   // Estados para origem do lead
   const [origens, setOrigens] = useState<string[]>([]);
@@ -144,12 +145,12 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
   } = useLeadAttachments(lead.id);
   const { saveLead } = useLeadSave();
   const { responsibles, history } = useLeadResponsibles(lead.id);
-  const { activities } = useLeadActivityLog(lead.id, pipelineEntryId);
+  const { activities, logActivity } = useLeadActivityLog(lead.id, pipelineEntryId);
   const { getLeadTags, removeTagFromLead } = useLeadTags();
   const [leadTags, setLeadTags] = useState<{ id: string; nome: string; cor: string | null }[]>([]);
 
   // Hooks para agendamentos, deals e produtos
-  const { appointments, saveAppointment, getUpcomingAppointments } = useSupabaseAppointments();
+  const { appointments, saveAppointment, deleteAppointment, getUpcomingAppointments } = useSupabaseAppointments();
   const { deals, saveDeal, getDealsByLeadId } = useSupabaseDeals();
   const { products } = useSupabaseProducts();
   const queryClient = useQueryClient();
@@ -230,6 +231,39 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
       toast.error('Erro ao criar agendamento');
     } finally {
       setSavingAppointment(false);
+    }
+  };
+
+  // Handler para deletar agendamento
+  const handleDeleteAppointment = async (apt: Appointment) => {
+    if (!confirm(`Tem certeza que deseja deletar o agendamento "${apt.titulo}"?\n\nEsta ação será registrada no histórico.`)) {
+      return;
+    }
+
+    try {
+      setDeletingAppointmentId(apt.id);
+      
+      // Registrar no histórico ANTES de deletar
+      await logActivity({
+        leadId: lead.id,
+        pipelineEntryId: pipelineEntryId,
+        activityType: 'appointment_deleted',
+        details: {
+          titulo: apt.titulo,
+          data_hora: apt.start_at || apt.data_hora,
+          status: apt.status
+        }
+      });
+
+      const success = await deleteAppointment(apt.id);
+      if (success) {
+        onUpdate?.();
+      }
+    } catch (error) {
+      console.error('Erro ao deletar agendamento:', error);
+      toast.error('Erro ao deletar agendamento');
+    } finally {
+      setDeletingAppointmentId(null);
     }
   };
 
@@ -1276,13 +1310,29 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
                           </p>
                         </div>
                       </div>
-                      <Badge variant={
-                        apt.status === 'Agendado' ? 'default' :
-                        apt.status === 'Realizado' ? 'secondary' :
-                        'outline'
-                      }>
-                        {apt.status}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={
+                          apt.status === 'Agendado' ? 'default' :
+                          apt.status === 'Realizado' ? 'secondary' :
+                          'outline'
+                        }>
+                          {apt.status}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteAppointment(apt)}
+                          disabled={deletingAppointmentId === apt.id}
+                          title="Deletar agendamento"
+                        >
+                          {deletingAppointmentId === apt.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
