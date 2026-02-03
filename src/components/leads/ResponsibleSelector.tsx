@@ -16,11 +16,13 @@ import { getResponsibleColor, getInitials } from '@/utils/responsibleColors';
 
 interface ResponsibleSelectorProps {
   leadId: string;
+  pipelineEntryId?: string;
   performerName?: string;
 }
 
 export const ResponsibleSelector: React.FC<ResponsibleSelectorProps> = ({
   leadId,
+  pipelineEntryId,
   performerName,
 }) => {
   const [selectedUserId, setSelectedUserId] = useState<string>('');
@@ -33,7 +35,7 @@ export const ResponsibleSelector: React.FC<ResponsibleSelectorProps> = ({
     assignResponsible,
     removeResponsible,
     setPrimaryResponsible,
-  } = useLeadResponsibles(leadId);
+  } = useLeadResponsibles(leadId, pipelineEntryId);
 
   // Filtrar usuários que ainda não são responsáveis
   const availableUsers = allUsers.filter(
@@ -48,6 +50,7 @@ export const ResponsibleSelector: React.FC<ResponsibleSelectorProps> = ({
       userId: selectedUserId,
       isPrimary: responsibles.length === 0, // Primeiro é automáticamente primary
       performedByName: performerName,
+      pipelineEntryId,
     });
     setSelectedUserId('');
   };

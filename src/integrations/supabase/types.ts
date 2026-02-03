@@ -542,6 +542,7 @@ export type Database = {
           notes: string | null
           performed_by: string | null
           performed_by_name: string | null
+          pipeline_entry_id: string | null
           user_id: string
           user_name: string
         }
@@ -553,6 +554,7 @@ export type Database = {
           notes?: string | null
           performed_by?: string | null
           performed_by_name?: string | null
+          pipeline_entry_id?: string | null
           user_id: string
           user_name: string
         }
@@ -564,6 +566,7 @@ export type Database = {
           notes?: string | null
           performed_by?: string | null
           performed_by_name?: string | null
+          pipeline_entry_id?: string | null
           user_id?: string
           user_name?: string
         }
@@ -573,6 +576,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_responsibility_history_pipeline_entry_id_fkey"
+            columns: ["pipeline_entry_id"]
+            isOneToOne: false
+            referencedRelation: "lead_pipeline_entries"
             referencedColumns: ["id"]
           },
         ]
@@ -585,6 +595,7 @@ export type Database = {
           id: string
           is_primary: boolean | null
           lead_id: string
+          pipeline_entry_id: string | null
           user_id: string
         }
         Insert: {
@@ -594,6 +605,7 @@ export type Database = {
           id?: string
           is_primary?: boolean | null
           lead_id: string
+          pipeline_entry_id?: string | null
           user_id: string
         }
         Update: {
@@ -603,6 +615,7 @@ export type Database = {
           id?: string
           is_primary?: boolean | null
           lead_id?: string
+          pipeline_entry_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -618,6 +631,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_responsibles_pipeline_entry_id_fkey"
+            columns: ["pipeline_entry_id"]
+            isOneToOne: false
+            referencedRelation: "lead_pipeline_entries"
             referencedColumns: ["id"]
           },
           {

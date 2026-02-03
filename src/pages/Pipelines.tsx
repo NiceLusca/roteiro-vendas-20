@@ -181,14 +181,19 @@ function PipelinesContent({ slug }: { slug: string }) {
     .filter(stage => stage.pipeline_id === pipelineId)
     .sort((a, b) => a.ordem - b.ordem || a.id.localeCompare(b.id));
 
-  // Buscar responsáveis de todos os leads (antes do filtro de responsável)
-  const baseLeadIds = useMemo(() => 
+  // Criar mapa leadId -> pipelineEntryId para buscar responsáveis por pipeline
+  const entryMap = useMemo(() => {
+    const map: Record<string, string> = {};
     leadPipelineEntries
       .filter(entry => entry.status_inscricao === 'Ativo' && entry.pipeline_id === pipelineId && entry.leads !== null)
-      .map(entry => entry.lead_id),
-    [leadPipelineEntries, pipelineId]
-  );
-  const { data: responsiblesMap = {} } = useMultipleLeadResponsibles(baseLeadIds);
+      .forEach(entry => {
+        map[entry.lead_id] = entry.id;
+      });
+    return map;
+  }, [leadPipelineEntries, pipelineId]);
+  
+  const { data: responsiblesMap = {} } = useMultipleLeadResponsibles(entryMap);
+  const baseLeadIds = Object.keys(entryMap);
   const { data: tagsMap = {}, refetch: refetchTagsMap } = useMultipleLeadTags(baseLeadIds);
 
   // Buscar dados extras (deals, appointments) com base no display_config

@@ -144,7 +144,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
     downloadAttachment 
   } = useLeadAttachments(lead.id);
   const { saveLead } = useLeadSave();
-  const { responsibles, history } = useLeadResponsibles(lead.id);
+  const { responsibles, history } = useLeadResponsibles(lead.id, pipelineEntryId);
   const { activities, logActivity } = useLeadActivityLog(lead.id, pipelineEntryId);
   const { getLeadTags, removeTagFromLead } = useLeadTags();
   const [leadTags, setLeadTags] = useState<{ id: string; nome: string; cor: string | null }[]>([]);
@@ -836,6 +836,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
               
               <ResponsibleSelector 
                 leadId={lead.id} 
+                pipelineEntryId={pipelineEntryId}
                 performerName={currentUserName}
               />
               
