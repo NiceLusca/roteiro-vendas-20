@@ -86,6 +86,7 @@ interface KanbanBoardProps {
   onRegressStage?: (entryId: string) => void;
   onTransferPipeline?: (leadId: string) => void;
   onUnsubscribeFromPipeline?: (entryId: string, leadId: string) => void;
+  onPendingMoveForNewAppointment?: (data: { entryId: string; leadId: string; toStageId: string }) => void;
   hasMore?: boolean;
   onLoadMore?: () => void;
   loadingMore?: boolean;
@@ -119,6 +120,7 @@ export function KanbanBoard({
   onRegressStage,
   onTransferPipeline,
   onUnsubscribeFromPipeline,
+  onPendingMoveForNewAppointment,
   hasMore,
   onLoadMore,
   loadingMore
@@ -499,9 +501,18 @@ export function KanbanBoard({
         onConfirm={handleAppointmentSelected}
         onCancel={handleAppointmentSelectorCancel}
         onCreateNew={() => {
+          const { pendingMove } = appointmentSelectorState;
+          if (pendingMove) {
+            // Notificar o pai (Pipelines.tsx) sobre a movimentação pendente
+            onPendingMoveForNewAppointment?.({
+              entryId: appointmentSelectorState.entryId,
+              leadId: pendingMove.entry.lead_id,
+              toStageId: pendingMove.toStage.id
+            });
+          }
           setAppointmentSelectorState(prev => ({ ...prev, open: false, pendingMove: null }));
-          if (onEditLead && appointmentSelectorState.pendingMove?.entry.lead_id) {
-            onEditLead(appointmentSelectorState.pendingMove.entry.lead_id, { initialTab: 'appointments' });
+          if (onEditLead && pendingMove?.entry.lead_id) {
+            onEditLead(pendingMove.entry.lead_id, { initialTab: 'appointments' });
           }
         }}
         isLoading={isMovingWithAppointment}
