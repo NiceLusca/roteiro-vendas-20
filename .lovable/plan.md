@@ -1,65 +1,99 @@
 
-# Plano: Responsáveis por Pipeline (Não Interpipelines)
+# Plano: Recuperar Responsáveis Legados
 
-## ✅ CONCLUÍDO
+## Problema Identificado
 
-## Problema Atual
+Os responsáveis antigos foram salvos com `pipeline_entry_id = NULL` (antes da migração), mas a query atual só busca por `pipeline_entry_id` específico:
 
-A tabela `lead_responsibles` vinculava responsáveis ao `lead_id`, fazendo com que um responsável atribuído em um pipeline fosse visível em todos os outros pipelines onde o lead está inscrito.
+```typescript
+.in('pipeline_entry_id', entryIds)  // Não encontra registros com NULL
+```
 
-## Solução Implementada
+Resultado: todos os cards aparecem "Sem responsável".
 
-O sistema agora vincula responsáveis ao `pipeline_entry_id` em vez do `lead_id`, permitindo que cada inscrição em pipeline tenha seus próprios responsáveis.
+## Solução
 
-## Alterações Realizadas
+Modificar a query para buscar **ambos os casos**:
+1. Responsáveis vinculados ao `pipeline_entry_id` (novos)
+2. Responsáveis vinculados ao `lead_id` onde `pipeline_entry_id IS NULL` (legados)
 
-### 1. Banco de Dados (Migration)
+## Alterações
 
-- ✅ Adicionada coluna `pipeline_entry_id` à tabela `lead_responsibles`
-- ✅ Criado índice `idx_lead_responsibles_entry_id` para performance
-- ✅ Atualizada constraint UNIQUE para `(pipeline_entry_id, user_id)`
-- ✅ Adicionada coluna `pipeline_entry_id` à tabela `lead_responsibility_history`
-- ✅ Dados existentes mantidos com `pipeline_entry_id = NULL` (compatibilidade)
+### 1. Hook `useMultipleLeadResponsibles`
 
-### 2. Hook `useLeadResponsibles.ts`
+**Antes:**
+```typescript
+.in('pipeline_entry_id', entryIds)
+```
 
-- ✅ Interface `LeadResponsible` atualizada com `pipeline_entry_id?: string | null`
-- ✅ Hook aceita novo parâmetro `pipelineEntryId`
-- ✅ Query filtra por `pipeline_entry_id` quando fornecido
-- ✅ Mutation `assignResponsible` inclui `pipelineEntryId`
-- ✅ Hook `useMultipleLeadResponsibles` recebe `Record<string, string>` (leadId → entryId)
+**Depois:**
+```typescript
+// Buscar por pipeline_entry_id OU por lead_id com entry NULL (legados)
+.or(`pipeline_entry_id.in.(${entryIds.join(',')}),and(lead_id.in.(${leadIds.join(',')}),pipeline_entry_id.is.null)`)
+```
 
-### 3. Componente `ResponsibleSelector.tsx`
+### 2. Hook `useLeadResponsibles` (para LeadEditDialog)
 
-- ✅ Nova prop `pipelineEntryId?: string`
-- ✅ Passa `pipelineEntryId` para o hook e mutations
+**Antes:**
+```typescript
+if (pipelineEntryId) {
+  query = query.eq('pipeline_entry_id', pipelineEntryId);
+} else {
+  query = query.eq('lead_id', leadId).is('pipeline_entry_id', null);
+}
+```
 
-### 4. Componente `LeadEditDialog.tsx`
+**Depois:**
+```typescript
+if (pipelineEntryId) {
+  // Buscar por entry específico OU legados deste lead
+  query = query.or(`pipeline_entry_id.eq.${pipelineEntryId},and(lead_id.eq.${leadId},pipeline_entry_id.is.null)`);
+} else {
+  query = query.eq('lead_id', leadId).is('pipeline_entry_id', null);
+}
+```
 
-- ✅ Passa `pipelineEntryId` para `ResponsibleSelector` e `useLeadResponsibles`
+## Arquivos a Modificar
 
-### 5. Página `Pipelines.tsx`
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/hooks/useLeadResponsibles.ts` | Modificar queries para incluir legados |
 
-- ✅ Cria mapa `entryMap: Record<string, string>` (leadId → pipelineEntryId)
-- ✅ Passa mapa para `useMultipleLeadResponsibles`
+## Comportamento Esperado
 
-## Comportamento Final
-
-1. **Dados existentes**: Permanecem com `pipeline_entry_id = NULL` (compatibilidade)
-2. **Novos responsáveis**: Salvos com `pipeline_entry_id` preenchido
-3. **Visualização**: Cada pipeline mostra apenas responsáveis daquele pipeline
-4. **Histórico**: Registros de histórico continuam funcionando normalmente
+1. Responsáveis legados (com `pipeline_entry_id = NULL`) continuam aparecendo
+2. Novos responsáveis são salvos com `pipeline_entry_id` preenchido
+3. Cada pipeline mostra seus responsáveis específicos + legados do lead
+4. Migração gradual: quando usuário adiciona/remove responsável, sistema usa o novo formato
 
 ## Fluxo de Dados
 
 ```text
-Pipeline A                    Pipeline B
-    |                             |
-Entry #1 (Lead X)            Entry #2 (Lead X)
-    |                             |
-Responsáveis:                Responsáveis:
-  - João (primary)             - Maria (primary)
-  - Ana                        - Pedro
+Consulta para Pipeline "Mentoria Society"
+                    |
+       +------------+------------+
+       |                         |
+Responsáveis com            Responsáveis com
+pipeline_entry_id           pipeline_entry_id = NULL
+= entry atual               E lead_id = lead atual
+       |                         |
+       +------------+------------+
+                    |
+              Merge e exibe
 ```
 
-O mesmo lead pode ter responsáveis diferentes em cada pipeline.
+## Opção de Migração Futura (Opcional)
+
+Após confirmar que está funcionando, podemos criar um script para migrar dados legados:
+
+```sql
+-- Atualizar responsáveis legados para associar ao pipeline_entry
+UPDATE lead_responsibles lr
+SET pipeline_entry_id = lpe.id
+FROM lead_pipeline_entries lpe
+WHERE lr.lead_id = lpe.lead_id
+  AND lr.pipeline_entry_id IS NULL
+  AND lpe.status_inscricao = 'Ativo';
+```
+
+Isso é opcional e pode ser feito depois.
