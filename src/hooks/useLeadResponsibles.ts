@@ -56,9 +56,9 @@ export const useLeadResponsibles = (leadId?: string, pipelineEntryId?: string) =
           profile:profiles!lead_responsibles_user_id_fkey(user_id, nome, email, full_name)
         `);
       
-      // Se pipelineEntryId fornecido, filtrar por ele; senão, comportamento legado
+      // Se pipelineEntryId fornecido, buscar por entry específico OU legados deste lead
       if (pipelineEntryId) {
-        query = query.eq('pipeline_entry_id', pipelineEntryId);
+        query = query.or(`pipeline_entry_id.eq.${pipelineEntryId},and(lead_id.eq.${leadId},pipeline_entry_id.is.null)`);
       } else {
         // Comportamento legado: buscar por lead_id onde pipeline_entry_id é NULL
         query = query.eq('lead_id', leadId).is('pipeline_entry_id', null);
@@ -331,13 +331,14 @@ export const useMultipleLeadResponsibles = (
     queryFn: async () => {
       if (!entryIds.length) return {};
       
+      // Buscar por pipeline_entry_id OU por lead_id com entry NULL (legados)
       const { data, error } = await supabase
         .from('lead_responsibles')
         .select(`
           *,
           profile:profiles!lead_responsibles_user_id_fkey(user_id, nome, email, full_name)
         `)
-        .in('pipeline_entry_id', entryIds)
+        .or(`pipeline_entry_id.in.(${entryIds.join(',')}),and(lead_id.in.(${leadIds.join(',')}),pipeline_entry_id.is.null)`)
         .order('is_primary', { ascending: false });
 
       if (error) throw error;
