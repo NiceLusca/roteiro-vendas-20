@@ -983,6 +983,8 @@ function PipelinesContent({ slug }: { slug: string }) {
             stageEntries={stageEntries}
             tagsMap={tagsMap}
             sortBy={sortBy}
+            displayConfig={displayConfig}
+            dealsByLeadId={dealsByLeadId}
             onViewLead={handleViewOrEditLead}
             onAdvanceStage={handleAdvanceStage}
             onRegressStage={handleRegressStage}
