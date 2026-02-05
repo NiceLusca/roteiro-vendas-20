@@ -486,7 +486,8 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
           debounceTimer = setTimeout(() => {
             // Resetar paginação ao receber updates
             setPage(0);
-            fetchEntries(pipelineId, true, false);
+            // Buscar sem paginação quando há pipelineId específico
+            fetchEntries(pipelineId, true, false, !!pipelineId);
           }, 2000);
         }
       )
