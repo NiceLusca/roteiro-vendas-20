@@ -1,95 +1,150 @@
 
-# Plano: Adicionar Campo "Data da Venda" na Visualização
+# Plano: Data de Venda Obrigatória no Dialog e Webhook
 
-## Contexto do Problema
+## Objetivo
 
-Atualmente a data de fechamento da venda (`data_fechamento` no `deals` e `data_venda` no `orders`) existe no banco de dados, mas **não é exibida** na interface do pipeline. Isso dificulta identificar rapidamente quando uma venda foi confirmada e verificar se os dados estão corretos.
-
-## Solução Proposta
-
-Adicionar a coluna **"Data Venda"** nas visualizações do pipeline (Kanban e Tabela) quando a configuração `show_deals` estiver ativa.
+1. **Remover data da venda do card Kanban** (visualização fechada)
+2. **Tornar data de venda obrigatória** ao marcar "Venda Confirmada" no LeadEditDialog
+3. **Incluir data de venda no webhook** `comercial-metrics` para o dashboard Clarity
 
 ## Alterações
 
-### 1. Atualizar Tipos de Exibição
+### 1. Remover data do Kanban Card (visualização fechada)
 
 **Arquivo:** `src/types/pipelineDisplay.ts`
 
-| Campo | Valor |
-|-------|-------|
-| Novo field key | `data_venda` |
-| Label | "Data Venda" |
-| Source | `deals` |
-| Format | `date` |
+Remover `data_venda` dos `card_fields` do pipeline comercial:
 
-Adicionar também ao `DealDisplayInfo`:
-- `data_fechamento?: string | null`
-
-### 2. Atualizar Hook de Dados
-
-**Arquivo:** `src/hooks/usePipelineDisplayData.ts`
-
-Incluir `data_fechamento` na query de deals:
-```sql
-SELECT id, lead_id, valor_proposto, valor_recorrente, status, motivo_perda, data_fechamento
-FROM deals
-WHERE lead_id IN (...)
-```
-
-### 3. Atualizar Visualização em Tabela
-
-**Arquivo:** `src/components/pipeline/PipelineTableView.tsx`
-
-Adicionar coluna "Data Venda" que exibe:
-- Data formatada (dd/MM/yyyy) quando `status = 'ganho'`
-- Badge "Pendente" quando ainda não confirmado
-
-### 4. Atualizar Kanban Card (Opcional)
-
-**Arquivo:** `src/components/kanban/KanbanCard.tsx`
-
-Para vendas confirmadas, exibir badge com a data:
-- "Fechou em 03/02" (formato compacto)
-
-### 5. Atualizar Config Comercial
-
-**Arquivo:** `src/types/pipelineDisplay.ts`
-
-Adicionar `data_venda` aos campos padrão do pipeline comercial:
 ```typescript
-COMERCIAL_DISPLAY_CONFIG: {
-  card_fields: ['nome', 'origem', 'valor_deal', 'data_venda', 'closer', 'sla'],
-  table_columns: ['nome', 'contato', 'etapa', 'origem', 'valor_deal', 'data_venda', ...],
-  ...
-}
+// ANTES
+card_fields: ['nome', 'origem', 'valor_deal', 'data_venda', 'closer', 'sla'],
+
+// DEPOIS
+card_fields: ['nome', 'origem', 'valor_deal', 'closer', 'sla'],
 ```
 
-## Visualização Esperada
+A data permanece na tabela e no dialog (card aberto).
 
-### Tabela do Pipeline Comercial
+### 2. Campo de Data Obrigatório no LeadEditDialog
 
-| Lead | Etapa | Valor | Data Venda | Closer |
-|------|-------|-------|------------|--------|
-| Brendon Khelf | Fechou | R$ 997 | 03/02/2026 | João |
-| Lana Quincó | Fechou | R$ 997 | 01/02/2026 | Maria |
-| Diana Rocha | Fechou | R$ 497 | - | Pedro |
+**Arquivo:** `src/components/kanban/LeadEditDialog.tsx`
 
-### Benefícios
+Adicionar um seletor de data que aparece quando "Venda Confirmada" está marcada:
 
-1. **Visibilidade imediata** de quando cada venda foi confirmada
-2. **Fácil verificação** de dados entre planilhas e sistema
-3. **Identificação rápida** de vendas não confirmadas (sem data)
-4. **Ordenação** por data de venda para relatórios
+| Elemento | Comportamento |
+|----------|---------------|
+| Campo de data | Exibido condicionalmente quando `vendaConfirmada = true` |
+| Validação | Bloquear salvamento se data não preenchida |
+| Default | Data atual quando checkbox é marcado pela primeira vez |
+
+Novo estado e UI:
+```typescript
+// Novo estado
+const [dataVenda, setDataVenda] = useState<Date | undefined>(undefined);
+
+// Ao marcar venda confirmada, definir data atual como default
+useEffect(() => {
+  if (vendaConfirmada && !dataVenda && !existingDeal?.data_fechamento) {
+    setDataVenda(new Date());
+  }
+}, [vendaConfirmada]);
+
+// Validação no handleSaveDeal
+if (vendaConfirmada && !dataVenda) {
+  toast.error('Selecione a data da venda');
+  return;
+}
+
+// Usar dataVenda ao invés de new Date()
+data_fechamento: vendaConfirmada ? dataVenda.toISOString() : null
+```
+
+### 3. Atualizar Webhook comercial-metrics
+
+**Arquivo:** `supabase/functions/comercial-metrics/index.ts`
+
+Atualmente o webhook busca orders filtrando por `created_at`. Precisamos incluir `data_venda` no retorno para permitir análises por data de fechamento real.
+
+Alterações na query:
+```typescript
+// Adicionar data_venda na query de orders
+const { data: orders } = await supabase
+  .from("orders")
+  .select(`
+    id,
+    closer,
+    valor_total,
+    deal_id,
+    lead_id,
+    data_venda,
+    deals!inner(recorrente, data_fechamento),
+    leads!inner(origem)
+  `)
+```
+
+Alterações no processamento:
+```typescript
+// Adicionar ao processedOrders
+const processedOrders = (orders || []).map((o: any) => ({
+  ...existing,
+  data_venda: o.data_venda || o.deals?.data_fechamento || null,
+}));
+
+// Incluir no array de vendas retornado
+vendas: processedOrders.map(o => ({
+  ...existing,
+  data_venda: o.data_venda,
+})),
+```
+
+## Fluxo de Dados
+
+```text
+LeadEditDialog
+      │
+      ▼
+  ┌─────────────┐
+  │ Checkbox:   │
+  │ "Venda      │──────┬──────────────┐
+  │ Confirmada" │      │              │
+  └─────────────┘      ▼              ▼
+               ┌──────────────┐  ┌─────────────┐
+               │ Date Picker  │  │ Valor Venda │
+               │ (Data Venda)*│  │ (R$) *      │
+               └──────────────┘  └─────────────┘
+                      │
+                      ▼
+           ┌───────────────────┐
+           │ deals.data_fecham │
+           │ orders.data_venda │
+           └───────────────────┘
+                      │
+                      ▼
+           ┌───────────────────┐
+           │ comercial-metrics │
+           │ /functions/v1     │──► Dashboard Clarity
+           └───────────────────┘
+```
 
 ## Arquivos Modificados
 
-| Arquivo | Tipo de Alteração |
-|---------|-------------------|
-| `src/types/pipelineDisplay.ts` | Adicionar campo e tipo |
-| `src/hooks/usePipelineDisplayData.ts` | Incluir campo na query |
-| `src/components/pipeline/PipelineTableView.tsx` | Nova coluna |
-| `src/components/kanban/KanbanCard.tsx` | Badge opcional |
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/types/pipelineDisplay.ts` | Remover `data_venda` dos card_fields |
+| `src/components/kanban/LeadEditDialog.tsx` | Adicionar campo de data obrigatório |
+| `supabase/functions/comercial-metrics/index.ts` | Incluir `data_venda` no retorno |
 
 ## Detalhes Técnicos
 
-O campo `data_fechamento` já existe na tabela `deals` e é preenchido automaticamente quando o checkbox "Venda Confirmada" é marcado no `LeadEditDialog`. A alteração é puramente de exibição - nenhuma mudança no banco de dados é necessária.
+### Validação de Data
+- Se o deal já existe e tem `data_fechamento`, pré-popular o campo
+- Se é novo fechamento, usar data atual como default (mas editável)
+- Impedir salvamento sem data quando "Venda Confirmada" está marcada
+
+### Webhook - Prioridade de Data
+1. `orders.data_venda` (preenchido manualmente)
+2. `deals.data_fechamento` (timestamp automático)
+3. `null` se nenhum disponível
+
+### Interface do Seletor de Data
+Usar o mesmo componente `Calendar` + `Popover` já utilizado na aba de Agendamentos, mantendo consistência visual.
