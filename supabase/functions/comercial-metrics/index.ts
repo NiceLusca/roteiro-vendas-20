@@ -28,6 +28,7 @@ interface OrderData {
   lead_origem: string | null;
   recorrente: boolean | null;
   produto_nome: string | null;
+  data_venda: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -353,7 +354,8 @@ Deno.serve(async (req) => {
         valor_total,
         deal_id,
         lead_id,
-        deals!inner(recorrente, produto_id),
+        data_venda,
+        deals!inner(recorrente, produto_id, data_fechamento),
         leads!inner(origem)
       `)
       .eq("status_pagamento", "pago")
@@ -412,6 +414,7 @@ Deno.serve(async (req) => {
       lead_origem: o.leads?.origem || "Outro",
       recorrente: o.deals?.recorrente || false,
       produto_nome: orderProductMap.get(o.id) || null,
+      data_venda: o.data_venda || o.deals?.data_fechamento || null, // Prioridade: orders.data_venda > deals.data_fechamento
     }));
 
     // Calculate financial metrics
@@ -691,6 +694,16 @@ Deno.serve(async (req) => {
           closer_x_produto: closerXProduto,
           closer_x_tipo_venda: closerXTipoVenda,
         },
+        // Lista detalhada de vendas com data_venda para análises no dashboard
+        lista_vendas: processedOrders.map(o => ({
+          id: o.id,
+          closer: o.closer,
+          valor: o.valor_total,
+          origem: o.lead_origem,
+          recorrente: o.recorrente,
+          produto: o.produto_nome,
+          data_venda: o.data_venda,
+        })),
       },
       gerado_em: new Date().toISOString(),
     };

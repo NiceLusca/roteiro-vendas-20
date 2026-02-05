@@ -114,6 +114,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
   const [dealValor, setDealValor] = useState('');
   const [vendaRecorrente, setVendaRecorrente] = useState(false); // Checkbox para estatísticas
   const [vendaConfirmada, setVendaConfirmada] = useState(false);
+  const [dataVenda, setDataVenda] = useState<Date | undefined>(undefined); // Data obrigatória quando venda confirmada
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [savingDeal, setSavingDeal] = useState(false);
   const [productSearchOpen, setProductSearchOpen] = useState(false);
@@ -169,14 +170,28 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
       setDealValor(formatCurrencyInput(String(Math.round(existingDeal.valor_proposto * 100))));
       setVendaRecorrente((existingDeal as any).recorrente === true);
       setVendaConfirmada(existingDeal.status === 'Ganha');
+      // Pré-popular data de venda se existente
+      if (existingDeal.data_fechamento) {
+        setDataVenda(new Date(existingDeal.data_fechamento));
+      } else {
+        setDataVenda(undefined);
+      }
       // Produtos são carregados pelo hook useSupabaseDealProducts
     } else if (open) {
       setDealValor('');
       setVendaRecorrente(false);
       setVendaConfirmada(false);
+      setDataVenda(undefined);
       setSelectedProductIds([]);
     }
   }, [open, existingDeal]);
+
+  // Definir data atual como default quando marcar venda confirmada pela primeira vez
+  useEffect(() => {
+    if (vendaConfirmada && !dataVenda && !existingDeal?.data_fechamento) {
+      setDataVenda(new Date());
+    }
+  }, [vendaConfirmada]);
   
   // Sincronizar produtos selecionados com os do deal
   useEffect(() => {
@@ -277,11 +292,18 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
       return;
     }
 
+    // Data de venda é obrigatória quando venda confirmada
+    if (vendaConfirmada && !dataVenda) {
+      toast.error('Selecione a data da venda');
+      return;
+    }
+
     try {
       setSavingDeal(true);
 
       // O status é baseado no checkbox de venda confirmada
       const status = vendaConfirmada ? 'ganho' : 'aberto';
+      const dataFechamento = vendaConfirmada && dataVenda ? dataVenda.toISOString() : null;
 
       const result = await saveDeal({
         ...(existingDeal?.id ? { id: existingDeal.id } : {}),
@@ -289,7 +311,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
         valor_proposto: parsedValor,
         recorrente: vendaRecorrente, // Boolean para estatísticas
         status: status as any,
-        data_fechamento: vendaConfirmada ? new Date().toISOString() : null
+        data_fechamento: dataFechamento
       });
 
       // Salvar produtos associados ao deal
@@ -326,7 +348,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
               valor_total: parsedValor,
               closer: closerName,
               status_pagamento: 'pago',
-              data_venda: new Date().toISOString(),
+              data_venda: dataVenda ? dataVenda.toISOString() : new Date().toISOString(),
               updated_at: new Date().toISOString()
             })
             .eq('id', existingOrder.id);
@@ -340,7 +362,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
               valor_total: parsedValor,
               closer: closerName,
               status_pagamento: 'pago',
-              data_venda: new Date().toISOString()
+              data_venda: dataVenda ? dataVenda.toISOString() : new Date().toISOString()
             });
         }
       }
@@ -1375,6 +1397,39 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
                   </div>
                 </div>
               </div>
+
+              {/* Data de Venda - aparece quando venda confirmada */}
+              {vendaConfirmada && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4" />
+                    Data da Venda *
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className={`w-full justify-start text-left font-normal ${
+                          !dataVenda && 'text-muted-foreground'
+                        }`}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dataVenda 
+                          ? format(dataVenda, "dd/MM/yyyy", { locale: ptBR })
+                          : "Selecionar data da venda"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dataVenda}
+                        onSelect={setDataVenda}
+                        locale={ptBR}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
 
               {/* Seletor de produtos */}
               <div className="space-y-2">
