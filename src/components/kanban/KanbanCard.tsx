@@ -125,6 +125,7 @@ export const KanbanCard = memo(function KanbanCard({
   const showValorDeal = cardFields.includes('valor_deal') && dealInfo;
   const showValorRecorrente = cardFields.includes('valor_recorrente') && dealInfo?.valor_recorrente;
   const showDataSessao = cardFields.includes('data_sessao') && appointmentInfo;
+  const showDataVenda = cardFields.includes('data_venda') && dealInfo?.data_fechamento;
   const showCloser = cardFields.includes('closer') && lead?.closer;
   const showTags = cardFields.includes('tags');
   const showResponsavel = cardFields.includes('responsavel');
@@ -316,6 +317,11 @@ export const KanbanCard = memo(function KanbanCard({
             {showValorRecorrente && (
               <Badge variant="outline" className="text-[9px] text-green-600 border-green-600/50">
                 +{formatCurrency(dealInfo.valor_recorrente!)} rec
+              </Badge>
+            )}
+            {showDataVenda && (
+              <Badge variant="outline" className="text-[9px] text-muted-foreground border-muted-foreground/30">
+                {format(new Date(dealInfo.data_fechamento!), "dd/MM", { locale: ptBR })}
               </Badge>
             )}
           </div>

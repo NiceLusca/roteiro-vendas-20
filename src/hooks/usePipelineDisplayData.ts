@@ -26,7 +26,7 @@ export function usePipelineDisplayData({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('deals')
-        .select('id, lead_id, valor_proposto, valor_recorrente, status, motivo_perda')
+        .select('id, lead_id, valor_proposto, valor_recorrente, status, motivo_perda, data_fechamento')
         .in('lead_id', leadIds)
         .order('created_at', { ascending: false });
 

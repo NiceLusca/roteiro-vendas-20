@@ -44,6 +44,7 @@ export const AVAILABLE_DISPLAY_FIELDS: Record<string, DisplayFieldDefinition> = 
   valor_deal: { key: 'valor_deal', label: 'Valor Venda', source: 'deals', format: 'currency' },
   valor_recorrente: { key: 'valor_recorrente', label: 'Recorrente', source: 'deals', format: 'currency' },
   status_deal: { key: 'status_deal', label: 'Status Venda', source: 'deals', format: 'badge' },
+  data_venda: { key: 'data_venda', label: 'Data Venda', source: 'deals', format: 'date' },
   objecao: { key: 'objecao', label: 'Objeção', source: 'deals', format: 'text' },
   
   // Appointments
@@ -61,8 +62,8 @@ export const DEFAULT_DISPLAY_CONFIG: PipelineDisplayConfig = {
 };
 
 export const COMERCIAL_DISPLAY_CONFIG: PipelineDisplayConfig = {
-  card_fields: ['nome', 'origem', 'valor_deal', 'closer', 'sla'],
-  table_columns: ['nome', 'contato', 'etapa', 'origem', 'valor_deal', 'valor_recorrente', 'data_sessao', 'closer', 'objecao'],
+  card_fields: ['nome', 'origem', 'valor_deal', 'data_venda', 'closer', 'sla'],
+  table_columns: ['nome', 'contato', 'etapa', 'origem', 'valor_deal', 'valor_recorrente', 'data_venda', 'data_sessao', 'closer', 'objecao'],
   show_deals: true,
   show_orders: true,
   show_appointments: true,
@@ -76,6 +77,7 @@ export interface DealDisplayInfo {
   valor_recorrente?: number | null;
   status: string;
   motivo_perda?: string | null;
+  data_fechamento?: string | null;
 }
 
 // Appointment info for display

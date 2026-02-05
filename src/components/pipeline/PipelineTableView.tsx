@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { 
   Table, 
   TableBody, 
@@ -34,6 +35,7 @@ import {
 } from 'lucide-react';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
 import { LeadTag } from '@/types/bulkImport';
+import { PipelineDisplayConfig, DealDisplayInfo } from '@/types/pipelineDisplay';
 import { ResponsibleAvatars } from '@/components/leads/ResponsibleAvatars';
 import { cn } from '@/lib/utils';
 
@@ -51,6 +53,8 @@ interface PipelineTableViewProps {
   }>;
   tagsMap?: Record<string, LeadTag[]>;
   sortBy?: TableSortOption;
+  displayConfig?: PipelineDisplayConfig | null;
+  dealsByLeadId?: Record<string, DealDisplayInfo>;
   onViewLead?: (leadId: string) => void;
   onAdvanceStage?: (entryId: string) => void;
   onRegressStage?: (entryId: string) => void;
@@ -99,6 +103,8 @@ export function PipelineTableView({
   stageEntries,
   tagsMap = {},
   sortBy = 'chronological',
+  displayConfig,
+  dealsByLeadId = {},
   onViewLead,
   onAdvanceStage,
   onRegressStage,
@@ -107,6 +113,9 @@ export function PipelineTableView({
 }: PipelineTableViewProps) {
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  // Check if we should show deal-related columns
+  const showDataVenda = displayConfig?.show_deals && displayConfig?.table_columns?.includes('data_venda');
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -348,6 +357,7 @@ export function PipelineTableView({
               onSort={handleSort}
             />
             <TableHead>Tags</TableHead>
+            {showDataVenda && <TableHead>Data Venda</TableHead>}
             <TableHead className="w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>
@@ -363,6 +373,7 @@ export function PipelineTableView({
             const leadTags = tagsMap[entry.lead_id] || [];
             const isFirstStage = entry.stageOrdem === stageEntries[0]?.stage.ordem;
             const isLastStage = entry.stageOrdem === stageEntries[stageEntries.length - 1]?.stage.ordem;
+            const dealInfo = dealsByLeadId[entry.lead_id];
 
             return (
               <TableRow 
@@ -473,6 +484,20 @@ export function PipelineTableView({
                     )}
                   </div>
                 </TableCell>
+
+                {showDataVenda && (
+                  <TableCell>
+                    {dealInfo?.data_fechamento ? (
+                      <span className="text-sm">
+                        {format(new Date(dealInfo.data_fechamento), "dd/MM/yyyy", { locale: ptBR })}
+                      </span>
+                    ) : dealInfo ? (
+                      <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                        Pendente
+                      </Badge>
+                    ) : null}
+                  </TableCell>
+                )}
                 
                 <TableCell onClick={(e) => e.stopPropagation()}>
                   <DropdownMenu>
