@@ -62,7 +62,7 @@ export const DEFAULT_DISPLAY_CONFIG: PipelineDisplayConfig = {
 };
 
 export const COMERCIAL_DISPLAY_CONFIG: PipelineDisplayConfig = {
-  card_fields: ['nome', 'origem', 'valor_deal', 'data_venda', 'closer', 'sla'],
+  card_fields: ['nome', 'origem', 'valor_deal', 'closer', 'sla'],
   table_columns: ['nome', 'contato', 'etapa', 'origem', 'valor_deal', 'valor_recorrente', 'data_venda', 'data_sessao', 'closer', 'objecao'],
   show_deals: true,
   show_orders: true,
