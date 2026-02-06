@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Users, Package, Bell } from 'lucide-react';
+import { Users, Package, Bell, History } from 'lucide-react';
 import { PipelineManager } from '@/components/settings/PipelineManager';
 import { ProductManager } from '@/components/settings/ProductManager';
 import { NotificationSettingsCard } from '@/components/notifications/NotificationSettingsCard';
 import { RoleManager } from '@/components/security/RoleManager';
+import { PipelineMovementHistory } from '@/components/pipeline/PipelineMovementHistory';
 
 export default function Settings() {
   const [searchParams] = useSearchParams();
@@ -30,7 +29,7 @@ export default function Settings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="pipelines" className="gap-2">
             <Package className="w-4 h-4" />
             Pipelines
@@ -46,6 +45,10 @@ export default function Settings() {
           <TabsTrigger value="users" className="gap-2">
             <Users className="w-4 h-4" />
             Usuários
+          </TabsTrigger>
+          <TabsTrigger value="movements" className="gap-2">
+            <History className="w-4 h-4" />
+            Movimentações
           </TabsTrigger>
         </TabsList>
 
@@ -74,6 +77,10 @@ export default function Settings() {
               <RoleManager />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="movements">
+          <PipelineMovementHistory />
         </TabsContent>
       </Tabs>
     </div>
