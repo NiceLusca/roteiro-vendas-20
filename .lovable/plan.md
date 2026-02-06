@@ -1,150 +1,225 @@
 
-# Plano: Data de Venda Obrigatória no Dialog e Webhook
+# Plano: Histórico de Movimentações do Pipeline + Correção dos 3 Leads
 
-## Objetivo
+## Resumo
 
-1. **Remover data da venda do card Kanban** (visualização fechada)
-2. **Tornar data de venda obrigatória** ao marcar "Venda Confirmada" no LeadEditDialog
-3. **Incluir data de venda no webhook** `comercial-metrics` para o dashboard Clarity
+1. **Corrigir os 3 leads manualmente** via SQL (reativar e mover para "Fechou")
+2. **Implementar log de arquivamento** - registrar no `lead_activity_log` quando leads são descadastrados
+3. **Criar mini-histórico de movimentações** - nova seção no dashboard que permite filtrar por tipo de ação (descadastramento, inscrição, transferência)
 
-## Alterações
+## Parte 1: Correção Imediata dos 3 Leads
 
-### 1. Remover data do Kanban Card (visualização fechada)
+Executar SQL para:
+1. Reativar as entries (status = 'Ativo')
+2. Mover para etapa "Fechou"
+3. Criar deals com valor R$ 750,00
 
-**Arquivo:** `src/types/pipelineDisplay.ts`
+```sql
+-- 1. Reativar e mover para "Fechou"
+UPDATE lead_pipeline_entries 
+SET 
+  status_inscricao = 'Ativo',
+  etapa_atual_id = '25221344-0e76-486c-800f-eab07e0c8c08', -- Fechou
+  data_entrada_etapa = NOW(),
+  updated_at = NOW()
+WHERE id IN (
+  '402dc789-d7d6-45d0-9401-bdd4a1fa5a9f',  -- Anna Christina
+  'a97ef3ab-4ce0-4184-8c33-59e62b479fe2',  -- Fabiane Neves
+  '6a631a0e-9e5c-43df-9a31-efe7b878d875'   -- Giani Cristina
+);
 
-Remover `data_venda` dos `card_fields` do pipeline comercial:
-
-```typescript
-// ANTES
-card_fields: ['nome', 'origem', 'valor_deal', 'data_venda', 'closer', 'sla'],
-
-// DEPOIS
-card_fields: ['nome', 'origem', 'valor_deal', 'closer', 'sla'],
+-- 2. Criar deals (ganho) para cada lead
+INSERT INTO deals (lead_id, valor_proposto, status, data_fechamento)
+VALUES 
+  ('5e387202-7d0f-4405-979b-6c99992394f2', 750, 'ganho', NOW()),
+  ('ca6a05f2-a3f6-4ed5-8712-3ceb7652f3db', 750, 'ganho', NOW()),
+  ('fc09c00d-7a71-4aa3-aacf-1d0cf09ab88e', 750, 'ganho', NOW());
 ```
 
-A data permanece na tabela e no dialog (card aberto).
+## Parte 2: Registrar Arquivamento no Activity Log
 
-### 2. Campo de Data Obrigatório no LeadEditDialog
+**Arquivo:** `src/hooks/useSupabaseLeadPipelineEntries.ts`
 
-**Arquivo:** `src/components/kanban/LeadEditDialog.tsx`
+Modificar a função `archiveEntry` para registrar a atividade:
 
-Adicionar um seletor de data que aparece quando "Venda Confirmada" está marcada:
-
-| Elemento | Comportamento |
-|----------|---------------|
-| Campo de data | Exibido condicionalmente quando `vendaConfirmada = true` |
-| Validação | Bloquear salvamento se data não preenchida |
-| Default | Data atual quando checkbox é marcado pela primeira vez |
-
-Novo estado e UI:
 ```typescript
-// Novo estado
-const [dataVenda, setDataVenda] = useState<Date | undefined>(undefined);
+const archiveEntry = async (entryId: string, motivo?: string) => {
+  if (!user) return false;
 
-// Ao marcar venda confirmada, definir data atual como default
-useEffect(() => {
-  if (vendaConfirmada && !dataVenda && !existingDeal?.data_fechamento) {
-    setDataVenda(new Date());
+  try {
+    // Buscar dados do entry antes de arquivar
+    const { data: entry } = await supabase
+      .from('lead_pipeline_entries')
+      .select('lead_id, pipeline_id, etapa_atual_id')
+      .eq('id', entryId)
+      .maybeSingle();
+
+    // Atualizar status
+    const { error } = await supabase
+      .from('lead_pipeline_entries')
+      .update({
+        status_inscricao: 'Arquivado',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', entryId);
+
+    if (error) { /* ... */ }
+
+    // NOVO: Registrar no activity log
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('nome, full_name')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    await supabase.from('lead_activity_log').insert({
+      lead_id: entry.lead_id,
+      pipeline_entry_id: entryId,
+      activity_type: 'archive',
+      details: {
+        motivo: motivo || 'Sem motivo informado',
+        pipeline_id: entry.pipeline_id,
+        etapa_id: entry.etapa_atual_id
+      },
+      performed_by: user.id,
+      performed_by_name: profile?.nome || profile?.full_name || user.email
+    });
+
+    // ... resto
   }
-}, [vendaConfirmada]);
-
-// Validação no handleSaveDeal
-if (vendaConfirmada && !dataVenda) {
-  toast.error('Selecione a data da venda');
-  return;
-}
-
-// Usar dataVenda ao invés de new Date()
-data_fechamento: vendaConfirmada ? dataVenda.toISOString() : null
+};
 ```
 
-### 3. Atualizar Webhook comercial-metrics
+## Parte 3: Mini-Histórico de Movimentações do Pipeline
 
-**Arquivo:** `supabase/functions/comercial-metrics/index.ts`
+Criar um novo componente `PipelineMovementHistory` que será acessível via Settings ou Reports.
 
-Atualmente o webhook busca orders filtrando por `created_at`. Precisamos incluir `data_venda` no retorno para permitir análises por data de fechamento real.
+**Arquivo novo:** `src/components/pipeline/PipelineMovementHistory.tsx`
 
-Alterações na query:
-```typescript
-// Adicionar data_venda na query de orders
-const { data: orders } = await supabase
-  .from("orders")
-  .select(`
-    id,
-    closer,
-    valor_total,
-    deal_id,
-    lead_id,
-    data_venda,
-    deals!inner(recorrente, data_fechamento),
-    leads!inner(origem)
-  `)
-```
-
-Alterações no processamento:
-```typescript
-// Adicionar ao processedOrders
-const processedOrders = (orders || []).map((o: any) => ({
-  ...existing,
-  data_venda: o.data_venda || o.deals?.data_fechamento || null,
-}));
-
-// Incluir no array de vendas retornado
-vendas: processedOrders.map(o => ({
-  ...existing,
-  data_venda: o.data_venda,
-})),
-```
-
-## Fluxo de Dados
+### Interface
 
 ```text
-LeadEditDialog
-      │
-      ▼
-  ┌─────────────┐
-  │ Checkbox:   │
-  │ "Venda      │──────┬──────────────┐
-  │ Confirmada" │      │              │
-  └─────────────┘      ▼              ▼
-               ┌──────────────┐  ┌─────────────┐
-               │ Date Picker  │  │ Valor Venda │
-               │ (Data Venda)*│  │ (R$) *      │
-               └──────────────┘  └─────────────┘
-                      │
-                      ▼
-           ┌───────────────────┐
-           │ deals.data_fecham │
-           │ orders.data_venda │
-           └───────────────────┘
-                      │
-                      ▼
-           ┌───────────────────┐
-           │ comercial-metrics │
-           │ /functions/v1     │──► Dashboard Clarity
-           └───────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│ Histórico de Movimentações                                 │
+├────────────────────────────────────────────────────────────┤
+│ Filtros: [Pipeline ▼] [Tipo ▼] [Período ▼] [Buscar...]    │
+│          Tipo: Descadastramentos | Inscrições | Todos      │
+├────────────────────────────────────────────────────────────┤
+│ 06/02 14:32  Fabiane Neves descadastrada por Maria         │
+│              Motivo: Erro de cadastro                      │
+│              Pipeline: Comercial → Etapa: Agendado         │
+├────────────────────────────────────────────────────────────┤
+│ 05/02 10:15  João Silva inscrito por Carlos                │
+│              Pipeline: Comercial → Etapa: Agendado         │
+├────────────────────────────────────────────────────────────┤
+│ 04/02 16:45  Ana Costa transferida por Maria               │
+│              De: Aquisição → Para: Comercial               │
+└────────────────────────────────────────────────────────────┘
+```
+
+### Funcionalidades
+
+| Recurso | Descrição |
+|---------|-----------|
+| Filtro por tipo | Descadastramentos, Inscrições, Transferências, Mudanças de etapa |
+| Filtro por pipeline | Qual pipeline afetado |
+| Filtro por período | Últimos 7 dias, 30 dias, customizado |
+| Busca por nome | Buscar lead ou responsável |
+| Identificação do ator | Quem realizou a ação |
+| Detalhes da ação | Motivo, etapa anterior/nova, timestamps |
+
+### Localização
+
+Adicionar nova aba em `/settings` ou botão em `/pipelines`:
+
+```typescript
+// Em src/pages/Settings.tsx ou como dialog em Pipelines.tsx
+<TabsTrigger value="movements">Movimentações</TabsTrigger>
+<TabsContent value="movements">
+  <PipelineMovementHistory />
+</TabsContent>
 ```
 
 ## Arquivos Modificados
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/types/pipelineDisplay.ts` | Remover `data_venda` dos card_fields |
-| `src/components/kanban/LeadEditDialog.tsx` | Adicionar campo de data obrigatório |
-| `supabase/functions/comercial-metrics/index.ts` | Incluir `data_venda` no retorno |
+| `src/hooks/useSupabaseLeadPipelineEntries.ts` | Log de arquivamento no activity_log |
+| `src/components/pipeline/PipelineMovementHistory.tsx` | **Novo** - Componente de histórico |
+| `src/pages/Settings.tsx` | Adicionar aba de Movimentações |
+
+## Fluxo de Dados
+
+```text
+Usuário descadastra lead
+         │
+         ▼
+┌─────────────────────────┐
+│ archiveEntry()          │
+│ - Update status         │
+│ - Insert activity_log   │──────────┐
+└─────────────────────────┘          │
+                                     ▼
+                          ┌──────────────────────┐
+                          │  lead_activity_log   │
+                          │  activity_type:      │
+                          │  - 'archive'         │
+                          │  - 'inscription'     │
+                          │  - 'transfer'        │
+                          │  - 'stage_change'    │
+                          │  performed_by_name   │
+                          │  details (motivo)    │
+                          └──────────────────────┘
+                                     │
+                                     ▼
+                          ┌──────────────────────┐
+                          │ PipelineMovement     │
+                          │ History              │
+                          │ - Filtros            │
+                          │ - Lista de eventos   │
+                          └──────────────────────┘
+```
 
 ## Detalhes Técnicos
 
-### Validação de Data
-- Se o deal já existe e tem `data_fechamento`, pré-popular o campo
-- Se é novo fechamento, usar data atual como default (mas editável)
-- Impedir salvamento sem data quando "Venda Confirmada" está marcada
+### Query para o Histórico
 
-### Webhook - Prioridade de Data
-1. `orders.data_venda` (preenchido manualmente)
-2. `deals.data_fechamento` (timestamp automático)
-3. `null` se nenhum disponível
+```typescript
+const fetchMovements = async (filters) => {
+  let query = supabase
+    .from('lead_activity_log')
+    .select(`
+      *,
+      leads!lead_activity_log_lead_id_fkey(nome, email)
+    `)
+    .in('activity_type', ['archive', 'inscription', 'transfer', 'stage_change'])
+    .order('created_at', { ascending: false });
 
-### Interface do Seletor de Data
-Usar o mesmo componente `Calendar` + `Popover` já utilizado na aba de Agendamentos, mantendo consistência visual.
+  if (filters.type) {
+    query = query.eq('activity_type', filters.type);
+  }
+
+  if (filters.pipelineId) {
+    query = query.eq('details->pipeline_id', filters.pipelineId);
+  }
+
+  // ...
+};
+```
+
+### Tipos de Atividade
+
+| Tipo | Descrição | Dados em `details` |
+|------|-----------|-------------------|
+| `archive` | Descadastramento | motivo, pipeline_id, etapa_id |
+| `inscription` | Inscrição | pipeline_id, etapa_inicial_id |
+| `transfer` | Transferência | de_pipeline, para_pipeline |
+| `stage_change` | Mudança de etapa | de_etapa, para_etapa |
+
+## Ordem de Implementação
+
+1. Executar SQL para corrigir os 3 leads
+2. Modificar `archiveEntry` para logar no activity_log
+3. Criar componente `PipelineMovementHistory`
+4. Adicionar aba em Settings
+5. Testar fluxo completo de descadastramento
