@@ -76,9 +76,8 @@ const activityTypeConfig: Record<ActivityType, { label: string; icon: React.Reac
 
 const periodOptions = [
   { value: '7', label: 'Últimos 7 dias' },
-  { value: '30', label: 'Últimos 30 dias' },
-  { value: '90', label: 'Últimos 90 dias' },
-  { value: 'all', label: 'Todo o período' }
+  { value: '14', label: 'Últimos 14 dias' },
+  { value: '30', label: 'Últimos 30 dias' }
 ];
 
 export function PipelineMovementHistory() {
@@ -135,13 +134,11 @@ export function PipelineMovementHistory() {
         query = query.eq('activity_type', selectedType);
       }
 
-      // Filter by period
-      if (selectedPeriod !== 'all') {
-        const daysAgo = parseInt(selectedPeriod);
-        const fromDate = new Date();
-        fromDate.setDate(fromDate.getDate() - daysAgo);
-        query = query.gte('created_at', fromDate.toISOString());
-      }
+      // Filter by period (always max 30 days)
+      const daysAgo = Math.min(parseInt(selectedPeriod) || 30, 30);
+      const fromDate = new Date();
+      fromDate.setDate(fromDate.getDate() - daysAgo);
+      query = query.gte('created_at', fromDate.toISOString());
 
       const { data, error } = await query;
 
