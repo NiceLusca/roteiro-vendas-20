@@ -307,11 +307,26 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
 
   // Update pipeline entry
 
-  // Archive pipeline entry
+  // Archive pipeline entry with activity logging
   const archiveEntry = async (entryId: string, motivo?: string) => {
     if (!user) return false;
 
     try {
+      // 1. Buscar dados do entry antes de arquivar
+      const { data: entry, error: fetchError } = await supabase
+        .from('lead_pipeline_entries')
+        .select('lead_id, pipeline_id, etapa_atual_id')
+        .eq('id', entryId)
+        .maybeSingle();
+
+      if (fetchError || !entry) {
+        logger.error('Entry não encontrado para arquivar', fetchError as any, {
+          feature: 'lead-pipeline-entries'
+        });
+        return false;
+      }
+
+      // 2. Atualizar status para Arquivado
       const { error } = await supabase
         .from('lead_pipeline_entries')
         .update({
@@ -332,9 +347,46 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         return false;
       }
 
+      // 3. Buscar nome do usuário para o log
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('nome, full_name')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const performerName = profile?.nome || profile?.full_name || user.email || 'Usuário';
+
+      // 4. Registrar no activity log
+      const { error: logError } = await supabase
+        .from('lead_activity_log')
+        .insert({
+          lead_id: entry.lead_id,
+          pipeline_entry_id: entryId,
+          activity_type: 'archive',
+          details: {
+            motivo: motivo || 'Sem motivo informado',
+            pipeline_id: entry.pipeline_id,
+            etapa_id: entry.etapa_atual_id
+          },
+          performed_by: user.id,
+          performed_by_name: performerName
+        });
+
+      if (logError) {
+        logger.warn('Falha ao registrar log de arquivamento', {
+          feature: 'lead-pipeline-entries',
+          metadata: { error: logError.message }
+        });
+      } else {
+        logger.info('Arquivamento registrado no activity log', {
+          feature: 'lead-pipeline-entries',
+          metadata: { entryId, motivo }
+        });
+      }
+
       toast({
-        title: "Entry arquivado",
-        description: "Lead foi removido do pipeline ativo"
+        title: "Lead descadastrado",
+        description: "Lead foi removido do pipeline"
       });
 
       fetchEntries();
