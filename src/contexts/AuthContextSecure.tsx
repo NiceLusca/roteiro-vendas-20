@@ -30,12 +30,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   // Helper para log de eventos de segurança (ASSÍNCRONO)
+  // OTIMIZADO: Logar apenas falhas ou eventos críticos para reduzir volume
   const logSecurityEventAsync = (
     eventType: string, 
     userId: string | null,
     success: boolean, 
     details?: any
   ) => {
+    // Otimização: não logar logins bem-sucedidos (muito volume)
+    // Mantém logs de: falhas, logout, signup, password_reset
+    if (eventType === 'login_attempt' && success) {
+      return; // Skip successful logins to reduce database load
+    }
+
     // Use setTimeout to defer RPC calls and prevent deadlock
     setTimeout(async () => {
       try {
@@ -46,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           p_user_agent: typeof window !== 'undefined' ? navigator.userAgent : null,
           p_success: success,
           p_details: details || null,
-          p_severity: 'info'
+          p_severity: success ? 'info' : 'warn'
         });
       } catch (error) {
         logger.error('Erro ao registrar evento de segurança', error as Error, { feature: 'auth', metadata: { eventType, userId } });
