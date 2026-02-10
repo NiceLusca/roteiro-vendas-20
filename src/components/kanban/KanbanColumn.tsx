@@ -1,4 +1,4 @@
-import React, { memo, useMemo, useCallback, DragEvent, useState } from 'react';
+import React, { memo, useMemo, useCallback, DragEvent, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -104,9 +104,15 @@ export const KanbanColumn = memo(function KanbanColumn({
   groupName,
   onToggleGroupCollapse
 }: KanbanColumnProps) {
+  const CARDS_PER_PAGE = 50;
+  const [visibleCount, setVisibleCount] = useState(CARDS_PER_PAGE);
   const [isOver, setIsOver] = useState(false);
   const [isColumnOver, setIsColumnOver] = useState(false);
   const [isDraggingColumn, setIsDraggingColumn] = useState(false);
+
+  useEffect(() => {
+    setVisibleCount(CARDS_PER_PAGE);
+  }, [stage.id]);
 
   // HTML5 Native Drop Handlers para cards
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -337,7 +343,7 @@ export const KanbanColumn = memo(function KanbanColumn({
       <div className="flex-1 overflow-y-auto px-1 pb-2">
         {sortedEntries.length > 0 && (
           <div className="space-y-3">
-            {sortedEntries.map((entry) => {
+            {sortedEntries.slice(0, visibleCount).map((entry) => {
               const stageChecklistItems = checklistItems.filter(
                 item => item.etapa_id === stage.id
               );
@@ -377,8 +383,21 @@ export const KanbanColumn = memo(function KanbanColumn({
               );
             })}
             
-            {/* Load More Button */}
-            {hasMore && (
+            {/* Load More Button - column pagination */}
+            {sortedEntries.length > visibleCount && (
+              <div className="flex justify-center py-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setVisibleCount(prev => prev + CARDS_PER_PAGE)}
+                >
+                  Mostrar mais ({sortedEntries.length - visibleCount} restantes)
+                </Button>
+              </div>
+            )}
+            
+            {/* Load More Button - server pagination */}
+            {hasMore && sortedEntries.length <= visibleCount && (
               <div className="flex justify-center py-4">
                 <Button
                   variant="outline"
