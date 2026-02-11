@@ -96,16 +96,66 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         .eq('status_inscricao', 'Ativo')
         .order('data_entrada_etapa', { ascending: false });
       
-      // Aplicar paginação apenas se noPagination = false
-      if (!noPagination) {
-        query = query.range(offset, offset + ITEMS_PER_PAGE - 1);
-      }
-
       if (effectivePipelineId && effectivePipelineId.trim() !== '') {
         query = query.eq('pipeline_id', effectivePipelineId);
       }
 
-      const { data, error } = await query;
+      let data: any[] | null = null;
+      let error: any = null;
+
+      if (noPagination) {
+        // ✅ Batching para superar limite de 1000 rows do Supabase
+        const BATCH_SIZE = 1000;
+        const allRows: any[] = [];
+        let batchOffset = 0;
+        let keepFetching = true;
+
+        while (keepFetching) {
+          // Clone the query builder for each batch
+          let batchQuery = supabase
+            .from('lead_pipeline_entries')
+            .select(`
+              *,
+              leads!fk_lead_pipeline_entries_lead(
+                id, nome, email, whatsapp, closer, lead_score, origem
+              ),
+              pipeline_stages!fk_lead_pipeline_entries_stage(nome, ordem, pipeline_id)
+            `)
+            .eq('status_inscricao', 'Ativo')
+            .order('data_entrada_etapa', { ascending: false })
+            .range(batchOffset, batchOffset + BATCH_SIZE - 1);
+
+          if (effectivePipelineId && effectivePipelineId.trim() !== '') {
+            batchQuery = batchQuery.eq('pipeline_id', effectivePipelineId);
+          }
+
+          const result = await batchQuery;
+
+          if (result.error) {
+            error = result.error;
+            keepFetching = false;
+          } else {
+            const rows = result.data || [];
+            allRows.push(...rows);
+            batchOffset += BATCH_SIZE;
+            keepFetching = rows.length === BATCH_SIZE;
+            logger.debug('Batch carregado', {
+              feature: 'lead-pipeline-entries',
+              metadata: { batchOffset, rowsInBatch: rows.length, totalSoFar: allRows.length }
+            });
+          }
+        }
+
+        if (!error) {
+          data = allRows;
+        }
+      } else {
+        // Paginação normal
+        query = query.range(offset, offset + ITEMS_PER_PAGE - 1);
+        const result = await query;
+        data = result.data;
+        error = result.error;
+      }
 
       logger.debug('fetchEntries resultado', {
         feature: 'lead-pipeline-entries',
