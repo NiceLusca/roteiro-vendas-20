@@ -11,20 +11,67 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 // Product ID → Pipeline slug mapping (string keys for new format)
 const PRODUCT_PIPELINE_MAP: Record<string, string> = {
-  // Mentoria Society products
-  '2922489': 'mentoria-society', // Mentoria Society – Aplicação2 – GAB
-  '2921900': 'mentoria-society', // Mentoria Society – Aplicação – GAB
-  '2921896': 'mentoria-society', // Mentoria Society – GAB
-  '2917974': 'mentoria-society', // Mentoria Society – Aplicação – REC
-  '2908090': 'mentoria-society', // Mentoria Society – Aplicação
-  '2893797': 'mentoria-society', // Mentoria Society
-  
-  // Future products can be added here:
-  // '1234567': 'outro-pipeline',
+  '2922489': 'mentoria-society',
+  '2921900': 'mentoria-society',
+  '2921896': 'mentoria-society',
+  '2917974': 'mentoria-society',
+  '2908090': 'mentoria-society',
+  '2893797': 'mentoria-society',
 };
 
+// Helper: fetch all admin user_ids
+async function getAdminUserIds(supabase: any): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('user_roles')
+    .select('user_id')
+    .eq('role', 'admin');
+  
+  if (error || !data) {
+    console.error('Error fetching admin users:', error);
+    return [];
+  }
+  return data.map((r: any) => r.user_id);
+}
+
+// Helper: send notifications to all admins
+async function notifyAdmins(
+  supabase: any,
+  params: {
+    type: string;
+    priority: string;
+    title: string;
+    message: string;
+    leadId?: string;
+    leadName?: string;
+    actionUrl?: string;
+  }
+) {
+  const adminIds = await getAdminUserIds(supabase);
+  if (adminIds.length === 0) {
+    console.log('No admin users found to notify');
+    return;
+  }
+
+  const notifications = adminIds.map((userId: string) => ({
+    user_id: userId,
+    type: params.type,
+    priority: params.priority,
+    title: params.title,
+    message: params.message,
+    lead_id: params.leadId || null,
+    lead_name: params.leadName || null,
+    action_url: params.actionUrl || null,
+  }));
+
+  const { error } = await supabase.from('notifications').insert(notifications);
+  if (error) {
+    console.error('Error creating admin notifications:', error);
+  } else {
+    console.log(`Notified ${adminIds.length} admins: ${params.title}`);
+  }
+}
+
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -33,17 +80,13 @@ serve(async (req) => {
 
   try {
     const payload = await req.json();
-    
     console.log('Webhook received:', JSON.stringify(payload, null, 2));
 
-    // Parse new Eduzz format: { id, event, data: { ... } }
-    // Handle array payload (n8n sends array with body wrapper)
     const rawPayload = Array.isArray(payload) ? payload[0]?.body || payload[0] : payload.body || payload;
-    
     const event = rawPayload.event;
     const data = rawPayload.data;
 
-    // Validate payment is approved (new format uses event or data.status)
+    // Validate payment is approved
     if (event !== 'myeduzz.invoice_paid' && data?.status !== 'paid') {
       console.log(`Ignoring webhook: event=${event}, status=${data?.status} (not approved payment)`);
       return new Response(
@@ -52,7 +95,7 @@ serve(async (req) => {
       );
     }
 
-    // Iterate over items[] to find first product mapped to a pipeline
+    // Find matching product
     const items = data?.items || [];
     let matchedProduct = null;
     let targetPipelineSlug: string | null = null;
@@ -69,39 +112,26 @@ serve(async (req) => {
 
     if (!targetPipelineSlug || !matchedProduct) {
       const productIds = items.map((i: any) => i.productId).join(', ');
-      console.log(`Ignoring webhook: no products in items[] match configured pipelines. Products: [${productIds}]`);
+      console.log(`Ignoring webhook: no products match configured pipelines. Products: [${productIds}]`);
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: `Ignored: products [${productIds}] not configured for any pipeline` 
-        }),
+        JSON.stringify({ success: true, message: `Ignored: products [${productIds}] not configured` }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Extract buyer data from data.buyer
+    // Extract buyer data
     const buyer = data?.buyer || {};
     const customerName = buyer.name?.trim() || 'Nome não informado';
     const customerEmail = buyer.email?.trim()?.toLowerCase() || null;
     const customerPhone = (buyer.cellphone || buyer.phone || '').replace(/\D/g, '') || null;
     
-    // Extract transaction details
     const productName = matchedProduct.name || 'Produto Eduzz';
     const transValue = data?.price?.value || data?.price?.paid?.value || null;
     const transCod = data?.transaction?.id || rawPayload.id || null;
 
-    console.log('Customer data extracted:', {
-      name: customerName,
-      email: customerEmail,
-      phone: customerPhone,
-      product: productName,
-      productId: matchedProduct.productId,
-      value: transValue,
-      transCod,
-      targetPipeline: targetPipelineSlug
-    });
+    console.log('Customer data:', { name: customerName, email: customerEmail, phone: customerPhone, product: productName, value: transValue, transCod, targetPipeline: targetPipelineSlug });
 
-    // Search for existing lead by whatsapp OR email
+    // Search for existing lead
     let existingLead = null;
 
     if (customerPhone) {
@@ -110,11 +140,7 @@ serve(async (req) => {
         .select('id, nome, email, whatsapp, observacoes')
         .eq('whatsapp', customerPhone)
         .maybeSingle();
-      
-      if (leadByPhone) {
-        existingLead = leadByPhone;
-        console.log('Found existing lead by phone:', existingLead.id);
-      }
+      if (leadByPhone) { existingLead = leadByPhone; console.log('Found lead by phone:', existingLead.id); }
     }
 
     if (!existingLead && customerEmail) {
@@ -123,78 +149,40 @@ serve(async (req) => {
         .select('id, nome, email, whatsapp, observacoes')
         .eq('email', customerEmail)
         .maybeSingle();
-      
-      if (leadByEmail) {
-        existingLead = leadByEmail;
-        console.log('Found existing lead by email:', existingLead.id);
-      }
+      if (leadByEmail) { existingLead = leadByEmail; console.log('Found lead by email:', existingLead.id); }
     }
 
     let leadId: string;
 
     if (existingLead) {
-      // Update existing lead
-      const updateData: Record<string, any> = {
-        updated_at: new Date().toISOString(),
-      };
+      const updateData: Record<string, any> = { updated_at: new Date().toISOString() };
+      if (!existingLead.whatsapp && customerPhone) updateData.whatsapp = customerPhone;
+      if (!existingLead.email && customerEmail) updateData.email = customerEmail;
+      if (transValue) updateData.valor_lead = transValue;
 
-      // Only update fields that are empty or add new info
-      if (!existingLead.whatsapp && customerPhone) {
-        updateData.whatsapp = customerPhone;
-      }
-      if (!existingLead.email && customerEmail) {
-        updateData.email = customerEmail;
-      }
-      if (transValue) {
-        updateData.valor_lead = transValue;
-      }
-
-      // Add purchase info to observacoes
       const purchaseNote = `[COMPRA] ${new Date().toISOString().split('T')[0]} - ${productName} - R$ ${transValue?.toFixed(2) || '0.00'} - Trans: ${transCod}`;
-      updateData.observacoes = existingLead.observacoes 
-        ? `${existingLead.observacoes}\n${purchaseNote}`
-        : purchaseNote;
+      updateData.observacoes = existingLead.observacoes ? `${existingLead.observacoes}\n${purchaseNote}` : purchaseNote;
 
-      const { error: updateError } = await supabase
-        .from('leads')
-        .update(updateData)
-        .eq('id', existingLead.id);
-
-      if (updateError) {
-        console.error('Error updating lead:', updateError);
-        throw updateError;
-      }
-
+      const { error: updateError } = await supabase.from('leads').update(updateData).eq('id', existingLead.id);
+      if (updateError) { console.error('Error updating lead:', updateError); throw updateError; }
       leadId = existingLead.id;
       console.log('Lead updated:', leadId);
     } else {
-      // Create new lead
-      const newLeadData = {
-        nome: customerName,
-        email: customerEmail,
-        whatsapp: customerPhone,
-        origem: productName,
-        valor_lead: transValue,
-        status_geral: 'lead',
-        observacoes: `[COMPRA] ${new Date().toISOString().split('T')[0]} - ${productName} - R$ ${transValue?.toFixed(2) || '0.00'} - Trans: ${transCod}`,
-      };
-
       const { data: newLead, error: insertError } = await supabase
         .from('leads')
-        .insert(newLeadData)
+        .insert({
+          nome: customerName, email: customerEmail, whatsapp: customerPhone,
+          origem: productName, valor_lead: transValue, status_geral: 'lead',
+          observacoes: `[COMPRA] ${new Date().toISOString().split('T')[0]} - ${productName} - R$ ${transValue?.toFixed(2) || '0.00'} - Trans: ${transCod}`,
+        })
         .select('id')
         .single();
-
-      if (insertError) {
-        console.error('Error creating lead:', insertError);
-        throw insertError;
-      }
-
+      if (insertError) { console.error('Error creating lead:', insertError); throw insertError; }
       leadId = newLead.id;
       console.log('New lead created:', leadId);
     }
 
-    // Get target pipeline based on product mapping
+    // Get target pipeline
     const { data: pipeline, error: pipelineError } = await supabase
       .from('pipelines')
       .select('id, nome')
@@ -207,9 +195,7 @@ serve(async (req) => {
       throw new Error(`Pipeline "${targetPipelineSlug}" not found`);
     }
 
-    console.log('Target pipeline:', pipeline.id, pipeline.nome);
-
-    // Get first stage of pipeline
+    // Get first stage
     const { data: firstStage, error: stageError } = await supabase
       .from('pipeline_stages')
       .select('id, nome')
@@ -220,13 +206,11 @@ serve(async (req) => {
       .maybeSingle();
 
     if (stageError || !firstStage) {
-      console.error('First stage not found for pipeline:', pipeline.id, stageError);
+      console.error('First stage not found:', pipeline.id, stageError);
       throw new Error('First stage not found for pipeline');
     }
 
-    console.log('First stage:', firstStage.id, firstStage.nome);
-
-    // Check if lead is already enrolled in this pipeline
+    // Check if already enrolled
     const { data: existingEntry } = await supabase
       .from('lead_pipeline_entries')
       .select('id')
@@ -236,14 +220,21 @@ serve(async (req) => {
       .maybeSingle();
 
     if (existingEntry) {
-      console.log('Lead already enrolled in pipeline:', existingEntry.id);
+      console.log('Lead already enrolled:', existingEntry.id);
+
+      // Notify admins: already enrolled
+      await notifyAdmins(supabase, {
+        type: 'automation',
+        priority: 'low',
+        title: 'Compra Eduzz - Lead já inscrito',
+        message: `${customerName} comprou ${productName} - R$ ${transValue?.toFixed(2) || '0.00'}, mas já está inscrito no pipeline ${pipeline.nome}.`,
+        leadId,
+        leadName: customerName,
+        actionUrl: `/pipelines?lead=${leadId}`,
+      });
+
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Lead already enrolled in pipeline',
-          lead_id: leadId,
-          entry_id: existingEntry.id
-        }),
+        JSON.stringify({ success: true, message: 'Lead already enrolled in pipeline', lead_id: leadId, entry_id: existingEntry.id }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -253,65 +244,55 @@ serve(async (req) => {
     const { data: newEntry, error: entryError } = await supabase
       .from('lead_pipeline_entries')
       .insert({
-        lead_id: leadId,
-        pipeline_id: pipeline.id,
-        etapa_atual_id: firstStage.id,
-        status_inscricao: 'Ativo',
-        data_inscricao: now,
-        data_entrada_etapa: now,
-        saude_etapa: 'Verde',
+        lead_id: leadId, pipeline_id: pipeline.id, etapa_atual_id: firstStage.id,
+        status_inscricao: 'Ativo', data_inscricao: now, data_entrada_etapa: now, saude_etapa: 'Verde',
       })
       .select('id')
       .single();
 
-    if (entryError) {
-      console.error('Error enrolling lead in pipeline:', entryError);
-      throw entryError;
-    }
-
-    console.log('Lead enrolled in pipeline:', newEntry.id);
+    if (entryError) { console.error('Error enrolling lead:', entryError); throw entryError; }
+    console.log('Lead enrolled:', newEntry.id);
 
     // Log activity
-    await supabase
-      .from('lead_activity_log')
-      .insert({
-        lead_id: leadId,
-        pipeline_entry_id: newEntry.id,
-        activity_type: 'pipeline_inscription',
-        details: {
-          pipeline_name: pipeline.nome,
-          stage_name: firstStage.nome,
-          source: 'eduzz_webhook',
-          product: productName,
-          product_id: matchedProduct.productId,
-          trans_cod: transCod,
-          value: transValue
-        }
-      });
+    await supabase.from('lead_activity_log').insert({
+      lead_id: leadId, pipeline_entry_id: newEntry.id, activity_type: 'pipeline_inscription',
+      details: { pipeline_name: pipeline.nome, stage_name: firstStage.nome, source: 'eduzz_webhook', product: productName, product_id: matchedProduct.productId, trans_cod: transCod, value: transValue },
+    });
+
+    // Notify admins: success
+    await notifyAdmins(supabase, {
+      type: 'automation',
+      priority: 'medium',
+      title: 'Nova Compra Eduzz',
+      message: `${customerName} comprou ${productName} - R$ ${transValue?.toFixed(2) || '0.00'}. Lead inscrito no pipeline ${pipeline.nome}.`,
+      leadId,
+      leadName: customerName,
+      actionUrl: `/pipelines?lead=${leadId}`,
+    });
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: 'Lead created/updated and enrolled in pipeline',
-        lead_id: leadId,
-        entry_id: newEntry.id,
-        pipeline: pipeline.nome,
-        stage: firstStage.nome
-      }),
+      JSON.stringify({ success: true, message: 'Lead created/updated and enrolled', lead_id: leadId, entry_id: newEntry.id, pipeline: pipeline.nome, stage: firstStage.nome }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('Webhook processing error:', error);
+
+    // Notify admins: error
+    try {
+      await notifyAdmins(supabase, {
+        type: 'automation',
+        priority: 'critical',
+        title: 'Erro no Webhook Eduzz',
+        message: `Erro ao processar compra: ${error.message || 'Erro interno'}`,
+      });
+    } catch (notifError) {
+      console.error('Failed to send error notification:', notifError);
+    }
+
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message || 'Internal server error' 
-      }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      JSON.stringify({ success: false, error: error.message || 'Internal server error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
