@@ -1,81 +1,53 @@
 
-# Otimizacao: Limite de Cards por Coluna no Kanban
 
 ## Problema
 
-O pipeline "Pos-Venda" tem 1000+ leads concentrados em uma unica coluna ("Enviar mensagem de texto"). Todos os 1000 cards sao renderizados simultaneamente no DOM, causando:
+O webhook da Eduzz processa compras e inscreve leads no pipeline, mas tudo acontece silenciosamente. Os admins não recebem nenhuma notificação no CRM quando uma nova compra é processada, um lead é criado, ou quando ocorre um erro.
 
-- Lentidao ao abrir o pipeline
-- Scroll pesado e travamentos
-- Uso excessivo de memoria (cada card tem calculos de SLA, tooltips, badges, etc.)
+## Solução
 
-## Solucao
+Adicionar notificações in-app para todos os admins sempre que o webhook processar uma compra com sucesso ou falhar. Isso usa a tabela `notifications` que já existe no sistema.
 
-Implementar **paginacao a nivel de coluna** (lazy rendering): cada coluna mostra inicialmente ate **50 cards**, com um botao "Mostrar mais" no final para carregar mais 50 por vez. Os dados ja estao todos em memoria -- a otimizacao e puramente de renderizacao.
+## Mudanças
+
+### 1. Edge Function `eduzz-webhook/index.ts`
+
+Após processar com sucesso (lead criado/atualizado + inscrito no pipeline), inserir uma notificação na tabela `notifications` para cada admin:
+
+- Buscar todos os `user_id` da tabela `user_roles` onde `role = 'admin'`
+- Inserir uma notificação para cada admin com:
+  - **type**: `'automation'`
+  - **priority**: `'medium'`
+  - **title**: `'Nova Compra Eduzz'`
+  - **message**: `"[Nome do cliente] comprou [Produto] - R$ [valor]. Lead inscrito no pipeline [nome pipeline]."`
+  - **lead_id**: ID do lead
+  - **lead_name**: nome do cliente
+  - **action_url**: `/pipelines?lead=[leadId]`
+
+- Também notificar em caso de **erro** no processamento:
+  - **type**: `'automation'`
+  - **priority**: `'critical'`
+  - **title**: `'Erro no Webhook Eduzz'`
+  - **message**: descrição do erro
+
+- Notificar quando lead **já está inscrito** no pipeline (para visibilidade):
+  - **priority**: `'low'`
+  - **title**: `'Compra Eduzz - Lead já inscrito'`
+
+### 2. Cenários cobertos
 
 ```text
-Antes:                          Depois:
-┌─────────────────┐            ┌─────────────────┐
-│ Enviar msg  1000│            │ Enviar msg  1000│
-├─────────────────┤            ├─────────────────┤
-│ Card 1          │            │ Card 1          │
-│ Card 2          │            │ Card 2          │
-│ ...             │            │ ...             │
-│ Card 999        │            │ Card 50         │
-│ Card 1000       │            │                 │
-│                 │            │ [Mostrar mais]  │
-│ (1000 no DOM)   │            │ 950 restantes   │
-└─────────────────┘            └─────────────────┘
+Compra processada com sucesso  → Notificação "medium" para admins
+Lead já inscrito no pipeline   → Notificação "low" para admins  
+Erro no processamento          → Notificação "critical" para admins
+Produto não mapeado            → Sem notificação (não é relevante)
+Evento não é compra (ping)     → Sem notificação
 ```
 
-## Alteracoes
+### Detalhes técnicos
 
-### 1. KanbanColumn.tsx -- Limite de renderizacao por coluna
+- A edge function já usa `SUPABASE_SERVICE_ROLE_KEY`, então o insert na tabela `notifications` funciona sem problemas de RLS
+- Nenhuma mudança de banco necessária — a tabela `notifications` já tem todos os campos necessários
+- O `NotificationCenter` existente no frontend já exibe essas notificações em tempo real
+- São 7 admins no sistema atualmente, então serão 7 inserts por compra (batch insert)
 
-Adicionar estado interno `visibleCount` iniciando em 50. Renderizar apenas `sortedEntries.slice(0, visibleCount)` ao inves de todos. Exibir um botao "Mostrar mais (X restantes)" quando houver mais cards alem do limite. O botao incrementa `visibleCount` em 50 a cada clique.
-
-### 2. KanbanColumn.tsx -- Resetar ao trocar de pipeline
-
-O `visibleCount` reseta para 50 quando `stage.id` muda (via useEffect), garantindo que ao navegar entre pipelines o limite reinicia.
-
-## Detalhes tecnicos
-
-```typescript
-// Dentro de KanbanColumn
-const CARDS_PER_PAGE = 50;
-const [visibleCount, setVisibleCount] = useState(CARDS_PER_PAGE);
-
-// Reset quando muda a coluna
-useEffect(() => {
-  setVisibleCount(CARDS_PER_PAGE);
-}, [stage.id]);
-
-const visibleEntries = sortedEntries.slice(0, visibleCount);
-const hasMoreInColumn = sortedEntries.length > visibleCount;
-const remaining = sortedEntries.length - visibleCount;
-
-// No JSX, renderizar visibleEntries ao inves de sortedEntries
-// E ao final:
-{hasMoreInColumn && (
-  <Button onClick={() => setVisibleCount(prev => prev + CARDS_PER_PAGE)}>
-    Mostrar mais ({remaining} restantes)
-  </Button>
-)}
-```
-
-## Impacto
-
-| Metrica | Antes | Depois |
-|---------|-------|--------|
-| Cards no DOM (1a coluna) | 1000 | 50 |
-| Tempo de render | ~3-5s | < 500ms |
-| Memoria | Alta | -95% |
-| Funcionalidades afetadas | Nenhuma | Nenhuma |
-
-## Riscos
-
-Nenhum. Os dados continuam todos carregados em memoria. O drag-and-drop funciona normalmente porque opera sobre o entryId, nao sobre a posicao visual. O contador no header da coluna continua mostrando o total real (1000). A busca e os filtros continuam funcionando sobre todos os dados.
-
-## Arquivo modificado
-
-- `src/components/kanban/KanbanColumn.tsx` (unica alteracao)
