@@ -799,7 +799,7 @@ function PipelinesContent({ slug }: { slug: string }) {
           <div className="relative w-48">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome..."
+              placeholder="Buscar por nome, telefone, e-mail..."
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-8 h-9"
