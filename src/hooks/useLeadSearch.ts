@@ -38,7 +38,7 @@ export function useLeadSearch({ searchTerm = '', limit = 50, enabled = true }: U
         .limit(limit);
 
       if (searchTerm.trim()) {
-        query = query.ilike('nome', `%${searchTerm}%`);
+        query = query.or(`nome.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,whatsapp.ilike.%${searchTerm}%`);
       }
 
       const { data, error } = await query;

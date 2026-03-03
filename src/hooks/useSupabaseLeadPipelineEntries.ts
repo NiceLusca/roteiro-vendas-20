@@ -633,7 +633,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         `)
         .eq('status_inscricao', 'Ativo')
         .eq('pipeline_id', targetPipelineId)
-        .ilike('leads.nome', `%${searchTerm}%`)
+        .or(`nome.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,whatsapp.ilike.%${searchTerm}%,observacoes.ilike.%${searchTerm}%`, { referencedTable: 'leads' })
         .order('data_entrada_etapa', { ascending: false });
       
       if (error) {
