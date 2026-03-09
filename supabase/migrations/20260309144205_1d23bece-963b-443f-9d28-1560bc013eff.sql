@@ -1,0 +1,1 @@
+UPDATE leads SET updated_at = '2026-03-06T22:30:00+00'::timestamptz WHERE id = '47b9aa11-e95a-422f-8d6b-8c65a9fc0d6f';
