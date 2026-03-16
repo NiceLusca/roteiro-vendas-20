@@ -82,6 +82,7 @@ export function LeadsCRMTable({
 }: LeadsCRMTableProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const { saveLead } = useLeadSave();
+  const { logActivity } = useLeadActivityLog();
 
   const leadIds = leads.map(l => l.id);
   const { dealsMap, appointmentsMap, pipelinesMap } = useLeadsCRMData({
@@ -89,14 +90,38 @@ export function LeadsCRMTable({
     enabled: leads.length > 0,
   });
 
-  const handleInlineSave = useCallback(async (leadId: string, field: string, value: string) => {
+  // Field label map for activity log
+  const fieldLabels: Record<string, string> = useMemo(() => ({
+    status_geral: 'Status',
+    origem: 'Origem',
+    closer: 'Closer',
+    lead_score: 'Score',
+  }), []);
+
+  const handleInlineSave = useCallback(async (leadId: string, field: string, value: string, oldValue?: string | number | null) => {
     const payload: any = { id: leadId, [field]: value || null };
     if (field === 'lead_score') {
       payload[field] = value ? parseInt(value, 10) : 0;
     }
     await saveLead(payload, { silent: true });
+    
+    // Log the change in activity history
+    const oldDisplay = oldValue != null && String(oldValue).trim() !== '' ? String(oldValue) : '(vazio)';
+    const newDisplay = value.trim() !== '' ? value : '(vazio)';
+    logActivity({
+      leadId,
+      activityType: 'lead_updated',
+      details: {
+        field,
+        field_label: fieldLabels[field] || field,
+        old_value: oldDisplay,
+        new_value: newDisplay,
+        source: 'crm_table_inline',
+      },
+    });
+    
     onUpdate?.();
-  }, [saveLead, onUpdate]);
+  }, [saveLead, onUpdate, logActivity, fieldLabels]);
 
   return (
     <div className="space-y-3">
