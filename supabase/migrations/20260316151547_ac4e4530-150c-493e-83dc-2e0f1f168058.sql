@@ -1,0 +1,1 @@
+UPDATE lead_pipeline_entries SET status_inscricao = 'Ativo' WHERE status_inscricao = 'ativo';
