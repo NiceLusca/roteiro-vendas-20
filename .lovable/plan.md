@@ -2,68 +2,38 @@
 
 ## Problema
 
-A página de Leads atual exibe cards individuais — útil para ações rápidas, mas ineficiente para visualizar e comparar dados em massa como numa planilha. A planilha CSV tinha colunas como Data, Nome, Email, WhatsApp, Origem, Status, Closer, Valor da Venda, Recorrente, etc. O CRM precisa substituir essa visão.
+A busca no pipeline usa `.ilike('leads.nome', ...)` — só pesquisa pelo campo `nome`. Se o usuário digitar um telefone, e-mail ou CPF, não encontra nada.
 
 ## Solução
 
-Criar uma nova aba **"Tabela CRM"** na página de Leads, com uma tabela densa e scrollável que mostra todas as informações relevantes do lead num formato de planilha. Os dados relacionados (vendas, agendamentos, pipelines) são carregados sob demanda quando a aba é selecionada.
+Modificar a busca server-side para pesquisar em múltiplos campos simultaneamente usando `.or()` do Supabase, cobrindo: `nome`, `email`, `whatsapp` e `observacoes` (onde CPF costuma estar armazenado).
 
 ## Mudanças
 
-### 1. Novo componente `src/components/leads/LeadsCRMTable.tsx`
+### 1. `src/hooks/useSupabaseLeadPipelineEntries.ts` — função `searchLeads`
 
-Tabela com as seguintes colunas (baseadas na planilha original + dados do CRM):
+Substituir a linha:
+```typescript
+.ilike('leads.nome', `%${searchTerm}%`)
+```
 
-| Coluna | Fonte |
-|--------|-------|
-| Nome | `leads.nome` |
-| WhatsApp | `leads.whatsapp` |
-| E-mail | `leads.email` |
-| Origem | `leads.origem` |
-| Status | `leads.status_geral` |
-| Closer | `leads.closer` (ou responsável primário) |
-| Pipelines | `lead_pipeline_entries` (badges com nome do pipeline + etapa atual) |
-| Próx. Sessão | `appointments` (próximo agendamento futuro) |
-| Último Atendimento | `appointments` (último realizado) |
-| Valor Venda | `deals.valor_proposto` (soma de todas as vendas ganhas) |
-| Recorrente | `deals.recorrente` (badge sim/não) |
-| Nº Vendas | Contagem de deals com status 'ganho' |
-| Score | `leads.lead_score` |
-| Tags | `lead_tag_assignments` |
-| Criado em | `leads.created_at` |
+Por uma query que use `.or()` no join dos leads para buscar em múltiplos campos:
+```typescript
+.or(`nome.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,whatsapp.ilike.%${searchTerm}%,observacoes.ilike.%${searchTerm}%`, { referencedTable: 'leads' })
+```
 
-Características:
-- Tabela com `overflow-x-auto` para scroll horizontal
-- Headers fixos com sticky positioning
-- Linhas clicáveis que abrem o LeadEditDialog (reusa o que já existe no pipeline)
-- Texto compacto (`text-xs`) para caber mais dados
-- Colunas com largura fixa para manter alinhamento
+Isso permite que o usuário pesquise por nome, telefone, e-mail ou qualquer dado nas observações (como CPF).
 
-### 2. Novo hook `src/hooks/useLeadsCRMData.ts`
+### 2. `src/pages/Pipelines.tsx` — placeholder do input
 
-Hook dedicado que carrega os dados enriquecidos para a tabela, fazendo queries otimizadas:
-- Busca leads paginados (reusa a mesma query do `useOptimizedLeads`)
-- Em paralelo, busca: deals, próximos agendamentos, pipeline entries (com nomes de pipeline e etapa) para os lead IDs da página atual
-- Retorna maps por `lead_id` para cada tipo de dado
-- Só carrega quando a aba "Tabela CRM" está ativa (`enabled` flag)
+Atualizar o placeholder de `"Buscar por nome..."` para `"Buscar por nome, telefone, e-mail..."` para indicar ao usuário que a busca é mais abrangente.
 
-### 3. Modificação em `src/pages/Leads.tsx`
+### 3. `src/hooks/useLeadSearch.ts` — mesma melhoria
 
-- Adicionar nova aba "Tabela CRM" nas Tabs existentes (ao lado de "Todos os Leads" e "Duplicatas")
-- Renderizar `<LeadsCRMTable>` no `TabsContent` da nova aba
-- Passar os mesmos filtros (search, status, score, tag) e paginação
-- Lazy load: o hook só dispara queries quando `activeTab === 'table'`
+Aplicar a mesma lógica de busca multi-campo neste hook também, que é usado em outros selects/autocompletes:
+```typescript
+.or(`nome.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,whatsapp.ilike.%${searchTerm}%`)
+```
 
-### 4. Clique na linha
-
-- Ao clicar numa linha, abre o `LeadEditDialog` existente (o mesmo usado no pipeline/kanban)
-- Permite editar todas as informações sem sair da visão de tabela
-
-## Performance
-
-- Dados relacionados carregados apenas quando a aba está ativa
-- Paginação mantida (50 leads por página)
-- Queries paralelas com `Promise.all` para deals + appointments + entries
-- `staleTime: 30s` para evitar re-fetches desnecessários
-- Nenhum impacto na aba de cards existente
+Substituindo o `.ilike('nome', ...)` atual.
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -41,8 +41,10 @@ import {
   GitBranch,
   Loader2,
   Upload,
-  AlertTriangle
+  AlertTriangle,
+  Table as TableIcon
 } from 'lucide-react';
+import { LeadsCRMTable } from '@/components/leads/LeadsCRMTable';
 
 function LeadsContent() {
   const { toast } = useToast();
@@ -476,6 +478,10 @@ function LeadsContent() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList>
               <TabsTrigger value="all">Todos os Leads</TabsTrigger>
+              <TabsTrigger value="table" className="gap-2">
+                <TableIcon className="h-4 w-4" />
+                Tabela CRM
+              </TabsTrigger>
               <TabsTrigger value="duplicates" className="gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 Possíveis Duplicatas
@@ -810,6 +816,19 @@ function LeadsContent() {
                   ))}
                 </div>
               )}
+            </TabsContent>
+
+            {/* Tab: Tabela CRM */}
+            <TabsContent value="table" className="mt-4">
+              <LeadsCRMTable
+                leads={filteredLeads}
+                totalCount={totalCount}
+                totalPages={totalPages}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                isLoading={leadsLoading}
+                onUpdate={refetch}
+              />
             </TabsContent>
           </Tabs>
 

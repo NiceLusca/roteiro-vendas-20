@@ -1,0 +1,241 @@
+import { useState } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Lead } from '@/types/crm';
+import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
+import { useLeadsCRMData } from '@/hooks/useLeadsCRMData';
+import { formatWhatsApp } from '@/utils/formatters';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { ChevronLeft, ChevronRight, Table as TableIcon } from 'lucide-react';
+
+interface LeadsCRMTableProps {
+  leads: Lead[];
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
+  onPageChange: (page: number) => void;
+  isLoading: boolean;
+  onUpdate?: () => void;
+}
+
+const statusLabels: Record<string, string> = {
+  lead: 'Lead',
+  qualificado: 'Qualificado',
+  reuniao_marcada: 'Reunião Marcada',
+  em_negociacao: 'Em Negociação',
+  cliente: 'Cliente',
+  perdido: 'Perdido',
+};
+
+const statusColors: Record<string, string> = {
+  lead: 'bg-muted text-muted-foreground',
+  qualificado: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
+  reuniao_marcada: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
+  em_negociacao: 'bg-purple-500/10 text-purple-700 dark:text-purple-400',
+  cliente: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
+  perdido: 'bg-destructive/10 text-destructive',
+};
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+}
+
+function formatShortDate(dateStr: string | null) {
+  if (!dateStr) return '—';
+  try {
+    return format(new Date(dateStr), 'dd/MM/yy HH:mm', { locale: ptBR });
+  } catch {
+    return '—';
+  }
+}
+
+export function LeadsCRMTable({
+  leads,
+  totalCount,
+  totalPages,
+  currentPage,
+  onPageChange,
+  isLoading,
+  onUpdate,
+}: LeadsCRMTableProps) {
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+
+  const leadIds = leads.map(l => l.id);
+  const { dealsMap, appointmentsMap, pipelinesMap } = useLeadsCRMData({
+    leadIds,
+    enabled: leads.length > 0,
+  });
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {totalCount} lead{totalCount !== 1 ? 's' : ''} encontrado{totalCount !== 1 ? 's' : ''}
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage <= 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            {currentPage} / {totalPages || 1}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="border rounded-lg overflow-hidden">
+        <div className="overflow-x-auto max-h-[calc(100vh-340px)]">
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
+              <TableRow>
+                <TableHead className="min-w-[180px] font-semibold">Nome</TableHead>
+                <TableHead className="min-w-[130px]">WhatsApp</TableHead>
+                <TableHead className="min-w-[180px]">E-mail</TableHead>
+                <TableHead className="min-w-[120px]">Origem</TableHead>
+                <TableHead className="min-w-[120px]">Status</TableHead>
+                <TableHead className="min-w-[100px]">Closer</TableHead>
+                <TableHead className="min-w-[200px]">Pipelines</TableHead>
+                <TableHead className="min-w-[130px]">Próx. Sessão</TableHead>
+                <TableHead className="min-w-[130px]">Último Atend.</TableHead>
+                <TableHead className="min-w-[110px] text-right">Valor Vendas</TableHead>
+                <TableHead className="min-w-[80px] text-center">Recorr.</TableHead>
+                <TableHead className="min-w-[70px] text-center">Nº Vendas</TableHead>
+                <TableHead className="min-w-[60px] text-center">Score</TableHead>
+                <TableHead className="min-w-[150px]">Tags</TableHead>
+                <TableHead className="min-w-[100px]">Criado em</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading && leads.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={15} className="text-center py-12 text-muted-foreground">
+                    Carregando...
+                  </TableCell>
+                </TableRow>
+              ) : leads.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={15} className="text-center py-12 text-muted-foreground">
+                    <TableIcon className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                    Nenhum lead encontrado
+                  </TableCell>
+                </TableRow>
+              ) : (
+                leads.map(lead => {
+                  const deals = dealsMap[lead.id];
+                  const apts = appointmentsMap[lead.id];
+                  const pipes = pipelinesMap[lead.id];
+
+                  return (
+                    <TableRow
+                      key={lead.id}
+                      className="cursor-pointer hover:bg-accent/50 text-xs"
+                      onClick={() => setSelectedLead(lead)}
+                    >
+                      <TableCell className="font-medium text-sm">{lead.nome}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {lead.whatsapp ? formatWhatsApp(lead.whatsapp) : '—'}
+                      </TableCell>
+                      <TableCell className="text-xs truncate max-w-[200px]">
+                        {lead.email || '—'}
+                      </TableCell>
+                      <TableCell className="text-xs">{lead.origem || '—'}</TableCell>
+                      <TableCell>
+                        {lead.status_geral ? (
+                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusColors[lead.status_geral] || ''}`}>
+                            {statusLabels[lead.status_geral] || lead.status_geral}
+                          </Badge>
+                        ) : '—'}
+                      </TableCell>
+                      <TableCell className="text-xs">{lead.closer || '—'}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {pipes && pipes.length > 0 ? pipes.map((p, i) => (
+                            <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0 whitespace-nowrap">
+                              {p.pipelineName} → {p.stageName}
+                            </Badge>
+                          )) : <span className="text-muted-foreground">—</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">
+                        {formatShortDate(apts?.nextAppointment || null)}
+                      </TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">
+                        {formatShortDate(apts?.lastAppointment || null)}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-medium">
+                        {deals && deals.totalValue > 0 ? formatCurrency(deals.totalValue) : '—'}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {deals?.hasRecorrente ? (
+                          <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] px-1.5 py-0">Sim</Badge>
+                        ) : deals && deals.dealCount > 0 ? (
+                          <span className="text-muted-foreground text-[10px]">Não</span>
+                        ) : '—'}
+                      </TableCell>
+                      <TableCell className="text-center text-xs">
+                        {deals && deals.dealCount > 0 ? deals.dealCount : '—'}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {lead.lead_score != null && lead.lead_score > 0 ? (
+                          <span className="text-xs font-semibold">{lead.lead_score}</span>
+                        ) : '—'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {(lead as any).tags?.length > 0
+                            ? (lead as any).tags.map((tag: any) => (
+                                <Badge key={tag.id} variant="outline" className="text-[10px] px-1.5 py-0" style={{ borderColor: tag.cor || undefined, color: tag.cor || undefined }}>
+                                  {tag.nome}
+                                </Badge>
+                              ))
+                            : <span className="text-muted-foreground">—</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs whitespace-nowrap">
+                        {lead.created_at ? format(new Date(lead.created_at), 'dd/MM/yy', { locale: ptBR }) : '—'}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* Lead Edit Dialog */}
+      {selectedLead && (
+        <LeadEditDialog
+          open={!!selectedLead}
+          onOpenChange={(open) => { if (!open) setSelectedLead(null); }}
+          lead={selectedLead}
+          onUpdate={() => {
+            onUpdate?.();
+          }}
+          displayConfig={{ show_appointments: true, show_deals: true, show_orders: false, card_fields: [], table_columns: [] }}
+        />
+      )}
+    </div>
+  );
+}
