@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 
 interface SecurityHeadersProps {
@@ -11,7 +10,8 @@ export function SecurityHeaders({
   environment = 'production' 
 }: SecurityHeadersProps) {
   
-  // Content Security Policy
+  // CSP only applied in development where unsafe-inline is acceptable
+  // In production, CSP should be configured at the CDN/server level with proper nonces
   const csp = environment === 'development'
     ? `default-src 'self' 'unsafe-inline' 'unsafe-eval' https://szuqdfakikbotidnxxvw.supabase.co wss://szuqdfakikbotidnxxvw.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com data: blob:; 
        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://szuqdfakikbotidnxxvw.supabase.co; 
@@ -19,39 +19,12 @@ export function SecurityHeaders({
        font-src 'self' https://fonts.gstatic.com data:; 
        img-src 'self' data: blob: https:; 
        connect-src 'self' https://szuqdfakikbotidnxxvw.supabase.co wss://szuqdfakikbotidnxxvw.supabase.co;`
-    : `default-src 'self'; 
-       script-src 'self' ${nonce ? `'nonce-${nonce}'` : "'strict-dynamic'"}; 
-       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
-       font-src 'self' https://fonts.gstatic.com data:; 
-       img-src 'self' data: blob: https:; 
-       connect-src 'self' https://szuqdfakikbotidnxxvw.supabase.co wss://szuqdfakikbotidnxxvw.supabase.co; 
-       frame-ancestors 'none'; 
-       base-uri 'self'; 
-       form-action 'self';`;
-
-  useEffect(() => {
-    // Verificar se estamos em produção para aplicar headers mais rigorosos
-    if (environment === 'production' && typeof window !== 'undefined') {
-      // Log de configurações de segurança aplicadas
-      console.log('🔒 Headers de segurança aplicados:', {
-        csp: 'Content Security Policy ativo',
-        hsts: 'HTTP Strict Transport Security ativo',
-        nosniff: 'X-Content-Type-Options: nosniff',
-        xss: 'X-XSS-Protection ativo',
-        frameOptions: 'X-Frame-Options: DENY'
-      });
-    }
-  }, [environment]);
+    : null;
 
   return (
     <Helmet>
-      {/* Content Security Policy */}
-      <meta httpEquiv="Content-Security-Policy" content={csp} />
-      
-      {/* HTTP Strict Transport Security (apenas HTTPS) */}
-      {environment === 'production' && (
-        <meta httpEquiv="Strict-Transport-Security" content="max-age=31536000; includeSubDomains; preload" />
-      )}
+      {/* CSP only in development - production should use server-side headers */}
+      {csp && <meta httpEquiv="Content-Security-Policy" content={csp} />}
       
       {/* X-Content-Type-Options */}
       <meta httpEquiv="X-Content-Type-Options" content="nosniff" />
@@ -64,17 +37,6 @@ export function SecurityHeaders({
       
       {/* Referrer Policy */}
       <meta name="referrer" content="strict-origin-when-cross-origin" />
-      
-      {/* Permissions Policy */}
-      <meta 
-        httpEquiv="Permissions-Policy" 
-        content="camera=(), microphone=(), geolocation=(), interest-cohort=()" 
-      />
-      
-      {/* Cross-Origin Policies */}
-      <meta httpEquiv="Cross-Origin-Embedder-Policy" content="require-corp" />
-      <meta httpEquiv="Cross-Origin-Opener-Policy" content="same-origin" />
-      <meta httpEquiv="Cross-Origin-Resource-Policy" content="same-origin" />
     </Helmet>
   );
 }

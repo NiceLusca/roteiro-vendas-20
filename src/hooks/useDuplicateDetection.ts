@@ -402,7 +402,7 @@ export function useDuplicateDetection() {
     try {
       const { error } = await supabase
         .from('lead_pipeline_entries')
-        .update({ status_inscricao: 'inativo' })
+        .update({ status_inscricao: 'Arquivado' })
         .eq('lead_id', leadId);
 
       if (error) throw error;

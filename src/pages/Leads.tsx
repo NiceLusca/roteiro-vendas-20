@@ -177,8 +177,8 @@ function LeadsContent() {
     };
   }, []);
 
-  // Memoize filtered leads to prevent unnecessary re-renders
-  const filteredLeads = useMemo(() => leads, [leads]);
+  // leads are already optimized via useOptimizedLeads
+  const filteredLeads = leads;
 
   // Memoized handlers to prevent re-renders
   const handleCreateLead = useCallback(() => {
