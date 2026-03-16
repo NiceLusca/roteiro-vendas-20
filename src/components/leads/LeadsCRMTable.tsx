@@ -232,7 +232,7 @@ export function LeadsCRMTable({
                       <TableCell className="text-xs">
                         <InlineEditCell
                           value={lead.closer}
-                          onSave={v => handleInlineSave(lead.id, 'closer', v)}
+                          onSave={v => handleInlineSave(lead.id, 'closer', v, lead.closer)}
                           placeholder="Closer"
                         />
                       </TableCell>
