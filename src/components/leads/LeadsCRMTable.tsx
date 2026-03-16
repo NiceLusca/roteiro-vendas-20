@@ -30,16 +30,32 @@ interface LeadsCRMTableProps {
 }
 
 const statusOptions = [
-  { value: 'lead', label: 'Lead', className: 'bg-muted text-muted-foreground' },
-  { value: 'qualificado', label: 'Qualificado', className: 'bg-blue-500/10 text-blue-700 dark:text-blue-400' },
-  { value: 'reuniao_marcada', label: 'Reunião Marcada', className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400' },
-  { value: 'em_negociacao', label: 'Em Negociação', className: 'bg-purple-500/10 text-purple-700 dark:text-purple-400' },
-  { value: 'cliente', label: 'Cliente', className: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' },
-  { value: 'perdido', label: 'Perdido', className: 'bg-destructive/10 text-destructive' },
+  { value: 'agendado', label: 'Agendado', className: 'bg-blue-500/10 text-blue-700 dark:text-blue-400' },
+  { value: 'confirmado', label: 'Confirmado', className: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' },
+  { value: 'ligacao_realizada', label: 'Ligação realizada', className: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400' },
+  { value: 'remarcou', label: 'Remarcou', className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400' },
+  { value: 'nao_compareceu', label: 'Não compareceu', className: 'bg-orange-500/10 text-orange-700 dark:text-orange-400' },
+  { value: 'desmarcou', label: 'Desmarcou', className: 'bg-rose-500/10 text-rose-700 dark:text-rose-400' },
+  { value: 'closer_ausente', label: 'Closer Ausente', className: 'bg-slate-500/10 text-slate-700 dark:text-slate-400' },
+  { value: 'fechou', label: 'Fechou', className: 'bg-emerald-600/10 text-emerald-800 dark:text-emerald-300' },
+  { value: 'nao_fechou', label: 'Não fechou', className: 'bg-destructive/10 text-destructive' },
+  { value: 'ja_possui', label: 'Já possui', className: 'bg-purple-500/10 text-purple-700 dark:text-purple-400' },
 ];
 
-const statusLabels: Record<string, string> = Object.fromEntries(statusOptions.map(o => [o.value, o.label]));
-const statusColors: Record<string, string> = Object.fromEntries(statusOptions.map(o => [o.value, o.className]));
+const origemOptions = [
+  { value: 'Imersão Igor', label: 'Imersão Igor' },
+  { value: 'Imersão Manu & Grazi', label: 'Imersão Manu & Grazi' },
+  { value: 'Desafio FEM', label: 'Desafio FEM' },
+  { value: 'Mentoria 50K', label: 'Mentoria 50K' },
+  { value: 'HDL', label: 'HDL' },
+  { value: 'Convidado', label: 'Convidado' },
+  { value: 'Society', label: 'Society' },
+  { value: 'Evento', label: 'Evento' },
+  { value: 'Pós venda', label: 'Pós venda' },
+  { value: 'Suporte - pós venda', label: 'Suporte - pós venda' },
+  { value: 'Recup. Imer. Igor', label: 'Recup. Imer. Igor' },
+  { value: 'Recup. Imer. Manu&Grazi', label: 'Recup. Imer. Manu&Grazi' },
+];
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -168,10 +184,12 @@ export function LeadsCRMTable({
 
                       {/* Editable: Origem */}
                       <TableCell className="text-xs">
-                        <InlineEditCell
+                        <InlineSelectCell
                           value={lead.origem}
+                          options={origemOptions}
                           onSave={v => handleInlineSave(lead.id, 'origem', v)}
-                          placeholder="Origem"
+                          allowFreeText
+                          freeTextPlaceholder="Digitar origem..."
                         />
                       </TableCell>
 
