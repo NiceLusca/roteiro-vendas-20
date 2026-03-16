@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -12,10 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Lead } from '@/types/crm';
 import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
 import { useLeadsCRMData } from '@/hooks/useLeadsCRMData';
+import { useLeadSave } from '@/hooks/useLeadSave';
 import { formatWhatsApp } from '@/utils/formatters';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Table as TableIcon } from 'lucide-react';
+import { InlineEditCell, InlineSelectCell } from './InlineEditCell';
 
 interface LeadsCRMTableProps {
   leads: Lead[];
@@ -27,23 +29,17 @@ interface LeadsCRMTableProps {
   onUpdate?: () => void;
 }
 
-const statusLabels: Record<string, string> = {
-  lead: 'Lead',
-  qualificado: 'Qualificado',
-  reuniao_marcada: 'Reunião Marcada',
-  em_negociacao: 'Em Negociação',
-  cliente: 'Cliente',
-  perdido: 'Perdido',
-};
+const statusOptions = [
+  { value: 'lead', label: 'Lead', className: 'bg-muted text-muted-foreground' },
+  { value: 'qualificado', label: 'Qualificado', className: 'bg-blue-500/10 text-blue-700 dark:text-blue-400' },
+  { value: 'reuniao_marcada', label: 'Reunião Marcada', className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400' },
+  { value: 'em_negociacao', label: 'Em Negociação', className: 'bg-purple-500/10 text-purple-700 dark:text-purple-400' },
+  { value: 'cliente', label: 'Cliente', className: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' },
+  { value: 'perdido', label: 'Perdido', className: 'bg-destructive/10 text-destructive' },
+];
 
-const statusColors: Record<string, string> = {
-  lead: 'bg-muted text-muted-foreground',
-  qualificado: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
-  reuniao_marcada: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
-  em_negociacao: 'bg-purple-500/10 text-purple-700 dark:text-purple-400',
-  cliente: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
-  perdido: 'bg-destructive/10 text-destructive',
-};
+const statusLabels: Record<string, string> = Object.fromEntries(statusOptions.map(o => [o.value, o.label]));
+const statusColors: Record<string, string> = Object.fromEntries(statusOptions.map(o => [o.value, o.className]));
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -68,12 +64,22 @@ export function LeadsCRMTable({
   onUpdate,
 }: LeadsCRMTableProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const { saveLead } = useLeadSave();
 
   const leadIds = leads.map(l => l.id);
   const { dealsMap, appointmentsMap, pipelinesMap } = useLeadsCRMData({
     leadIds,
     enabled: leads.length > 0,
   });
+
+  const handleInlineSave = useCallback(async (leadId: string, field: string, value: string) => {
+    const payload: any = { id: leadId, [field]: value || null };
+    if (field === 'lead_score') {
+      payload[field] = value ? parseInt(value, 10) : 0;
+    }
+    await saveLead(payload, { silent: true });
+    onUpdate?.();
+  }, [saveLead, onUpdate]);
 
   return (
     <div className="space-y-3">
@@ -159,15 +165,34 @@ export function LeadsCRMTable({
                       <TableCell className="text-xs truncate max-w-[200px]">
                         {lead.email || '—'}
                       </TableCell>
-                      <TableCell className="text-xs">{lead.origem || '—'}</TableCell>
-                      <TableCell>
-                        {lead.status_geral ? (
-                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${statusColors[lead.status_geral] || ''}`}>
-                            {statusLabels[lead.status_geral] || lead.status_geral}
-                          </Badge>
-                        ) : '—'}
+
+                      {/* Editable: Origem */}
+                      <TableCell className="text-xs">
+                        <InlineEditCell
+                          value={lead.origem}
+                          onSave={v => handleInlineSave(lead.id, 'origem', v)}
+                          placeholder="Origem"
+                        />
                       </TableCell>
-                      <TableCell className="text-xs">{lead.closer || '—'}</TableCell>
+
+                      {/* Editable: Status */}
+                      <TableCell>
+                        <InlineSelectCell
+                          value={lead.status_geral}
+                          options={statusOptions}
+                          onSave={v => handleInlineSave(lead.id, 'status_geral', v)}
+                        />
+                      </TableCell>
+
+                      {/* Editable: Closer */}
+                      <TableCell className="text-xs">
+                        <InlineEditCell
+                          value={lead.closer}
+                          onSave={v => handleInlineSave(lead.id, 'closer', v)}
+                          placeholder="Closer"
+                        />
+                      </TableCell>
+
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {pipes && pipes.length > 0 ? pipes.map((p, i) => (
@@ -196,11 +221,18 @@ export function LeadsCRMTable({
                       <TableCell className="text-center text-xs">
                         {deals && deals.dealCount > 0 ? deals.dealCount : '—'}
                       </TableCell>
+
+                      {/* Editable: Score */}
                       <TableCell className="text-center">
-                        {lead.lead_score != null && lead.lead_score > 0 ? (
-                          <span className="text-xs font-semibold">{lead.lead_score}</span>
-                        ) : '—'}
+                        <InlineEditCell
+                          value={lead.lead_score != null && lead.lead_score > 0 ? lead.lead_score : ''}
+                          onSave={v => handleInlineSave(lead.id, 'lead_score', v)}
+                          type="number"
+                          placeholder="0"
+                          displayClassName="justify-center"
+                        />
                       </TableCell>
+
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {(lead as any).tags?.length > 0
@@ -224,7 +256,6 @@ export function LeadsCRMTable({
         </div>
       </div>
 
-      {/* Lead Edit Dialog */}
       {selectedLead && (
         <LeadEditDialog
           open={!!selectedLead}

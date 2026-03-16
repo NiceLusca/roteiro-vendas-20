@@ -1,48 +1,39 @@
 
 
-# Edição Inline na Tabela CRM
+## Problema
 
-## Objetivo
+A busca no pipeline usa `.ilike('leads.nome', ...)` — só pesquisa pelo campo `nome`. Se o usuário digitar um telefone, e-mail ou CPF, não encontra nada.
 
-Permitir editar campos diretamente na tabela clicando na célula, como numa planilha. Sem abrir dialogs -- clicou, editou, salvou.
+## Solução
 
-## Campos editáveis e tipo de input
+Modificar a busca server-side para pesquisar em múltiplos campos simultaneamente usando `.or()` do Supabase, cobrindo: `nome`, `email`, `whatsapp` e `observacoes` (onde CPF costuma estar armazenado).
 
-| Campo | Tipo de edição |
-|-------|---------------|
-| Status | Select dropdown (opções fixas do enum) |
-| Origem | Input texto (click-to-edit) |
-| Closer | Input texto (click-to-edit) |
-| Score | Input numérico (click-to-edit) |
+## Mudanças
 
-Campos como Nome, WhatsApp, Email continuam abrindo o LeadEditDialog ao clicar (são dados mais sensíveis). Pipelines, Vendas, Agendamentos são read-only (dados calculados de outras tabelas).
+### 1. `src/hooks/useSupabaseLeadPipelineEntries.ts` — função `searchLeads`
 
-## Implementação
+Substituir a linha:
+```typescript
+.ilike('leads.nome', `%${searchTerm}%`)
+```
 
-### 1. Componente `InlineEditCell`
+Por uma query que use `.or()` no join dos leads para buscar em múltiplos campos:
+```typescript
+.or(`nome.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,whatsapp.ilike.%${searchTerm}%,observacoes.ilike.%${searchTerm}%`, { referencedTable: 'leads' })
+```
 
-Componente reutilizável que alterna entre modo visualização e modo edição:
-- **Visualização**: mostra o valor atual (texto, badge, etc.)
-- **Edição**: ao clicar, transforma em input/select inline
-- **Salvar**: Enter ou blur salva; Escape cancela
-- Indicador visual sutil (borda pontilhada ou ícone de lápis no hover) para indicar que é editável
+Isso permite que o usuário pesquise por nome, telefone, e-mail ou qualquer dado nas observações (como CPF).
 
-### 2. Componente `InlineSelectCell`
+### 2. `src/pages/Pipelines.tsx` — placeholder do input
 
-Para o campo Status -- renderiza um select dropdown nativo com as opções do enum `status_geral`.
+Atualizar o placeholder de `"Buscar por nome..."` para `"Buscar por nome, telefone, e-mail..."` para indicar ao usuário que a busca é mais abrangente.
 
-### 3. Lógica de save
+### 3. `src/hooks/useLeadSearch.ts` — mesma melhoria
 
-Usar `useLeadSave().saveLead()` com `{ silent: true }` para updates parciais sem toast spam. Mostrar toast apenas em erro. Após salvar, chamar `onUpdate()` para refrescar os dados.
+Aplicar a mesma lógica de busca multi-campo neste hook também, que é usado em outros selects/autocompletes:
+```typescript
+.or(`nome.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,whatsapp.ilike.%${searchTerm}%`)
+```
 
-### 4. Modificação em `LeadsCRMTable.tsx`
-
-- Substituir as células estáticas de Status, Origem, Closer e Score pelos componentes inline
-- Adicionar `e.stopPropagation()` no click das células editáveis para não abrir o LeadEditDialog
-- Manter o click na linha (nas demais colunas) abrindo o dialog normalmente
-
-### Arquivos
-
-- **Criar**: `src/components/leads/InlineEditCell.tsx` (componente genérico texto/número)
-- **Editar**: `src/components/leads/LeadsCRMTable.tsx` (integrar edição inline)
+Substituindo o `.ilike('nome', ...)` atual.
 
