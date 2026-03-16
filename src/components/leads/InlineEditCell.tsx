@@ -215,7 +215,9 @@ export const InlineSelectCell = memo(function InlineSelectCell({
     ? renderDisplay(value, currentOption)
     : currentOption
       ? <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0', currentOption.className)}>{currentOption.label}</Badge>
-      : <span className="text-muted-foreground text-xs">—</span>;
+      : value
+        ? <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-muted/50 text-foreground">{value}</Badge>
+        : <span className="text-muted-foreground text-xs">—</span>;
 
   return (
     <div
