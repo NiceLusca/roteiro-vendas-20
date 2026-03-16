@@ -43,18 +43,18 @@ const statusOptions = [
 ];
 
 const origemOptions = [
-  { value: 'Imersão Igor', label: 'Imersão Igor' },
-  { value: 'Imersão Manu & Grazi', label: 'Imersão Manu & Grazi' },
-  { value: 'Desafio FEM', label: 'Desafio FEM' },
-  { value: 'Mentoria 50K', label: 'Mentoria 50K' },
-  { value: 'HDL', label: 'HDL' },
-  { value: 'Convidado', label: 'Convidado' },
-  { value: 'Society', label: 'Society' },
-  { value: 'Evento', label: 'Evento' },
-  { value: 'Pós venda', label: 'Pós venda' },
-  { value: 'Suporte - pós venda', label: 'Suporte - pós venda' },
-  { value: 'Recup. Imer. Igor', label: 'Recup. Imer. Igor' },
-  { value: 'Recup. Imer. Manu&Grazi', label: 'Recup. Imer. Manu&Grazi' },
+  { value: 'Imersão Igor', label: 'Imersão Igor', className: 'bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20' },
+  { value: 'Imersão Manu & Grazi', label: 'Imersão Manu & Grazi', className: 'bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-400 border-fuchsia-500/20' },
+  { value: 'Desafio FEM', label: 'Desafio FEM', className: 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20' },
+  { value: 'Mentoria 50K', label: 'Mentoria 50K', className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20' },
+  { value: 'HDL', label: 'HDL', className: 'bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20' },
+  { value: 'Convidado', label: 'Convidado', className: 'bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/20' },
+  { value: 'Society', label: 'Society', className: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20' },
+  { value: 'Evento', label: 'Evento', className: 'bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20' },
+  { value: 'Pós venda', label: 'Pós venda', className: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20' },
+  { value: 'Suporte - pós venda', label: 'Suporte - pós venda', className: 'bg-lime-500/10 text-lime-700 dark:text-lime-400 border-lime-500/20' },
+  { value: 'Recup. Imer. Igor', label: 'Recup. Imer. Igor', className: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20' },
+  { value: 'Recup. Imer. Manu&Grazi', label: 'Recup. Imer. Manu&Grazi', className: 'bg-pink-500/10 text-pink-700 dark:text-pink-400 border-pink-500/20' },
 ];
 
 function formatCurrency(value: number) {
