@@ -817,6 +817,19 @@ function LeadsContent() {
                 </div>
               )}
             </TabsContent>
+
+            {/* Tab: Tabela CRM */}
+            <TabsContent value="table" className="mt-4">
+              <LeadsCRMTable
+                leads={filteredLeads}
+                totalCount={totalCount}
+                totalPages={totalPages}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                isLoading={leadsLoading}
+                onUpdate={refetch}
+              />
+            </TabsContent>
           </Tabs>
 
           {/* Dialog de Mesclagem de Duplicatas */}
