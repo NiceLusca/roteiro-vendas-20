@@ -140,7 +140,6 @@ function AppContent() {
               </Suspense>
             </AdminRoute>
           } />
-          {/* LeadDetail deprecated - redirect to leads list */}
           <Route path="leads/:id" element={<Navigate to="/leads" replace />} />
           <Route path="help" element={
             <Suspense fallback={<EnhancedLoading loading={true}><></></EnhancedLoading>}>
