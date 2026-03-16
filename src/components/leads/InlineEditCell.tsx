@@ -185,7 +185,7 @@ export const InlineSelectCell = memo(function InlineSelectCell({
       <div onClick={e => e.stopPropagation()} className={cn('w-full', className)}>
         <select
           ref={selectRef}
-          value={value ?? ''}
+          defaultValue={value ?? ''}
           onChange={e => {
             if (e.target.value === '__free_text__') {
               setDraft('');
@@ -194,7 +194,12 @@ export const InlineSelectCell = memo(function InlineSelectCell({
               commit(e.target.value);
             }
           }}
-          onBlur={() => setEditing(false)}
+          onBlur={e => {
+            // Only close without saving if no change was made
+            if (e.target.value === (value ?? '')) {
+              setEditing(false);
+            }
+          }}
           onKeyDown={e => { if (e.key === 'Escape') setEditing(false); }}
           disabled={saving}
           className="w-full h-7 px-1 text-xs rounded border border-primary/40 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
