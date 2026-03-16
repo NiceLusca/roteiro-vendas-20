@@ -30,7 +30,7 @@ const Deals = lazy(() => import('./pages/Deals'));
 const Orders = lazy(() => import('./pages/Orders'));
 const Reports = lazy(() => import('./pages/Reports'));
 const Settings = lazy(() => import('./pages/Settings'));
-// LeadDetail page deprecated - redirects to leads list (use LeadEditDialog instead)
+
 const Help = lazy(() => import('./pages/Help'));
 const Security = lazy(() => import('./pages/Security'));
 // Production page hidden from sidebar but still accessible via direct URL for admins
