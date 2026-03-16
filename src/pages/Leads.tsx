@@ -41,8 +41,10 @@ import {
   GitBranch,
   Loader2,
   Upload,
-  AlertTriangle
+  AlertTriangle,
+  Table as TableIcon
 } from 'lucide-react';
+import { LeadsCRMTable } from '@/components/leads/LeadsCRMTable';
 
 function LeadsContent() {
   const { toast } = useToast();
