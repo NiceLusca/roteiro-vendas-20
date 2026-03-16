@@ -213,7 +213,7 @@ export function LeadsCRMTable({
                         <InlineSelectCell
                           value={lead.origem}
                           options={origemOptions}
-                          onSave={v => handleInlineSave(lead.id, 'origem', v)}
+                          onSave={v => handleInlineSave(lead.id, 'origem', v, lead.origem)}
                           allowFreeText
                           freeTextPlaceholder="Digitar origem..."
                         />
