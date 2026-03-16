@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -13,6 +13,7 @@ import { Lead } from '@/types/crm';
 import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
 import { useLeadsCRMData } from '@/hooks/useLeadsCRMData';
 import { useLeadSave } from '@/hooks/useLeadSave';
+import { useLeadActivityLog } from '@/hooks/useLeadActivityLog';
 import { formatWhatsApp } from '@/utils/formatters';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -81,6 +82,7 @@ export function LeadsCRMTable({
 }: LeadsCRMTableProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const { saveLead } = useLeadSave();
+  const { logActivity } = useLeadActivityLog();
 
   const leadIds = leads.map(l => l.id);
   const { dealsMap, appointmentsMap, pipelinesMap } = useLeadsCRMData({
@@ -88,14 +90,38 @@ export function LeadsCRMTable({
     enabled: leads.length > 0,
   });
 
-  const handleInlineSave = useCallback(async (leadId: string, field: string, value: string) => {
+  // Field label map for activity log
+  const fieldLabels: Record<string, string> = useMemo(() => ({
+    status_geral: 'Status',
+    origem: 'Origem',
+    closer: 'Closer',
+    lead_score: 'Score',
+  }), []);
+
+  const handleInlineSave = useCallback(async (leadId: string, field: string, value: string, oldValue?: string | number | null) => {
     const payload: any = { id: leadId, [field]: value || null };
     if (field === 'lead_score') {
       payload[field] = value ? parseInt(value, 10) : 0;
     }
     await saveLead(payload, { silent: true });
+    
+    // Log the change in activity history
+    const oldDisplay = oldValue != null && String(oldValue).trim() !== '' ? String(oldValue) : '(vazio)';
+    const newDisplay = value.trim() !== '' ? value : '(vazio)';
+    logActivity({
+      leadId,
+      activityType: 'lead_updated',
+      details: {
+        field,
+        field_label: fieldLabels[field] || field,
+        old_value: oldDisplay,
+        new_value: newDisplay,
+        source: 'crm_table_inline',
+      },
+    });
+    
     onUpdate?.();
-  }, [saveLead, onUpdate]);
+  }, [saveLead, onUpdate, logActivity, fieldLabels]);
 
   return (
     <div className="space-y-3">
@@ -187,7 +213,7 @@ export function LeadsCRMTable({
                         <InlineSelectCell
                           value={lead.origem}
                           options={origemOptions}
-                          onSave={v => handleInlineSave(lead.id, 'origem', v)}
+                          onSave={v => handleInlineSave(lead.id, 'origem', v, lead.origem)}
                           allowFreeText
                           freeTextPlaceholder="Digitar origem..."
                         />
@@ -198,7 +224,7 @@ export function LeadsCRMTable({
                         <InlineSelectCell
                           value={lead.status_geral}
                           options={statusOptions}
-                          onSave={v => handleInlineSave(lead.id, 'status_geral', v)}
+                          onSave={v => handleInlineSave(lead.id, 'status_geral', v, lead.status_geral)}
                         />
                       </TableCell>
 
@@ -206,7 +232,7 @@ export function LeadsCRMTable({
                       <TableCell className="text-xs">
                         <InlineEditCell
                           value={lead.closer}
-                          onSave={v => handleInlineSave(lead.id, 'closer', v)}
+                          onSave={v => handleInlineSave(lead.id, 'closer', v, lead.closer)}
                           placeholder="Closer"
                         />
                       </TableCell>
@@ -244,7 +270,7 @@ export function LeadsCRMTable({
                       <TableCell className="text-center">
                         <InlineEditCell
                           value={lead.lead_score != null && lead.lead_score > 0 ? lead.lead_score : ''}
-                          onSave={v => handleInlineSave(lead.id, 'lead_score', v)}
+                          onSave={v => handleInlineSave(lead.id, 'lead_score', v, lead.lead_score)}
                           type="number"
                           placeholder="0"
                           displayClassName="justify-center"
