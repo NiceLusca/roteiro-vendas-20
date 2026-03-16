@@ -270,7 +270,7 @@ export function LeadsCRMTable({
                       <TableCell className="text-center">
                         <InlineEditCell
                           value={lead.lead_score != null && lead.lead_score > 0 ? lead.lead_score : ''}
-                          onSave={v => handleInlineSave(lead.id, 'lead_score', v)}
+                          onSave={v => handleInlineSave(lead.id, 'lead_score', v, lead.lead_score)}
                           type="number"
                           placeholder="0"
                           displayClassName="justify-center"
