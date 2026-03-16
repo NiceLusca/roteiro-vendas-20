@@ -123,21 +123,30 @@ export const InlineSelectCell = memo(function InlineSelectCell({
   options,
   onSave,
   className,
+  allowFreeText,
+  freeTextPlaceholder,
   renderDisplay,
 }: InlineSelectCellProps) {
   const [editing, setEditing] = useState(false);
+  const [freeTextMode, setFreeTextMode] = useState(false);
+  const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
   const selectRef = useRef<HTMLSelectElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (editing) {
+    if (editing && !freeTextMode) {
       setTimeout(() => selectRef.current?.focus(), 0);
     }
-  }, [editing]);
+    if (editing && freeTextMode) {
+      setTimeout(() => inputRef.current?.select(), 0);
+    }
+  }, [editing, freeTextMode]);
 
   const commit = useCallback(async (newValue: string) => {
     if (newValue === (value ?? '')) {
       setEditing(false);
+      setFreeTextMode(false);
       return;
     }
     setSaving(true);
@@ -146,8 +155,30 @@ export const InlineSelectCell = memo(function InlineSelectCell({
     } finally {
       setSaving(false);
       setEditing(false);
+      setFreeTextMode(false);
     }
   }, [value, onSave]);
+
+  if (editing && freeTextMode) {
+    return (
+      <div onClick={e => e.stopPropagation()} className={cn('w-full', className)}>
+        <input
+          ref={inputRef}
+          type="text"
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') commit(draft.trim());
+            if (e.key === 'Escape') { setFreeTextMode(false); setEditing(false); }
+          }}
+          onBlur={() => commit(draft.trim())}
+          disabled={saving}
+          placeholder={freeTextPlaceholder}
+          className="w-full h-7 px-1.5 text-xs rounded border border-primary/40 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </div>
+    );
+  }
 
   if (editing) {
     return (
@@ -155,7 +186,14 @@ export const InlineSelectCell = memo(function InlineSelectCell({
         <select
           ref={selectRef}
           value={value ?? ''}
-          onChange={e => commit(e.target.value)}
+          onChange={e => {
+            if (e.target.value === '__free_text__') {
+              setDraft('');
+              setFreeTextMode(true);
+            } else {
+              commit(e.target.value);
+            }
+          }}
           onBlur={() => setEditing(false)}
           onKeyDown={e => { if (e.key === 'Escape') setEditing(false); }}
           disabled={saving}
@@ -165,6 +203,7 @@ export const InlineSelectCell = memo(function InlineSelectCell({
           {options.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
+          {allowFreeText && <option value="__free_text__">✏️ Digitar outro...</option>}
         </select>
       </div>
     );
