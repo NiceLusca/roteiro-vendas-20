@@ -184,10 +184,12 @@ export function LeadsCRMTable({
 
                       {/* Editable: Origem */}
                       <TableCell className="text-xs">
-                        <InlineEditCell
+                        <InlineSelectCell
                           value={lead.origem}
+                          options={origemOptions}
                           onSave={v => handleInlineSave(lead.id, 'origem', v)}
-                          placeholder="Origem"
+                          allowFreeText
+                          freeTextPlaceholder="Digitar origem..."
                         />
                       </TableCell>
 

@@ -113,6 +113,8 @@ interface InlineSelectCellProps {
   options: SelectOption[];
   onSave: (value: string) => Promise<void>;
   className?: string;
+  allowFreeText?: boolean;
+  freeTextPlaceholder?: string;
   renderDisplay?: (value: string | null | undefined, option?: SelectOption) => React.ReactNode;
 }
 
