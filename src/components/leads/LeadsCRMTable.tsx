@@ -13,6 +13,7 @@ import { Lead } from '@/types/crm';
 import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
 import { useLeadsCRMData } from '@/hooks/useLeadsCRMData';
 import { useLeadSave } from '@/hooks/useLeadSave';
+import { useLeadActivityLog } from '@/hooks/useLeadActivityLog';
 import { formatWhatsApp } from '@/utils/formatters';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
