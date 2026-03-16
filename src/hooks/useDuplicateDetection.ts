@@ -74,7 +74,7 @@ export function useDuplicateDetection() {
       const { data: pipelineEntries, error: pipelineEntriesError } = await supabase
         .from('lead_pipeline_entries')
         .select('lead_id, pipeline_id, status_inscricao')
-        .or('status_inscricao.ilike.ativo,status_inscricao.ilike.Ativo');
+        .eq('status_inscricao', 'Ativo');
 
       if (pipelineEntriesError) {
         console.error('Erro ao buscar pipeline entries:', pipelineEntriesError);
