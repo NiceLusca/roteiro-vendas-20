@@ -478,6 +478,10 @@ function LeadsContent() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList>
               <TabsTrigger value="all">Todos os Leads</TabsTrigger>
+              <TabsTrigger value="table" className="gap-2">
+                <TableIcon className="h-4 w-4" />
+                Tabela CRM
+              </TabsTrigger>
               <TabsTrigger value="duplicates" className="gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 Possíveis Duplicatas
