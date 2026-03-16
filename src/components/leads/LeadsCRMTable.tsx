@@ -224,7 +224,7 @@ export function LeadsCRMTable({
                         <InlineSelectCell
                           value={lead.status_geral}
                           options={statusOptions}
-                          onSave={v => handleInlineSave(lead.id, 'status_geral', v)}
+                          onSave={v => handleInlineSave(lead.id, 'status_geral', v, lead.status_geral)}
                         />
                       </TableCell>
 
