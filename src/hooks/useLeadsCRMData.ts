@@ -124,7 +124,7 @@ export function useLeadsCRMData({ leadIds, enabled }: UseLeadsCRMDataOptions) {
           pipeline_stages:etapa_atual_id (nome)
         `)
         .in('lead_id', leadIds)
-        .eq('status_inscricao', 'ativo');
+        .eq('status_inscricao', 'Ativo');
 
       const map: Record<string, LeadPipelineInfo[]> = {};
       data?.forEach((entry: any) => {

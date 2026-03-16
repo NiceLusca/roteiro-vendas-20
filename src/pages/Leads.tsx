@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -177,8 +177,8 @@ function LeadsContent() {
     };
   }, []);
 
-  // Memoize filtered leads to prevent unnecessary re-renders
-  const filteredLeads = useMemo(() => leads, [leads]);
+  // leads are already optimized via useOptimizedLeads
+  const filteredLeads = leads;
 
   // Memoized handlers to prevent re-renders
   const handleCreateLead = useCallback(() => {
