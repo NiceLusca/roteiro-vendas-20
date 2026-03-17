@@ -474,36 +474,9 @@ function LeadsContent() {
             </div>
           </div>
 
-          {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList>
-              <TabsTrigger value="all">Todos os Leads</TabsTrigger>
-              <TabsTrigger value="table" className="gap-2">
-                <TableIcon className="h-4 w-4" />
-                Tabela CRM
-              </TabsTrigger>
-              <TabsTrigger value="duplicates" className="gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                Possíveis Duplicatas
-                {duplicates.length > 0 && (
-                  <Badge variant="destructive" className="ml-1 text-xs px-1.5 py-0 h-5">
-                    {duplicates.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Tab: Todos os Leads */}
-            <TabsContent value="all" className="mt-4 space-y-4">
-          {/* Filtros */}
+          {/* Filtros - acima das tabs para todas as abas */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="h-4 w-4" />
-                Filtros
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="pt-4 pb-3">
               <div className="flex items-center gap-4 flex-wrap">
                 {/* Busca */}
                 <div className="flex items-center gap-2 min-w-64 relative">
@@ -573,6 +546,28 @@ function LeadsContent() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList>
+              <TabsTrigger value="all">Todos os Leads</TabsTrigger>
+              <TabsTrigger value="table" className="gap-2">
+                <TableIcon className="h-4 w-4" />
+                Tabela CRM
+              </TabsTrigger>
+              <TabsTrigger value="duplicates" className="gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Possíveis Duplicatas
+                {duplicates.length > 0 && (
+                  <Badge variant="destructive" className="ml-1 text-xs px-1.5 py-0 h-5">
+                    {duplicates.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Tab: Todos os Leads */}
+            <TabsContent value="all" className="mt-4 space-y-4">
 
           {/* Lista de Leads */}
           <div className="space-y-4">
