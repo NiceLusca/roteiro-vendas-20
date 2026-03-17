@@ -1,39 +1,29 @@
 
 
+# Sincronizar Vendas entre Card e Tabela CRM
+
 ## Problema
 
-A busca no pipeline usa `.ilike('leads.nome', ...)` — só pesquisa pelo campo `nome`. Se o usuário digitar um telefone, e-mail ou CPF, não encontra nada.
+Quando uma venda é criada/atualizada no diálogo do lead (aba Vendas), o cache `crm-deals` usado pela Tabela CRM não é invalidado -- apenas `pipeline-deals` é. Isso significa que a coluna "Valor Vendas" e "Recorr." na tabela não atualizam até um refresh manual. O inverso também: ao fechar o dialog, a tabela não reflete as mudanças.
 
 ## Solução
 
-Modificar a busca server-side para pesquisar em múltiplos campos simultaneamente usando `.or()` do Supabase, cobrindo: `nome`, `email`, `whatsapp` e `observacoes` (onde CPF costuma estar armazenado).
+Adicionar invalidação do query key `crm-deals` no `LeadEditDialog` quando uma negociação é salva. Também invalidar `crm-appointments` para manter consistência quando agendamentos mudam.
 
-## Mudanças
+### Arquivo: `src/components/kanban/LeadEditDialog.tsx`
 
-### 1. `src/hooks/useSupabaseLeadPipelineEntries.ts` — função `searchLeads`
+Na função de salvar deal (~linha 371), adicionar:
 
-Substituir a linha:
 ```typescript
-.ilike('leads.nome', `%${searchTerm}%`)
+queryClient.invalidateQueries({ queryKey: ['pipeline-deals'] });
+queryClient.invalidateQueries({ queryKey: ['crm-deals'] });
+queryClient.invalidateQueries({ queryKey: ['crm-appointments'] });
 ```
 
-Por uma query que use `.or()` no join dos leads para buscar em múltiplos campos:
-```typescript
-.or(`nome.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,whatsapp.ilike.%${searchTerm}%,observacoes.ilike.%${searchTerm}%`, { referencedTable: 'leads' })
-```
+Isso garante que qualquer alteração feita no diálogo (vendas, agendamentos) seja refletida imediatamente na Tabela CRM quando o dialog fecha e o `onUpdate` dispara o refetch dos leads.
 
-Isso permite que o usuário pesquise por nome, telefone, e-mail ou qualquer dado nas observações (como CPF).
+### Escopo
 
-### 2. `src/pages/Pipelines.tsx` — placeholder do input
-
-Atualizar o placeholder de `"Buscar por nome..."` para `"Buscar por nome, telefone, e-mail..."` para indicar ao usuário que a busca é mais abrangente.
-
-### 3. `src/hooks/useLeadSearch.ts` — mesma melhoria
-
-Aplicar a mesma lógica de busca multi-campo neste hook também, que é usado em outros selects/autocompletes:
-```typescript
-.or(`nome.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,whatsapp.ilike.%${searchTerm}%`)
-```
-
-Substituindo o `.ilike('nome', ...)` atual.
+- 1 arquivo editado: `src/components/kanban/LeadEditDialog.tsx`
+- Adicionar 2 linhas de invalidação de cache
 
