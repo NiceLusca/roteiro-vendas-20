@@ -34,6 +34,7 @@ interface LeadsCRMTableProps {
 const statusOptions = [
   { value: 'agendado', label: 'Agendado', className: 'bg-blue-500/10 text-blue-700 dark:text-blue-400' },
   { value: 'confirmado', label: 'Confirmado', className: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' },
+  { value: 'atendido', label: 'Atendido', className: 'bg-teal-500/10 text-teal-700 dark:text-teal-400' },
   { value: 'ligacao_realizada', label: 'Ligação realizada', className: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400' },
   { value: 'remarcou', label: 'Remarcou', className: 'bg-amber-500/10 text-amber-700 dark:text-amber-400' },
   { value: 'nao_compareceu', label: 'Não compareceu', className: 'bg-orange-500/10 text-orange-700 dark:text-orange-400' },
