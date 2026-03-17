@@ -369,6 +369,8 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
 
       // Invalidar cache de deals para forçar atualização no Kanban
       queryClient.invalidateQueries({ queryKey: ['pipeline-deals'] });
+      queryClient.invalidateQueries({ queryKey: ['crm-deals'] });
+      queryClient.invalidateQueries({ queryKey: ['crm-appointments'] });
 
       toast.success(existingDeal ? 'Negociação atualizada!' : 'Negociação criada!');
       onUpdate?.();
