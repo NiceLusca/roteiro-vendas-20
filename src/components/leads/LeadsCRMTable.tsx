@@ -3,7 +3,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
@@ -19,6 +18,8 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Table as TableIcon } from 'lucide-react';
 import { InlineEditCell, InlineSelectCell } from './InlineEditCell';
+import { SortableTableHead, SortDirection } from './SortableTableHead';
+import { CRMTableFilters } from './CRMTableFilters';
 
 interface LeadsCRMTableProps {
   leads: Lead[];
@@ -84,19 +85,118 @@ export function LeadsCRMTable({
   const { saveLead } = useLeadSave();
   const { logActivity } = useLeadActivityLog();
 
+  // Sort state
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+  // Local filter state
+  const [filterOrigem, setFilterOrigem] = useState('all');
+  const [filterCloser, setFilterCloser] = useState('all');
+
   const leadIds = leads.map(l => l.id);
   const { dealsMap, appointmentsMap, pipelinesMap } = useLeadsCRMData({
     leadIds,
     enabled: leads.length > 0,
   });
 
-  // Field label map for activity log
   const fieldLabels: Record<string, string> = useMemo(() => ({
     status_geral: 'Status',
     origem: 'Origem',
     closer: 'Closer',
     lead_score: 'Score',
   }), []);
+
+  const handleSort = useCallback((column: string) => {
+    setSortColumn(prev => {
+      if (prev !== column) {
+        setSortDirection('asc');
+        return column;
+      }
+      // cycle: asc → desc → null
+      setSortDirection(d => {
+        if (d === 'asc') return 'desc';
+        if (d === 'desc') return null;
+        return 'asc';
+      });
+      if (sortDirection === 'desc') return null;
+      return column;
+    });
+  }, [sortDirection]);
+
+  // Apply local filters then sort
+  const processedLeads = useMemo(() => {
+    let result = [...leads];
+
+    // Local filters
+    if (filterOrigem !== 'all') {
+      result = result.filter(l => l.origem === filterOrigem);
+    }
+    if (filterCloser !== 'all') {
+      result = result.filter(l => l.closer === filterCloser);
+    }
+
+    // Sort
+    if (!sortColumn || !sortDirection) return result;
+
+    result.sort((a, b) => {
+      let valA: any;
+      let valB: any;
+
+      switch (sortColumn) {
+        case 'nome': valA = a.nome; valB = b.nome; break;
+        case 'whatsapp': valA = a.whatsapp; valB = b.whatsapp; break;
+        case 'email': valA = a.email; valB = b.email; break;
+        case 'origem': valA = a.origem; valB = b.origem; break;
+        case 'status_geral': valA = a.status_geral; valB = b.status_geral; break;
+        case 'closer': valA = a.closer; valB = b.closer; break;
+        case 'pipelines':
+          valA = pipelinesMap[a.id]?.length ?? 0;
+          valB = pipelinesMap[b.id]?.length ?? 0;
+          break;
+        case 'next_appointment':
+          valA = appointmentsMap[a.id]?.nextAppointment;
+          valB = appointmentsMap[b.id]?.nextAppointment;
+          break;
+        case 'last_appointment':
+          valA = appointmentsMap[a.id]?.lastAppointment;
+          valB = appointmentsMap[b.id]?.lastAppointment;
+          break;
+        case 'total_value':
+          valA = dealsMap[a.id]?.totalValue ?? 0;
+          valB = dealsMap[b.id]?.totalValue ?? 0;
+          break;
+        case 'deal_count':
+          valA = dealsMap[a.id]?.dealCount ?? 0;
+          valB = dealsMap[b.id]?.dealCount ?? 0;
+          break;
+        case 'lead_score':
+          valA = a.lead_score ?? 0;
+          valB = b.lead_score ?? 0;
+          break;
+        case 'created_at':
+          valA = a.created_at;
+          valB = b.created_at;
+          break;
+        default: return 0;
+      }
+
+      // nulls last
+      if (valA == null && valB == null) return 0;
+      if (valA == null) return 1;
+      if (valB == null) return -1;
+
+      let cmp = 0;
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        cmp = valA - valB;
+      } else {
+        cmp = String(valA).localeCompare(String(valB), 'pt-BR', { sensitivity: 'base' });
+      }
+
+      return sortDirection === 'desc' ? -cmp : cmp;
+    });
+
+    return result;
+  }, [leads, filterOrigem, filterCloser, sortColumn, sortDirection, dealsMap, appointmentsMap, pipelinesMap]);
 
   const handleInlineSave = useCallback(async (leadId: string, field: string, value: string, oldValue?: string | number | null) => {
     const payload: any = { id: leadId, [field]: value || null };
@@ -105,7 +205,6 @@ export function LeadsCRMTable({
     }
     await saveLead(payload, { silent: true });
     
-    // Log the change in activity history
     const oldDisplay = oldValue != null && String(oldValue).trim() !== '' ? String(oldValue) : '(vazio)';
     const newDisplay = value.trim() !== '' ? value : '(vazio)';
     logActivity({
@@ -125,10 +224,21 @@ export function LeadsCRMTable({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {totalCount} lead{totalCount !== 1 ? 's' : ''} encontrado{totalCount !== 1 ? 's' : ''}
-        </p>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-4 flex-wrap">
+          <p className="text-sm text-muted-foreground">
+            {filterOrigem !== 'all' || filterCloser !== 'all'
+              ? `${processedLeads.length} de ${totalCount} leads`
+              : `${totalCount} lead${totalCount !== 1 ? 's' : ''} encontrado${totalCount !== 1 ? 's' : ''}`}
+          </p>
+          <CRMTableFilters
+            leads={leads}
+            filterOrigem={filterOrigem}
+            onFilterOrigemChange={setFilterOrigem}
+            filterCloser={filterCloser}
+            onFilterCloserChange={setFilterCloser}
+          />
+        </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -157,21 +267,21 @@ export function LeadsCRMTable({
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
               <TableRow>
-                <TableHead className="min-w-[180px] font-semibold">Nome</TableHead>
-                <TableHead className="min-w-[130px]">WhatsApp</TableHead>
-                <TableHead className="min-w-[180px]">E-mail</TableHead>
-                <TableHead className="min-w-[120px]">Origem</TableHead>
-                <TableHead className="min-w-[120px]">Status</TableHead>
-                <TableHead className="min-w-[100px]">Closer</TableHead>
-                <TableHead className="min-w-[200px]">Pipelines</TableHead>
-                <TableHead className="min-w-[130px]">Próx. Sessão</TableHead>
-                <TableHead className="min-w-[130px]">Último Atend.</TableHead>
-                <TableHead className="min-w-[110px] text-right">Valor Vendas</TableHead>
-                <TableHead className="min-w-[80px] text-center">Recorr.</TableHead>
-                <TableHead className="min-w-[70px] text-center">Nº Vendas</TableHead>
-                <TableHead className="min-w-[60px] text-center">Score</TableHead>
-                <TableHead className="min-w-[150px]">Tags</TableHead>
-                <TableHead className="min-w-[100px]">Criado em</TableHead>
+                <SortableTableHead label="Nome" column="nome" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[180px] font-semibold" />
+                <SortableTableHead label="WhatsApp" column="whatsapp" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[130px]" />
+                <SortableTableHead label="E-mail" column="email" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[180px]" />
+                <SortableTableHead label="Origem" column="origem" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[120px]" />
+                <SortableTableHead label="Status" column="status_geral" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[120px]" />
+                <SortableTableHead label="Closer" column="closer" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[100px]" />
+                <SortableTableHead label="Pipelines" column="pipelines" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[200px]" />
+                <SortableTableHead label="Próx. Sessão" column="next_appointment" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[130px]" />
+                <SortableTableHead label="Último Atend." column="last_appointment" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[130px]" />
+                <SortableTableHead label="Valor Vendas" column="total_value" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[110px] text-right" />
+                <SortableTableHead label="Recorr." column="recorrente" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[80px] text-center" />
+                <SortableTableHead label="Nº Vendas" column="deal_count" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[70px] text-center" />
+                <SortableTableHead label="Score" column="lead_score" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[60px] text-center" />
+                <SortableTableHead label="Tags" column="tags" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[150px]" />
+                <SortableTableHead label="Criado em" column="created_at" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[100px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -181,7 +291,7 @@ export function LeadsCRMTable({
                     Carregando...
                   </TableCell>
                 </TableRow>
-              ) : leads.length === 0 ? (
+              ) : processedLeads.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={15} className="text-center py-12 text-muted-foreground">
                     <TableIcon className="h-8 w-8 mx-auto mb-2 opacity-40" />
@@ -189,7 +299,7 @@ export function LeadsCRMTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                leads.map(lead => {
+                processedLeads.map(lead => {
                   const deals = dealsMap[lead.id];
                   const apts = appointmentsMap[lead.id];
                   const pipes = pipelinesMap[lead.id];
@@ -208,7 +318,6 @@ export function LeadsCRMTable({
                         {lead.email || '—'}
                       </TableCell>
 
-                      {/* Editable: Origem */}
                       <TableCell className="text-xs">
                         <InlineSelectCell
                           value={lead.origem}
@@ -219,7 +328,6 @@ export function LeadsCRMTable({
                         />
                       </TableCell>
 
-                      {/* Editable: Status */}
                       <TableCell>
                         <InlineSelectCell
                           value={lead.status_geral}
@@ -228,7 +336,6 @@ export function LeadsCRMTable({
                         />
                       </TableCell>
 
-                      {/* Editable: Closer */}
                       <TableCell className="text-xs">
                         <InlineEditCell
                           value={lead.closer}
@@ -266,7 +373,6 @@ export function LeadsCRMTable({
                         {deals && deals.dealCount > 0 ? deals.dealCount : '—'}
                       </TableCell>
 
-                      {/* Editable: Score */}
                       <TableCell className="text-center">
                         <InlineEditCell
                           value={lead.lead_score != null && lead.lead_score > 0 ? lead.lead_score : ''}
