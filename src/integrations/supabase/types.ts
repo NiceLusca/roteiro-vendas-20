@@ -1455,6 +1455,17 @@ export type Database = {
         | "em_negociacao"
         | "cliente"
         | "perdido"
+        | "agendado"
+        | "confirmado"
+        | "atendido"
+        | "ligacao_realizada"
+        | "remarcou"
+        | "nao_compareceu"
+        | "desmarcou"
+        | "closer_ausente"
+        | "fechou"
+        | "nao_fechou"
+        | "ja_possui"
       status_pedido: "pendente" | "pago" | "cancelado"
     }
     CompositeTypes: {
@@ -1608,6 +1619,17 @@ export const Constants = {
         "em_negociacao",
         "cliente",
         "perdido",
+        "agendado",
+        "confirmado",
+        "atendido",
+        "ligacao_realizada",
+        "remarcou",
+        "nao_compareceu",
+        "desmarcou",
+        "closer_ausente",
+        "fechou",
+        "nao_fechou",
+        "ja_possui",
       ],
       status_pedido: ["pendente", "pago", "cancelado"],
     },

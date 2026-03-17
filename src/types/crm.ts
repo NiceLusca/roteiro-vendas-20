@@ -1,7 +1,7 @@
 // Tipos do CRM - Sistema de Vendas e Pipelines
 // IMPORTANT: These types must match exactly the database enum values
 
-export type StatusGeral = 'lead' | 'qualificado' | 'reuniao_marcada' | 'em_negociacao' | 'cliente' | 'perdido';
+export type StatusGeral = 'lead' | 'qualificado' | 'reuniao_marcada' | 'em_negociacao' | 'cliente' | 'perdido' | 'agendado' | 'confirmado' | 'atendido' | 'ligacao_realizada' | 'remarcou' | 'nao_compareceu' | 'desmarcou' | 'closer_ausente' | 'fechou' | 'nao_fechou' | 'ja_possui';
 export type OrigemLead = string; // Free-form text for lead origin
 export type ObjecaoPrincipal = 'confianca' | 'preco' | 'tempo' | 'necessidade' | 'outro';
 export type StatusAppointment = 'Agendado' | 'Realizado' | 'Cancelado' | 'Remarcado' | 'No-Show';
