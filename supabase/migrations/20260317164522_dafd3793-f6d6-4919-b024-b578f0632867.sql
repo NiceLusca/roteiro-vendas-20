@@ -1,0 +1,12 @@
+-- Add missing status values to the status_geral enum
+ALTER TYPE public.status_geral ADD VALUE IF NOT EXISTS 'agendado';
+ALTER TYPE public.status_geral ADD VALUE IF NOT EXISTS 'confirmado';
+ALTER TYPE public.status_geral ADD VALUE IF NOT EXISTS 'atendido';
+ALTER TYPE public.status_geral ADD VALUE IF NOT EXISTS 'ligacao_realizada';
+ALTER TYPE public.status_geral ADD VALUE IF NOT EXISTS 'remarcou';
+ALTER TYPE public.status_geral ADD VALUE IF NOT EXISTS 'nao_compareceu';
+ALTER TYPE public.status_geral ADD VALUE IF NOT EXISTS 'desmarcou';
+ALTER TYPE public.status_geral ADD VALUE IF NOT EXISTS 'closer_ausente';
+ALTER TYPE public.status_geral ADD VALUE IF NOT EXISTS 'fechou';
+ALTER TYPE public.status_geral ADD VALUE IF NOT EXISTS 'nao_fechou';
+ALTER TYPE public.status_geral ADD VALUE IF NOT EXISTS 'ja_possui';
