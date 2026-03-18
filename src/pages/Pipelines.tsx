@@ -83,6 +83,11 @@ function PipelinesContent({ slug }: { slug: string }) {
     leadId: string | null;
     leadName: string;
   }>({ open: false, entryId: null, leadId: null, leadName: '' });
+  const [deleteLeadState, setDeleteLeadState] = useState<{
+    open: boolean;
+    leadId: string;
+    leadName: string;
+  }>({ open: false, leadId: '', leadName: '' });
   
   // Estado para seleção de agendamento durante movimentação
   const [pendingAppointmentSelection, setPendingAppointmentSelection] = useState<{
