@@ -1027,6 +1027,12 @@ function PipelinesContent({ slug }: { slug: string }) {
             }
           }}
           displayConfig={currentPipeline?.display_config}
+          isAdmin={isAdmin}
+          onDeleteLead={() => {
+            if (editingLead) {
+              setDeleteLeadState({ open: true, leadId: editingLead.lead.id, leadName: editingLead.lead.nome });
+            }
+          }}
         />
       )}
 
