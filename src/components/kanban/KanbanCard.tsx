@@ -55,6 +55,8 @@ interface KanbanCardProps {
   onTransferPipeline?: () => void;
   onUnsubscribeFromPipeline?: () => void;
   onManageDeal?: () => void;
+  onDeleteLead?: () => void;
+  isAdmin?: boolean;
   onDragStart?: (entryId: string) => void;
   onDragEnd?: () => void;
   onTagsChange?: () => void;
@@ -96,6 +98,8 @@ export const KanbanCard = memo(function KanbanCard({
   onTransferPipeline,
   onUnsubscribeFromPipeline,
   onManageDeal,
+  onDeleteLead,
+  isAdmin = false,
   onDragStart,
   onDragEnd,
   onTagsChange
@@ -282,6 +286,8 @@ export const KanbanCard = memo(function KanbanCard({
               onRegisterInteraction={onRegisterInteraction}
               onUnsubscribeFromPipeline={onUnsubscribeFromPipeline}
               onManageDeal={onManageDeal}
+              onDeleteLead={onDeleteLead}
+              isAdmin={isAdmin}
             />
           </div>
         </div>
