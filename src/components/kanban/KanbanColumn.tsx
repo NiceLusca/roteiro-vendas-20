@@ -47,6 +47,8 @@ interface KanbanColumnProps {
   onTransferPipeline?: (leadId: string) => void;
   onUnsubscribeFromPipeline?: (entryId: string, leadId: string) => void;
   onManageDeal?: (leadId: string) => void;
+  onDeleteLead?: (leadId: string, leadName: string) => void;
+  isAdmin?: boolean;
   onDropLead?: (entryId: string, toStageId: string) => void;
   onDragStart?: (entryId: string) => void;
   onDragEnd?: () => void;
