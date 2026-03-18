@@ -20,6 +20,7 @@ import { ChevronLeft, ChevronRight, Table as TableIcon } from 'lucide-react';
 import { InlineEditCell, InlineSelectCell } from './InlineEditCell';
 import { SortableTableHead, SortDirection } from './SortableTableHead';
 import { CRMTableFilters } from './CRMTableFilters';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface LeadsCRMTableProps {
   leads: Lead[];
