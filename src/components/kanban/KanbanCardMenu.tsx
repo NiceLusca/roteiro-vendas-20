@@ -52,6 +52,8 @@ export const KanbanCardMenu = memo(function KanbanCardMenu({
   onRegisterInteraction,
   onUnsubscribeFromPipeline,
   onManageDeal,
+  onDeleteLead,
+  isAdmin = false,
 }: KanbanCardMenuProps) {
   // ✅ SOLUÇÃO 4: Controle manual do estado para evitar fechamento inesperado
   const [isOpen, setIsOpen] = useState(false);
