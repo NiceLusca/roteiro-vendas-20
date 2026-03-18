@@ -55,6 +55,8 @@ interface KanbanCardProps {
   onTransferPipeline?: () => void;
   onUnsubscribeFromPipeline?: () => void;
   onManageDeal?: () => void;
+  onDeleteLead?: () => void;
+  isAdmin?: boolean;
   onDragStart?: (entryId: string) => void;
   onDragEnd?: () => void;
   onTagsChange?: () => void;
