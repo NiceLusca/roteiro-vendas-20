@@ -10,9 +10,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Lead } from '@/types/crm';
 import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
+import { LeadDeleteConfirmDialog } from '@/components/leads/LeadDeleteConfirmDialog';
 import { useLeadsCRMData } from '@/hooks/useLeadsCRMData';
 import { useLeadSave } from '@/hooks/useLeadSave';
 import { useLeadActivityLog } from '@/hooks/useLeadActivityLog';
+import { useUserRole } from '@/hooks/useUserRole';
 import { formatWhatsApp } from '@/utils/formatters';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -84,8 +86,10 @@ export function LeadsCRMTable({
   onUpdate,
 }: LeadsCRMTableProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [deleteLeadState, setDeleteLeadState] = useState<{ open: boolean; leadId: string; leadName: string }>({ open: false, leadId: '', leadName: '' });
   const { saveLead } = useLeadSave();
   const { logActivity } = useLeadActivityLog();
+  const { isAdmin } = useUserRole();
 
   // Sort state
   const [sortColumn, setSortColumn] = useState<string | null>(null);
@@ -442,8 +446,23 @@ export function LeadsCRMTable({
             onUpdate?.();
           }}
           displayConfig={{ show_appointments: true, show_deals: true, show_orders: false, card_fields: [], table_columns: [] }}
+          isAdmin={isAdmin}
+          onDeleteLead={() => {
+            setDeleteLeadState({ open: true, leadId: selectedLead.id, leadName: selectedLead.nome });
+          }}
         />
       )}
+
+      <LeadDeleteConfirmDialog
+        open={deleteLeadState.open}
+        onOpenChange={(open) => setDeleteLeadState(prev => ({ ...prev, open }))}
+        leadId={deleteLeadState.leadId}
+        leadName={deleteLeadState.leadName}
+        onDeleted={() => {
+          setSelectedLead(null);
+          onUpdate?.();
+        }}
+      />
     </div>
   );
 }
