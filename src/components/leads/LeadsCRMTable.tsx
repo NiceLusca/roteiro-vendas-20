@@ -86,8 +86,10 @@ export function LeadsCRMTable({
   onUpdate,
 }: LeadsCRMTableProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [deleteLeadState, setDeleteLeadState] = useState<{ open: boolean; leadId: string; leadName: string }>({ open: false, leadId: '', leadName: '' });
   const { saveLead } = useLeadSave();
   const { logActivity } = useLeadActivityLog();
+  const { isAdmin } = useUserRole();
 
   // Sort state
   const [sortColumn, setSortColumn] = useState<string | null>(null);
