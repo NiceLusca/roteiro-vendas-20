@@ -286,6 +286,8 @@ export const KanbanCard = memo(function KanbanCard({
               onRegisterInteraction={onRegisterInteraction}
               onUnsubscribeFromPipeline={onUnsubscribeFromPipeline}
               onManageDeal={onManageDeal}
+              onDeleteLead={onDeleteLead}
+              isAdmin={isAdmin}
             />
           </div>
         </div>
