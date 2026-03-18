@@ -42,6 +42,7 @@ export function useSupabaseDeals() {
           status,
           data_fechamento,
           motivo_perda,
+          closer_id,
           created_at,
           updated_at
         `)

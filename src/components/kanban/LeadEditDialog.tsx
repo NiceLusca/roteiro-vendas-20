@@ -305,13 +305,17 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
       const status = vendaConfirmada ? 'ganho' : 'aberto';
       const dataFechamento = vendaConfirmada && dataVenda ? dataVenda.toISOString() : null;
 
+      // Get current user id for closer_id
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+
       const result = await saveDeal({
         ...(existingDeal?.id ? { id: existingDeal.id } : {}),
         lead_id: lead.id,
         valor_proposto: parsedValor,
         recorrente: vendaRecorrente, // Boolean para estatísticas
         status: status as any,
-        data_fechamento: dataFechamento
+        data_fechamento: dataFechamento,
+        ...(currentUser && !existingDeal?.id ? { closer_id: currentUser.id } : {})
       });
 
       // Salvar produtos associados ao deal

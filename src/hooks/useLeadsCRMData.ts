@@ -7,10 +7,17 @@ interface UseLeadsCRMDataOptions {
   enabled: boolean;
 }
 
+export interface CloserDealBreakdown {
+  closerName: string;
+  totalValue: number;
+  dealCount: number;
+}
+
 export interface LeadDealsSummary {
   totalValue: number;
   dealCount: number;
   hasRecorrente: boolean;
+  closerBreakdown: CloserDealBreakdown[];
 }
 
 export interface LeadAppointmentsSummary {
@@ -34,17 +41,28 @@ export function useLeadsCRMData({ leadIds, enabled }: UseLeadsCRMDataOptions) {
       
       const { data } = await supabase
         .from('deals')
-        .select('lead_id, valor_proposto, status, recorrente')
+        .select('lead_id, valor_proposto, status, recorrente, closer_id, profiles:closer_id(nome, full_name)')
         .in('lead_id', leadIds);
 
       const map: Record<string, LeadDealsSummary> = {};
-      data?.forEach(deal => {
+      data?.forEach((deal: any) => {
         if (!map[deal.lead_id]) {
-          map[deal.lead_id] = { totalValue: 0, dealCount: 0, hasRecorrente: false };
+          map[deal.lead_id] = { totalValue: 0, dealCount: 0, hasRecorrente: false, closerBreakdown: [] };
         }
         if (deal.status === 'ganho') {
-          map[deal.lead_id].totalValue += Number(deal.valor_proposto) || 0;
+          const value = Number(deal.valor_proposto) || 0;
+          map[deal.lead_id].totalValue += value;
           map[deal.lead_id].dealCount += 1;
+
+          // Track per-closer breakdown
+          const closerName = deal.profiles?.nome || deal.profiles?.full_name || 'Não atribuído';
+          const existing = map[deal.lead_id].closerBreakdown.find(c => c.closerName === closerName);
+          if (existing) {
+            existing.totalValue += value;
+            existing.dealCount += 1;
+          } else {
+            map[deal.lead_id].closerBreakdown.push({ closerName, totalValue: value, dealCount: 1 });
+          }
         }
         if (deal.recorrente) {
           map[deal.lead_id].hasRecorrente = true;
