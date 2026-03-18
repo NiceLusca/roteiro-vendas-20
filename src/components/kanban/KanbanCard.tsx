@@ -98,6 +98,8 @@ export const KanbanCard = memo(function KanbanCard({
   onTransferPipeline,
   onUnsubscribeFromPipeline,
   onManageDeal,
+  onDeleteLead,
+  isAdmin = false,
   onDragStart,
   onDragEnd,
   onTagsChange
