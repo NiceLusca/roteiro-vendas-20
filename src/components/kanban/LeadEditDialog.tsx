@@ -76,7 +76,7 @@ interface LeadEditDialogProps {
   isAdmin?: boolean;
 }
 
-export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStageName, onJumpToStage, pipelineEntryId, displayConfig, initialTab }: LeadEditDialogProps) {
+export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStageName, onJumpToStage, pipelineEntryId, displayConfig, initialTab, onDeleteLead, isAdmin = false }: LeadEditDialogProps) {
   const [formData, setFormData] = useState({
     nome: lead.nome,
     whatsapp: lead.whatsapp || '',
