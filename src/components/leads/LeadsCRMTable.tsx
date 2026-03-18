@@ -362,7 +362,32 @@ export function LeadsCRMTable({
                         {formatShortDate(apts?.lastAppointment || null)}
                       </TableCell>
                       <TableCell className="text-right text-xs font-medium">
-                        {deals && deals.totalValue > 0 ? formatCurrency(deals.totalValue) : '—'}
+                        {deals && deals.totalValue > 0 ? (
+                          deals.closerBreakdown.length > 1 ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help underline decoration-dotted underline-offset-2">
+                                    {formatCurrency(deals.totalValue)}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="left" className="max-w-xs">
+                                  <div className="space-y-1">
+                                    <p className="font-semibold text-xs mb-1">Vendas por closer:</p>
+                                    {deals.closerBreakdown.map((cb, i) => (
+                                      <div key={i} className="flex justify-between gap-4 text-xs">
+                                        <span>{cb.closerName}</span>
+                                        <span className="font-mono">{formatCurrency(cb.totalValue)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            formatCurrency(deals.totalValue)
+                          )
+                        ) : '—'}
                       </TableCell>
                       <TableCell className="text-center">
                         {deals?.hasRecorrente ? (
