@@ -1,0 +1,1 @@
+ALTER TABLE public.deals ADD COLUMN closer_id uuid REFERENCES public.profiles(user_id);

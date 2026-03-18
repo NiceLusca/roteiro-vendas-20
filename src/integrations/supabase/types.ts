@@ -177,6 +177,7 @@ export type Database = {
       }
       deals: {
         Row: {
+          closer_id: string | null
           created_at: string | null
           data_fechamento: string | null
           id: string
@@ -190,6 +191,7 @@ export type Database = {
           valor_recorrente: number | null
         }
         Insert: {
+          closer_id?: string | null
           created_at?: string | null
           data_fechamento?: string | null
           id?: string
@@ -203,6 +205,7 @@ export type Database = {
           valor_recorrente?: number | null
         }
         Update: {
+          closer_id?: string | null
           created_at?: string | null
           data_fechamento?: string | null
           id?: string
@@ -216,6 +219,13 @@ export type Database = {
           valor_recorrente?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "deals_closer_id_fkey"
+            columns: ["closer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "deals_lead_id_fkey"
             columns: ["lead_id"]
