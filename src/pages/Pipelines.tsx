@@ -28,6 +28,7 @@ import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
 import { StageJumpDialog } from '@/components/pipeline/StageJumpDialog';
 import { UnsubscribeConfirmDialog } from '@/components/pipeline/UnsubscribeConfirmDialog';
 import { AppointmentSelectorDialog, AppointmentOption } from '@/components/kanban/AppointmentSelectorDialog';
+import { LeadDeleteConfirmDialog } from '@/components/leads/LeadDeleteConfirmDialog';
 import { Lead, LeadPipelineEntry, PipelineStage } from '@/types/crm';
 import { validateAppointmentRequirement } from '@/lib/appointmentValidator';
 import { useToast } from '@/hooks/use-toast';
