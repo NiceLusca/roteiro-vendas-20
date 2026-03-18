@@ -677,10 +677,23 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Editar Lead: {lead.nome}
-          </DialogTitle>
+          <div className="flex items-center justify-between pr-6">
+            <DialogTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Editar Lead: {lead.nome}
+            </DialogTitle>
+            {isAdmin && onDeleteLead && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={onDeleteLead}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Excluir
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         <Tabs defaultValue={initialTab || "comments"} className="w-full">
