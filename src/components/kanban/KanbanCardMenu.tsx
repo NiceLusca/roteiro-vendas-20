@@ -204,6 +204,22 @@ export const KanbanCardMenu = memo(function KanbanCardMenu({
             Registrar Interação
           </DropdownMenuItem>
         )}
+        
+        {isAdmin && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteLead?.();
+              }}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir Lead
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
     </div>
