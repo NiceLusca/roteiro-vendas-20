@@ -7,10 +7,17 @@ interface UseLeadsCRMDataOptions {
   enabled: boolean;
 }
 
+export interface CloserDealBreakdown {
+  closerName: string;
+  totalValue: number;
+  dealCount: number;
+}
+
 export interface LeadDealsSummary {
   totalValue: number;
   dealCount: number;
   hasRecorrente: boolean;
+  closerBreakdown: CloserDealBreakdown[];
 }
 
 export interface LeadAppointmentsSummary {
