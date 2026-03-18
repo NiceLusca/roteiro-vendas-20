@@ -446,8 +446,23 @@ export function LeadsCRMTable({
             onUpdate?.();
           }}
           displayConfig={{ show_appointments: true, show_deals: true, show_orders: false, card_fields: [], table_columns: [] }}
+          isAdmin={isAdmin}
+          onDeleteLead={() => {
+            setDeleteLeadState({ open: true, leadId: selectedLead.id, leadName: selectedLead.nome });
+          }}
         />
       )}
+
+      <LeadDeleteConfirmDialog
+        open={deleteLeadState.open}
+        onOpenChange={(open) => setDeleteLeadState(prev => ({ ...prev, open }))}
+        leadId={deleteLeadState.leadId}
+        leadName={deleteLeadState.leadName}
+        onDeleted={() => {
+          setSelectedLead(null);
+          onUpdate?.();
+        }}
+      />
     </div>
   );
 }
