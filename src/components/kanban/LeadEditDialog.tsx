@@ -67,15 +67,13 @@ interface LeadEditDialogProps {
   onOpenChange: (open: boolean) => void;
   lead: Lead;
   onUpdate?: () => void;
-  // Props para transferência de etapa
   currentStageName?: string;
   onJumpToStage?: () => void;
-  // ID do entry no pipeline atual (para filtrar histórico)
   pipelineEntryId?: string;
-  // Config de exibição do pipeline (controla quais abas aparecem)
   displayConfig?: PipelineDisplayConfig;
-  // Aba inicial (para abrir diretamente em uma aba específica)
   initialTab?: 'info' | 'responsibles' | 'comments' | 'appointments' | 'deals' | 'attachments' | 'history';
+  onDeleteLead?: () => void;
+  isAdmin?: boolean;
 }
 
 export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStageName, onJumpToStage, pipelineEntryId, displayConfig, initialTab }: LeadEditDialogProps) {
