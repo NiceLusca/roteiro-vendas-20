@@ -1030,6 +1030,17 @@ function PipelinesContent({ slug }: { slug: string }) {
         />
       )}
 
+      <LeadDeleteConfirmDialog
+        open={deleteLeadState.open}
+        onOpenChange={(open) => setDeleteLeadState(prev => ({ ...prev, open }))}
+        leadId={deleteLeadState.leadId}
+        leadName={deleteLeadState.leadName}
+        onDeleted={() => {
+          setEditingLead(null);
+          handleRefresh();
+        }}
+      />
+
       <StageJumpDialog
         open={stageJumpDialogState.open}
         onOpenChange={(open) => setStageJumpDialogState({ open, entryId: null })}
