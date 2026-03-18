@@ -35,6 +35,8 @@ interface KanbanCardMenuProps {
   onRegisterInteraction?: () => void;
   onUnsubscribeFromPipeline?: () => void;
   onManageDeal?: () => void;
+  onDeleteLead?: () => void;
+  isAdmin?: boolean;
 }
 
 export const KanbanCardMenu = memo(function KanbanCardMenu({
