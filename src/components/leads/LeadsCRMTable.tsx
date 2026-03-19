@@ -288,6 +288,7 @@ export function LeadsCRMTable({
                 <SortableTableHead label="Score" column="lead_score" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[60px] text-center" />
                 <SortableTableHead label="Tags" column="tags" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[150px]" />
                 <SortableTableHead label="Criado em" column="created_at" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[100px]" />
+                {isAdmin && <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[50px]">Ações</th>}
               </TableRow>
             </TableHeader>
             <TableBody>
