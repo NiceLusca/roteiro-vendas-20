@@ -114,8 +114,6 @@ export function KanbanBoard({
   onEditLead,
   onCreateAppointment,
   onManageDeal,
-  onDeleteLead,
-  isAdmin = false,
   onAdvanceStage,
   onJumpToStage,
   onRegisterInteraction,
