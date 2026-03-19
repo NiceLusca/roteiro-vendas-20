@@ -28,7 +28,6 @@ import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
 import { StageJumpDialog } from '@/components/pipeline/StageJumpDialog';
 import { UnsubscribeConfirmDialog } from '@/components/pipeline/UnsubscribeConfirmDialog';
 import { AppointmentSelectorDialog, AppointmentOption } from '@/components/kanban/AppointmentSelectorDialog';
-import { LeadDeleteConfirmDialog } from '@/components/leads/LeadDeleteConfirmDialog';
 import { Lead, LeadPipelineEntry, PipelineStage } from '@/types/crm';
 import { validateAppointmentRequirement } from '@/lib/appointmentValidator';
 import { useToast } from '@/hooks/use-toast';
@@ -83,11 +82,6 @@ function PipelinesContent({ slug }: { slug: string }) {
     leadId: string | null;
     leadName: string;
   }>({ open: false, entryId: null, leadId: null, leadName: '' });
-  const [deleteLeadState, setDeleteLeadState] = useState<{
-    open: boolean;
-    leadId: string;
-    leadName: string;
-  }>({ open: false, leadId: '', leadName: '' });
   
   // Estado para seleção de agendamento durante movimentação
   const [pendingAppointmentSelection, setPendingAppointmentSelection] = useState<{
@@ -983,8 +977,6 @@ function PipelinesContent({ slug }: { slug: string }) {
             onPendingMoveForNewAppointment={handlePendingMoveForNewAppointment}
             onMoveSuccess={(data) => registerMoveForUndo(data.entryId, data.fromStageId, data.toStageId, data.leadName)}
             onRefresh={handleRefresh}
-            onDeleteLead={(leadId, leadName) => setDeleteLeadState({ open: true, leadId, leadName })}
-            isAdmin={isAdmin}
           />
         ) : (
           <PipelineTableView
@@ -1027,25 +1019,9 @@ function PipelinesContent({ slug }: { slug: string }) {
             }
           }}
           displayConfig={currentPipeline?.display_config}
-          isAdmin={isAdmin}
-          onDeleteLead={() => {
-            if (editingLead) {
-              setDeleteLeadState({ open: true, leadId: editingLead.lead.id, leadName: editingLead.lead.nome });
-            }
-          }}
         />
       )}
 
-      <LeadDeleteConfirmDialog
-        open={deleteLeadState.open}
-        onOpenChange={(open) => setDeleteLeadState(prev => ({ ...prev, open }))}
-        leadId={deleteLeadState.leadId}
-        leadName={deleteLeadState.leadName}
-        onDeleted={() => {
-          setEditingLead(null);
-          handleRefresh();
-        }}
-      />
 
       <StageJumpDialog
         open={stageJumpDialogState.open}

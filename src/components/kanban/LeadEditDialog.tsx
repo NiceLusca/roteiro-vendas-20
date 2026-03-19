@@ -72,11 +72,9 @@ interface LeadEditDialogProps {
   pipelineEntryId?: string;
   displayConfig?: PipelineDisplayConfig;
   initialTab?: 'info' | 'responsibles' | 'comments' | 'appointments' | 'deals' | 'attachments' | 'history';
-  onDeleteLead?: () => void;
-  isAdmin?: boolean;
 }
 
-export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStageName, onJumpToStage, pipelineEntryId, displayConfig, initialTab, onDeleteLead, isAdmin = false }: LeadEditDialogProps) {
+export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStageName, onJumpToStage, pipelineEntryId, displayConfig, initialTab }: LeadEditDialogProps) {
   const [formData, setFormData] = useState({
     nome: lead.nome,
     whatsapp: lead.whatsapp || '',
@@ -682,17 +680,6 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
               <User className="h-5 w-5" />
               Editar Lead: {lead.nome}
             </DialogTitle>
-            {isAdmin && onDeleteLead && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={onDeleteLead}
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Excluir
-              </Button>
-            )}
           </div>
         </DialogHeader>
 

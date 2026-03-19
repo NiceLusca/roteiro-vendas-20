@@ -18,7 +18,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { formatWhatsApp } from '@/utils/formatters';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Table as TableIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Table as TableIcon, Trash2 } from 'lucide-react';
 import { InlineEditCell, InlineSelectCell } from './InlineEditCell';
 import { SortableTableHead, SortDirection } from './SortableTableHead';
 import { CRMTableFilters } from './CRMTableFilters';
@@ -288,6 +288,7 @@ export function LeadsCRMTable({
                 <SortableTableHead label="Score" column="lead_score" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[60px] text-center" />
                 <SortableTableHead label="Tags" column="tags" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[150px]" />
                 <SortableTableHead label="Criado em" column="created_at" currentSort={sortColumn} currentDirection={sortDirection} onSort={handleSort} className="min-w-[100px]" />
+                {isAdmin && <th className="h-12 px-2 text-center align-middle font-medium text-muted-foreground min-w-[50px]">Ações</th>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -428,6 +429,21 @@ export function LeadsCRMTable({
                       <TableCell className="text-xs whitespace-nowrap">
                         {lead.created_at ? format(new Date(lead.created_at), 'dd/MM/yy', { locale: ptBR }) : '—'}
                       </TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-center px-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteLeadState({ open: true, leadId: lead.id, leadName: lead.nome });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })
@@ -446,10 +462,6 @@ export function LeadsCRMTable({
             onUpdate?.();
           }}
           displayConfig={{ show_appointments: true, show_deals: true, show_orders: false, card_fields: [], table_columns: [] }}
-          isAdmin={isAdmin}
-          onDeleteLead={() => {
-            setDeleteLeadState({ open: true, leadId: selectedLead.id, leadName: selectedLead.nome });
-          }}
         />
       )}
 

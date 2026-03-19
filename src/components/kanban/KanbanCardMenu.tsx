@@ -11,7 +11,7 @@ import {
   MoreVertical,
   Eye,
   CheckSquare,
-  Trash2,
+  
   ArrowLeft,
   ArrowRight,
   GitBranch,
@@ -35,8 +35,6 @@ interface KanbanCardMenuProps {
   onRegisterInteraction?: () => void;
   onUnsubscribeFromPipeline?: () => void;
   onManageDeal?: () => void;
-  onDeleteLead?: () => void;
-  isAdmin?: boolean;
 }
 
 export const KanbanCardMenu = memo(function KanbanCardMenu({
@@ -52,8 +50,6 @@ export const KanbanCardMenu = memo(function KanbanCardMenu({
   onRegisterInteraction,
   onUnsubscribeFromPipeline,
   onManageDeal,
-  onDeleteLead,
-  isAdmin = false,
 }: KanbanCardMenuProps) {
   // ✅ SOLUÇÃO 4: Controle manual do estado para evitar fechamento inesperado
   const [isOpen, setIsOpen] = useState(false);
@@ -205,21 +201,6 @@ export const KanbanCardMenu = memo(function KanbanCardMenu({
           </DropdownMenuItem>
         )}
         
-        {isAdmin && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteLead?.();
-              }}
-              className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Excluir Lead
-            </DropdownMenuItem>
-          </>
-        )}
       </DropdownMenuContent>
     </DropdownMenu>
     </div>
