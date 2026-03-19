@@ -1,39 +1,25 @@
 
 
-## Problema
+# Mover botão de excluir para a linha da Tabela CRM
 
-A busca no pipeline usa `.ilike('leads.nome', ...)` — só pesquisa pelo campo `nome`. Se o usuário digitar um telefone, e-mail ou CPF, não encontra nada.
+## O que muda
 
-## Solução
+1. **Remover** o botão "Excluir" do `LeadEditDialog` (header do dialog) — não aparece mais em nenhum contexto
+2. **Remover** o item "Excluir Lead" do `KanbanCardMenu` (menu ⋮ do card no pipeline)
+3. **Remover** props `onDeleteLead`/`isAdmin` da cadeia Kanban (`Pipelines.tsx` → `KanbanBoard` → `KanbanColumn` → `KanbanCard` → `KanbanCardMenu`)
+4. **Adicionar** um ícone de lixeira (🗑) na linha de cada lead na `LeadsCRMTable`, visível apenas para admins, que abre o `LeadDeleteConfirmDialog` (checkbox + botão, já existente)
 
-Modificar a busca server-side para pesquisar em múltiplos campos simultaneamente usando `.or()` do Supabase, cobrindo: `nome`, `email`, `whatsapp` e `observacoes` (onde CPF costuma estar armazenado).
+## Arquivos afetados
 
-## Mudanças
+- **`src/components/kanban/LeadEditDialog.tsx`** — remover botão Excluir do header e props relacionadas
+- **`src/components/kanban/KanbanCardMenu.tsx`** — remover item "Excluir Lead" e props `onDeleteLead`/`isAdmin`
+- **`src/components/kanban/KanbanCard.tsx`** — remover props `onDeleteLead`/`isAdmin`
+- **`src/components/kanban/KanbanColumn.tsx`** — remover props `onDeleteLead`/`isAdmin`
+- **`src/components/kanban/KanbanBoard.tsx`** — remover props `onDeleteLead`/`isAdmin`
+- **`src/pages/Pipelines.tsx`** — remover state de delete e `LeadDeleteConfirmDialog` do pipeline
+- **`src/components/leads/LeadsCRMTable.tsx`** — adicionar coluna de ações com ícone de lixeira (admin only) em cada linha; manter dialog de delete já existente
 
-### 1. `src/hooks/useSupabaseLeadPipelineEntries.ts` — função `searchLeads`
+## Detalhe da coluna de ações na tabela
 
-Substituir a linha:
-```typescript
-.ilike('leads.nome', `%${searchTerm}%`)
-```
-
-Por uma query que use `.or()` no join dos leads para buscar em múltiplos campos:
-```typescript
-.or(`nome.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,whatsapp.ilike.%${searchTerm}%,observacoes.ilike.%${searchTerm}%`, { referencedTable: 'leads' })
-```
-
-Isso permite que o usuário pesquise por nome, telefone, e-mail ou qualquer dado nas observações (como CPF).
-
-### 2. `src/pages/Pipelines.tsx` — placeholder do input
-
-Atualizar o placeholder de `"Buscar por nome..."` para `"Buscar por nome, telefone, e-mail..."` para indicar ao usuário que a busca é mais abrangente.
-
-### 3. `src/hooks/useLeadSearch.ts` — mesma melhoria
-
-Aplicar a mesma lógica de busca multi-campo neste hook também, que é usado em outros selects/autocompletes:
-```typescript
-.or(`nome.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,whatsapp.ilike.%${searchTerm}%`)
-```
-
-Substituindo o `.ilike('nome', ...)` atual.
+Adicionar uma última coluna "Ações" com um botão de ícone `Trash2` por linha, que ao clicar (com `e.stopPropagation()` para não abrir o dialog de edição) abre o `LeadDeleteConfirmDialog`. Visível apenas quando `isAdmin === true`.
 
