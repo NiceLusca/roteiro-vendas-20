@@ -18,7 +18,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { formatWhatsApp } from '@/utils/formatters';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, Table as TableIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Table as TableIcon, Trash2 } from 'lucide-react';
 import { InlineEditCell, InlineSelectCell } from './InlineEditCell';
 import { SortableTableHead, SortDirection } from './SortableTableHead';
 import { CRMTableFilters } from './CRMTableFilters';

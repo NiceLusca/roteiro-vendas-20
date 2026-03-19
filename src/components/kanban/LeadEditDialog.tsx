@@ -680,17 +680,6 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
               <User className="h-5 w-5" />
               Editar Lead: {lead.nome}
             </DialogTitle>
-            {isAdmin && onDeleteLead && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={onDeleteLead}
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-                Excluir
-              </Button>
-            )}
           </div>
         </DialogHeader>
 

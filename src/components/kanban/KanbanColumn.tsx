@@ -376,8 +376,6 @@ export const KanbanColumn = memo(function KanbanColumn({
                   onTransferPipeline={() => onTransferPipeline?.(entry.lead.id)}
                   onUnsubscribeFromPipeline={() => onUnsubscribeFromPipeline?.(entry.id, entry.lead.id)}
                   onManageDeal={() => onManageDeal?.(entry.lead.id)}
-                  onDeleteLead={() => onDeleteLead?.(entry.lead.id, entry.lead.nome)}
-                  isAdmin={isAdmin}
                   onDragStart={onDragStart}
                   onDragEnd={onDragEnd}
                   onTagsChange={onTagsChange}
