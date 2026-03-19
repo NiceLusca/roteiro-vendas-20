@@ -72,8 +72,6 @@ interface LeadEditDialogProps {
   pipelineEntryId?: string;
   displayConfig?: PipelineDisplayConfig;
   initialTab?: 'info' | 'responsibles' | 'comments' | 'appointments' | 'deals' | 'attachments' | 'history';
-  onDeleteLead?: () => void;
-  isAdmin?: boolean;
 }
 
 export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStageName, onJumpToStage, pipelineEntryId, displayConfig, initialTab, onDeleteLead, isAdmin = false }: LeadEditDialogProps) {
