@@ -978,8 +978,6 @@ function PipelinesContent({ slug }: { slug: string }) {
             onPendingMoveForNewAppointment={handlePendingMoveForNewAppointment}
             onMoveSuccess={(data) => registerMoveForUndo(data.entryId, data.fromStageId, data.toStageId, data.leadName)}
             onRefresh={handleRefresh}
-            onDeleteLead={(leadId, leadName) => setDeleteLeadState({ open: true, leadId, leadName })}
-            isAdmin={isAdmin}
           />
         ) : (
           <PipelineTableView
