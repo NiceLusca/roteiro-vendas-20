@@ -91,8 +91,6 @@ export const KanbanColumn = memo(function KanbanColumn({
   onTransferPipeline,
   onUnsubscribeFromPipeline,
   onManageDeal,
-  onDeleteLead,
-  isAdmin = false,
   onDropLead,
   onDragStart,
   onDragEnd,
