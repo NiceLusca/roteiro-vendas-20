@@ -11,7 +11,7 @@ import {
   MoreVertical,
   Eye,
   CheckSquare,
-  Trash2,
+  
   ArrowLeft,
   ArrowRight,
   GitBranch,
