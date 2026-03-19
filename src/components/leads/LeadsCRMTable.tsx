@@ -429,6 +429,21 @@ export function LeadsCRMTable({
                       <TableCell className="text-xs whitespace-nowrap">
                         {lead.created_at ? format(new Date(lead.created_at), 'dd/MM/yy', { locale: ptBR }) : '—'}
                       </TableCell>
+                      {isAdmin && (
+                        <TableCell className="text-center px-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteLeadState({ open: true, leadId: lead.id, leadName: lead.nome });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })
