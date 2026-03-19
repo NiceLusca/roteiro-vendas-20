@@ -79,8 +79,6 @@ interface KanbanBoardProps {
   onEditLead?: (leadId: string, options?: { initialTab?: string }) => void;
   onCreateAppointment?: (leadId: string) => void;
   onManageDeal?: (leadId: string) => void;
-  onDeleteLead?: (leadId: string, leadName: string) => void;
-  isAdmin?: boolean;
   onAdvanceStage?: (entryId: string) => void;
   onJumpToStage?: (entryId: string) => void;
   onRegisterInteraction?: (leadId: string) => void;
