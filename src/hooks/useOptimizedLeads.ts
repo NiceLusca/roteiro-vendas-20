@@ -52,7 +52,7 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
     error,
     refetch
   } = useQuery({
-    queryKey: ['leads', page, searchTerm, filterStatus, filterScore, filterTag, user?.id],
+    queryKey: ['leads', page, searchTerm, filterStatus, filterScore, filterTag, filterSessionDate, user?.id],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
 
