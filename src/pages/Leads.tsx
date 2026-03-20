@@ -495,15 +495,44 @@ function LeadsContent() {
 
                 {/* Filtro Status */}
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-44">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os status</SelectItem>
-                    <SelectItem value="Ativo">Ativo</SelectItem>
-                    <SelectItem value="Cliente">Cliente</SelectItem>
-                    <SelectItem value="Perdido">Perdido</SelectItem>
-                    <SelectItem value="Inativo">Inativo</SelectItem>
+                    <SelectItem value="lead">Lead</SelectItem>
+                    <SelectItem value="qualificado">Qualificado</SelectItem>
+                    <SelectItem value="reuniao_marcada">Reunião marcada</SelectItem>
+                    <SelectItem value="em_negociacao">Em negociação</SelectItem>
+                    <SelectItem value="agendado">Agendado</SelectItem>
+                    <SelectItem value="confirmado">Confirmado</SelectItem>
+                    <SelectItem value="atendido">Atendido</SelectItem>
+                    <SelectItem value="ligacao_realizada">Ligação realizada</SelectItem>
+                    <SelectItem value="remarcou">Remarcou</SelectItem>
+                    <SelectItem value="nao_compareceu">Não compareceu</SelectItem>
+                    <SelectItem value="desmarcou">Desmarcou</SelectItem>
+                    <SelectItem value="closer_ausente">Closer ausente</SelectItem>
+                    <SelectItem value="fechou">Fechou</SelectItem>
+                    <SelectItem value="nao_fechou">Não fechou</SelectItem>
+                    <SelectItem value="ja_possui">Já possui</SelectItem>
+                    <SelectItem value="cliente">Cliente</SelectItem>
+                    <SelectItem value="perdido">Perdido</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Filtro Data da Sessão */}
+                <Select value={filterSessionDate} onValueChange={setFilterSessionDate}>
+                  <SelectTrigger className="w-44">
+                    <SelectValue placeholder="Data da sessão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as datas</SelectItem>
+                    <SelectItem value="today">Hoje</SelectItem>
+                    <SelectItem value="tomorrow">Amanhã</SelectItem>
+                    <SelectItem value="this_week">Esta semana</SelectItem>
+                    <SelectItem value="next_week">Próxima semana</SelectItem>
+                    <SelectItem value="this_month">Este mês</SelectItem>
+                    <SelectItem value="no_session">Sem sessão</SelectItem>
                   </SelectContent>
                 </Select>
 
