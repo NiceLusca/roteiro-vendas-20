@@ -138,6 +138,9 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
           return { leads: [], totalCount: 0, totalPages: 0 };
         }
       }
+
+      // Apply search
+      if (searchTerm) {
         query = query.or(`nome.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,whatsapp.ilike.%${searchTerm}%`);
       }
 
