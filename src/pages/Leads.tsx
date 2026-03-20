@@ -132,7 +132,8 @@ function LeadsContent() {
     searchTerm: debouncedSearch,
     filterStatus,
     filterScore,
-    filterTag
+    filterTag,
+    filterSessionDate
   });
 
   const { updateLeadTags } = useLeadTags();
