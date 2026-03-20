@@ -96,7 +96,6 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
 
       // Apply tag filter
       if (filterTag !== 'all') {
-        // Filter leads that have the selected tag
         const { data: tagAssignments } = await supabase
           .from('lead_tag_assignments')
           .select('lead_id')
@@ -106,13 +105,39 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
         if (leadIdsWithTag.length > 0) {
           query = query.in('id', leadIdsWithTag);
         } else {
-          // If no leads have this tag, return empty result
           return { leads: [], totalCount: 0, totalPages: 0 };
         }
       }
 
-      // Apply search with trigram similarity
-      if (searchTerm) {
+      // Apply session date filter
+      const sessionRange = getSessionDateRange(filterSessionDate);
+      if (sessionRange === 'no_session') {
+        // Find leads that have NO appointments at all
+        const { data: leadsWithAppts } = await supabase
+          .from('appointments')
+          .select('lead_id');
+        const idsWithAppts = new Set(leadsWithAppts?.map(a => a.lead_id) || []);
+        // We need to exclude these leads - use NOT IN
+        if (idsWithAppts.size > 0) {
+          // Supabase doesn't have "not in" directly on query builder for dynamic sets,
+          // so we fetch all and filter, or use a workaround
+          const idsArray = Array.from(idsWithAppts);
+          query = query.not('id', 'in', `(${idsArray.join(',')})`);
+        }
+      } else if (sessionRange) {
+        const { data: apptLeads } = await supabase
+          .from('appointments')
+          .select('lead_id')
+          .gte('data_hora', sessionRange.from.toISOString())
+          .lte('data_hora', sessionRange.to.toISOString());
+        
+        const leadIdsWithSession = [...new Set(apptLeads?.map(a => a.lead_id) || [])];
+        if (leadIdsWithSession.length > 0) {
+          query = query.in('id', leadIdsWithSession);
+        } else {
+          return { leads: [], totalCount: 0, totalPages: 0 };
+        }
+      }
         query = query.or(`nome.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,whatsapp.ilike.%${searchTerm}%`);
       }
 
