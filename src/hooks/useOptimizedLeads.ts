@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/crm';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContextSecure';
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, addDays, startOfMonth, endOfMonth } from 'date-fns';
 
 const LEADS_PER_PAGE = 50;
 
@@ -12,10 +13,33 @@ interface UseOptimizedLeadsOptions {
   filterStatus?: string;
   filterScore?: string;
   filterTag?: string;
+  filterSessionDate?: string;
+}
+
+function getSessionDateRange(filter: string): { from: Date; to: Date } | 'no_session' | null {
+  const now = new Date();
+  switch (filter) {
+    case 'today':
+      return { from: startOfDay(now), to: endOfDay(now) };
+    case 'tomorrow':
+      return { from: startOfDay(addDays(now, 1)), to: endOfDay(addDays(now, 1)) };
+    case 'this_week':
+      return { from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfWeek(now, { weekStartsOn: 1 }) };
+    case 'next_week': {
+      const nextWeekStart = addDays(startOfWeek(now, { weekStartsOn: 1 }), 7);
+      return { from: nextWeekStart, to: endOfWeek(nextWeekStart, { weekStartsOn: 1 }) };
+    }
+    case 'this_month':
+      return { from: startOfMonth(now), to: endOfMonth(now) };
+    case 'no_session':
+      return 'no_session';
+    default:
+      return null;
+  }
 }
 
 export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
-  const { page = 1, searchTerm = '', filterStatus = 'all', filterScore = 'all', filterTag = 'all' } = options;
+  const { page = 1, searchTerm = '', filterStatus = 'all', filterScore = 'all', filterTag = 'all', filterSessionDate = 'all' } = options;
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -28,7 +52,7 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
     error,
     refetch
   } = useQuery({
-    queryKey: ['leads', page, searchTerm, filterStatus, filterScore, filterTag, user?.id],
+    queryKey: ['leads', page, searchTerm, filterStatus, filterScore, filterTag, filterSessionDate, user?.id],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
 
@@ -72,7 +96,6 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
 
       // Apply tag filter
       if (filterTag !== 'all') {
-        // Filter leads that have the selected tag
         const { data: tagAssignments } = await supabase
           .from('lead_tag_assignments')
           .select('lead_id')
@@ -82,12 +105,41 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
         if (leadIdsWithTag.length > 0) {
           query = query.in('id', leadIdsWithTag);
         } else {
-          // If no leads have this tag, return empty result
           return { leads: [], totalCount: 0, totalPages: 0 };
         }
       }
 
-      // Apply search with trigram similarity
+      // Apply session date filter
+      const sessionRange = getSessionDateRange(filterSessionDate);
+      if (sessionRange === 'no_session') {
+        // Find leads that have NO appointments at all
+        const { data: leadsWithAppts } = await supabase
+          .from('appointments')
+          .select('lead_id');
+        const idsWithAppts = new Set(leadsWithAppts?.map(a => a.lead_id) || []);
+        // We need to exclude these leads - use NOT IN
+        if (idsWithAppts.size > 0) {
+          // Supabase doesn't have "not in" directly on query builder for dynamic sets,
+          // so we fetch all and filter, or use a workaround
+          const idsArray = Array.from(idsWithAppts);
+          query = query.not('id', 'in', `(${idsArray.join(',')})`);
+        }
+      } else if (sessionRange) {
+        const { data: apptLeads } = await supabase
+          .from('appointments')
+          .select('lead_id')
+          .gte('data_hora', sessionRange.from.toISOString())
+          .lte('data_hora', sessionRange.to.toISOString());
+        
+        const leadIdsWithSession = [...new Set(apptLeads?.map(a => a.lead_id) || [])];
+        if (leadIdsWithSession.length > 0) {
+          query = query.in('id', leadIdsWithSession);
+        } else {
+          return { leads: [], totalCount: 0, totalPages: 0 };
+        }
+      }
+
+      // Apply search
       if (searchTerm) {
         query = query.or(`nome.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,whatsapp.ilike.%${searchTerm}%`);
       }
