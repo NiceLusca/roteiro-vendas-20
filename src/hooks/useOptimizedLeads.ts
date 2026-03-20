@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Lead } from '@/types/crm';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContextSecure';
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, addDays, startOfMonth, endOfMonth } from 'date-fns';
 
 const LEADS_PER_PAGE = 50;
 
@@ -12,10 +13,33 @@ interface UseOptimizedLeadsOptions {
   filterStatus?: string;
   filterScore?: string;
   filterTag?: string;
+  filterSessionDate?: string;
+}
+
+function getSessionDateRange(filter: string): { from: Date; to: Date } | 'no_session' | null {
+  const now = new Date();
+  switch (filter) {
+    case 'today':
+      return { from: startOfDay(now), to: endOfDay(now) };
+    case 'tomorrow':
+      return { from: startOfDay(addDays(now, 1)), to: endOfDay(addDays(now, 1)) };
+    case 'this_week':
+      return { from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfWeek(now, { weekStartsOn: 1 }) };
+    case 'next_week': {
+      const nextWeekStart = addDays(startOfWeek(now, { weekStartsOn: 1 }), 7);
+      return { from: nextWeekStart, to: endOfWeek(nextWeekStart, { weekStartsOn: 1 }) };
+    }
+    case 'this_month':
+      return { from: startOfMonth(now), to: endOfMonth(now) };
+    case 'no_session':
+      return 'no_session';
+    default:
+      return null;
+  }
 }
 
 export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
-  const { page = 1, searchTerm = '', filterStatus = 'all', filterScore = 'all', filterTag = 'all' } = options;
+  const { page = 1, searchTerm = '', filterStatus = 'all', filterScore = 'all', filterTag = 'all', filterSessionDate = 'all' } = options;
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
