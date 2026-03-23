@@ -19,6 +19,7 @@ interface LeadEntry {
   etapa_grupo: string | null;
   origem: string | null;
   closer: string | null;
+  status_geral: string | null;
 }
 
 interface OrderData {
@@ -218,7 +219,7 @@ Deno.serve(async (req) => {
         id,
         lead_id,
         etapa_atual_id,
-        leads!inner(origem)
+        leads!inner(origem, status_geral)
       `)
       .eq("pipeline_id", pipeline.id)
       .eq("status_inscricao", "Ativo");
@@ -269,6 +270,7 @@ Deno.serve(async (req) => {
         etapa_grupo: stage?.grupo || null,
         origem: e.leads?.origem || "Outro",
         closer: closerName,
+        status_geral: e.leads?.status_geral || null,
       };
     });
 
@@ -284,9 +286,7 @@ Deno.serve(async (req) => {
       }
     });
 
-    // 5. Calculate attendance metrics based on stage progression
-    // Compareceu = ordem >= 6 AND nome != 'Perdido sem sessão' AND nome != 'Mentorado'
-    // Não compareceu = 'No-Show' OR 'Perdido sem sessão'
+    // 5. Calculate attendance metrics based on leads.status_geral
     let mentorados = 0;
     let compareceram = 0;
     let naoCompareceram = 0;
@@ -298,40 +298,57 @@ Deno.serve(async (req) => {
     let emRecuperacao = 0;
     let noShow = 0;
 
-    leadEntries.forEach((e) => {
-      const nome = e.etapa_nome.toLowerCase();
-      const ordem = e.etapa_ordem;
+    // Contagem por status_geral
+    const porStatus: Record<string, number> = {};
 
-      if (nome === "mentorado") {
-        mentorados++;
-      } else if (nome === "agendado") {
-        pendentes.agendado++;
-        pendentes.total++;
-      } else if (nome === "confirmado") {
-        pendentes.confirmado++;
-        pendentes.total++;
-      } else if (nome === "remarcou") {
-        pendentes.remarcou++;
-        pendentes.total++;
-      } else if (nome === "no-show" || nome === "no show") {
-        noShow++;
-        naoCompareceram++;
-      } else if (nome.includes("perdido sem sessão") || nome.includes("perdido sem sessao")) {
-        perdidosSemSessao++;
-        naoCompareceram++;
-      } else if (ordem >= 6) {
-        compareceram++;
-        
-        // CORREÇÃO: usar startsWith para evitar que "Não Fechou" seja contado como fechamento
-        if (nome.startsWith("fechou") && !nome.includes("recuperação") && !nome.includes("recuperacao")) {
+    leadEntries.forEach((e) => {
+      const status = e.status_geral || 'lead';
+      porStatus[status] = (porStatus[status] || 0) + 1;
+
+      switch (status) {
+        case 'cliente':
+          mentorados++;
+          break;
+        case 'agendado':
+          pendentes.agendado++;
+          pendentes.total++;
+          break;
+        case 'confirmado':
+          pendentes.confirmado++;
+          pendentes.total++;
+          break;
+        case 'remarcou':
+          pendentes.remarcou++;
+          pendentes.total++;
+          break;
+        case 'nao_compareceu':
+        case 'desmarcou':
+        case 'closer_ausente':
+          noShow++;
+          naoCompareceram++;
+          break;
+        case 'atendido':
+        case 'ligacao_realizada':
+          compareceram++;
+          break;
+        case 'fechou':
+          compareceram++;
           fechamentosDiretos++;
-        } else if (nome.startsWith("fechou") && (nome.includes("recuperação") || nome.includes("recuperacao") || nome.includes("pós"))) {
-          fechamentosRecuperacao++;
-        } else if (nome.includes("perdido") && nome.includes("sessão") || nome.includes("perdido pós") || nome.includes("perdido pos")) {
+          break;
+        case 'nao_fechou':
+        case 'ja_possui':
+          compareceram++;
           perdidosPossSessao++;
-        } else if (nome.includes("recuperação") || nome.includes("recuperacao") || nome.includes("d+")) {
+          break;
+        case 'em_negociacao':
+          compareceram++;
           emRecuperacao++;
-        }
+          break;
+        case 'perdido':
+          perdidosSemSessao++;
+          naoCompareceram++;
+          break;
+        // lead, qualificado, reuniao_marcada → não contam em nenhuma categoria especial
       }
     });
 
@@ -459,14 +476,13 @@ Deno.serve(async (req) => {
       const stats = closerStats.get(e.closer)!;
       stats.leads++;
       
-      const nome = e.etapa_nome.toLowerCase();
-      if (e.etapa_ordem >= 6 && nome !== "mentorado" && !nome.includes("perdido sem sessão")) {
+      const status = e.status_geral || 'lead';
+      // Compareceu = atendido, ligacao_realizada, fechou, nao_fechou, ja_possui, em_negociacao
+      const compareceuStatuses = ['atendido', 'ligacao_realizada', 'fechou', 'nao_fechou', 'ja_possui', 'em_negociacao'];
+      if (compareceuStatuses.includes(status)) {
         stats.compareceu++;
       }
-      // CORREÇÃO: "Não Fechou" contém "fechou" mas NÃO é fechamento!
-      // Contar apenas etapas que começam com "fechou" (ex: "fechou", "fechou (pós-recuperação)")
-      const isFechamento = nome.startsWith("fechou");
-      if (isFechamento) {
+      if (status === 'fechou') {
         stats.fechou++;
       }
     });
@@ -509,7 +525,7 @@ Deno.serve(async (req) => {
       }
       const stats = origemStats.get(origem)!;
       stats.leads++;
-      if (e.etapa_nome.toLowerCase().includes("fechou")) {
+      if (e.status_geral === 'fechou') {
         stats.fechou++;
       }
     });
@@ -562,12 +578,12 @@ Deno.serve(async (req) => {
       const stats = origemMap.get(origem)!;
       stats.leads++;
       
-      const nome = e.etapa_nome.toLowerCase();
-      if (e.etapa_ordem >= 6 && nome !== "mentorado" && !nome.includes("perdido sem sessão")) {
+      const status = e.status_geral || 'lead';
+      const compareceuStatuses = ['atendido', 'ligacao_realizada', 'fechou', 'nao_fechou', 'ja_possui', 'em_negociacao'];
+      if (compareceuStatuses.includes(status)) {
         stats.compareceu++;
       }
-      // CORREÇÃO: usar startsWith para evitar "Não Fechou"
-      if (nome.startsWith("fechou")) {
+      if (status === 'fechou') {
         stats.fechou++;
       }
     });
@@ -686,6 +702,7 @@ Deno.serve(async (req) => {
         },
         por_tipo_venda: porTipoVenda,
         por_etapa: Object.values(porEtapa).sort((a, b) => a.ordem - b.ordem),
+        por_status: Object.entries(porStatus).map(([status, total]) => ({ status, total })).sort((a, b) => b.total - a.total),
         por_closer: porCloser,
         por_origem: porOrigem,
         por_produto: porProduto,
