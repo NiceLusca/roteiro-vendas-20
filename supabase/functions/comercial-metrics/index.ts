@@ -578,12 +578,12 @@ Deno.serve(async (req) => {
       const stats = origemMap.get(origem)!;
       stats.leads++;
       
-      const nome = e.etapa_nome.toLowerCase();
-      if (e.etapa_ordem >= 6 && nome !== "mentorado" && !nome.includes("perdido sem sessão")) {
+      const status = e.status_geral || 'lead';
+      const compareceuStatuses = ['atendido', 'ligacao_realizada', 'fechou', 'nao_fechou', 'ja_possui', 'em_negociacao'];
+      if (compareceuStatuses.includes(status)) {
         stats.compareceu++;
       }
-      // CORREÇÃO: usar startsWith para evitar "Não Fechou"
-      if (nome.startsWith("fechou")) {
+      if (status === 'fechou') {
         stats.fechou++;
       }
     });
