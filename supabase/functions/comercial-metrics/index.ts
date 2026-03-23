@@ -476,14 +476,13 @@ Deno.serve(async (req) => {
       const stats = closerStats.get(e.closer)!;
       stats.leads++;
       
-      const nome = e.etapa_nome.toLowerCase();
-      if (e.etapa_ordem >= 6 && nome !== "mentorado" && !nome.includes("perdido sem sessão")) {
+      const status = e.status_geral || 'lead';
+      // Compareceu = atendido, ligacao_realizada, fechou, nao_fechou, ja_possui, em_negociacao
+      const compareceuStatuses = ['atendido', 'ligacao_realizada', 'fechou', 'nao_fechou', 'ja_possui', 'em_negociacao'];
+      if (compareceuStatuses.includes(status)) {
         stats.compareceu++;
       }
-      // CORREÇÃO: "Não Fechou" contém "fechou" mas NÃO é fechamento!
-      // Contar apenas etapas que começam com "fechou" (ex: "fechou", "fechou (pós-recuperação)")
-      const isFechamento = nome.startsWith("fechou");
-      if (isFechamento) {
+      if (status === 'fechou') {
         stats.fechou++;
       }
     });
