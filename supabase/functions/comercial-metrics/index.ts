@@ -219,7 +219,7 @@ Deno.serve(async (req) => {
         id,
         lead_id,
         etapa_atual_id,
-        leads!inner(origem)
+        leads!inner(origem, status_geral)
       `)
       .eq("pipeline_id", pipeline.id)
       .eq("status_inscricao", "Ativo");
