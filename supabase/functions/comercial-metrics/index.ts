@@ -525,7 +525,7 @@ Deno.serve(async (req) => {
       }
       const stats = origemStats.get(origem)!;
       stats.leads++;
-      if (e.etapa_nome.toLowerCase().includes("fechou")) {
+      if (e.status_geral === 'fechou') {
         stats.fechou++;
       }
     });
