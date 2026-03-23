@@ -19,6 +19,7 @@ interface LeadEntry {
   etapa_grupo: string | null;
   origem: string | null;
   closer: string | null;
+  status_geral: string | null;
 }
 
 interface OrderData {
