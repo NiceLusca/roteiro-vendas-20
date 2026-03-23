@@ -702,6 +702,7 @@ Deno.serve(async (req) => {
         },
         por_tipo_venda: porTipoVenda,
         por_etapa: Object.values(porEtapa).sort((a, b) => a.ordem - b.ordem),
+        por_status: Object.entries(porStatus).map(([status, total]) => ({ status, total })).sort((a, b) => b.total - a.total),
         por_closer: porCloser,
         por_origem: porOrigem,
         por_produto: porProduto,
