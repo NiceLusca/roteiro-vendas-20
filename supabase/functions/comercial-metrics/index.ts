@@ -270,6 +270,7 @@ Deno.serve(async (req) => {
         etapa_grupo: stage?.grupo || null,
         origem: e.leads?.origem || "Outro",
         closer: closerName,
+        status_geral: e.leads?.status_geral || null,
       };
     });
 
