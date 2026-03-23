@@ -286,9 +286,7 @@ Deno.serve(async (req) => {
       }
     });
 
-    // 5. Calculate attendance metrics based on stage progression
-    // Compareceu = ordem >= 6 AND nome != 'Perdido sem sessão' AND nome != 'Mentorado'
-    // Não compareceu = 'No-Show' OR 'Perdido sem sessão'
+    // 5. Calculate attendance metrics based on leads.status_geral
     let mentorados = 0;
     let compareceram = 0;
     let naoCompareceram = 0;
@@ -300,40 +298,57 @@ Deno.serve(async (req) => {
     let emRecuperacao = 0;
     let noShow = 0;
 
-    leadEntries.forEach((e) => {
-      const nome = e.etapa_nome.toLowerCase();
-      const ordem = e.etapa_ordem;
+    // Contagem por status_geral
+    const porStatus: Record<string, number> = {};
 
-      if (nome === "mentorado") {
-        mentorados++;
-      } else if (nome === "agendado") {
-        pendentes.agendado++;
-        pendentes.total++;
-      } else if (nome === "confirmado") {
-        pendentes.confirmado++;
-        pendentes.total++;
-      } else if (nome === "remarcou") {
-        pendentes.remarcou++;
-        pendentes.total++;
-      } else if (nome === "no-show" || nome === "no show") {
-        noShow++;
-        naoCompareceram++;
-      } else if (nome.includes("perdido sem sessão") || nome.includes("perdido sem sessao")) {
-        perdidosSemSessao++;
-        naoCompareceram++;
-      } else if (ordem >= 6) {
-        compareceram++;
-        
-        // CORREÇÃO: usar startsWith para evitar que "Não Fechou" seja contado como fechamento
-        if (nome.startsWith("fechou") && !nome.includes("recuperação") && !nome.includes("recuperacao")) {
+    leadEntries.forEach((e) => {
+      const status = e.status_geral || 'lead';
+      porStatus[status] = (porStatus[status] || 0) + 1;
+
+      switch (status) {
+        case 'cliente':
+          mentorados++;
+          break;
+        case 'agendado':
+          pendentes.agendado++;
+          pendentes.total++;
+          break;
+        case 'confirmado':
+          pendentes.confirmado++;
+          pendentes.total++;
+          break;
+        case 'remarcou':
+          pendentes.remarcou++;
+          pendentes.total++;
+          break;
+        case 'nao_compareceu':
+        case 'desmarcou':
+        case 'closer_ausente':
+          noShow++;
+          naoCompareceram++;
+          break;
+        case 'atendido':
+        case 'ligacao_realizada':
+          compareceram++;
+          break;
+        case 'fechou':
+          compareceram++;
           fechamentosDiretos++;
-        } else if (nome.startsWith("fechou") && (nome.includes("recuperação") || nome.includes("recuperacao") || nome.includes("pós"))) {
-          fechamentosRecuperacao++;
-        } else if (nome.includes("perdido") && nome.includes("sessão") || nome.includes("perdido pós") || nome.includes("perdido pos")) {
+          break;
+        case 'nao_fechou':
+        case 'ja_possui':
+          compareceram++;
           perdidosPossSessao++;
-        } else if (nome.includes("recuperação") || nome.includes("recuperacao") || nome.includes("d+")) {
+          break;
+        case 'em_negociacao':
+          compareceram++;
           emRecuperacao++;
-        }
+          break;
+        case 'perdido':
+          perdidosSemSessao++;
+          naoCompareceram++;
+          break;
+        // lead, qualificado, reuniao_marcada → não contam em nenhuma categoria especial
       }
     });
 
