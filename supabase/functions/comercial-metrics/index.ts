@@ -231,21 +231,27 @@ Deno.serve(async (req) => {
 
     console.log(`[comercial-metrics] ${entries?.length || 0} entries ativos`);
 
-    // 3b. Get all lead responsibles with profiles for pipeline leads
+    // 3b. Get all lead responsibles with profiles for pipeline leads (batched)
+    const CHUNK_SIZE = 100;
     const leadIds = (entries || []).map((e: any) => e.lead_id);
-    const { data: responsibles, error: respError } = await supabase
-      .from("lead_responsibles")
-      .select(`
-        lead_id,
-        is_primary,
-        profiles!lead_responsibles_user_id_fkey(nome, full_name)
-      `)
-      .in("lead_id", leadIds)
-      .eq("is_primary", true);
-
-    if (respError) {
-      console.error("[comercial-metrics] Erro ao buscar responsibles:", respError);
+    const allResponsibles: any[] = [];
+    for (let i = 0; i < leadIds.length; i += CHUNK_SIZE) {
+      const chunk = leadIds.slice(i, i + CHUNK_SIZE);
+      const { data, error } = await supabase
+        .from("lead_responsibles")
+        .select(`
+          lead_id,
+          is_primary,
+          profiles!lead_responsibles_user_id_fkey(nome, full_name)
+        `)
+        .in("lead_id", chunk)
+        .eq("is_primary", true);
+      if (error) {
+        console.error(`[comercial-metrics] Erro ao buscar responsibles (chunk ${i / CHUNK_SIZE + 1}):`, error);
+      }
+      if (data) allResponsibles.push(...data);
     }
+    const responsibles = allResponsibles;
 
     // Create a map of lead_id -> closer name
     const closerMap = new Map<string, string>();
@@ -346,7 +352,6 @@ Deno.serve(async (req) => {
           break;
         case 'perdido':
           perdidosSemSessao++;
-          naoCompareceram++;
           break;
         // lead, qualificado, reuniao_marcada → não contam em nenhuma categoria especial
       }
@@ -385,17 +390,26 @@ Deno.serve(async (req) => {
 
     console.log(`[comercial-metrics] ${orders?.length || 0} orders encontrados`);
 
-    // Get lead responsibles for all order lead_ids to map closer correctly
-    const orderLeadIds = (orders || []).map((o: any) => o.lead_id).filter(Boolean);
-    const { data: orderResponsibles } = orderLeadIds.length > 0 ? await supabase
-      .from("lead_responsibles")
-      .select(`
-        lead_id,
-        is_primary,
-        profiles!lead_responsibles_user_id_fkey(nome, full_name)
-      `)
-      .in("lead_id", orderLeadIds)
-      .eq("is_primary", true) : { data: [] };
+    // Get lead responsibles for all order lead_ids to map closer correctly (batched)
+    const orderLeadIds = [...new Set((orders || []).map((o: any) => o.lead_id).filter(Boolean))];
+    const allOrderResponsibles: any[] = [];
+    for (let i = 0; i < orderLeadIds.length; i += CHUNK_SIZE) {
+      const chunk = orderLeadIds.slice(i, i + CHUNK_SIZE);
+      const { data, error } = await supabase
+        .from("lead_responsibles")
+        .select(`
+          lead_id,
+          is_primary,
+          profiles!lead_responsibles_user_id_fkey(nome, full_name)
+        `)
+        .in("lead_id", chunk)
+        .eq("is_primary", true);
+      if (error) {
+        console.error(`[comercial-metrics] Erro ao buscar order responsibles (chunk ${i / CHUNK_SIZE + 1}):`, error);
+      }
+      if (data) allOrderResponsibles.push(...data);
+    }
+    const orderResponsibles = allOrderResponsibles;
 
     // Create a map of order lead_id -> closer name (from lead_responsibles)
     const orderCloserMap = new Map<string, string>();
