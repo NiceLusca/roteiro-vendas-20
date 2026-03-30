@@ -352,7 +352,6 @@ Deno.serve(async (req) => {
           break;
         case 'perdido':
           perdidosSemSessao++;
-          naoCompareceram++;
           break;
         // lead, qualificado, reuniao_marcada → não contam em nenhuma categoria especial
       }
