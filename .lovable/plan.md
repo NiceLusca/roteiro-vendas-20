@@ -1,42 +1,54 @@
 
 
-# Webhook comercial-metrics: filtrar pelo pipeline comercial + usar status_geral
+# Plano de Correção: comercial-metrics
 
-## Contexto
+## Problemas identificados
 
-O usuário mudou de ideia: quer manter o filtro pelo pipeline "comercial" (só leads inscritos nele), mas usar `leads.status_geral` para calcular as métricas ao invés da lógica de `etapa_ordem >= 6`.
+1. **Bug critico: Closers zerados** - A query de `lead_responsibles` (linha 236-244) envia 611 UUIDs em um unico `.in()`, gerando URL too long. O erro e silenciado e resulta em `closerMap` vazio, zerando todos os dados por closer.
 
-## O que muda
+2. **Contagem dupla de "perdido"** - Leads com `status_geral = 'perdido'` sao contados em `naoCompareceram` E em `perdidosSemSessao` (linhas 347-350). Isso infla a metrica de nao-comparecimento. Um lead "perdido" pode nunca ter tido sessao, logo nao deveria contar como "nao compareceu".
 
-A função já busca o pipeline comercial e seus entries. A mudança principal é **substituir a lógica de métricas baseada em `etapa_ordem`/`etapa_nome` pela lógica baseada em `leads.status_geral`**.
+3. **Query de order_responsibles sem batching** - A query de responsaveis para orders (linha 390-398) tambem nao tem batching. Funciona agora com poucos orders, mas pode quebrar se crescer.
+
+## Correções
 
 ### Arquivo: `supabase/functions/comercial-metrics/index.ts`
 
-1. **Manter** a busca do pipeline comercial e seus `lead_pipeline_entries` (filtro de escopo)
-2. **Adicionar** join com `leads.status_geral` na query de entries (já faz join com `leads!inner(origem)`, basta adicionar `status_geral`)
-3. **Substituir** a lógica de classificação (linhas ~290-336) de `etapa_ordem`/`etapa_nome` para `status_geral`:
+**Correção 1 - Batching na query de lead_responsibles (linhas 234-257)**
 
-| status_geral | Categoria |
-|---|---|
-| `agendado`, `confirmado` | Pendentes |
-| `remarcou` | Pendentes (remarcou) |
-| `atendido`, `ligacao_realizada` | Compareceram |
-| `nao_compareceu`, `desmarcou`, `closer_ausente` | Não compareceram |
-| `fechou` | Fechamento direto |
-| `nao_fechou`, `ja_possui` | Perdidos pós-sessão |
-| `perdido` | Perdido geral |
-| `cliente` | Mentorado/Cliente |
-| `em_negociacao` | Em recuperação |
+Substituir a query unica por um loop em chunks de 100 IDs:
 
-4. **Atualizar** a lógica de `porCloser` e `cruzamentos` para usar `status_geral` em vez de `etapa_ordem`
-5. **Manter** `por_etapa` com dados do pipeline (útil para Clarity) + adicionar `por_status` com contagem por `status_geral`
-6. **Manter** toda lógica financeira (orders) inalterada
-7. **Manter** batching de `lead_responsibles` para evitar URL too long
+```
+const CHUNK_SIZE = 100;
+const allResponsibles = [];
+for (let i = 0; i < leadIds.length; i += CHUNK_SIZE) {
+  const chunk = leadIds.slice(i, i + CHUNK_SIZE);
+  const { data, error } = await supabase
+    .from("lead_responsibles")
+    .select(...)
+    .in("lead_id", chunk)
+    .eq("is_primary", true);
+  if (!error && data) allResponsibles.push(...data);
+}
+```
 
-### Resultado
+**Correção 2 - Remover contagem dupla de "perdido" (linhas 347-350)**
 
-- Escopo: apenas leads do pipeline comercial (como antes)
-- Métricas: baseadas em `status_geral` do lead (alinhado com a Tabela CRM)
-- Financeiro: inalterado
-- Resposta JSON: mesma estrutura, compatível com Clarity
+Mudar o case `'perdido'` para contar apenas em `perdidosSemSessao`, sem incrementar `naoCompareceram`:
+
+```
+case 'perdido':
+  perdidosSemSessao++;
+  break;
+```
+
+**Correção 3 - Batching na query de order_responsibles (linhas 388-398)**
+
+Aplicar o mesmo padrao de chunks de 100 para `orderLeadIds`.
+
+## Resultado esperado
+
+- Closers populados corretamente no dashboard Clarity
+- Metrica de "nao compareceram" reflete apenas no-shows reais
+- Queries robustas para qualquer volume de leads
 
