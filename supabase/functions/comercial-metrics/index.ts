@@ -617,7 +617,7 @@ Deno.serve(async (req) => {
         fim: dataFim,
         dias_totais: diasTotais,
       },
-      fonte: "leads",
+      fonte: "leads_pipeline_comercial",
       metricas: {
         resumo: {
           total_leads: totalLeads,
