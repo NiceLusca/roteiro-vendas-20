@@ -1,54 +1,68 @@
 
 
-# Plano de Correção: comercial-metrics
+# Migrar comercial-metrics para fonte direta: tabela `leads`
 
-## Problemas identificados
+## O que muda
 
-1. **Bug critico: Closers zerados** - A query de `lead_responsibles` (linha 236-244) envia 611 UUIDs em um unico `.in()`, gerando URL too long. O erro e silenciado e resulta em `closerMap` vazio, zerando todos os dados por closer.
+A API deixa de depender do pipeline comercial (`lead_pipeline_entries`) e passa a consultar diretamente a tabela `leads`, usando `status_geral` e `created_at` como filtros principais.
 
-2. **Contagem dupla de "perdido"** - Leads com `status_geral = 'perdido'` sao contados em `naoCompareceram` E em `perdidosSemSessao` (linhas 347-350). Isso infla a metrica de nao-comparecimento. Um lead "perdido" pode nunca ter tido sessao, logo nao deveria contar como "nao compareceu".
+## Arquivo: `supabase/functions/comercial-metrics/index.ts`
 
-3. **Query de order_responsibles sem batching** - A query de responsaveis para orders (linha 390-398) tambem nao tem batching. Funciona agora com poucos orders, mas pode quebrar se crescer.
+### 1. Remover busca do pipeline e entries
 
-## Correções
+Eliminar as queries de:
+- `pipelines` (slug = "comercial")
+- `pipeline_stages`
+- `lead_pipeline_entries`
 
-### Arquivo: `supabase/functions/comercial-metrics/index.ts`
+### 2. Nova query principal: tabela `leads`
 
-**Correção 1 - Batching na query de lead_responsibles (linhas 234-257)**
-
-Substituir a query unica por um loop em chunks de 100 IDs:
-
-```
-const CHUNK_SIZE = 100;
-const allResponsibles = [];
-for (let i = 0; i < leadIds.length; i += CHUNK_SIZE) {
-  const chunk = leadIds.slice(i, i + CHUNK_SIZE);
-  const { data, error } = await supabase
-    .from("lead_responsibles")
-    .select(...)
-    .in("lead_id", chunk)
-    .eq("is_primary", true);
-  if (!error && data) allResponsibles.push(...data);
-}
+```sql
+SELECT id, nome, origem, status_geral, closer, created_at
+FROM leads
+WHERE created_at >= dataInicio AND created_at <= dataFim
 ```
 
-**Correção 2 - Remover contagem dupla de "perdido" (linhas 347-350)**
+- Filtro de periodo agora aplica-se aos **leads** (pela `created_at`), nao apenas aos orders
+- Todos os leads do CRM entram, independente de pipeline
 
-Mudar o case `'perdido'` para contar apenas em `perdidosSemSessao`, sem incrementar `naoCompareceram`:
+### 3. Closer via `lead_responsibles`
 
-```
-case 'perdido':
-  perdidosSemSessao++;
-  break;
-```
+Manter a logica de batching (chunks de 100) para buscar o responsavel primario de cada lead. Sem mudanca aqui, so muda o conjunto de `leadIds` (agora vem da query de leads, nao de entries).
 
-**Correção 3 - Batching na query de order_responsibles (linhas 388-398)**
+### 4. Metricas por `status_geral`
 
-Aplicar o mesmo padrao de chunks de 100 para `orderLeadIds`.
+Mesma logica atual de classificacao (compareceu, no-show, fechou, perdido, etc.) - ja esta baseada em `status_geral`, nao precisa mudar.
 
-## Resultado esperado
+### 5. Remover `por_etapa` e `por_status` baseado em pipeline
 
-- Closers populados corretamente no dashboard Clarity
-- Metrica de "nao compareceram" reflete apenas no-shows reais
-- Queries robustas para qualquer volume de leads
+- Remover `por_etapa` (nao ha mais etapas)
+- Manter `por_status` (contagem por `status_geral`)
+
+### 6. Financeiro (orders) - sem mudanca
+
+A query de orders continua filtrando por periodo e `status_pagamento = 'pago'`. Nenhuma alteracao.
+
+### 7. Breakdowns mantidos
+
+- `por_closer` - sem mudanca (ja usa `status_geral`)
+- `por_origem` - sem mudanca (ja usa normalizeOrigem)
+- `por_produto` - sem mudanca (vem de orders)
+- `cruzamentos` - sem mudanca
+- `lista_vendas` - sem mudanca
+
+### 8. Resposta JSON
+
+Remover `pipeline` do response (nao ha mais pipeline). Manter toda a estrutura de `metricas`.
+
+### 9. Deploy
+
+Deploy automatico da edge function.
+
+## Resultado
+
+- Fonte: tabela `leads` filtrada por periodo
+- Metricas: baseadas em `status_geral` (como ja esta)
+- Financeiro: inalterado
+- Dashboard Clarity recebe os mesmos campos, com dados mais abrangentes
 
