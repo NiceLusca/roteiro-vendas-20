@@ -529,32 +529,40 @@ Deno.serve(async (req) => {
         : 0,
     })).sort((a, b) => b.receita - a.receita);
 
-    // 8. Group by origem
-    const origemStats = new Map<string, { leads: number; fechou: number; receita: number }>();
-    
+    // 8. Group by origem (com normalização)
+    const normalizeOrigem = (s: string) => s?.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[´`'']/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim() || 'OUTRO';
+
+    const origemStats = new Map<string, { leads: number; compareceu: number; fechou: number; receita: number; displayName: string }>();
+    const compareceuStatuses = ['atendido', 'ligacao_realizada', 'fechou', 'nao_fechou', 'ja_possui', 'em_negociacao'];
+
     leadEntries.forEach((e) => {
-      const origem = e.origem || "Outro";
-      if (!origemStats.has(origem)) {
-        origemStats.set(origem, { leads: 0, fechou: 0, receita: 0 });
+      const rawOrigem = e.origem || "Outro";
+      const key = normalizeOrigem(rawOrigem);
+      if (!origemStats.has(key)) {
+        origemStats.set(key, { leads: 0, compareceu: 0, fechou: 0, receita: 0, displayName: rawOrigem });
       }
-      const stats = origemStats.get(origem)!;
+      const stats = origemStats.get(key)!;
       stats.leads++;
-      if (e.status_geral === 'fechou') {
-        stats.fechou++;
-      }
+      const status = e.status_geral || 'lead';
+      if (compareceuStatuses.includes(status)) stats.compareceu++;
+      if (status === 'fechou') stats.fechou++;
     });
 
     processedOrders.forEach((o) => {
-      const origem = o.lead_origem || "Outro";
-      if (!origemStats.has(origem)) {
-        origemStats.set(origem, { leads: 0, fechou: 0, receita: 0 });
+      const rawOrigem = o.lead_origem || "Outro";
+      const key = normalizeOrigem(rawOrigem);
+      if (!origemStats.has(key)) {
+        origemStats.set(key, { leads: 0, compareceu: 0, fechou: 0, receita: 0, displayName: rawOrigem });
       }
-      origemStats.get(origem)!.receita += o.valor_total;
+      origemStats.get(key)!.receita += o.valor_total;
     });
 
-    const porOrigem = Array.from(origemStats.entries()).map(([origem, stats]) => ({
-      origem,
-      ...stats,
+    const porOrigem = Array.from(origemStats.entries()).map(([_, stats]) => ({
+      origem: stats.displayName,
+      leads: stats.leads,
+      compareceu: stats.compareceu,
+      fechou: stats.fechou,
+      receita: stats.receita,
     })).sort((a, b) => b.leads - a.leads);
 
     // 9. Group by produto
