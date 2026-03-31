@@ -158,21 +158,65 @@ Deno.serve(async (req) => {
       (new Date(dataFim!).getTime() - new Date(dataInicio!).getTime()) / (1000 * 60 * 60 * 24)
     ) + 1;
 
-    console.log(`[comercial-metrics] v3.0 - Fonte: leads | Período: ${periodo}, Início: ${dataInicio}, Fim: ${dataFim}, Dias: ${diasTotais}`);
+    console.log(`[comercial-metrics] v4.0 - Fonte: leads_pipeline_comercial | Período: ${periodo}, Início: ${dataInicio}, Fim: ${dataFim}, Dias: ${diasTotais}`);
 
-    // 1. Query leads directly, filtered by period
-    const { data: leads, error: leadsError } = await supabase
-      .from("leads")
-      .select("id, nome, origem, status_geral, closer, created_at")
-      .gte("created_at", `${dataInicio}T00:00:00`)
-      .lte("created_at", `${dataFim}T23:59:59`);
+    // 1. Buscar pipeline comercial
+    const { data: pipeline, error: pipelineError } = await supabase
+      .from("pipelines")
+      .select("id")
+      .eq("slug", "comercial")
+      .single();
 
-    if (leadsError) {
-      console.error("[comercial-metrics] Erro ao buscar leads:", leadsError);
-      throw leadsError;
+    if (pipelineError || !pipeline) {
+      console.error("[comercial-metrics] Pipeline comercial não encontrado:", pipelineError);
+      return new Response(
+        JSON.stringify({ error: "Pipeline comercial não encontrado" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    console.log(`[comercial-metrics] ${leads?.length || 0} leads encontrados no período`);
+    console.log(`[comercial-metrics] Pipeline comercial ID: ${pipeline.id}`);
+
+    // 2. Buscar lead_ids que passaram pelo pipeline comercial (qualquer status)
+    const allPipelineLeadIds: string[] = [];
+    let from = 0;
+    const PAGE = 1000;
+    while (true) {
+      const { data, error } = await supabase
+        .from("lead_pipeline_entries")
+        .select("lead_id")
+        .eq("pipeline_id", pipeline.id)
+        .range(from, from + PAGE - 1);
+      if (error) {
+        console.error(`[comercial-metrics] Erro ao buscar entries (offset ${from}):`, error);
+        break;
+      }
+      if (!data || data.length === 0) break;
+      data.forEach((d: any) => allPipelineLeadIds.push(d.lead_id));
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+    const uniqueLeadIds = [...new Set(allPipelineLeadIds)];
+    console.log(`[comercial-metrics] ${uniqueLeadIds.length} leads únicos no pipeline comercial`);
+
+    // 3. Buscar leads desses IDs, filtrados por periodo (em chunks)
+    const allLeads: any[] = [];
+    for (let i = 0; i < uniqueLeadIds.length; i += CHUNK_SIZE) {
+      const chunk = uniqueLeadIds.slice(i, i + CHUNK_SIZE);
+      const { data, error: leadsError } = await supabase
+        .from("leads")
+        .select("id, nome, origem, status_geral, closer, created_at")
+        .in("id", chunk)
+        .gte("created_at", `${dataInicio}T00:00:00`)
+        .lte("created_at", `${dataFim}T23:59:59`);
+      if (leadsError) {
+        console.error(`[comercial-metrics] Erro ao buscar leads (chunk ${i / CHUNK_SIZE + 1}):`, leadsError);
+      }
+      if (data) allLeads.push(...data);
+    }
+    const leads = allLeads;
+
+    console.log(`[comercial-metrics] ${leads.length} leads do pipeline comercial no período`);
 
     // 2. Get lead responsibles with profiles (batched)
     const CHUNK_SIZE = 100;
@@ -573,7 +617,7 @@ Deno.serve(async (req) => {
         fim: dataFim,
         dias_totais: diasTotais,
       },
-      fonte: "leads",
+      fonte: "leads_pipeline_comercial",
       metricas: {
         resumo: {
           total_leads: totalLeads,
@@ -633,7 +677,7 @@ Deno.serve(async (req) => {
       gerado_em: new Date().toISOString(),
     };
 
-    console.log(`[comercial-metrics] v3.0 Resposta gerada com sucesso`);
+    console.log(`[comercial-metrics] v4.0 Resposta gerada com sucesso`);
 
     return new Response(JSON.stringify(response, null, 2), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
