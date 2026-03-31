@@ -1,68 +1,87 @@
 
 
-# Migrar comercial-metrics para fonte direta: tabela `leads`
+# Correcao: filtrar leads que passaram pelo pipeline comercial
 
-## O que muda
+## Problema
 
-A API deixa de depender do pipeline comercial (`lead_pipeline_entries`) e passa a consultar diretamente a tabela `leads`, usando `status_geral` e `created_at` como filtros principais.
+A mudanca anterior para consultar direto da tabela `leads` incluiu todos os leads do CRM, inclusive quem nunca agendou ou passou pelo pipeline comercial. O dashboard comercial deve mostrar apenas leads que tiveram (ou tem) inscricao no pipeline comercial.
+
+## Solucao: abordagem hibrida
+
+1. Buscar o `pipeline_id` do pipeline com slug `"comercial"`
+2. Buscar todos os `lead_id` distintos da tabela `lead_pipeline_entries` onde `pipeline_id` = comercial (sem filtro de status_inscricao, para incluir historico completo)
+3. Filtrar a tabela `leads` apenas para esses IDs, aplicando tambem o filtro de periodo (`created_at`)
+4. Continuar usando `status_geral` para todas as metricas (sem mudar logica de classificacao)
 
 ## Arquivo: `supabase/functions/comercial-metrics/index.ts`
 
-### 1. Remover busca do pipeline e entries
+### Mudanca na secao de query principal (linhas 161-168)
 
-Eliminar as queries de:
-- `pipelines` (slug = "comercial")
-- `pipeline_stages`
-- `lead_pipeline_entries`
+Substituir a query direta por:
 
-### 2. Nova query principal: tabela `leads`
+```typescript
+// 1. Buscar pipeline comercial
+const { data: pipeline } = await supabase
+  .from("pipelines")
+  .select("id")
+  .eq("slug", "comercial")
+  .single();
 
-```sql
-SELECT id, nome, origem, status_geral, closer, created_at
-FROM leads
-WHERE created_at >= dataInicio AND created_at <= dataFim
+if (!pipeline) {
+  return new Response(
+    JSON.stringify({ error: "Pipeline comercial não encontrado" }),
+    { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+// 2. Buscar lead_ids que passaram pelo pipeline comercial (qualquer status)
+const allPipelineLeadIds: string[] = [];
+let from = 0;
+const PAGE = 1000;
+while (true) {
+  const { data } = await supabase
+    .from("lead_pipeline_entries")
+    .select("lead_id")
+    .eq("pipeline_id", pipeline.id)
+    .range(from, from + PAGE - 1);
+  if (!data || data.length === 0) break;
+  data.forEach(d => allPipelineLeadIds.push(d.lead_id));
+  if (data.length < PAGE) break;
+  from += PAGE;
+}
+const uniqueLeadIds = [...new Set(allPipelineLeadIds)];
+
+// 3. Buscar leads desses IDs, filtrados por periodo (em chunks)
+const allLeads: any[] = [];
+for (let i = 0; i < uniqueLeadIds.length; i += CHUNK_SIZE) {
+  const chunk = uniqueLeadIds.slice(i, i + CHUNK_SIZE);
+  const { data } = await supabase
+    .from("leads")
+    .select("id, nome, origem, status_geral, closer, created_at")
+    .in("id", chunk)
+    .gte("created_at", `${dataInicio}T00:00:00`)
+    .lte("created_at", `${dataFim}T23:59:59`);
+  if (data) allLeads.push(...data);
+}
+const leads = allLeads;
 ```
 
-- Filtro de periodo agora aplica-se aos **leads** (pela `created_at`), nao apenas aos orders
-- Todos os leads do CRM entram, independente de pipeline
+### Restante do codigo
 
-### 3. Closer via `lead_responsibles`
+Sem mudancas. A variavel `leads` continua alimentando o mesmo fluxo de metricas por `status_geral`, closers, origens, financeiro, etc.
 
-Manter a logica de batching (chunks de 100) para buscar o responsavel primario de cada lead. Sem mudanca aqui, so muda o conjunto de `leadIds` (agora vem da query de leads, nao de entries).
+### Indicador na resposta
 
-### 4. Metricas por `status_geral`
+Mudar `fonte` para `"leads_pipeline_comercial"` para deixar claro o escopo.
 
-Mesma logica atual de classificacao (compareceu, no-show, fechou, perdido, etc.) - ja esta baseada em `status_geral`, nao precisa mudar.
-
-### 5. Remover `por_etapa` e `por_status` baseado em pipeline
-
-- Remover `por_etapa` (nao ha mais etapas)
-- Manter `por_status` (contagem por `status_geral`)
-
-### 6. Financeiro (orders) - sem mudanca
-
-A query de orders continua filtrando por periodo e `status_pagamento = 'pago'`. Nenhuma alteracao.
-
-### 7. Breakdowns mantidos
-
-- `por_closer` - sem mudanca (ja usa `status_geral`)
-- `por_origem` - sem mudanca (ja usa normalizeOrigem)
-- `por_produto` - sem mudanca (vem de orders)
-- `cruzamentos` - sem mudanca
-- `lista_vendas` - sem mudanca
-
-### 8. Resposta JSON
-
-Remover `pipeline` do response (nao ha mais pipeline). Manter toda a estrutura de `metricas`.
-
-### 9. Deploy
+### Deploy
 
 Deploy automatico da edge function.
 
 ## Resultado
 
-- Fonte: tabela `leads` filtrada por periodo
-- Metricas: baseadas em `status_geral` (como ja esta)
+- Escopo: apenas leads que passaram pelo pipeline comercial (historico completo, nao so ativos)
+- Metricas: baseadas em `status_geral` do lead
+- Periodo: filtro por `created_at` do lead
 - Financeiro: inalterado
-- Dashboard Clarity recebe os mesmos campos, com dados mais abrangentes
 
