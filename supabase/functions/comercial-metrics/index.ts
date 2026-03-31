@@ -5,18 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface PipelineStage {
-  id: string;
-  nome: string;
-  ordem: number;
-  grupo: string | null;
-}
-
 interface LeadEntry {
   lead_id: string;
-  etapa_nome: string;
-  etapa_ordem: number;
-  etapa_grupo: string | null;
   origem: string | null;
   closer: string | null;
   status_geral: string | null;
@@ -33,7 +23,6 @@ interface OrderData {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -71,7 +60,6 @@ Deno.serve(async (req) => {
 
     // Prioridade: datas específicas > ultimos_dias/meses > periodo pré-definido
     if (dataInicio && dataFim) {
-      // Usar datas fornecidas diretamente
       console.log(`[comercial-metrics] Usando período customizado: ${dataInicio} a ${dataFim}`);
     } else if (ultimosDias) {
       const dias = parseInt(ultimosDias, 10);
@@ -95,7 +83,6 @@ Deno.serve(async (req) => {
       dataInicio = startDate.toISOString().split("T")[0];
       dataFim = today;
     } else {
-      // Períodos pré-definidos
       switch (periodo) {
         case "mes_atual":
           dataInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
@@ -155,13 +142,11 @@ Deno.serve(async (req) => {
           dataFim = new Date(now.getFullYear() - 1, 11, 31).toISOString().split("T")[0];
           break;
         default:
-          // Fallback para mês atual
           dataInicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
           dataFim = today;
       }
     }
 
-    // Validar que data_inicio <= data_fim
     if (dataInicio && dataFim && dataInicio > dataFim) {
       return new Response(
         JSON.stringify({ error: "data_inicio não pode ser maior que data_fim" }),
@@ -169,71 +154,29 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Calcular dias totais do período
     const diasTotais = Math.ceil(
       (new Date(dataFim!).getTime() - new Date(dataInicio!).getTime()) / (1000 * 60 * 60 * 24)
     ) + 1;
 
-    console.log(`[comercial-metrics] v2.2 - Período: ${periodo}, Início: ${dataInicio}, Fim: ${dataFim}, Dias: ${diasTotais}`);
+    console.log(`[comercial-metrics] v3.0 - Fonte: leads | Período: ${periodo}, Início: ${dataInicio}, Fim: ${dataFim}, Dias: ${diasTotais}`);
 
-    // 1. Get comercial pipeline
-    const { data: pipeline, error: pipelineError } = await supabase
-      .from("pipelines")
-      .select("id, nome, slug")
-      .eq("slug", "comercial")
-      .single();
+    // 1. Query leads directly, filtered by period
+    const { data: leads, error: leadsError } = await supabase
+      .from("leads")
+      .select("id, nome, origem, status_geral, closer, created_at")
+      .gte("created_at", `${dataInicio}T00:00:00`)
+      .lte("created_at", `${dataFim}T23:59:59`);
 
-    if (pipelineError || !pipeline) {
-      console.error("[comercial-metrics] Pipeline não encontrado:", pipelineError);
-      return new Response(
-        JSON.stringify({ error: "Pipeline comercial não encontrado" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (leadsError) {
+      console.error("[comercial-metrics] Erro ao buscar leads:", leadsError);
+      throw leadsError;
     }
 
-    console.log(`[comercial-metrics] Pipeline encontrado: ${pipeline.nome} (${pipeline.id})`);
+    console.log(`[comercial-metrics] ${leads?.length || 0} leads encontrados no período`);
 
-    // 2. Get all stages
-    const { data: stages, error: stagesError } = await supabase
-      .from("pipeline_stages")
-      .select("id, nome, ordem, grupo")
-      .eq("pipeline_id", pipeline.id)
-      .eq("ativo", true)
-      .order("ordem");
-
-    if (stagesError) {
-      console.error("[comercial-metrics] Erro ao buscar etapas:", stagesError);
-      throw stagesError;
-    }
-
-    console.log(`[comercial-metrics] ${stages?.length || 0} etapas encontradas`);
-
-    // Create stage lookup map
-    const stageMap = new Map<string, PipelineStage>();
-    stages?.forEach((s) => stageMap.set(s.id, s));
-
-    // 3. Get lead pipeline entries with lead data
-    const { data: entries, error: entriesError } = await supabase
-      .from("lead_pipeline_entries")
-      .select(`
-        id,
-        lead_id,
-        etapa_atual_id,
-        leads!inner(origem, status_geral)
-      `)
-      .eq("pipeline_id", pipeline.id)
-      .eq("status_inscricao", "Ativo");
-
-    if (entriesError) {
-      console.error("[comercial-metrics] Erro ao buscar entries:", entriesError);
-      throw entriesError;
-    }
-
-    console.log(`[comercial-metrics] ${entries?.length || 0} entries ativos`);
-
-    // 3b. Get all lead responsibles with profiles for pipeline leads (batched)
+    // 2. Get lead responsibles with profiles (batched)
     const CHUNK_SIZE = 100;
-    const leadIds = (entries || []).map((e: any) => e.lead_id);
+    const leadIds = (leads || []).map((l: any) => l.id);
     const allResponsibles: any[] = [];
     for (let i = 0; i < leadIds.length; i += CHUNK_SIZE) {
       const chunk = leadIds.slice(i, i + CHUNK_SIZE);
@@ -251,11 +194,10 @@ Deno.serve(async (req) => {
       }
       if (data) allResponsibles.push(...data);
     }
-    const responsibles = allResponsibles;
 
     // Create a map of lead_id -> closer name
     const closerMap = new Map<string, string>();
-    (responsibles || []).forEach((r: any) => {
+    allResponsibles.forEach((r: any) => {
       const name = r.profiles?.nome || r.profiles?.full_name || null;
       if (name) {
         closerMap.set(r.lead_id, name);
@@ -264,35 +206,15 @@ Deno.serve(async (req) => {
 
     console.log(`[comercial-metrics] ${closerMap.size} leads com closer atribuído`);
 
-    // Process entries with stage info - get closer from closerMap
-    const leadEntries: LeadEntry[] = (entries || []).map((e: any) => {
-      const stage = e.etapa_atual_id ? stageMap.get(e.etapa_atual_id) : null;
-      const closerName = closerMap.get(e.lead_id) || null;
-      
-      return {
-        lead_id: e.lead_id,
-        etapa_nome: stage?.nome || "Sem etapa",
-        etapa_ordem: stage?.ordem || 0,
-        etapa_grupo: stage?.grupo || null,
-        origem: e.leads?.origem || "Outro",
-        closer: closerName,
-        status_geral: e.leads?.status_geral || null,
-      };
-    });
+    // 3. Process lead entries
+    const leadEntries: LeadEntry[] = (leads || []).map((l: any) => ({
+      lead_id: l.id,
+      origem: l.origem || "Outro",
+      closer: closerMap.get(l.id) || null,
+      status_geral: l.status_geral || null,
+    }));
 
-    // 4. Calculate metrics by stage
-    const porEtapa: Record<string, { etapa: string; grupo: string | null; ordem: number; total: number }> = {};
-    stages?.forEach((s) => {
-      porEtapa[s.nome] = { etapa: s.nome, grupo: s.grupo, ordem: s.ordem, total: 0 };
-    });
-
-    leadEntries.forEach((e) => {
-      if (porEtapa[e.etapa_nome]) {
-        porEtapa[e.etapa_nome].total++;
-      }
-    });
-
-    // 5. Calculate attendance metrics based on leads.status_geral
+    // 4. Calculate attendance metrics based on status_geral
     let mentorados = 0;
     let compareceram = 0;
     let naoCompareceram = 0;
@@ -304,7 +226,6 @@ Deno.serve(async (req) => {
     let emRecuperacao = 0;
     let noShow = 0;
 
-    // Contagem por status_geral
     const porStatus: Record<string, number> = {};
 
     leadEntries.forEach((e) => {
@@ -353,7 +274,6 @@ Deno.serve(async (req) => {
         case 'perdido':
           perdidosSemSessao++;
           break;
-        // lead, qualificado, reuniao_marcada → não contam em nenhuma categoria especial
       }
     });
 
@@ -367,7 +287,7 @@ Deno.serve(async (req) => {
       ? Number(((totalFechamentos / compareceram) * 100).toFixed(2))
       : 0;
 
-    // 6. Get financial data from orders
+    // 5. Get financial data from orders
     const { data: orders, error: ordersError } = await supabase
       .from("orders")
       .select(`
@@ -390,7 +310,7 @@ Deno.serve(async (req) => {
 
     console.log(`[comercial-metrics] ${orders?.length || 0} orders encontrados`);
 
-    // Get lead responsibles for all order lead_ids to map closer correctly (batched)
+    // Get lead responsibles for order lead_ids (batched)
     const orderLeadIds = [...new Set((orders || []).map((o: any) => o.lead_id).filter(Boolean))];
     const allOrderResponsibles: any[] = [];
     for (let i = 0; i < orderLeadIds.length; i += CHUNK_SIZE) {
@@ -409,18 +329,14 @@ Deno.serve(async (req) => {
       }
       if (data) allOrderResponsibles.push(...data);
     }
-    const orderResponsibles = allOrderResponsibles;
 
-    // Create a map of order lead_id -> closer name (from lead_responsibles)
     const orderCloserMap = new Map<string, string>();
-    (orderResponsibles || []).forEach((r: any) => {
+    allOrderResponsibles.forEach((r: any) => {
       const name = r.profiles?.nome || r.profiles?.full_name || null;
       if (name) {
         orderCloserMap.set(r.lead_id, name);
       }
     });
-
-    console.log(`[comercial-metrics] ${orderCloserMap.size} orders com closer via lead_responsibles`);
 
     // Get products for orders
     const orderIds = (orders || []).map((o: any) => o.id);
@@ -429,7 +345,6 @@ Deno.serve(async (req) => {
       .select("pedido_id, produto_id, products(nome)")
       .in("pedido_id", orderIds) : { data: [] };
 
-    // Map order items to products
     const orderProductMap = new Map<string, string>();
     (orderItems || []).forEach((item: any) => {
       if (item.products?.nome && !orderProductMap.has(item.pedido_id)) {
@@ -437,22 +352,20 @@ Deno.serve(async (req) => {
       }
     });
 
-    // Process order data - USE orderCloserMap to get closer from lead_responsibles, not orders.closer
     const processedOrders: OrderData[] = (orders || []).map((o: any) => ({
       id: o.id,
-      closer: orderCloserMap.get(o.lead_id) || o.closer || null, // Prioritize lead_responsibles
+      closer: orderCloserMap.get(o.lead_id) || o.closer || null,
       valor_total: Number(o.valor_total) || 0,
       lead_origem: o.leads?.origem || "Outro",
       recorrente: o.deals?.recorrente || false,
       produto_nome: orderProductMap.get(o.id) || null,
-      data_venda: o.data_venda || o.deals?.data_fechamento || null, // Prioridade: orders.data_venda > deals.data_fechamento
+      data_venda: o.data_venda || o.deals?.data_fechamento || null,
     }));
 
     // Calculate financial metrics
     const receitaTotal = processedOrders.reduce((sum, o) => sum + o.valor_total, 0);
     const ticketMedio = processedOrders.length > 0 ? receitaTotal / processedOrders.length : 0;
 
-    // Por tipo de venda
     const vendasRecorrente = processedOrders.filter((o) => o.recorrente);
     const vendasAvista = processedOrders.filter((o) => !o.recorrente);
 
@@ -467,17 +380,13 @@ Deno.serve(async (req) => {
       },
     };
 
-    // 7. Group by closer
+    // 6. Group by closer
     const closerStats = new Map<string, {
-      leads: number;
-      compareceu: number;
-      fechou: number;
-      receita: number;
-      recorrente: number;
-      avista: number;
-      receita_recorrente: number;
-      receita_avista: number;
+      leads: number; compareceu: number; fechou: number; receita: number;
+      recorrente: number; avista: number; receita_recorrente: number; receita_avista: number;
     }>();
+
+    const compareceuStatuses = ['atendido', 'ligacao_realizada', 'fechou', 'nao_fechou', 'ja_possui', 'em_negociacao'];
 
     leadEntries.forEach((e) => {
       if (!e.closer) return;
@@ -489,19 +398,11 @@ Deno.serve(async (req) => {
       }
       const stats = closerStats.get(e.closer)!;
       stats.leads++;
-      
       const status = e.status_geral || 'lead';
-      // Compareceu = atendido, ligacao_realizada, fechou, nao_fechou, ja_possui, em_negociacao
-      const compareceuStatuses = ['atendido', 'ligacao_realizada', 'fechou', 'nao_fechou', 'ja_possui', 'em_negociacao'];
-      if (compareceuStatuses.includes(status)) {
-        stats.compareceu++;
-      }
-      if (status === 'fechou') {
-        stats.fechou++;
-      }
+      if (compareceuStatuses.includes(status)) stats.compareceu++;
+      if (status === 'fechou') stats.fechou++;
     });
 
-    // Add order data to closer stats
     processedOrders.forEach((o) => {
       if (!o.closer) return;
       if (!closerStats.has(o.closer)) {
@@ -524,16 +425,15 @@ Deno.serve(async (req) => {
     const porCloser = Array.from(closerStats.entries()).map(([closer, stats]) => ({
       closer,
       ...stats,
-      taxa_conversao: stats.compareceu > 0 
-        ? Number(((stats.fechou / stats.compareceu) * 100).toFixed(2)) 
+      taxa_conversao: stats.compareceu > 0
+        ? Number(((stats.fechou / stats.compareceu) * 100).toFixed(2))
         : 0,
     })).sort((a, b) => b.receita - a.receita);
 
-    // 8. Group by origem (com normalização)
+    // 7. Group by origem (com normalização)
     const normalizeOrigem = (s: string) => s?.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[´`'']/g, '').replace(/[^\w\s]/g, ' ').replace(/\s+/g, ' ').trim() || 'OUTRO';
 
     const origemStats = new Map<string, { leads: number; compareceu: number; fechou: number; receita: number; displayName: string }>();
-    const compareceuStatuses = ['atendido', 'ligacao_realizada', 'fechou', 'nao_fechou', 'ja_possui', 'em_negociacao'];
 
     leadEntries.forEach((e) => {
       const rawOrigem = e.origem || "Outro";
@@ -565,9 +465,9 @@ Deno.serve(async (req) => {
       receita: stats.receita,
     })).sort((a, b) => b.leads - a.leads);
 
-    // 9. Group by produto
+    // 8. Group by produto
     const produtoStats = new Map<string, { vendas: number; receita: number }>();
-    
+
     processedOrders.forEach((o) => {
       const produto = o.produto_nome || "Sem produto";
       if (!produtoStats.has(produto)) {
@@ -583,10 +483,9 @@ Deno.serve(async (req) => {
       ...stats,
     })).sort((a, b) => b.receita - a.receita);
 
-    // 10. Cross-tabulations
-    // Closer x Origem
+    // 9. Cross-tabulations
     const closerOrigemStats = new Map<string, Map<string, { leads: number; compareceu: number; fechou: number; receita: number }>>();
-    
+
     leadEntries.forEach((e) => {
       if (!e.closer) return;
       const origem = e.origem || "Outro";
@@ -599,15 +498,9 @@ Deno.serve(async (req) => {
       }
       const stats = origemMap.get(origem)!;
       stats.leads++;
-      
       const status = e.status_geral || 'lead';
-      const compareceuStatuses = ['atendido', 'ligacao_realizada', 'fechou', 'nao_fechou', 'ja_possui', 'em_negociacao'];
-      if (compareceuStatuses.includes(status)) {
-        stats.compareceu++;
-      }
-      if (status === 'fechou') {
-        stats.fechou++;
-      }
+      if (compareceuStatuses.includes(status)) stats.compareceu++;
+      if (status === 'fechou') stats.fechou++;
     });
 
     processedOrders.forEach((o) => {
@@ -628,15 +521,14 @@ Deno.serve(async (req) => {
         closer,
         origem,
         ...stats,
-        taxa_conversao: stats.compareceu > 0 
+        taxa_conversao: stats.compareceu > 0
           ? Number(((stats.fechou / stats.compareceu) * 100).toFixed(2))
           : 0,
       }))
     );
 
-    // Closer x Produto
     const closerProdutoStats = new Map<string, Map<string, { vendas: number; receita: number; recorrente: number; avista: number }>>();
-    
+
     processedOrders.forEach((o) => {
       if (!o.closer) return;
       const produto = o.produto_nome || "Sem produto";
@@ -665,7 +557,6 @@ Deno.serve(async (req) => {
       }))
     );
 
-    // Closer x Tipo Venda
     const closerXTipoVenda = Array.from(closerStats.entries()).map(([closer, stats]) => ({
       closer,
       recorrente: stats.recorrente,
@@ -682,10 +573,7 @@ Deno.serve(async (req) => {
         fim: dataFim,
         dias_totais: diasTotais,
       },
-      pipeline: {
-        id: pipeline.id,
-        nome: pipeline.nome,
-      },
+      fonte: "leads",
       metricas: {
         resumo: {
           total_leads: totalLeads,
@@ -713,7 +601,7 @@ Deno.serve(async (req) => {
           receita_recorrente: porTipoVenda.recorrente.receita,
           receita_avista: porTipoVenda.avista.receita,
           ticket_medio: Number(ticketMedio.toFixed(2)),
-          ticket_medio_recorrente: porTipoVenda.recorrente.vendas > 0 
+          ticket_medio_recorrente: porTipoVenda.recorrente.vendas > 0
             ? Number((porTipoVenda.recorrente.receita / porTipoVenda.recorrente.vendas).toFixed(2))
             : 0,
           ticket_medio_avista: porTipoVenda.avista.vendas > 0
@@ -723,7 +611,6 @@ Deno.serve(async (req) => {
           vendas_avista: porTipoVenda.avista.vendas,
         },
         por_tipo_venda: porTipoVenda,
-        por_etapa: Object.values(porEtapa).sort((a, b) => a.ordem - b.ordem),
         por_status: Object.entries(porStatus).map(([status, total]) => ({ status, total })).sort((a, b) => b.total - a.total),
         por_closer: porCloser,
         por_origem: porOrigem,
@@ -733,7 +620,6 @@ Deno.serve(async (req) => {
           closer_x_produto: closerXProduto,
           closer_x_tipo_venda: closerXTipoVenda,
         },
-        // Lista detalhada de vendas com data_venda para análises no dashboard
         lista_vendas: processedOrders.map(o => ({
           id: o.id,
           closer: o.closer,
@@ -747,7 +633,7 @@ Deno.serve(async (req) => {
       gerado_em: new Date().toISOString(),
     };
 
-    console.log(`[comercial-metrics] Resposta gerada com sucesso`);
+    console.log(`[comercial-metrics] v3.0 Resposta gerada com sucesso`);
 
     return new Response(JSON.stringify(response, null, 2), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
