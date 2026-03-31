@@ -677,7 +677,7 @@ Deno.serve(async (req) => {
       gerado_em: new Date().toISOString(),
     };
 
-    console.log(`[comercial-metrics] v3.0 Resposta gerada com sucesso`);
+    console.log(`[comercial-metrics] v4.0 Resposta gerada com sucesso`);
 
     return new Response(JSON.stringify(response, null, 2), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
