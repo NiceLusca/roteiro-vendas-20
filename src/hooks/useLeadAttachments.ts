@@ -175,6 +175,7 @@ export function useLeadAttachments(leadId?: string, pipelineEntryId?: string) {
       // Registrar atividade
       await logActivity({
         leadId,
+        pipelineEntryId,
         activityType: 'attachment_deleted',
         details: {
           file_name: fileName || filePath.split('/').pop() || 'arquivo'

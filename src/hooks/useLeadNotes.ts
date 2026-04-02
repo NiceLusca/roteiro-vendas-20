@@ -79,6 +79,7 @@ export function useLeadNotes(leadId?: string, pipelineEntryId?: string) {
       // Registrar atividade
       await logActivity({
         leadId,
+        pipelineEntryId,
         activityType: 'note_added',
         details: {
           note_preview: noteText.substring(0, 100),
