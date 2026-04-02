@@ -16,7 +16,7 @@ export interface LeadAttachment {
   publicUrl?: string;
 }
 
-export function useLeadAttachments(leadId?: string) {
+export function useLeadAttachments(leadId?: string, pipelineEntryId?: string) {
   const [attachments, setAttachments] = useState<LeadAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
