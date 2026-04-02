@@ -803,9 +803,9 @@ function PipelinesContent({ slug }: { slug: string }) {
             onCreatePipeline={handleCreatePipeline}
           />
 
-          <div className="h-6 w-px bg-border" />
+          {viewMode !== 'activities' && <div className="h-6 w-px bg-border" />}
 
-          {/* Busca */}
+          {viewMode !== 'activities' && <>
           <div className="relative w-48">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -961,6 +961,7 @@ function PipelinesContent({ slug }: { slug: string }) {
           <span className="text-xs text-muted-foreground">
             {allEntries.length} lead{allEntries.length !== 1 ? 's' : ''}
           </span>
+          </>}
         </div>
       </div>
 
