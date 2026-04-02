@@ -500,7 +500,7 @@ export function PipelineActivityDashboard({ pipelineId }: Props) {
                     <BarChart3 className="h-4 w-4 text-muted-foreground" />
                     <p className="text-sm font-medium text-foreground">Atividades por dia</p>
                   </div>
-                  <div className="h-48">
+                  <div className="h-40">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={dailyChartData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -524,46 +524,33 @@ export function PipelineActivityDashboard({ pipelineId }: Props) {
               </Card>
             )}
 
-            {/* Pie chart - type distribution */}
+            {/* Type breakdown - clear list */}
             {typeChartData.length > 0 && (
               <Card className="border-border/50">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Activity className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm font-medium text-foreground">Distribuição por tipo</p>
+                    <p className="text-sm font-medium text-foreground">Tipos de atividade</p>
                   </div>
-                  <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={typeChartData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={40}
-                          outerRadius={70}
-                          paddingAngle={2}
-                          dataKey="value"
-                        >
-                          {typeChartData.map((_, index) => (
-                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: 'hsl(var(--popover))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px',
-                            fontSize: '12px',
-                            color: 'hsl(var(--popover-foreground))',
-                          }}
-                          formatter={(value: number, name: string) => [`${value}`, name]}
-                        />
-                        <Legend
-                          formatter={(value) => <span className="text-xs text-muted-foreground">{value}</span>}
-                          iconSize={8}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
+                  <div className="space-y-2">
+                    {typeChartData.map((item, index) => {
+                      const percentage = metrics.total > 0 ? ((item.value / metrics.total) * 100).toFixed(0) : '0';
+                      const color = CHART_COLORS[index % CHART_COLORS.length];
+                      return (
+                        <div key={item.name} className="flex items-center gap-3">
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                          <span className="text-sm text-foreground flex-1 truncate">{item.name}</span>
+                          <span className="text-sm font-semibold text-foreground tabular-nums">{item.value}</span>
+                          <span className="text-xs text-muted-foreground w-10 text-right tabular-nums">{percentage}%</span>
+                          <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden flex-shrink-0">
+                            <div
+                              className="h-full rounded-full"
+                              style={{ width: `${percentage}%`, backgroundColor: color }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
