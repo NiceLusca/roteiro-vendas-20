@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -13,10 +14,26 @@ import { formatDistanceToNow } from 'date-fns';
 import {
   ArrowRight, MessageSquare, UserPlus, UserMinus, Paperclip, Trash2,
   GitBranch, Archive, PlusCircle, Pencil, CalendarX, History,
-  CalendarIcon, Loader2, ChevronDown, Filter, User
+  CalendarIcon, Loader2, ChevronDown, Filter, User, Activity, Users,
+  BarChart3, Eye, EyeOff
 } from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend
+} from 'recharts';
 
 const PAGE_SIZE = 50;
+
+const CHART_COLORS = [
+  'hsl(var(--primary))',
+  'hsl(262, 80%, 50%)',
+  'hsl(142, 71%, 45%)',
+  'hsl(38, 92%, 50%)',
+  'hsl(0, 84%, 60%)',
+  'hsl(199, 89%, 48%)',
+  'hsl(330, 81%, 60%)',
+  'hsl(173, 58%, 39%)',
+];
 
 type PeriodFilter = 'today' | 'yesterday' | '7days' | '30days' | 'custom';
 
@@ -288,6 +305,44 @@ export function PipelineActivityDashboard({ pipelineId }: Props) {
     custom: 'Personalizado',
   };
 
+  const [showDashboard, setShowDashboard] = useState(true);
+
+  // Derived metrics
+  const metrics = useMemo(() => {
+    const uniqueUsers = new Set(activities.map(a => a.performed_by).filter(Boolean));
+    const stageChanges = activities.filter(a => a.activity_type === 'stage_change').length;
+    const comments = activities.filter(a => a.activity_type === 'note_added').length;
+    return {
+      total: activities.length,
+      activeUsers: uniqueUsers.size,
+      stageChanges,
+      comments,
+    };
+  }, [activities]);
+
+  // Daily volume chart data
+  const dailyChartData = useMemo(() => {
+    const map = new Map<string, number>();
+    activities.forEach(a => {
+      const day = format(new Date(a.created_at), 'dd/MM');
+      map.set(day, (map.get(day) || 0) + 1);
+    });
+    const entries = Array.from(map.entries()).map(([name, total]) => ({ name, total }));
+    return entries.reverse();
+  }, [activities]);
+
+  // Activity type distribution
+  const typeChartData = useMemo(() => {
+    const map = new Map<string, number>();
+    activities.forEach(a => {
+      const label = getActivityLabel(a.activity_type);
+      map.set(label, (map.get(label) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [activities]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Filters bar */}
@@ -369,10 +424,153 @@ export function PipelineActivityDashboard({ pipelineId }: Props) {
 
         <div className="flex-1" />
 
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowDashboard(!showDashboard)}
+          className="gap-2 text-xs"
+        >
+          {showDashboard ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          {showDashboard ? 'Ocultar resumo' : 'Ver resumo'}
+        </Button>
+
         <Badge variant="secondary" className="text-xs">
           {activities.length} atividade{activities.length !== 1 ? 's' : ''}
         </Badge>
       </div>
+
+      {/* Visual Dashboard */}
+      {showDashboard && !loading && activities.length > 0 && (
+        <div className="flex-shrink-0 mb-6 space-y-4">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card className="border-border/50">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Activity className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{metrics.total}</p>
+                  <p className="text-xs text-muted-foreground">Total de atividades</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-500/10">
+                  <Users className="h-4 w-4 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{metrics.activeUsers}</p>
+                  <p className="text-xs text-muted-foreground">Usuários ativos</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <ArrowRight className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{metrics.stageChanges}</p>
+                  <p className="text-xs text-muted-foreground">Movimentações</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-border/50">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-500/10">
+                  <MessageSquare className="h-4 w-4 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{metrics.comments}</p>
+                  <p className="text-xs text-muted-foreground">Comentários</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Charts */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Bar chart - daily volume */}
+            {dailyChartData.length > 1 && (
+              <Card className="border-border/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-sm font-medium text-foreground">Atividades por dia</p>
+                  </div>
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={dailyChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                        <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--popover))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            color: 'hsl(var(--popover-foreground))',
+                          }}
+                          formatter={(value: number) => [`${value} atividades`, 'Total']}
+                        />
+                        <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Pie chart - type distribution */}
+            {typeChartData.length > 0 && (
+              <Card className="border-border/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-sm font-medium text-foreground">Distribuição por tipo</p>
+                  </div>
+                  <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={typeChartData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={40}
+                          outerRadius={70}
+                          paddingAngle={2}
+                          dataKey="value"
+                        >
+                          {typeChartData.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--popover))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            color: 'hsl(var(--popover-foreground))',
+                          }}
+                          formatter={(value: number, name: string) => [`${value}`, name]}
+                        />
+                        <Legend
+                          formatter={(value) => <span className="text-xs text-muted-foreground">{value}</span>}
+                          iconSize={8}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Activity feed */}
       <div className="flex-1 overflow-y-auto">
