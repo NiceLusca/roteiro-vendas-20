@@ -803,7 +803,7 @@ function PipelinesContent({ slug }: { slug: string }) {
             onCreatePipeline={handleCreatePipeline}
           />
 
-          <div className="h-6 w-px bg-border" />
+          {viewMode !== 'activities' && <div className="h-6 w-px bg-border" />}
 
           {/* Busca */}
           <div className="relative w-48">
