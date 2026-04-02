@@ -781,6 +781,14 @@ function PipelinesContent({ slug }: { slug: string }) {
               <TableIcon className="h-4 w-4" />
               <span className="text-sm font-medium">Tabela</span>
             </ToggleGroupItem>
+            <ToggleGroupItem 
+              value="activities" 
+              aria-label="Atividades do Pipeline" 
+              className="h-8 px-3 gap-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+              <History className="h-4 w-4" />
+              <span className="text-sm font-medium">Atividades</span>
+            </ToggleGroupItem>
           </ToggleGroup>
 
           <div className="h-6 w-px bg-border" />
