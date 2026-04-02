@@ -131,6 +131,7 @@ export function useLeadAttachments(leadId?: string, pipelineEntryId?: string) {
       // Registrar atividade
       await logActivity({
         leadId,
+        pipelineEntryId,
         activityType: 'attachment_added',
         details: {
           file_name: displayName,
