@@ -305,6 +305,44 @@ export function PipelineActivityDashboard({ pipelineId }: Props) {
     custom: 'Personalizado',
   };
 
+  const [showDashboard, setShowDashboard] = useState(true);
+
+  // Derived metrics
+  const metrics = useMemo(() => {
+    const uniqueUsers = new Set(activities.map(a => a.performed_by).filter(Boolean));
+    const stageChanges = activities.filter(a => a.activity_type === 'stage_change').length;
+    const comments = activities.filter(a => a.activity_type === 'note_added').length;
+    return {
+      total: activities.length,
+      activeUsers: uniqueUsers.size,
+      stageChanges,
+      comments,
+    };
+  }, [activities]);
+
+  // Daily volume chart data
+  const dailyChartData = useMemo(() => {
+    const map = new Map<string, number>();
+    activities.forEach(a => {
+      const day = format(new Date(a.created_at), 'dd/MM');
+      map.set(day, (map.get(day) || 0) + 1);
+    });
+    const entries = Array.from(map.entries()).map(([name, total]) => ({ name, total }));
+    return entries.reverse();
+  }, [activities]);
+
+  // Activity type distribution
+  const typeChartData = useMemo(() => {
+    const map = new Map<string, number>();
+    activities.forEach(a => {
+      const label = getActivityLabel(a.activity_type);
+      map.set(label, (map.get(label) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [activities]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Filters bar */}
