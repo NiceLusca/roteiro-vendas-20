@@ -961,6 +961,7 @@ function PipelinesContent({ slug }: { slug: string }) {
           <span className="text-xs text-muted-foreground">
             {allEntries.length} lead{allEntries.length !== 1 ? 's' : ''}
           </span>
+          </>}
         </div>
       </div>
 
