@@ -439,72 +439,57 @@ export function PipelineActivityDashboard({ pipelineId }: Props) {
       </div>
 
       {/* Visual Dashboard */}
-      {showDashboard && !loading && activities.length > 0 && (
-        <div className="flex-shrink-0 mb-6 space-y-4">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="border-border/50">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Activity className="h-4 w-4 text-primary" />
+      {/* Main content: chart + feed side by side */}
+      <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4">
+        {/* Left: Dashboard summary (collapsible) */}
+        {showDashboard && !loading && activities.length > 0 && (
+          <div className="overflow-y-auto space-y-3 pr-1">
+            {/* Compact KPIs */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2 p-2.5 rounded-lg border border-border/50 bg-card">
+                <Activity className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-lg font-bold text-foreground leading-none">{metrics.total}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Atividades</p>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{metrics.total}</p>
-                  <p className="text-xs text-muted-foreground">Total de atividades</p>
+              </div>
+              <div className="flex items-center gap-2 p-2.5 rounded-lg border border-border/50 bg-card">
+                <Users className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-lg font-bold text-foreground leading-none">{metrics.activeUsers}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Usuários</p>
                 </div>
-              </CardContent>
-            </Card>
-            <Card className="border-border/50">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-500/10">
-                  <Users className="h-4 w-4 text-purple-600" />
+              </div>
+              <div className="flex items-center gap-2 p-2.5 rounded-lg border border-border/50 bg-card">
+                <ArrowRight className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-lg font-bold text-foreground leading-none">{metrics.stageChanges}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Movimentações</p>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{metrics.activeUsers}</p>
-                  <p className="text-xs text-muted-foreground">Usuários ativos</p>
+              </div>
+              <div className="flex items-center gap-2 p-2.5 rounded-lg border border-border/50 bg-card">
+                <MessageSquare className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-lg font-bold text-foreground leading-none">{metrics.comments}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Comentários</p>
                 </div>
-              </CardContent>
-            </Card>
-            <Card className="border-border/50">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <ArrowRight className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{metrics.stageChanges}</p>
-                  <p className="text-xs text-muted-foreground">Movimentações</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-border/50">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-500/10">
-                  <MessageSquare className="h-4 w-4 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{metrics.comments}</p>
-                  <p className="text-xs text-muted-foreground">Comentários</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </div>
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Bar chart - daily volume */}
+            {/* Bar chart */}
             {dailyChartData.length > 1 && (
               <Card className="border-border/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm font-medium text-foreground">Atividades por dia</p>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+                    <p className="text-xs font-medium text-foreground">Atividades por dia</p>
                   </div>
-                  <div className="h-40">
+                  <div className="h-36">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={dailyChartData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-                        <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} />
+                        <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                        <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} width={24} />
                         <Tooltip
                           contentStyle={{
                             backgroundColor: 'hsl(var(--popover))',
@@ -523,30 +508,24 @@ export function PipelineActivityDashboard({ pipelineId }: Props) {
               </Card>
             )}
 
-            {/* Type breakdown - clear list */}
+            {/* Type breakdown */}
             {typeChartData.length > 0 && (
               <Card className="border-border/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Activity className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-sm font-medium text-foreground">Tipos de atividade</p>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Activity className="h-3.5 w-3.5 text-muted-foreground" />
+                    <p className="text-xs font-medium text-foreground">Por tipo</p>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {typeChartData.map((item, index) => {
                       const percentage = metrics.total > 0 ? ((item.value / metrics.total) * 100).toFixed(0) : '0';
                       const color = CHART_COLORS[index % CHART_COLORS.length];
                       return (
-                        <div key={item.name} className="flex items-center gap-3">
-                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                          <span className="text-sm text-foreground flex-1 truncate">{item.name}</span>
-                          <span className="text-sm font-semibold text-foreground tabular-nums">{item.value}</span>
-                          <span className="text-xs text-muted-foreground w-10 text-right tabular-nums">{percentage}%</span>
-                          <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden flex-shrink-0">
-                            <div
-                              className="h-full rounded-full"
-                              style={{ width: `${percentage}%`, backgroundColor: color }}
-                            />
-                          </div>
+                        <div key={item.name} className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                          <span className="text-xs text-foreground flex-1 truncate">{item.name}</span>
+                          <span className="text-xs font-semibold text-foreground tabular-nums">{item.value}</span>
+                          <span className="text-[10px] text-muted-foreground w-8 text-right tabular-nums">{percentage}%</span>
                         </div>
                       );
                     })}
@@ -555,11 +534,10 @@ export function PipelineActivityDashboard({ pipelineId }: Props) {
               </Card>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Activity feed */}
-      <div className="flex-1 overflow-y-auto">
+        {/* Right (or full): Activity feed */}
+        <div className={cn("overflow-y-auto", !showDashboard || loading || activities.length === 0 ? "lg:col-span-2" : "")}>
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3, 4, 5].map(i => (
