@@ -15,7 +15,7 @@ export interface LeadNote {
   updated_at: string;
 }
 
-export function useLeadNotes(leadId?: string) {
+export function useLeadNotes(leadId?: string, pipelineEntryId?: string) {
   const [notes, setNotes] = useState<LeadNote[]>([]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
