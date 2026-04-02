@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -13,10 +14,26 @@ import { formatDistanceToNow } from 'date-fns';
 import {
   ArrowRight, MessageSquare, UserPlus, UserMinus, Paperclip, Trash2,
   GitBranch, Archive, PlusCircle, Pencil, CalendarX, History,
-  CalendarIcon, Loader2, ChevronDown, Filter, User
+  CalendarIcon, Loader2, ChevronDown, Filter, User, Activity, Users,
+  BarChart3, Eye, EyeOff
 } from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend
+} from 'recharts';
 
 const PAGE_SIZE = 50;
+
+const CHART_COLORS = [
+  'hsl(var(--primary))',
+  'hsl(262, 80%, 50%)',
+  'hsl(142, 71%, 45%)',
+  'hsl(38, 92%, 50%)',
+  'hsl(0, 84%, 60%)',
+  'hsl(199, 89%, 48%)',
+  'hsl(330, 81%, 60%)',
+  'hsl(173, 58%, 39%)',
+];
 
 type PeriodFilter = 'today' | 'yesterday' | '7days' | '30days' | 'custom';
 
