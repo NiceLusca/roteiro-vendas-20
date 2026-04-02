@@ -131,7 +131,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
     fetchUserName();
   }, []);
 
-  const { notes, loading: notesLoading, addNote, updateNote, deleteNote } = useLeadNotes(lead.id);
+  const { notes, loading: notesLoading, addNote, updateNote, deleteNote } = useLeadNotes(lead.id, pipelineEntryId);
   const { 
     attachments, 
     loading: attachmentsLoading, 
@@ -139,7 +139,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
     uploadAttachment, 
     deleteAttachment,
     downloadAttachment 
-  } = useLeadAttachments(lead.id);
+  } = useLeadAttachments(lead.id, pipelineEntryId);
   const { saveLead } = useLeadSave();
   const { responsibles, history } = useLeadResponsibles(lead.id, pipelineEntryId);
   const { activities, logActivity } = useLeadActivityLog(lead.id, pipelineEntryId);

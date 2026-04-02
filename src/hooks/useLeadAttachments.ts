@@ -16,7 +16,7 @@ export interface LeadAttachment {
   publicUrl?: string;
 }
 
-export function useLeadAttachments(leadId?: string) {
+export function useLeadAttachments(leadId?: string, pipelineEntryId?: string) {
   const [attachments, setAttachments] = useState<LeadAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -131,6 +131,7 @@ export function useLeadAttachments(leadId?: string) {
       // Registrar atividade
       await logActivity({
         leadId,
+        pipelineEntryId,
         activityType: 'attachment_added',
         details: {
           file_name: displayName,
@@ -174,6 +175,7 @@ export function useLeadAttachments(leadId?: string) {
       // Registrar atividade
       await logActivity({
         leadId,
+        pipelineEntryId,
         activityType: 'attachment_deleted',
         details: {
           file_name: fileName || filePath.split('/').pop() || 'arquivo'
