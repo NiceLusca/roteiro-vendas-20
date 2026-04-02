@@ -621,6 +621,7 @@ export function PipelineActivityDashboard({ pipelineId }: Props) {
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   );
