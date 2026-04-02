@@ -1,4 +1,5 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
@@ -21,7 +22,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Search, RotateCcw, LayoutGrid, Table as TableIcon, ArrowUpDown, RefreshCw, Bug, Undo2, CalendarClock } from 'lucide-react';
+import { Search, RotateCcw, LayoutGrid, Table as TableIcon, ArrowUpDown, RefreshCw, Bug, Undo2, CalendarClock, History } from 'lucide-react';
+import { PipelineActivityDashboard } from '@/components/pipeline/PipelineActivityDashboard';
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
@@ -780,6 +782,14 @@ function PipelinesContent({ slug }: { slug: string }) {
               <TableIcon className="h-4 w-4" />
               <span className="text-sm font-medium">Tabela</span>
             </ToggleGroupItem>
+            <ToggleGroupItem 
+              value="activities" 
+              aria-label="Atividades do Pipeline" 
+              className="h-8 px-3 gap-1.5 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+              <History className="h-4 w-4" />
+              <span className="text-sm font-medium">Atividades</span>
+            </ToggleGroupItem>
           </ToggleGroup>
 
           <div className="h-6 w-px bg-border" />
@@ -955,8 +965,10 @@ function PipelinesContent({ slug }: { slug: string }) {
       </div>
 
       {/* Área principal - Kanban ou Tabela */}
-      <div className="flex-1 overflow-x-auto overflow-y-auto p-4">
-        {viewMode === 'kanban' ? (
+      <div className={cn("flex-1 overflow-x-auto overflow-y-auto p-4", viewMode === 'activities' && 'overflow-hidden')}>
+        {viewMode === 'activities' ? (
+          <PipelineActivityDashboard pipelineId={pipelineId} />
+        ) : viewMode === 'kanban' ? (
           <KanbanBoard
             key={`kanban-${pipelineId}`}
             selectedPipelineId={pipelineId}
