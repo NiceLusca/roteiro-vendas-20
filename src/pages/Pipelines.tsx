@@ -1,4 +1,5 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { KanbanBoard } from '@/components/kanban/KanbanBoard';
