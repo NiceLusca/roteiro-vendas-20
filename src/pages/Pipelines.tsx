@@ -964,8 +964,10 @@ function PipelinesContent({ slug }: { slug: string }) {
       </div>
 
       {/* Área principal - Kanban ou Tabela */}
-      <div className="flex-1 overflow-x-auto overflow-y-auto p-4">
-        {viewMode === 'kanban' ? (
+      <div className={cn("flex-1 overflow-x-auto overflow-y-auto p-4", viewMode === 'activities' && 'overflow-hidden')}>
+        {viewMode === 'activities' ? (
+          <PipelineActivityDashboard pipelineId={pipelineId} />
+        ) : viewMode === 'kanban' ? (
           <KanbanBoard
             key={`kanban-${pipelineId}`}
             selectedPipelineId={pipelineId}
