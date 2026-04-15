@@ -4,6 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LeadForm } from '@/components/forms/LeadForm';
 import { PipelineInscriptionDialog } from '@/components/pipeline/PipelineInscriptionDialog';
@@ -28,6 +31,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useCRM } from '@/contexts/CRMContext';
 import { Lead } from '@/types/crm';
 import { formatWhatsApp, formatDateTime } from '@/utils/formatters';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { 
   Plus, 
   Search, 

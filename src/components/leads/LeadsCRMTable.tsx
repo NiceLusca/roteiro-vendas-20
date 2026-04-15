@@ -268,6 +268,10 @@ export function LeadsCRMTable({
             onFilterOrigemChange={setFilterOrigem}
             filterCloser={filterCloser}
             onFilterCloserChange={setFilterCloser}
+            onSortByName={() => {
+              setSortColumn('nome');
+              setSortDirection('asc');
+            }}
           />
         </div>
         <div className="flex items-center gap-2">
