@@ -528,7 +528,10 @@ function LeadsContent() {
                 </Select>
 
                 {/* Filtro Data da Sessão */}
-                <Select value={filterSessionDate} onValueChange={setFilterSessionDate}>
+                <Select value={filterSessionDate} onValueChange={(v) => {
+                  setFilterSessionDate(v);
+                  if (v !== 'specific_date') setSpecificDate(undefined);
+                }}>
                   <SelectTrigger className="w-44">
                     <SelectValue placeholder="Data da sessão" />
                   </SelectTrigger>
@@ -540,7 +543,34 @@ function LeadsContent() {
                     <SelectItem value="next_week">Próxima semana</SelectItem>
                     <SelectItem value="this_month">Este mês</SelectItem>
                     <SelectItem value="no_session">Sem sessão</SelectItem>
+                    <SelectItem value="specific_date">📅 Data específica</SelectItem>
                   </SelectContent>
+                </Select>
+
+                {filterSessionDate === 'specific_date' && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className={cn(
+                        "w-36 justify-start text-left text-xs font-normal",
+                        !specificDate && "text-muted-foreground"
+                      )}>
+                        {specificDate ? format(specificDate, "dd/MM/yyyy", { locale: ptBR }) : "Escolher data"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={specificDate}
+                        onSelect={(date) => {
+                          setSpecificDate(date);
+                          setCurrentPage(1);
+                        }}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
                 </Select>
 
                 {/* Filtro Score */}
