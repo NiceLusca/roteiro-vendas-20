@@ -1255,7 +1255,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
                         selected={appointmentDate}
                         onSelect={setAppointmentDate}
                         locale={ptBR}
-                        disabled={(date) => date < new Date()}
+                        
                       />
                     </PopoverContent>
                   </Popover>

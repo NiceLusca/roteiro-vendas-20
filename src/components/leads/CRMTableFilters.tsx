@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Filter, X } from 'lucide-react';
+import { Filter, X, ArrowDownAZ } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Lead } from '@/types/crm';
 
@@ -10,6 +10,7 @@ interface CRMTableFiltersProps {
   onFilterOrigemChange: (v: string) => void;
   filterCloser: string;
   onFilterCloserChange: (v: string) => void;
+  onSortByName?: () => void;
 }
 
 export const CRMTableFilters = memo(function CRMTableFilters({

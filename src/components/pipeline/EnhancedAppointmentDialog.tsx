@@ -222,7 +222,7 @@ export function EnhancedAppointmentDialog({
                     mode="single"
                     selected={date}
                     onSelect={setDate}
-                    disabled={(date) => date < new Date()}
+                    
                     initialFocus
                   />
                 </PopoverContent>

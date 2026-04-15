@@ -344,10 +344,12 @@ export function LeadsCRMTable({
                       </TableCell>
 
                       <TableCell className="text-xs">
-                        <InlineEditCell
+                        <InlineSelectCell
                           value={lead.closer}
+                          options={closerOptions}
                           onSave={v => handleInlineSave(lead.id, 'closer', v, lead.closer)}
-                          placeholder="Closer"
+                          allowFreeText
+                          freeTextPlaceholder="Digitar closer..."
                         />
                       </TableCell>
 
