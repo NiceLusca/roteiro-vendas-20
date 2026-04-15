@@ -62,6 +62,7 @@ function LeadsContent() {
   const [filterScore, setFilterScore] = useState<string>('all');
   const [filterTag, setFilterTag] = useState<string>('all');
   const [filterSessionDate, setFilterSessionDate] = useState<string>('all');
+  const [specificDate, setSpecificDate] = useState<Date | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
   const [showInscriptionDialog, setShowInscriptionDialog] = useState(false);
   const [selectedLeadForInscription, setSelectedLeadForInscription] = useState<Lead | null>(null);
