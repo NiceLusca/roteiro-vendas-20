@@ -139,7 +139,8 @@ function LeadsContent() {
     filterStatus,
     filterScore,
     filterTag,
-    filterSessionDate
+    filterSessionDate,
+    specificDate: specificDate?.toISOString()
   });
 
   const { updateLeadTags } = useLeadTags();

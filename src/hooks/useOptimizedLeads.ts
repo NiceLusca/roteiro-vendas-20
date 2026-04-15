@@ -14,6 +14,7 @@ interface UseOptimizedLeadsOptions {
   filterScore?: string;
   filterTag?: string;
   filterSessionDate?: string;
+  specificDate?: string;
 }
 
 function getSessionDateRange(filter: string): { from: Date; to: Date } | 'no_session' | null {
@@ -31,15 +32,17 @@ function getSessionDateRange(filter: string): { from: Date; to: Date } | 'no_ses
     }
     case 'this_month':
       return { from: startOfMonth(now), to: endOfMonth(now) };
-    case 'no_session':
-      return 'no_session';
-    default:
-      return null;
-  }
-}
+     case 'no_session':
+       return 'no_session';
+     case 'specific_date':
+       return 'specific_date';
+     default:
+       return null;
+   }
+ }
 
 export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
-  const { page = 1, searchTerm = '', filterStatus = 'all', filterScore = 'all', filterTag = 'all', filterSessionDate = 'all' } = options;
+  const { page = 1, searchTerm = '', filterStatus = 'all', filterScore = 'all', filterTag = 'all', filterSessionDate = 'all', specificDate } = options;
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -52,7 +55,7 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
     error,
     refetch
   } = useQuery({
-    queryKey: ['leads', page, searchTerm, filterStatus, filterScore, filterTag, filterSessionDate, user?.id],
+    queryKey: ['leads', page, searchTerm, filterStatus, filterScore, filterTag, filterSessionDate, specificDate, user?.id],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
 
