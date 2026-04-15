@@ -19,6 +19,7 @@ export const CRMTableFilters = memo(function CRMTableFilters({
   onFilterOrigemChange,
   filterCloser,
   onFilterCloserChange,
+  onSortByName,
 }: CRMTableFiltersProps) {
   const uniqueClosers = useMemo(() => {
     const set = new Set<string>();
@@ -74,6 +75,19 @@ export const CRMTableFilters = memo(function CRMTableFilters({
         >
           <X className="h-3 w-3" />
           Limpar
+        </Button>
+      )}
+
+      {onSortByName && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 px-2 text-xs gap-1"
+          onClick={onSortByName}
+          title="Ordenar por nome A→Z para encontrar duplicatas"
+        >
+          <ArrowDownAZ className="h-3.5 w-3.5" />
+          A→Z
         </Button>
       )}
     </div>
