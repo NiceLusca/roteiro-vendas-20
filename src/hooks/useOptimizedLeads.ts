@@ -14,6 +14,7 @@ interface UseOptimizedLeadsOptions {
   filterScore?: string;
   filterTag?: string;
   filterSessionDate?: string;
+  specificDate?: string;
 }
 
 function getSessionDateRange(filter: string): { from: Date; to: Date } | 'no_session' | null {
@@ -31,15 +32,15 @@ function getSessionDateRange(filter: string): { from: Date; to: Date } | 'no_ses
     }
     case 'this_month':
       return { from: startOfMonth(now), to: endOfMonth(now) };
-    case 'no_session':
-      return 'no_session';
-    default:
-      return null;
-  }
-}
+     case 'no_session':
+       return 'no_session';
+     default:
+       return null;
+   }
+ }
 
 export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
-  const { page = 1, searchTerm = '', filterStatus = 'all', filterScore = 'all', filterTag = 'all', filterSessionDate = 'all' } = options;
+  const { page = 1, searchTerm = '', filterStatus = 'all', filterScore = 'all', filterTag = 'all', filterSessionDate = 'all', specificDate } = options;
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -52,7 +53,7 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
     error,
     refetch
   } = useQuery({
-    queryKey: ['leads', page, searchTerm, filterStatus, filterScore, filterTag, filterSessionDate, user?.id],
+    queryKey: ['leads', page, searchTerm, filterStatus, filterScore, filterTag, filterSessionDate, specificDate, user?.id],
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated');
 
@@ -110,32 +111,46 @@ export function useOptimizedLeads(options: UseOptimizedLeadsOptions = {}) {
       }
 
       // Apply session date filter
-      const sessionRange = getSessionDateRange(filterSessionDate);
-      if (sessionRange === 'no_session') {
-        // Find leads that have NO appointments at all
-        const { data: leadsWithAppts } = await supabase
-          .from('appointments')
-          .select('lead_id');
-        const idsWithAppts = new Set(leadsWithAppts?.map(a => a.lead_id) || []);
-        // We need to exclude these leads - use NOT IN
-        if (idsWithAppts.size > 0) {
-          // Supabase doesn't have "not in" directly on query builder for dynamic sets,
-          // so we fetch all and filter, or use a workaround
-          const idsArray = Array.from(idsWithAppts);
-          query = query.not('id', 'in', `(${idsArray.join(',')})`);
-        }
-      } else if (sessionRange) {
+      if (filterSessionDate === 'specific_date' && specificDate) {
+        const dateObj = new Date(specificDate);
+        const dayStart = startOfDay(dateObj);
+        const dayEnd = endOfDay(dateObj);
         const { data: apptLeads } = await supabase
           .from('appointments')
           .select('lead_id')
-          .gte('data_hora', sessionRange.from.toISOString())
-          .lte('data_hora', sessionRange.to.toISOString());
+          .gte('data_hora', dayStart.toISOString())
+          .lte('data_hora', dayEnd.toISOString());
         
         const leadIdsWithSession = [...new Set(apptLeads?.map(a => a.lead_id) || [])];
         if (leadIdsWithSession.length > 0) {
           query = query.in('id', leadIdsWithSession);
         } else {
           return { leads: [], totalCount: 0, totalPages: 0 };
+        }
+      } else {
+        const sessionRange = getSessionDateRange(filterSessionDate);
+        if (sessionRange === 'no_session') {
+          const { data: leadsWithAppts } = await supabase
+            .from('appointments')
+            .select('lead_id');
+          const idsWithAppts = new Set(leadsWithAppts?.map(a => a.lead_id) || []);
+          if (idsWithAppts.size > 0) {
+            const idsArray = Array.from(idsWithAppts);
+            query = query.not('id', 'in', `(${idsArray.join(',')})`);
+          }
+        } else if (sessionRange) {
+          const { data: apptLeads } = await supabase
+            .from('appointments')
+            .select('lead_id')
+            .gte('data_hora', sessionRange.from.toISOString())
+            .lte('data_hora', sessionRange.to.toISOString());
+          
+          const leadIdsWithSession = [...new Set(apptLeads?.map(a => a.lead_id) || [])];
+          if (leadIdsWithSession.length > 0) {
+            query = query.in('id', leadIdsWithSession);
+          } else {
+            return { leads: [], totalCount: 0, totalPages: 0 };
+          }
         }
       }
 

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -98,6 +98,31 @@ export function LeadsCRMTable({
   // Local filter state
   const [filterOrigem, setFilterOrigem] = useState('all');
   const [filterCloser, setFilterCloser] = useState('all');
+
+  // Build closer options from profiles
+  const [closerOptions, setCloserOptions] = useState<{ value: string; label: string; className?: string }[]>([]);
+  
+  useEffect(() => {
+    const loadClosers = async () => {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data } = await supabase
+        .from('profiles')
+        .select('nome, full_name')
+        .order('nome');
+      
+      const options = (data || [])
+        .map(p => p.nome || p.full_name)
+        .filter((name): name is string => !!name?.trim())
+        .map(name => ({
+          value: name,
+          label: name,
+          className: 'bg-sky-500/10 text-sky-700 dark:text-sky-400'
+        }));
+      
+      setCloserOptions(options);
+    };
+    loadClosers();
+  }, []);
 
   const leadIds = leads.map(l => l.id);
   const { dealsMap, appointmentsMap, pipelinesMap } = useLeadsCRMData({
@@ -243,6 +268,10 @@ export function LeadsCRMTable({
             onFilterOrigemChange={setFilterOrigem}
             filterCloser={filterCloser}
             onFilterCloserChange={setFilterCloser}
+            onSortByName={() => {
+              setSortColumn('nome');
+              setSortDirection('asc');
+            }}
           />
         </div>
         <div className="flex items-center gap-2">
@@ -344,10 +373,12 @@ export function LeadsCRMTable({
                       </TableCell>
 
                       <TableCell className="text-xs">
-                        <InlineEditCell
+                        <InlineSelectCell
                           value={lead.closer}
+                          options={closerOptions}
                           onSave={v => handleInlineSave(lead.id, 'closer', v, lead.closer)}
-                          placeholder="Closer"
+                          allowFreeText
+                          freeTextPlaceholder="Digitar closer..."
                         />
                       </TableCell>
 

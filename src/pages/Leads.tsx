@@ -4,6 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LeadForm } from '@/components/forms/LeadForm';
 import { PipelineInscriptionDialog } from '@/components/pipeline/PipelineInscriptionDialog';
@@ -28,6 +31,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useCRM } from '@/contexts/CRMContext';
 import { Lead } from '@/types/crm';
 import { formatWhatsApp, formatDateTime } from '@/utils/formatters';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { 
   Plus, 
   Search, 
@@ -57,6 +62,7 @@ function LeadsContent() {
   const [filterScore, setFilterScore] = useState<string>('all');
   const [filterTag, setFilterTag] = useState<string>('all');
   const [filterSessionDate, setFilterSessionDate] = useState<string>('all');
+  const [specificDate, setSpecificDate] = useState<Date | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
   const [showInscriptionDialog, setShowInscriptionDialog] = useState(false);
   const [selectedLeadForInscription, setSelectedLeadForInscription] = useState<Lead | null>(null);
@@ -133,7 +139,8 @@ function LeadsContent() {
     filterStatus,
     filterScore,
     filterTag,
-    filterSessionDate
+    filterSessionDate,
+    specificDate: specificDate?.toISOString()
   });
 
   const { updateLeadTags } = useLeadTags();
@@ -522,7 +529,10 @@ function LeadsContent() {
                 </Select>
 
                 {/* Filtro Data da Sessão */}
-                <Select value={filterSessionDate} onValueChange={setFilterSessionDate}>
+                <Select value={filterSessionDate} onValueChange={(v) => {
+                  setFilterSessionDate(v);
+                  if (v !== 'specific_date') setSpecificDate(undefined);
+                }}>
                   <SelectTrigger className="w-44">
                     <SelectValue placeholder="Data da sessão" />
                   </SelectTrigger>
@@ -534,8 +544,34 @@ function LeadsContent() {
                     <SelectItem value="next_week">Próxima semana</SelectItem>
                     <SelectItem value="this_month">Este mês</SelectItem>
                     <SelectItem value="no_session">Sem sessão</SelectItem>
+                    <SelectItem value="specific_date">📅 Data específica</SelectItem>
                   </SelectContent>
                 </Select>
+
+                {filterSessionDate === 'specific_date' && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className={cn(
+                        "w-36 justify-start text-left text-xs font-normal",
+                        !specificDate && "text-muted-foreground"
+                      )}>
+                        {specificDate ? format(specificDate, "dd/MM/yyyy", { locale: ptBR }) : "Escolher data"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={specificDate}
+                        onSelect={(date) => {
+                          setSpecificDate(date);
+                          setCurrentPage(1);
+                        }}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
 
                 {/* Filtro Score */}
                 <Select value={filterScore} onValueChange={setFilterScore}>
