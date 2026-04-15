@@ -571,7 +571,6 @@ function LeadsContent() {
                     </PopoverContent>
                   </Popover>
                 )}
-                </Select>
 
                 {/* Filtro Score */}
                 <Select value={filterScore} onValueChange={setFilterScore}>
