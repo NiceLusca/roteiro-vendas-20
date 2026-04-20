@@ -5,6 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const CHUNK_SIZE = 100;
+
 interface LeadEntry {
   lead_id: string;
   origem: string | null;
@@ -219,7 +221,6 @@ Deno.serve(async (req) => {
     console.log(`[comercial-metrics] ${leads.length} leads do pipeline comercial no período`);
 
     // 2. Get lead responsibles with profiles (batched)
-    const CHUNK_SIZE = 100;
     const leadIds = (leads || []).map((l: any) => l.id);
     const allResponsibles: any[] = [];
     for (let i = 0; i < leadIds.length; i += CHUNK_SIZE) {
