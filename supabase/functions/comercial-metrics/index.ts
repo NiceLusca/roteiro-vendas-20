@@ -5,6 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const CHUNK_SIZE = 100;
+
 interface LeadEntry {
   lead_id: string;
   origem: string | null;
