@@ -1,55 +1,65 @@
 
 
-# Modificações na Tabela CRM — 4 Melhorias
+# Substituir edge functions comerciais (versão enxuta) — com correções de schema
 
-## 1. Permitir datas no passado ao agendar sessões
+Confirmação: **nenhum código do CRM consome `comercial-metrics`** (busca não retornou nenhum import). Apenas o Clarity externo consome. Logo, "Substituir tudo (versão enxuta)" é seguro.
 
-**Problema**: Os calendários em `EnhancedAppointmentDialog.tsx` e `LeadEditDialog.tsx` bloqueiam datas anteriores a hoje com `disabled={(date) => date < new Date()}`.
+Porém o código que você colou tem **3 problemas de schema** que precisam ser corrigidos antes do deploy, senão receita e closers vão zerar:
 
-**Solução**: Remover essa restrição para permitir selecionar qualquer data. Isso é necessário para registrar sessões que já aconteceram (ex: retroativamente).
+| Código colado | Coluna real no banco |
+|---|---|
+| `orders.total` | `orders.valor_total` |
+| `order_items.valor` | `order_items.preco_unitario` |
+| `appointments.start_at` | `appointments.start_at` ✅ (ok, existe) |
 
-**Arquivos**: `src/components/pipeline/EnhancedAppointmentDialog.tsx`, `src/components/kanban/LeadEditDialog.tsx`
+Além disso, o import `https://esm.sh/@supabase/supabase-js@2` deu **502 Bad Gateway** num deploy anterior (msg #46) — vou trocar por `npm:@supabase/supabase-js@2`, que é estável.
 
----
+## Plano de execução
 
-## 2. Filtro de data específica na página de Leads
+### 1. Criar `supabase/functions/comercial-leads-list/index.ts` (novo)
 
-**Problema**: O filtro "Data da sessão" só tem opções pré-definidas (Hoje, Amanhã, Esta semana, etc.). Não permite escolher uma data específica como 06/04.
+Aplicar exatamente o código que você colou, com 3 ajustes mínimos:
+- `import { createClient } from "npm:@supabase/supabase-js@2"` (em vez de esm.sh)
+- `orders.total` → `orders.valor_total`
+- `order_items.valor` → `order_items.preco_unitario`
 
-**Solução**: Adicionar uma opção "Data específica" no select que, ao ser selecionada, abre um datepicker (Calendar popover). A data escolhida é passada ao `useOptimizedLeads` como um novo caso no `getSessionDateRange`, filtrando appointments daquele dia exato.
+Tudo o resto fica igual: CORS completo, hierarquia `deals → lead_responsibles → leads.closer → "Não atribuído"`, suporte a POST/GET, filtros `closer[]`/`origem[]`.
 
-**Arquivos**: `src/pages/Leads.tsx`, `src/hooks/useOptimizedLeads.ts`
+### 2. Substituir `supabase/functions/comercial-metrics/index.ts` (versão enxuta)
 
----
+Aplicar exatamente o código que você colou (perde `pendentes`, `por_tipo_venda`, `por_status`, `produtos`, `vendas` — confirmado que ninguém consome internamente), com os mesmos 3 ajustes:
+- Import `npm:`
+- `orders.total` → `orders.valor_total`
+- Hierarquia idêntica à `comercial-leads-list`
 
-## 3. Closer como seletor em vez de campo de texto livre
+### 3. Atualizar `supabase/config.toml`
 
-**Problema**: A coluna Closer na tabela CRM usa `InlineEditCell` (campo de texto livre), o que causa inconsistências — closers com nomes diferentes, observações misturadas com nomes, etc.
+Adicionar a nova função:
+```toml
+[functions.comercial-leads-list]
+verify_jwt = false
+```
 
-**Solução**: Trocar o `InlineEditCell` por `InlineSelectCell` com uma lista fixa de closers reais (extraídos dos perfis do sistema via tabela `profiles`). Manter `allowFreeText` como fallback para nomes que não existam na lista.
+### 4. Deploy + validação
 
-Para definir a lista, vamos buscar os nomes distintos curtos (que parecem ser closers reais: "Gabriel", "Carol", "Casagrande", "Caagrande") da tabela `profiles` — assim os closers são os próprios usuários do sistema. Adicionar um array de `closerOptions` derivado dos profiles.
-
-**Arquivo**: `src/components/leads/LeadsCRMTable.tsx`
-
----
-
-## 4. Ordenação alfabética por nome (já existe, mas precisa destaque)
-
-**Problema**: O usuário quer ordenar por nome para identificar duplicatas. A ordenação por nome já está implementada (coluna "Nome" é clicável), mas pode não estar claro.
-
-**Solução**: Já funciona — basta clicar no cabeçalho "Nome" para ordenar A→Z. No entanto, vou garantir que a ordenação `localeCompare` com `sensitivity: 'base'` está correta para agrupar nomes semelhantes, e adicionar um botão explícito "A→Z" próximo aos filtros da tabela CRM para tornar essa funcionalidade mais visível/acessível.
-
-**Arquivo**: `src/components/leads/LeadsCRMTable.tsx`, `src/components/leads/CRMTableFilters.tsx`
-
----
+- Deploy das duas funções
+- Testar `OPTIONS` → deve retornar 204 com headers CORS
+- Testar `POST {periodo: "mes_atual"}` em ambas
+- Conferir paridade: `sum(por_closer.leads) === resumo.total_leads`
+- Conferir que `por_closer.length > 1` (não só "Não atribuído")
+- Conferir que nomes em `por_closer[].nome` batem com `leads[].Closer`
 
 ## Resumo técnico
 
-| Mudança | Arquivo(s) | Tipo |
-|---------|-----------|------|
-| Remover bloqueio de datas passadas | EnhancedAppointmentDialog, LeadEditDialog | Remover `disabled` prop |
-| Filtro data específica | Leads.tsx, useOptimizedLeads.ts | Novo caso `specific_date` + datepicker |
-| Closer como select | LeadsCRMTable.tsx | Trocar InlineEditCell → InlineSelectCell com profiles |
-| Botão ordenar A→Z visível | LeadsCRMTable.tsx ou CRMTableFilters.tsx | Botão atalho para sort por nome |
+| Mudança | Arquivo | Tipo |
+|---|---|---|
+| Criar nova função | `supabase/functions/comercial-leads-list/index.ts` | Novo arquivo |
+| Substituir versão enxuta | `supabase/functions/comercial-metrics/index.ts` | Reescrever |
+| Registrar verify_jwt=false | `supabase/config.toml` | Adicionar bloco |
+| Deploy + curl validation | (tools) | `deploy_edge_functions` + `curl_edge_functions` |
+
+## Riscos assumidos (versão enxuta)
+
+- A função `comercial-metrics` deixa de retornar `pendentes`, `por_tipo_venda`, `por_status`, `produtos`, `vendas`. **Confirmado por busca no código que nenhum frontend interno usa esses campos** (apenas Clarity externo consome a função, e ele só usa os 4 blocos preservados).
+- Se algum consumidor externo que não conhecemos usar esses campos, vai quebrar.
 
