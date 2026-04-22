@@ -1,5 +1,5 @@
 // ============================================================================
-// Edge Function: comercial-metrics  (v4 — closer hierarchy + parity fix)
+// Edge Function: comercial-leads-list  (v3 — CORS + closer hierarchy fix)
 // ============================================================================
 
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -23,20 +23,27 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function isFechouStatus(s: string | null): boolean {
-  return s === "fechou" || s === "cliente";
-}
-
-function isAtendidoStatus(s: string | null): boolean {
-  return (
-    s === "atendido" ||
-    s === "ligacao_realizada" ||
-    s === "fechou" ||
-    s === "cliente" ||
-    s === "nao_fechou" ||
-    s === "ja_possui" ||
-    s === "perdido"
-  );
+function mapStatus(statusGeral: string | null): string {
+  switch (statusGeral) {
+    case "fechou": return "Fechou";
+    case "agendado": return "Agendado";
+    case "confirmado": return "Confirmado";
+    case "remarcou": return "Remarcou";
+    case "nao_compareceu": return "Não Apareceu";
+    case "desmarcou": return "Desmarcou";
+    case "atendido":
+    case "ligacao_realizada": return "Compareceu";
+    case "nao_fechou":
+    case "ja_possui":
+    case "perdido": return "Não Fechou";
+    case "em_negociacao": return "Aguardando resposta";
+    case "cliente": return "Mentorado";
+    case "closer_ausente": return "No Show";
+    default:
+      return statusGeral
+        ? statusGeral.charAt(0).toUpperCase() + statusGeral.slice(1)
+        : "";
+  }
 }
 
 function resolvePeriod(params: URLSearchParams | Record<string, any>) {
@@ -49,6 +56,7 @@ function resolvePeriod(params: URLSearchParams | Record<string, any>) {
 
   const now = new Date();
   const today = now.toISOString().split("T")[0];
+
   if (dataInicio && dataFim) return { dataInicio, dataFim, periodo };
 
   switch (periodo) {
@@ -112,6 +120,11 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "datas devem estar em YYYY-MM-DD" }, 400);
     }
 
+    console.log(
+      `[comercial-leads-list v3] periodo=${periodo} ${dataInicio}→${dataFim} ` +
+      `closers=${closersFilter.length} origens=${origensFilter.length}`,
+    );
+
     const { data: pipeline, error: pipelineError } = await supabase
       .from("pipelines").select("id").eq("slug", "comercial").single();
     if (pipelineError || !pipeline) {
@@ -135,13 +148,7 @@ Deno.serve(async (req) => {
     const uniqueLeadIds = [...new Set(allEntryLeadIds)];
 
     if (uniqueLeadIds.length === 0) {
-      return jsonResponse({
-        resumo: { total_leads: 0, agendamentos: 0, atendimentos: 0, fechamentos: 0 },
-        financeiro: { receita_total: 0, ticket_medio: 0 },
-        por_closer: [],
-        por_origem: [],
-        periodo: { data_inicio: dataInicio, data_fim: dataFim },
-      });
+      return jsonResponse({ leads: [], total: 0, periodo: { data_inicio: dataInicio, data_fim: dataFim } });
     }
 
     const allLeads: any[] = [];
@@ -149,7 +156,7 @@ Deno.serve(async (req) => {
       const chunk = uniqueLeadIds.slice(i, i + CHUNK_SIZE);
       const { data, error } = await supabase
         .from("leads")
-        .select("id, nome, origem, status_geral, closer, created_at")
+        .select("id, nome, email, whatsapp, origem, status_geral, closer, objecao_principal, created_at")
         .in("id", chunk)
         .gte("created_at", `${dataInicio}T00:00:00`)
         .lte("created_at", `${dataFim}T23:59:59`);
@@ -158,13 +165,7 @@ Deno.serve(async (req) => {
     }
 
     if (allLeads.length === 0) {
-      return jsonResponse({
-        resumo: { total_leads: 0, agendamentos: 0, atendimentos: 0, fechamentos: 0 },
-        financeiro: { receita_total: 0, ticket_medio: 0 },
-        por_closer: [],
-        por_origem: [],
-        periodo: { data_inicio: dataInicio, data_fim: dataFim },
-      });
+      return jsonResponse({ leads: [], total: 0, periodo: { data_inicio: dataInicio, data_fim: dataFim } });
     }
 
     const leadIds = allLeads.map((l: any) => l.id);
@@ -174,7 +175,7 @@ Deno.serve(async (req) => {
       const chunk = leadIds.slice(i, i + CHUNK_SIZE);
       const { data, error } = await supabase
         .from("deals")
-        .select("lead_id, created_at, profiles!deals_closer_id_fkey(nome, full_name)")
+        .select("lead_id, created_at, recorrente, profiles!deals_closer_id_fkey(nome, full_name)")
         .in("lead_id", chunk)
         .order("created_at", { ascending: false });
       if (error) { console.error("[deals err]", error); continue; }
@@ -199,28 +200,43 @@ Deno.serve(async (req) => {
       });
     }
 
-    const apptLeadSet = new Set();
+    const apptMap = new Map();
     for (let i = 0; i < leadIds.length; i += CHUNK_SIZE) {
       const chunk = leadIds.slice(i, i + CHUNK_SIZE);
       const { data, error } = await supabase
         .from("appointments")
-        .select("lead_id")
-        .in("lead_id", chunk);
+        .select("lead_id, start_at, data_hora")
+        .in("lead_id", chunk)
+        .order("start_at", { ascending: false });
       if (error) { console.error("[appts err]", error); continue; }
-      (data || []).forEach((a: any) => apptLeadSet.add(a.lead_id));
+      (data || []).forEach((a: any) => {
+        if (!apptMap.has(a.lead_id)) apptMap.set(a.lead_id, { start_at: a.start_at || a.data_hora });
+      });
     }
 
-    const orderTotalMap = new Map();
+    // Aggregate orders per lead. Recurrence is determined by deals.recorrente
+    // (order_items doesn't store recorrencia in this schema reliably).
+    const orderAggMap = new Map();
     for (let i = 0; i < leadIds.length; i += CHUNK_SIZE) {
       const chunk = leadIds.slice(i, i + CHUNK_SIZE);
       const { data: orders, error } = await supabase
         .from("orders")
-        .select("lead_id, valor_total")
+        .select("id, lead_id, valor_total, data_venda, deal_id, deals(recorrente), order_items(preco_unitario, recorrencia, products(nome))")
         .in("lead_id", chunk);
       if (error) { console.error("[orders err]", error); continue; }
       (orders || []).forEach((o: any) => {
-        const prev = orderTotalMap.get(o.lead_id) || 0;
-        orderTotalMap.set(o.lead_id, prev + (Number(o.valor_total) || 0));
+        const items = (o.order_items || []) as any[];
+        const recorrenteFromDeal = !!o.deals?.recorrente;
+        const recorrenteFromItems = items.some((it) => it.recorrencia && it.recorrencia !== "Nenhuma");
+        const recorrente = recorrenteFromDeal || recorrenteFromItems;
+        const produto = items[0]?.products?.nome || null;
+        const prev = orderAggMap.get(o.lead_id);
+        orderAggMap.set(o.lead_id, {
+          total: (prev?.total || 0) + (Number(o.valor_total) || 0),
+          recorrente: prev?.recorrente || recorrente,
+          produto: prev?.produto || produto,
+          data_venda: prev?.data_venda || o.data_venda,
+        });
       });
     }
 
@@ -229,91 +245,60 @@ Deno.serve(async (req) => {
         ?? respCloserMap.get(l.id)
         ?? (l.closer && l.closer.trim() ? l.closer.trim() : NAO_ATRIBUIDO);
 
-    let workingLeads = allLeads.map((l: any) => ({
-      ...l,
-      __closer: resolveCloser(l),
-      __receita: orderTotalMap.get(l.id) || 0,
-      __agendado: apptLeadSet.has(l.id),
-    }));
+    let leads = allLeads.map((l: any, idx: number) => {
+      const apt = apptMap.get(l.id);
+      const order = orderAggMap.get(l.id);
+      const closer = resolveCloser(l);
+      const dateIso = (apt?.start_at || l.created_at) as string;
+      const dateOnly = dateIso ? dateIso.split("T")[0] : "";
+      const hora = dateIso && dateIso.includes("T")
+        ? dateIso.split("T")[1].substring(0, 5) : "";
+
+      return {
+        row_number: idx + 1,
+        id: l.id,
+        data: dateOnly,
+        parsedDate: dateIso,
+        Hora: hora,
+        Nome: l.nome || "",
+        "e-mail": l.email || "",
+        Whatsapp: l.whatsapp || "",
+        origem: l.origem || "Não informado",
+        Origem: l.origem || "Não informado",
+        Status: mapStatus(l.status_geral),
+        Closer: closer,
+        Vendedor: closer,
+        Valor: order?.total || 0,
+        "Venda Completa": order?.recorrente ? 0 : (order?.total || 0),
+        recorrente: order?.recorrente ? (order?.total || 0) : 0,
+        Recorrente: order?.recorrente ? (order?.total || 0) : 0,
+        Produto: order?.produto || "",
+        objecao_principal: l.objecao_principal || "",
+        status_geral: l.status_geral,
+      };
+    });
 
     if (closersFilter.length > 0) {
       const set = new Set(closersFilter.map((c) => c.toLowerCase()));
-      workingLeads = workingLeads.filter((l) => set.has((l.__closer || "").toLowerCase()));
+      leads = leads.filter((l) => set.has((l.Closer || "").toLowerCase()));
     }
     if (origensFilter.length > 0) {
       const set = new Set(origensFilter.map((c) => c.toLowerCase()));
-      workingLeads = workingLeads.filter((l) => set.has((l.origem || "").toLowerCase()));
+      leads = leads.filter((l) => set.has((l.origem || "").toLowerCase()));
     }
 
-    const total_leads = workingLeads.length;
-    const agendamentos = workingLeads.filter((l) => l.__agendado).length;
-    const atendimentos = workingLeads.filter((l) => isAtendidoStatus(l.status_geral)).length;
-    const fechamentos = workingLeads.filter((l) => isFechouStatus(l.status_geral)).length;
-    const receita_total = workingLeads.reduce((acc, l) => acc + l.__receita, 0);
-    const ticket_medio = fechamentos > 0 ? receita_total / fechamentos : 0;
-
-    const closerAgg = new Map();
-
-    for (const l of workingLeads) {
-      const key = l.__closer || NAO_ATRIBUIDO;
-      const cur = closerAgg.get(key) ?? {
-        leads: 0, agendamentos: 0, atendimentos: 0, fechamentos: 0, receita: 0,
-      };
-      cur.leads += 1;
-      if (l.__agendado) cur.agendamentos += 1;
-      if (isAtendidoStatus(l.status_geral)) cur.atendimentos += 1;
-      if (isFechouStatus(l.status_geral)) cur.fechamentos += 1;
-      cur.receita += l.__receita;
-      closerAgg.set(key, cur);
-    }
-
-    const por_closer = Array.from(closerAgg.entries())
-      .map(([nome, v]) => ({
-        nome,
-        leads: v.leads,
-        agendamentos: v.agendamentos,
-        atendimentos: v.atendimentos,
-        fechamentos: v.fechamentos,
-        receita: v.receita,
-        taxa_conversao: v.atendimentos > 0 ? v.fechamentos / v.atendimentos : 0,
-        taxa_fechamento: v.leads > 0 ? v.fechamentos / v.leads : 0,
-        ticket_medio: v.fechamentos > 0 ? v.receita / v.fechamentos : 0,
-      }))
-      .sort((a, b) => b.receita - a.receita);
-
-    const origemAgg = new Map();
-    for (const l of workingLeads) {
-      const key = l.origem || "Não informado";
-      const cur = origemAgg.get(key) ?? { leads: 0, fechamentos: 0, receita: 0 };
-      cur.leads += 1;
-      if (isFechouStatus(l.status_geral)) cur.fechamentos += 1;
-      cur.receita += l.__receita;
-      origemAgg.set(key, cur);
-    }
-    const por_origem = Array.from(origemAgg.entries())
-      .map(([nome, v]) => ({ nome, ...v }))
-      .sort((a, b) => b.leads - a.leads);
-
-    const sumLeads = por_closer.reduce((a, c) => a + c.leads, 0);
-    const sumReceita = por_closer.reduce((a, c) => a + c.receita, 0);
-    if (sumLeads !== total_leads) {
-      console.warn(`[comercial-metrics v4] PARITY MISMATCH leads: closer=${sumLeads} total=${total_leads}`);
-    }
-    if (Math.abs(sumReceita - receita_total) > 0.01) {
-      console.warn(`[comercial-metrics v4] PARITY MISMATCH receita: closer=${sumReceita} total=${receita_total}`);
-    }
-
-    console.log(`[comercial-metrics v4] total=${total_leads} closers=${por_closer.length} sumLeads=${sumLeads} receita=${receita_total}`);
+    const closerCounts = new Map();
+    leads.forEach((l) => closerCounts.set(l.Closer, (closerCounts.get(l.Closer) || 0) + 1));
+    console.log(`[comercial-leads-list v3] closers únicos = ${closerCounts.size}:`,
+      Array.from(closerCounts.entries()).map(([k, v]) => `${k}=${v}`).join(", "));
 
     return jsonResponse({
-      resumo: { total_leads, agendamentos, atendimentos, fechamentos },
-      financeiro: { receita_total, ticket_medio },
-      por_closer,
-      por_origem,
+      leads,
+      total: leads.length,
       periodo: { data_inicio: dataInicio, data_fim: dataFim },
     });
   } catch (err: any) {
-    console.error("[comercial-metrics v4] erro fatal", err);
-    return jsonResponse({ error: "Erro interno ao calcular métricas", details: String(err?.message || err) }, 500);
+    console.error("[comercial-leads-list v3] erro fatal", err);
+    return jsonResponse({ error: "Erro interno ao listar leads", details: String(err?.message || err) }, 500);
   }
 });

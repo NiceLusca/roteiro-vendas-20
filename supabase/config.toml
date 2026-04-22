@@ -9,5 +9,8 @@ verify_jwt = false
 [functions.comercial-metrics]
 verify_jwt = false
 
+[functions.comercial-leads-list]
+verify_jwt = false
+
 [functions.backfill-orders]
 verify_jwt = false
