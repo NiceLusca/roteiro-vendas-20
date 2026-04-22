@@ -74,6 +74,52 @@ export function useLeadsCRMData({ leadIds, enabled }: UseLeadsCRMDataOptions) {
     staleTime: 30000,
   });
 
+  // Fetch resolved closer per lead via hierarchy:
+  // deals.closer_id (most recent) → lead_responsibles.is_primary → null (caller falls back to leads.closer)
+  const { data: resolvedCloserMap } = useQuery({
+    queryKey: ['crm-resolved-closer', leadIds],
+    queryFn: async () => {
+      if (leadIds.length === 0) return {};
+
+      const map: Record<string, string> = {};
+
+      // 1) Deals — most recent first; first non-empty closer wins per lead
+      const { data: dealsData } = await supabase
+        .from('deals')
+        .select('lead_id, created_at, profiles:closer_id(nome, full_name)')
+        .in('lead_id', leadIds)
+        .order('created_at', { ascending: false });
+
+      dealsData?.forEach((d: any) => {
+        const name = d.profiles?.nome || d.profiles?.full_name;
+        if (name && !map[d.lead_id]) {
+          map[d.lead_id] = name;
+        }
+      });
+
+      // 2) Primary responsibles — only fill if not already resolved by deals
+      const unresolvedIds = leadIds.filter(id => !map[id]);
+      if (unresolvedIds.length > 0) {
+        const { data: respData } = await supabase
+          .from('lead_responsibles')
+          .select('lead_id, is_primary, profiles:user_id(nome, full_name)')
+          .in('lead_id', unresolvedIds)
+          .eq('is_primary', true);
+
+        respData?.forEach((r: any) => {
+          const name = r.profiles?.nome || r.profiles?.full_name;
+          if (name && !map[r.lead_id]) {
+            map[r.lead_id] = name;
+          }
+        });
+      }
+
+      return map;
+    },
+    enabled: enabled && leadIds.length > 0 && !!user,
+    staleTime: 30000,
+  });
+
   // Fetch appointments summary per lead
   const { data: appointmentsMap } = useQuery({
     queryKey: ['crm-appointments', leadIds],
@@ -164,5 +210,6 @@ export function useLeadsCRMData({ leadIds, enabled }: UseLeadsCRMDataOptions) {
     dealsMap: dealsMap || {},
     appointmentsMap: appointmentsMap || {},
     pipelinesMap: pipelinesMap || {},
+    resolvedCloserMap: resolvedCloserMap || {},
   };
 }

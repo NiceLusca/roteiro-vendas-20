@@ -125,7 +125,7 @@ export function LeadsCRMTable({
   }, []);
 
   const leadIds = leads.map(l => l.id);
-  const { dealsMap, appointmentsMap, pipelinesMap } = useLeadsCRMData({
+  const { dealsMap, appointmentsMap, pipelinesMap, resolvedCloserMap } = useLeadsCRMData({
     leadIds,
     enabled: leads.length > 0,
   });
@@ -163,7 +163,10 @@ export function LeadsCRMTable({
       result = result.filter(l => l.origem === filterOrigem);
     }
     if (filterCloser !== 'all') {
-      result = result.filter(l => l.closer === filterCloser);
+      result = result.filter(l => {
+        const resolved = resolvedCloserMap[l.id]?.trim() || l.closer?.trim() || '';
+        return resolved === filterCloser;
+      });
     }
 
     // Sort
@@ -264,6 +267,7 @@ export function LeadsCRMTable({
           </p>
           <CRMTableFilters
             leads={leads}
+            resolvedCloserMap={resolvedCloserMap}
             filterOrigem={filterOrigem}
             onFilterOrigemChange={setFilterOrigem}
             filterCloser={filterCloser}

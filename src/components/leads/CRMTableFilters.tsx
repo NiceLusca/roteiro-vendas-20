@@ -6,6 +6,7 @@ import { Lead } from '@/types/crm';
 
 interface CRMTableFiltersProps {
   leads: Lead[];
+  resolvedCloserMap?: Record<string, string>;
   filterOrigem: string;
   onFilterOrigemChange: (v: string) => void;
   filterCloser: string;
@@ -15,6 +16,7 @@ interface CRMTableFiltersProps {
 
 export const CRMTableFilters = memo(function CRMTableFilters({
   leads,
+  resolvedCloserMap = {},
   filterOrigem,
   onFilterOrigemChange,
   filterCloser,
@@ -23,9 +25,12 @@ export const CRMTableFilters = memo(function CRMTableFilters({
 }: CRMTableFiltersProps) {
   const uniqueClosers = useMemo(() => {
     const set = new Set<string>();
-    leads.forEach(l => { if (l.closer?.trim()) set.add(l.closer!.trim()); });
+    leads.forEach(l => {
+      const resolved = resolvedCloserMap[l.id]?.trim() || l.closer?.trim();
+      if (resolved) set.add(resolved);
+    });
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  }, [leads]);
+  }, [leads, resolvedCloserMap]);
 
   const uniqueOrigens = useMemo(() => {
     const set = new Set<string>();
