@@ -1,53 +1,143 @@
 
+# Diagnóstico: os closers não “somem” no CRM — o Clarity 2 está lendo o contrato errado
 
-# Diagnóstico: filtro Closer no CRM já tem fix no servidor, mas o frontend ignora
+## Causa real no projeto Clarity 2
 
-## O que descobri
+Os closers já existem nas edge functions do CRM, mas o **Clarity 2** tem dois problemas de integração:
 
-1. **`comercial-leads-list` (servidor) já está correta.** Os logs confirmam 14 closers distintos retornados (Vagner=131, Não atribuído=309, Lucas Casagrande Sampaio=44, Gabriel=109, Carolaine Santana=69, Casagrande=68, Carol=69, Alessandra=67, Uilma=61, Yan Hagassy=4, etc.). Não precisa redeploy — o código v3 já está no ar.
+1. **`useComercialMetrics.ts` espera um payload antigo**
+   - O Clarity 2 espera:
+     ```ts
+     { periodo, metricas: { por_closer, por_origem, ... } }
+     ```
+   - A versão enxuta atual de `comercial-metrics` retorna:
+     ```ts
+     { periodo, resumo, financeiro, por_closer, por_origem }
+     ```
+   - Resultado: o hook tenta acessar `result.metricas...`, quebra, e cai no fallback de cache.
 
-2. **O CRM não consome `comercial-leads-list`.** Busquei por toda a `src/` e não há nenhuma chamada a essa função. Ela é exclusiva do Clarity externo.
+2. **Os nomes dos campos mudaram**
+   - O Clarity 2 espera:
+     - `por_closer[].closer`
+     - `por_origem[].origem`
+   - A edge function atual entrega:
+     - `por_closer[].nome`
+     - `por_origem[].nome`
+   - Resultado: mesmo quando a API responde, os dropdowns ficam vazios ou incompletos se não houver normalização.
 
-3. **O filtro Closer da Tabela CRM lê o campo legado `leads.closer`.** Em `src/components/leads/CRMTableFilters.tsx` (linha 26):
-   ```ts
-   leads.forEach(l => { if (l.closer?.trim()) set.add(l.closer!.trim()); });
-   ```
-   Esse campo só tem 2 valores ("Não atribuído" e "Yan Hagassy") porque a maioria dos closers reais está em `deals.closer_id` (com FK para `profiles`) ou `lead_responsibles.is_primary`, e não na coluna texto `leads.closer`.
+3. **O cache mascara o erro**
+   - `useComercialMetrics.ts` salva e reaproveita `localStorage`.
+   - Quando a resposta nova não encaixa no shape antigo, o hook falha e reutiliza cache velho.
+   - Isso explica por que o Clarity 2 pode continuar mostrando uma lista antiga/incompleta de closers.
 
-## Por que redeployar `comercial-leads-list` não resolve
+4. **Há um bug separado em filtros baseados em leads**
+   - Em `src/components/Comparison/ComparisonFilters.tsx`, o código usa `lead.closer` minúsculo.
+   - O lead normalizado em `useCrmLeadsData.ts` expõe `Lead.Closer` maiúsculo.
+   - Resultado: nessa tela, os closers também não entram corretamente.
 
-Mesmo redeployando, o filtro do CRM continuaria mostrando só 2 nomes — porque ele nunca leu da edge function. O Clarity (consumidor externo) já recebe os 8+ closers desde o último deploy.
+## O que corrigir no Clarity 2
 
-## O que de fato precisa mudar
+### 1. Normalizar a resposta da `comercial-metrics`
+**Arquivo:** `src/hooks/useComercialMetrics.ts`
 
-Aplicar a mesma hierarquia `deals → lead_responsibles → leads.closer → "Não atribuído"` no carregamento do CRM, para que o filtro Closer popule a partir dessa fonte unificada e não do campo legado.
+Criar uma camada de adaptação logo após `response.json()` para aceitar **ambos os contratos**:
 
-### Mudanças
+- contrato antigo: `result.metricas`
+- contrato novo enxuto: `result.resumo`, `result.financeiro`, `result.por_closer`, `result.por_origem`
 
-**`src/hooks/useLeadsCRMData.ts`**
-- Já busca `deals` com `profiles:closer_id(nome, full_name)` para o breakdown de vendas. Estender essa lógica para também construir um mapa `leadId → closer resolvido` usando a hierarquia.
-- Buscar adicionalmente `lead_responsibles` com `is_primary=true` e join com `profiles`.
-- Expor um campo `closerResolvido` no objeto retornado por lead (sem alterar `lead.closer` original, para não quebrar edição inline).
+A normalização deve converter para o shape interno esperado pelo app:
+- `por_closer[].nome` → `por_closer[].closer`
+- `por_origem[].nome` → `por_origem[].origem`
+- encapsular resposta enxuta em `metricas`
 
-**`src/components/leads/CRMTableFilters.tsx`**
-- Trocar `l.closer?.trim()` por `l.closerResolvido?.trim()` na linha 26 ao popular `uniqueClosers`.
-- Manter o resto do componente igual.
+Exemplo de alvo interno:
+```ts
+{
+  periodo,
+  metricas: {
+    resumo,
+    financeiro,
+    por_closer: normalizedClosers,
+    por_origem: normalizedOrigens,
+    por_etapa: [],
+    por_tipo_venda: { recorrente: { vendas: 0, receita: 0 }, avista: { vendas: 0, receita: 0 } },
+    vendas: defaultVendas,
+    sessoes: defaultSessoes,
+    cruzamentos: defaultCruzamentos,
+    por_produto: [],
+    lista_vendas: []
+  }
+}
+```
 
-**`src/components/leads/LeadsCRMTable.tsx`** (pequeno ajuste, se necessário)
-- Quando aplicar o filtro selecionado, comparar contra `closerResolvido` em vez de `closer`.
-- A célula editável "Closer" continua editando `leads.closer` (campo legado) — sem alteração de comportamento de escrita.
+### 2. Tornar o hook resiliente a aliases de campo
+**Arquivos:**
+- `src/hooks/useComercialMetrics.ts`
+- opcionalmente `src/hooks/useFilteredMetrics.ts`
 
-### Resultado esperado
+Mesmo com a normalização principal, deixar fallback defensivo:
+- closer: `c.closer ?? c.nome`
+- origem: `o.origem ?? o.nome`
 
-O dropdown "Closer" na Tabela CRM passa a listar os 8 nomes reais (Alessandra, Casagrande, Gabriel, Carol, Vagner, Uilma, Lucas Casagrande Sampaio, Não atribuído + outros que existirem em deals/responsibles), batendo com o que `comercial-metrics` já retorna.
+Isso evita nova quebra se a API variar de novo.
 
-## Resumo técnico
+### 3. Invalidar o cache antigo
+**Arquivo:** `src/hooks/useComercialMetrics.ts`
+
+Bump de versão do cache:
+- de `comercial_metrics_cache`
+- para algo como `comercial_metrics_cache_v2`
+
+Isso força o Clarity 2 a parar de reutilizar payloads antigos incompatíveis.
+
+### 4. Corrigir os filtros que usam leads normalizados
+**Arquivo:** `src/components/Comparison/ComparisonFilters.tsx`
+
+Trocar:
+```ts
+allLeads.map(lead => lead.closer)
+```
+por:
+```ts
+allLeads.map(lead => lead.Closer || lead.closer)
+```
+
+E manter o mesmo padrão para origem, se necessário:
+```ts
+lead.Origem || lead.origem
+```
+
+## Resultado esperado
+
+Depois dessas correções:
+
+- o **Dashboard** do Clarity 2 volta a ler os closers vindos de `comercial-metrics`
+- o filtro **Closer** da barra unificada passa a listar os closers reais do período
+- o app deixa de depender de cache velho para “funcionar”
+- as telas que usam `allLeads` também passam a enxergar corretamente `Lead.Closer`
+
+## Observação importante sobre contagem de closers
+
+Há duas fontes com recortes diferentes:
+
+- **Dashboard / métricas**: usa `comercial-metrics` com o período selecionado (ex.: “Este Mês”) → tende a mostrar os **8 closers** do período
+- **Leads / comparação baseada em lista**: `useCrmLeadsData()` carrega `ano_atual` → pode mostrar **mais nomes** (ex.: 14) por incluir todo o ano e variações de nome
+
+Ou seja: se o objetivo é o dropdown do Dashboard, o problema principal é **contrato + cache**.  
+Se o objetivo é padronizar todos os dropdowns do sistema para a mesma lista, aí o passo seguinte é unificar também a normalização de nomes entre métricas e leads.
+
+## Arquivos a ajustar
 
 | Arquivo | Mudança |
 |---|---|
-| `src/hooks/useLeadsCRMData.ts` | Buscar `lead_responsibles` + montar `closerResolvido` por hierarquia |
-| `src/components/leads/CRMTableFilters.tsx` | Popular dropdown a partir de `closerResolvido` |
-| `src/components/leads/LeadsCRMTable.tsx` | Filtrar por `closerResolvido` (preservar edição de `closer`) |
+| `src/hooks/useComercialMetrics.ts` | Adaptar payload enxuto para o shape esperado e mapear `nome -> closer/origem` |
+| `src/hooks/useComercialMetrics.ts` | Versionar/invalidate cache antigo |
+| `src/hooks/useFilteredMetrics.ts` | Adicionar fallback defensivo para aliases (`closer/nome`, `origem/nome`) |
+| `src/components/Comparison/ComparisonFilters.tsx` | Usar `Lead.Closer` em vez de `lead.closer` |
 
-Nenhuma mudança em edge function, nenhuma mudança de schema.
+## Critérios de aceite
 
+1. O filtro **Closer** no Dashboard do Clarity 2 deixa de depender de cache antigo.
+2. `availableClosers` passa a ser preenchido com nomes reais vindos de `comercial-metrics`.
+3. O refresh manual deixa de cair silenciosamente em fallback por incompatibilidade de shape.
+4. A tela de comparação por closer passa a listar nomes vindos de `Lead.Closer`.
