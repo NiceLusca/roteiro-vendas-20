@@ -1,65 +1,53 @@
 
 
-# Substituir edge functions comerciais (versão enxuta) — com correções de schema
+# Diagnóstico: filtro Closer no CRM já tem fix no servidor, mas o frontend ignora
 
-Confirmação: **nenhum código do CRM consome `comercial-metrics`** (busca não retornou nenhum import). Apenas o Clarity externo consome. Logo, "Substituir tudo (versão enxuta)" é seguro.
+## O que descobri
 
-Porém o código que você colou tem **3 problemas de schema** que precisam ser corrigidos antes do deploy, senão receita e closers vão zerar:
+1. **`comercial-leads-list` (servidor) já está correta.** Os logs confirmam 14 closers distintos retornados (Vagner=131, Não atribuído=309, Lucas Casagrande Sampaio=44, Gabriel=109, Carolaine Santana=69, Casagrande=68, Carol=69, Alessandra=67, Uilma=61, Yan Hagassy=4, etc.). Não precisa redeploy — o código v3 já está no ar.
 
-| Código colado | Coluna real no banco |
-|---|---|
-| `orders.total` | `orders.valor_total` |
-| `order_items.valor` | `order_items.preco_unitario` |
-| `appointments.start_at` | `appointments.start_at` ✅ (ok, existe) |
+2. **O CRM não consome `comercial-leads-list`.** Busquei por toda a `src/` e não há nenhuma chamada a essa função. Ela é exclusiva do Clarity externo.
 
-Além disso, o import `https://esm.sh/@supabase/supabase-js@2` deu **502 Bad Gateway** num deploy anterior (msg #46) — vou trocar por `npm:@supabase/supabase-js@2`, que é estável.
+3. **O filtro Closer da Tabela CRM lê o campo legado `leads.closer`.** Em `src/components/leads/CRMTableFilters.tsx` (linha 26):
+   ```ts
+   leads.forEach(l => { if (l.closer?.trim()) set.add(l.closer!.trim()); });
+   ```
+   Esse campo só tem 2 valores ("Não atribuído" e "Yan Hagassy") porque a maioria dos closers reais está em `deals.closer_id` (com FK para `profiles`) ou `lead_responsibles.is_primary`, e não na coluna texto `leads.closer`.
 
-## Plano de execução
+## Por que redeployar `comercial-leads-list` não resolve
 
-### 1. Criar `supabase/functions/comercial-leads-list/index.ts` (novo)
+Mesmo redeployando, o filtro do CRM continuaria mostrando só 2 nomes — porque ele nunca leu da edge function. O Clarity (consumidor externo) já recebe os 8+ closers desde o último deploy.
 
-Aplicar exatamente o código que você colou, com 3 ajustes mínimos:
-- `import { createClient } from "npm:@supabase/supabase-js@2"` (em vez de esm.sh)
-- `orders.total` → `orders.valor_total`
-- `order_items.valor` → `order_items.preco_unitario`
+## O que de fato precisa mudar
 
-Tudo o resto fica igual: CORS completo, hierarquia `deals → lead_responsibles → leads.closer → "Não atribuído"`, suporte a POST/GET, filtros `closer[]`/`origem[]`.
+Aplicar a mesma hierarquia `deals → lead_responsibles → leads.closer → "Não atribuído"` no carregamento do CRM, para que o filtro Closer popule a partir dessa fonte unificada e não do campo legado.
 
-### 2. Substituir `supabase/functions/comercial-metrics/index.ts` (versão enxuta)
+### Mudanças
 
-Aplicar exatamente o código que você colou (perde `pendentes`, `por_tipo_venda`, `por_status`, `produtos`, `vendas` — confirmado que ninguém consome internamente), com os mesmos 3 ajustes:
-- Import `npm:`
-- `orders.total` → `orders.valor_total`
-- Hierarquia idêntica à `comercial-leads-list`
+**`src/hooks/useLeadsCRMData.ts`**
+- Já busca `deals` com `profiles:closer_id(nome, full_name)` para o breakdown de vendas. Estender essa lógica para também construir um mapa `leadId → closer resolvido` usando a hierarquia.
+- Buscar adicionalmente `lead_responsibles` com `is_primary=true` e join com `profiles`.
+- Expor um campo `closerResolvido` no objeto retornado por lead (sem alterar `lead.closer` original, para não quebrar edição inline).
 
-### 3. Atualizar `supabase/config.toml`
+**`src/components/leads/CRMTableFilters.tsx`**
+- Trocar `l.closer?.trim()` por `l.closerResolvido?.trim()` na linha 26 ao popular `uniqueClosers`.
+- Manter o resto do componente igual.
 
-Adicionar a nova função:
-```toml
-[functions.comercial-leads-list]
-verify_jwt = false
-```
+**`src/components/leads/LeadsCRMTable.tsx`** (pequeno ajuste, se necessário)
+- Quando aplicar o filtro selecionado, comparar contra `closerResolvido` em vez de `closer`.
+- A célula editável "Closer" continua editando `leads.closer` (campo legado) — sem alteração de comportamento de escrita.
 
-### 4. Deploy + validação
+### Resultado esperado
 
-- Deploy das duas funções
-- Testar `OPTIONS` → deve retornar 204 com headers CORS
-- Testar `POST {periodo: "mes_atual"}` em ambas
-- Conferir paridade: `sum(por_closer.leads) === resumo.total_leads`
-- Conferir que `por_closer.length > 1` (não só "Não atribuído")
-- Conferir que nomes em `por_closer[].nome` batem com `leads[].Closer`
+O dropdown "Closer" na Tabela CRM passa a listar os 8 nomes reais (Alessandra, Casagrande, Gabriel, Carol, Vagner, Uilma, Lucas Casagrande Sampaio, Não atribuído + outros que existirem em deals/responsibles), batendo com o que `comercial-metrics` já retorna.
 
 ## Resumo técnico
 
-| Mudança | Arquivo | Tipo |
-|---|---|---|
-| Criar nova função | `supabase/functions/comercial-leads-list/index.ts` | Novo arquivo |
-| Substituir versão enxuta | `supabase/functions/comercial-metrics/index.ts` | Reescrever |
-| Registrar verify_jwt=false | `supabase/config.toml` | Adicionar bloco |
-| Deploy + curl validation | (tools) | `deploy_edge_functions` + `curl_edge_functions` |
+| Arquivo | Mudança |
+|---|---|
+| `src/hooks/useLeadsCRMData.ts` | Buscar `lead_responsibles` + montar `closerResolvido` por hierarquia |
+| `src/components/leads/CRMTableFilters.tsx` | Popular dropdown a partir de `closerResolvido` |
+| `src/components/leads/LeadsCRMTable.tsx` | Filtrar por `closerResolvido` (preservar edição de `closer`) |
 
-## Riscos assumidos (versão enxuta)
-
-- A função `comercial-metrics` deixa de retornar `pendentes`, `por_tipo_venda`, `por_status`, `produtos`, `vendas`. **Confirmado por busca no código que nenhum frontend interno usa esses campos** (apenas Clarity externo consome a função, e ele só usa os 4 blocos preservados).
-- Se algum consumidor externo que não conhecemos usar esses campos, vai quebrar.
+Nenhuma mudança em edge function, nenhuma mudança de schema.
 
