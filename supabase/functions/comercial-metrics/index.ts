@@ -375,50 +375,31 @@ Deno.serve(async (req) => {
     };
 
     // ============================================================
-    // 4. CLOSER HIERARCHY (para todos os leads relevantes:
-    //    leads do período + leads das vendas)
+    // 4. CLOSER RESOLUTION (Tabela CRM como fonte de verdade)
+    //    - Para LEADS: leads.closer (texto livre) -> "Não atribuído"
+    //    - Para VENDAS: orders.closer -> leads.closer -> "Não atribuído"
+    //    NÃO usamos mais deals.closer_id nem lead_responsibles.is_primary,
+    //    porque a Tabela CRM (fonte de verdade) também não usa.
     // ============================================================
-    const closerLeadIds = [
-      ...new Set([
-        ...allLeadsPeriod.map((l: any) => l.id),
-        ...saleLeadIds,
-      ]),
-    ];
+    const normalizeCloserText = (raw: string | null | undefined): string => {
+      if (!raw) return NAO_ATRIBUIDO;
+      const trimmed = raw.trim();
+      return trimmed.length > 0 ? trimmed : NAO_ATRIBUIDO;
+    };
 
-    const dealCloserMap = new Map<string, string>();
-    for (let i = 0; i < closerLeadIds.length; i += CHUNK_SIZE) {
-      const chunk = closerLeadIds.slice(i, i + CHUNK_SIZE);
-      const { data, error } = await supabase
-        .from("deals")
-        .select("lead_id, created_at, profiles!deals_closer_id_fkey(nome, full_name)")
-        .in("lead_id", chunk)
-        .order("created_at", { ascending: false });
-      if (error) { console.error("[deals closer err]", error); continue; }
-      (data || []).forEach((d: any) => {
-        const name = d.profiles?.nome || d.profiles?.full_name;
-        if (name && !dealCloserMap.has(d.lead_id)) dealCloserMap.set(d.lead_id, name);
-      });
-    }
+    const resolveLeadCloser = (leadCloser: string | null | undefined): string =>
+      normalizeCloserText(leadCloser ?? null);
 
-    const respCloserMap = new Map<string, string>();
-    for (let i = 0; i < closerLeadIds.length; i += CHUNK_SIZE) {
-      const chunk = closerLeadIds.slice(i, i + CHUNK_SIZE);
-      const { data, error } = await supabase
-        .from("lead_responsibles")
-        .select("lead_id, is_primary, profiles!lead_responsibles_user_id_fkey(nome, full_name)")
-        .in("lead_id", chunk)
-        .eq("is_primary", true);
-      if (error) { console.error("[responsibles err]", error); continue; }
-      (data || []).forEach((r: any) => {
-        const name = r.profiles?.nome || r.profiles?.full_name;
-        if (name) respCloserMap.set(r.lead_id, name);
-      });
-    }
-
-    const resolveCloserById = (leadId: string, fallbackCloser: string | null): string =>
-      dealCloserMap.get(leadId)
-        ?? respCloserMap.get(leadId)
-        ?? (fallbackCloser && fallbackCloser.trim() ? fallbackCloser.trim() : NAO_ATRIBUIDO);
+    const resolveSaleCloser = (
+      orderCloser: string | null | undefined,
+      leadCloser: string | null | undefined,
+    ): string => {
+      const fromOrder = (orderCloser ?? "").trim();
+      if (fromOrder) return fromOrder;
+      const fromLead = (leadCloser ?? "").trim();
+      if (fromLead) return fromLead;
+      return NAO_ATRIBUIDO;
+    };
 
     // ============================================================
     // 5. APPOINTMENTS (para leads do período)
