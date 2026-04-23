@@ -404,17 +404,32 @@ Deno.serve(async (req) => {
       return trimmed.length === 0 || SENTINEL_CLOSERS.has(trimmed);
     };
 
+    // v10: aliases de closers — unifica nomes equivalentes da mesma pessoa.
+    // Chave em lower-case (sem trim necessário, normalizamos antes).
+    const CLOSER_ALIASES: Record<string, string> = {
+      "lucas casagrande sampaio": "Casagrande",
+      "lucas casagrande": "Casagrande",
+      "casagrande": "Casagrande",
+      "carolaine santana": "Carol",
+      "carolaine": "Carol",
+      "carol": "Carol",
+    };
+    const canonicalizeCloser = (raw: string): string => {
+      const key = raw.trim().toLowerCase();
+      return CLOSER_ALIASES[key] ?? raw.trim();
+    };
+
     const resolveLeadCloser = (leadCloser: string | null | undefined): string => {
       if (isSentinelCloser(leadCloser)) return NAO_ATRIBUIDO;
-      return String(leadCloser).trim();
+      return canonicalizeCloser(String(leadCloser));
     };
 
     const resolveSaleCloser = (
       orderCloser: string | null | undefined,
       leadCloser: string | null | undefined,
     ): string => {
-      if (!isSentinelCloser(orderCloser)) return String(orderCloser).trim();
-      if (!isSentinelCloser(leadCloser)) return String(leadCloser).trim();
+      if (!isSentinelCloser(orderCloser)) return canonicalizeCloser(String(orderCloser));
+      if (!isSentinelCloser(leadCloser)) return canonicalizeCloser(String(leadCloser));
       return NAO_ATRIBUIDO;
     };
 
@@ -817,7 +832,7 @@ Deno.serve(async (req) => {
     }
 
     console.log(
-      `[comercial-metrics v9] paridade-tabela-crm\n` +
+      `[comercial-metrics v10] paridade-tabela-crm\n` +
       `  total_leads_pipeline:                  ${total_leads}\n` +
       `  closers_distintos_leads:               [${closersDistintosLeads.join(", ")}]\n` +
       `  closers_distintos_vendas:              [${closersDistintosVendas.join(", ")}]\n` +
@@ -828,7 +843,7 @@ Deno.serve(async (req) => {
     );
 
     console.log(
-      `[comercial-metrics v9] resumo total_leads=${total_leads} validos=${leads_validos} ` +
+      `[comercial-metrics v10] resumo total_leads=${total_leads} validos=${leads_validos} ` +
       `fechou=${total_fechamentos} receita=${receita_total.toFixed(2)} ` +
       `closers=${por_closer_nested.length} produtos=${por_produto.length}`
     );
