@@ -340,7 +340,9 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
           .eq('deal_id', result.id)
           .maybeSingle();
         
+        let orderId: string | null = null;
         if (existingOrder?.id) {
+          orderId = existingOrder.id;
           // Atualizar order existente
           await supabase
             .from('orders')
@@ -354,7 +356,7 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
             .eq('id', existingOrder.id);
         } else {
           // Criar nova order
-          await supabase
+          const { data: newOrder } = await supabase
             .from('orders')
             .insert({
               lead_id: lead.id,
@@ -363,7 +365,47 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
               closer: closerName,
               status_pagamento: 'pago',
               data_venda: dataVenda ? dataVenda.toISOString() : new Date().toISOString()
-            });
+            })
+            .select('id')
+            .single();
+          orderId = newOrder?.id ?? null;
+        }
+
+        // Sincronizar order_items com produtos do deal
+        // Garante que dashboard (comercial-metrics) consiga classificar produto/recorrência
+        if (orderId && selectedProductIds.length > 0) {
+          // Limpa itens antigos para evitar duplicação
+          await supabase
+            .from('order_items')
+            .delete()
+            .eq('pedido_id', orderId);
+
+          // Buscar preços dos produtos selecionados
+          const { data: productsData } = await supabase
+            .from('products')
+            .select('id, preco')
+            .in('id', selectedProductIds);
+          const priceMap = new Map<string, number>(
+            (productsData || []).map((p: any) => [p.id, Number(p.preco) || 0])
+          );
+
+          const recorrenciaValue = vendaRecorrente ? 'Mensal' : 'Nenhuma';
+          const itemsPayload = selectedProductIds.map((productId) => ({
+            pedido_id: orderId!,
+            produto_id: productId,
+            quantidade: 1,
+            preco_unitario: priceMap.get(productId) ?? 0,
+            recorrencia: recorrenciaValue,
+          }));
+
+          if (itemsPayload.length > 0) {
+            const { error: itemsError } = await supabase
+              .from('order_items')
+              .insert(itemsPayload);
+            if (itemsError) {
+              console.error('Erro ao sincronizar order_items:', itemsError);
+            }
+          }
         }
       }
 
