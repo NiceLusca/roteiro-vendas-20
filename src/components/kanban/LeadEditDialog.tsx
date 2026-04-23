@@ -301,9 +301,9 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
       const status = vendaConfirmada ? 'ganho' : 'aberto';
       const dataFechamento = vendaConfirmada && dataVenda ? dataVenda.toISOString() : null;
 
-      // Get current user id for closer_id
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-
+      // NOTE: não atribuímos mais closer_id automaticamente ao usuário logado.
+      // A fonte de verdade de closer é o texto livre `leads.closer` (coluna Closer
+      // da Tabela CRM), espelhado em `orders.closer` ao confirmar a venda.
       const result = await saveDeal({
         ...(existingDeal?.id ? { id: existingDeal.id } : {}),
         lead_id: lead.id,
@@ -311,7 +311,6 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
         recorrente: vendaRecorrente, // Boolean para estatísticas
         status: status as any,
         data_fechamento: dataFechamento,
-        ...(currentUser && !existingDeal?.id ? { closer_id: currentUser.id } : {})
       });
 
       // Salvar produtos associados ao deal
@@ -319,18 +318,18 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
         await setDealProducts(selectedProductIds);
       }
 
-      // SE VENDA CONFIRMADA: criar/atualizar order com closer do responsável principal
+      // SE VENDA CONFIRMADA: criar/atualizar order espelhando `leads.closer`
       if (vendaConfirmada && result?.id) {
-        // Buscar responsável principal para usar como closer
-        const { data: primaryResp } = await supabase
-          .from('lead_responsibles')
-          .select('profiles(nome, full_name)')
-          .eq('lead_id', lead.id)
-          .eq('is_primary', true)
+        // Fonte de verdade: a coluna Closer da Tabela CRM = leads.closer (texto livre).
+        // Buscamos o valor mais recente direto do banco para evitar usar estado desatualizado.
+        const { data: leadRow } = await supabase
+          .from('leads')
+          .select('closer')
+          .eq('id', lead.id)
           .maybeSingle();
-        
-        const closerName = (primaryResp?.profiles as any)?.nome 
-          || (primaryResp?.profiles as any)?.full_name 
+
+        const closerName = (leadRow?.closer && leadRow.closer.trim())
+          || (lead.closer && lead.closer.trim())
           || 'Não atribuído';
         
         // Verificar se já existe order para este deal

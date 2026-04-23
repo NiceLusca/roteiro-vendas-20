@@ -1,9 +1,13 @@
 // ============================================================================
-// Edge Function: comercial-metrics  (v6 — base de leads + base de vendas separadas)
+// Edge Function: comercial-metrics  (v7 — Tabela CRM como fonte de verdade)
 // ============================================================================
 // - Leads do período (volume): usa leads.created_at
 // - Vendas do período (faturamento): usa orders.data_venda
 // - Fallback de produto/recorrência: order_items -> deal_products -> deals
+// - Closer SEMPRE resolvido pelo texto humano:
+//     vendas: orders.closer -> leads.closer -> "Não atribuído"
+//     leads:  leads.closer -> "Não atribuído"
+//   (NÃO usa mais deals.closer_id nem lead_responsibles)
 // ============================================================================
 
 import { createClient } from "npm:@supabase/supabase-js@2";
