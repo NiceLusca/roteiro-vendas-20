@@ -1,5 +1,5 @@
 // ============================================================================
-// Edge Function: comercial-metrics  (v4 — closer hierarchy + parity fix)
+// Edge Function: comercial-metrics  (v5 — payload completo nested + legado)
 // ============================================================================
 
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -23,20 +23,36 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function isFechouStatus(s: string | null): boolean {
-  return s === "fechou" || s === "cliente";
-}
+// ---- Status classifiers ---------------------------------------------------
+const STATUS_FECHOU = new Set(["fechou"]);
+const STATUS_MENTORADO = new Set(["cliente", "mentorado"]);
+const STATUS_COMPARECEU = new Set([
+  "atendido", "ligacao_realizada", "fechou", "nao_fechou", "ja_possui", "perdido",
+]);
+const STATUS_NO_SHOW = new Set(["nao_compareceu", "closer_ausente"]);
+const STATUS_PENDENTE = new Set(["agendado", "confirmado", "remarcou"]);
+const STATUS_PERDIDO = new Set(["nao_fechou", "ja_possui", "perdido"]);
 
-function isAtendidoStatus(s: string | null): boolean {
-  return (
-    s === "atendido" ||
-    s === "ligacao_realizada" ||
-    s === "fechou" ||
-    s === "cliente" ||
-    s === "nao_fechou" ||
-    s === "ja_possui" ||
-    s === "perdido"
-  );
+const isFechou = (s: string | null) => !!s && STATUS_FECHOU.has(s);
+const isMentorado = (s: string | null) => !!s && STATUS_MENTORADO.has(s);
+const isCompareceu = (s: string | null) => !!s && STATUS_COMPARECEU.has(s);
+const isNoShow = (s: string | null) => !!s && STATUS_NO_SHOW.has(s);
+const isPendente = (s: string | null) => !!s && STATUS_PENDENTE.has(s);
+const isPerdido = (s: string | null) => !!s && STATUS_PERDIDO.has(s);
+
+// Legacy "atendido" set (mantido para campo legado raiz `resumo.atendimentos`)
+const isAtendidoLegacy = (s: string | null) =>
+  !!s && (STATUS_COMPARECEU.has(s) || s === "cliente");
+
+function statusGrupo(s: string | null): string {
+  if (!s) return "Outro";
+  if (isFechou(s)) return "Fechamento";
+  if (isMentorado(s)) return "Mentorado";
+  if (isPendente(s)) return "Pendente";
+  if (isNoShow(s)) return "No-Show";
+  if (isPerdido(s)) return "Perdido";
+  if (s === "atendido" || s === "ligacao_realizada") return "Atendido";
+  return "Outro";
 }
 
 function resolvePeriod(params: URLSearchParams | Record<string, any>) {
@@ -76,6 +92,54 @@ function resolvePeriod(params: URLSearchParams | Record<string, any>) {
   return { dataInicio, dataFim, periodo };
 }
 
+function emptyResponse(dataInicio: string, dataFim: string, periodo: string, pipeline?: { id: string; nome: string }) {
+  const dias = Math.max(1, Math.round((+new Date(dataFim) - +new Date(dataInicio)) / 86400000) + 1);
+  return {
+    periodo: { inicio: dataInicio, fim: dataFim, data_inicio: dataInicio, data_fim: dataFim, tipo: periodo, dias_totais: dias },
+    pipeline: pipeline ?? { id: "", nome: "Comercial" },
+    fonte: "supabase-direct",
+    gerado_em: new Date().toISOString(),
+    // legado raiz
+    resumo: { total_leads: 0, agendamentos: 0, atendimentos: 0, fechamentos: 0 },
+    financeiro: { receita_total: 0, ticket_medio: 0 },
+    por_closer: [],
+    por_origem: [],
+    // nested completo
+    metricas: {
+      resumo: { total_leads: 0, mentorados: 0, leads_validos: 0 },
+      sessoes: {
+        pendentes: { agendado: 0, confirmado: 0, remarcou: 0, total: 0 },
+        compareceram: 0, nao_compareceram: 0, no_show: 0, taxa_comparecimento: 0,
+      },
+      vendas: {
+        fechamentos_diretos: 0, fechamentos_recuperacao: 0, total_fechamentos: 0,
+        taxa_conversao: 0, perdidos_pos_sessao: 0, perdidos_sem_sessao: 0, em_recuperacao: 0,
+      },
+      financeiro: {
+        receita_total: 0, ticket_medio: 0,
+        receita_recorrente: 0, receita_avista: 0,
+        ticket_medio_recorrente: 0, ticket_medio_avista: 0,
+        vendas_recorrente: 0, vendas_avista: 0,
+      },
+      por_tipo_venda: {
+        recorrente: { vendas: 0, receita: 0 },
+        avista: { vendas: 0, receita: 0 },
+      },
+      por_closer: [],
+      por_origem: [],
+      por_etapa: [],
+      por_status: [],
+      por_produto: [],
+      lista_vendas: [],
+      cruzamentos: {
+        closer_x_origem: [],
+        closer_x_produto: [],
+        closer_x_tipo_venda: [],
+      },
+    },
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -113,11 +177,12 @@ Deno.serve(async (req) => {
     }
 
     const { data: pipeline, error: pipelineError } = await supabase
-      .from("pipelines").select("id").eq("slug", "comercial").single();
+      .from("pipelines").select("id, nome").eq("slug", "comercial").single();
     if (pipelineError || !pipeline) {
       return jsonResponse({ error: "Pipeline comercial não encontrado" }, 404);
     }
 
+    // ---- Leads do pipeline comercial -------------------------------------
     const allEntryLeadIds: string[] = [];
     let from = 0;
     while (true) {
@@ -135,13 +200,7 @@ Deno.serve(async (req) => {
     const uniqueLeadIds = [...new Set(allEntryLeadIds)];
 
     if (uniqueLeadIds.length === 0) {
-      return jsonResponse({
-        resumo: { total_leads: 0, agendamentos: 0, atendimentos: 0, fechamentos: 0 },
-        financeiro: { receita_total: 0, ticket_medio: 0 },
-        por_closer: [],
-        por_origem: [],
-        periodo: { data_inicio: dataInicio, data_fim: dataFim },
-      });
+      return jsonResponse(emptyResponse(dataInicio!, dataFim!, periodo, { id: pipeline.id, nome: pipeline.nome }));
     }
 
     const allLeads: any[] = [];
@@ -158,18 +217,13 @@ Deno.serve(async (req) => {
     }
 
     if (allLeads.length === 0) {
-      return jsonResponse({
-        resumo: { total_leads: 0, agendamentos: 0, atendimentos: 0, fechamentos: 0 },
-        financeiro: { receita_total: 0, ticket_medio: 0 },
-        por_closer: [],
-        por_origem: [],
-        periodo: { data_inicio: dataInicio, data_fim: dataFim },
-      });
+      return jsonResponse(emptyResponse(dataInicio!, dataFim!, periodo, { id: pipeline.id, nome: pipeline.nome }));
     }
 
     const leadIds = allLeads.map((l: any) => l.id);
 
-    const dealCloserMap = new Map();
+    // ---- Closer hierarchy: deals ----------------------------------------
+    const dealCloserMap = new Map<string, string>();
     for (let i = 0; i < leadIds.length; i += CHUNK_SIZE) {
       const chunk = leadIds.slice(i, i + CHUNK_SIZE);
       const { data, error } = await supabase
@@ -184,7 +238,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const respCloserMap = new Map();
+    // ---- Closer hierarchy: lead_responsibles (primary) -------------------
+    const respCloserMap = new Map<string, string>();
     for (let i = 0; i < leadIds.length; i += CHUNK_SIZE) {
       const chunk = leadIds.slice(i, i + CHUNK_SIZE);
       const { data, error } = await supabase
@@ -199,7 +254,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const apptLeadSet = new Set();
+    // ---- Appointments ---------------------------------------------------
+    const apptLeadSet = new Set<string>();
     for (let i = 0; i < leadIds.length; i += CHUNK_SIZE) {
       const chunk = leadIds.slice(i, i + CHUNK_SIZE);
       const { data, error } = await supabase
@@ -210,31 +266,73 @@ Deno.serve(async (req) => {
       (data || []).forEach((a: any) => apptLeadSet.add(a.lead_id));
     }
 
-    const orderTotalMap = new Map();
+    // ---- Orders + items + product ---------------------------------------
+    type OrderRow = {
+      id: string;
+      lead_id: string | null;
+      valor_total: number;
+      data_venda: string | null;
+      data_pedido: string | null;
+      items: { recorrencia: string | null; produto?: string | null }[];
+    };
+    const ordersByLead = new Map<string, OrderRow[]>();
+
     for (let i = 0; i < leadIds.length; i += CHUNK_SIZE) {
       const chunk = leadIds.slice(i, i + CHUNK_SIZE);
       const { data: orders, error } = await supabase
         .from("orders")
-        .select("lead_id, valor_total")
+        .select(`
+          id, lead_id, valor_total, data_venda, data_pedido,
+          order_items ( recorrencia, products ( nome ) )
+        `)
         .in("lead_id", chunk);
       if (error) { console.error("[orders err]", error); continue; }
       (orders || []).forEach((o: any) => {
-        const prev = orderTotalMap.get(o.lead_id) || 0;
-        orderTotalMap.set(o.lead_id, prev + (Number(o.valor_total) || 0));
+        if (!o.lead_id) return;
+        const items = (o.order_items || []).map((it: any) => ({
+          recorrencia: it.recorrencia ?? null,
+          produto: it.products?.nome ?? null,
+        }));
+        const row: OrderRow = {
+          id: o.id,
+          lead_id: o.lead_id,
+          valor_total: Number(o.valor_total) || 0,
+          data_venda: o.data_venda,
+          data_pedido: o.data_pedido,
+          items,
+        };
+        const arr = ordersByLead.get(o.lead_id) || [];
+        arr.push(row);
+        ordersByLead.set(o.lead_id, arr);
       });
     }
+
+    const isOrderRecurring = (o: OrderRow): boolean =>
+      o.items.some((it) => it.recorrencia && it.recorrencia.toLowerCase() !== "nenhuma");
+
+    const orderProduct = (o: OrderRow): string =>
+      o.items.find((it) => it.produto)?.produto || "Sem produto";
 
     const resolveCloser = (l: any): string =>
       dealCloserMap.get(l.id)
         ?? respCloserMap.get(l.id)
         ?? (l.closer && l.closer.trim() ? l.closer.trim() : NAO_ATRIBUIDO);
 
-    let workingLeads = allLeads.map((l: any) => ({
-      ...l,
-      __closer: resolveCloser(l),
-      __receita: orderTotalMap.get(l.id) || 0,
-      __agendado: apptLeadSet.has(l.id),
-    }));
+    // ---- Working set ----------------------------------------------------
+    let workingLeads = allLeads.map((l: any) => {
+      const orders = ordersByLead.get(l.id) || [];
+      const isFechado = isFechou(l.status_geral);
+      const receitaFechada = isFechado ? orders.reduce((a, o) => a + o.valor_total, 0) : 0;
+      return {
+        ...l,
+        __closer: resolveCloser(l),
+        __orders: orders,
+        __agendado: apptLeadSet.has(l.id),
+        __mentorado: isMentorado(l.status_geral),
+        __fechou: isFechado,
+        __receita_fechada: receitaFechada,
+      };
+    });
 
     if (closersFilter.length > 0) {
       const set = new Set(closersFilter.map((c) => c.toLowerCase()));
@@ -245,29 +343,121 @@ Deno.serve(async (req) => {
       workingLeads = workingLeads.filter((l) => set.has((l.origem || "").toLowerCase()));
     }
 
+    // ---- Resumo ---------------------------------------------------------
     const total_leads = workingLeads.length;
-    const agendamentos = workingLeads.filter((l) => l.__agendado).length;
-    const atendimentos = workingLeads.filter((l) => isAtendidoStatus(l.status_geral)).length;
-    const fechamentos = workingLeads.filter((l) => isFechouStatus(l.status_geral)).length;
-    const receita_total = workingLeads.reduce((acc, l) => acc + l.__receita, 0);
-    const ticket_medio = fechamentos > 0 ? receita_total / fechamentos : 0;
+    const mentorados = workingLeads.filter((l) => l.__mentorado).length;
+    const leads_validos = workingLeads.filter((l) => !l.__mentorado && l.__agendado).length;
 
-    const closerAgg = new Map();
+    // ---- Sessões --------------------------------------------------------
+    const pendAg = workingLeads.filter((l) => l.status_geral === "agendado").length;
+    const pendConf = workingLeads.filter((l) => l.status_geral === "confirmado").length;
+    const pendRem = workingLeads.filter((l) => l.status_geral === "remarcou").length;
+    const pendTotal = pendAg + pendConf + pendRem;
+    const compareceram = workingLeads.filter((l) => isCompareceu(l.status_geral)).length;
+    const noShow = workingLeads.filter((l) => isNoShow(l.status_geral)).length;
+    const taxa_comparecimento = (compareceram + noShow) > 0
+      ? +(compareceram / (compareceram + noShow) * 100).toFixed(2)
+      : 0;
 
+    // ---- Vendas ---------------------------------------------------------
+    const fechouLeads = workingLeads.filter((l) => l.__fechou);
+    const total_fechamentos = fechouLeads.length;
+    const perdidos_pos_sessao = workingLeads.filter((l) => isPerdido(l.status_geral) && l.__agendado).length;
+    const perdidos_sem_sessao = workingLeads.filter((l) => isPerdido(l.status_geral) && !l.__agendado).length;
+    const taxa_conversao = compareceram > 0
+      ? +(total_fechamentos / compareceram * 100).toFixed(2)
+      : 0;
+
+    // ---- Financeiro -----------------------------------------------------
+    let receita_total = 0;
+    let receita_recorrente = 0;
+    let receita_avista = 0;
+    let vendas_recorrente = 0;
+    let vendas_avista = 0;
+
+    type Sale = {
+      id: string;
+      closer: string;
+      valor: number;
+      origem: string;
+      recorrente: boolean;
+      produto: string;
+      data_venda: string | null;
+    };
+    const lista_vendas: Sale[] = [];
+
+    for (const l of fechouLeads) {
+      for (const o of l.__orders as OrderRow[]) {
+        const rec = isOrderRecurring(o);
+        receita_total += o.valor_total;
+        if (rec) { receita_recorrente += o.valor_total; vendas_recorrente += 1; }
+        else { receita_avista += o.valor_total; vendas_avista += 1; }
+        lista_vendas.push({
+          id: o.id,
+          closer: l.__closer,
+          valor: o.valor_total,
+          origem: l.origem || "Não informado",
+          recorrente: rec,
+          produto: orderProduct(o),
+          data_venda: o.data_venda || o.data_pedido,
+        });
+      }
+    }
+
+    const ticket_medio = total_fechamentos > 0 ? receita_total / total_fechamentos : 0;
+    const ticket_medio_recorrente = vendas_recorrente > 0 ? receita_recorrente / vendas_recorrente : 0;
+    const ticket_medio_avista = vendas_avista > 0 ? receita_avista / vendas_avista : 0;
+
+    // ---- Por closer (nested) -------------------------------------------
+    const closerAgg = new Map<string, any>();
     for (const l of workingLeads) {
       const key = l.__closer || NAO_ATRIBUIDO;
       const cur = closerAgg.get(key) ?? {
-        leads: 0, agendamentos: 0, atendimentos: 0, fechamentos: 0, receita: 0,
+        leads: 0, compareceu: 0, fechou: 0, receita: 0,
+        recorrente: 0, avista: 0,
+        receita_recorrente: 0, receita_avista: 0,
+        // legado:
+        agendamentos: 0, atendimentos: 0, fechamentos: 0,
       };
       cur.leads += 1;
       if (l.__agendado) cur.agendamentos += 1;
-      if (isAtendidoStatus(l.status_geral)) cur.atendimentos += 1;
-      if (isFechouStatus(l.status_geral)) cur.fechamentos += 1;
-      cur.receita += l.__receita;
+      if (isCompareceu(l.status_geral)) cur.compareceu += 1;
+      if (isAtendidoLegacy(l.status_geral)) cur.atendimentos += 1;
+      if (l.__fechou) {
+        cur.fechou += 1;
+        cur.fechamentos += 1;
+        for (const o of l.__orders as OrderRow[]) {
+          cur.receita += o.valor_total;
+          if (isOrderRecurring(o)) {
+            cur.recorrente += 1;
+            cur.receita_recorrente += o.valor_total;
+          } else {
+            cur.avista += 1;
+            cur.receita_avista += o.valor_total;
+          }
+        }
+      }
       closerAgg.set(key, cur);
     }
 
-    const por_closer = Array.from(closerAgg.entries())
+    const por_closer_nested = Array.from(closerAgg.entries())
+      .map(([nome, v]) => ({
+        closer: nome,
+        nome,
+        leads: v.leads,
+        compareceu: v.compareceu,
+        fechou: v.fechou,
+        receita: v.receita,
+        taxa_conversao: v.compareceu > 0 ? +(v.fechou / v.compareceu * 100).toFixed(2) : 0,
+        recorrente: v.recorrente,
+        avista: v.avista,
+        receita_recorrente: v.receita_recorrente,
+        receita_avista: v.receita_avista,
+      }))
+      .sort((a, b) => b.receita - a.receita);
+
+    // legado raiz
+    const por_closer_legacy = Array.from(closerAgg.entries())
       .map(([nome, v]) => ({
         nome,
         leads: v.leads,
@@ -281,39 +471,183 @@ Deno.serve(async (req) => {
       }))
       .sort((a, b) => b.receita - a.receita);
 
-    const origemAgg = new Map();
+    // ---- Por origem -----------------------------------------------------
+    const origemAgg = new Map<string, any>();
     for (const l of workingLeads) {
       const key = l.origem || "Não informado";
-      const cur = origemAgg.get(key) ?? { leads: 0, fechamentos: 0, receita: 0 };
+      const cur = origemAgg.get(key) ?? { leads: 0, compareceu: 0, fechou: 0, receita: 0 };
       cur.leads += 1;
-      if (isFechouStatus(l.status_geral)) cur.fechamentos += 1;
-      cur.receita += l.__receita;
+      if (isCompareceu(l.status_geral)) cur.compareceu += 1;
+      if (l.__fechou) {
+        cur.fechou += 1;
+        cur.receita += l.__receita_fechada;
+      }
       origemAgg.set(key, cur);
     }
-    const por_origem = Array.from(origemAgg.entries())
-      .map(([nome, v]) => ({ nome, ...v }))
+    const por_origem_nested = Array.from(origemAgg.entries())
+      .map(([nome, v]) => ({ origem: nome, nome, ...v }))
       .sort((a, b) => b.leads - a.leads);
 
-    const sumLeads = por_closer.reduce((a, c) => a + c.leads, 0);
-    const sumReceita = por_closer.reduce((a, c) => a + c.receita, 0);
+    const por_origem_legacy = Array.from(origemAgg.entries())
+      .map(([nome, v]) => ({ nome, leads: v.leads, fechamentos: v.fechou, receita: v.receita }))
+      .sort((a, b) => b.leads - a.leads);
+
+    // ---- Por etapa / status --------------------------------------------
+    const statusAgg = new Map<string, number>();
+    for (const l of workingLeads) {
+      const k = l.status_geral || "sem_status";
+      statusAgg.set(k, (statusAgg.get(k) || 0) + 1);
+    }
+    const por_status = Array.from(statusAgg.entries()).map(([status, total]) => ({
+      status, total, grupo: statusGrupo(status),
+    }));
+    const por_etapa = por_status
+      .map((s, idx) => ({ etapa: s.status, grupo: s.grupo, total: s.total, ordem: idx + 1 }));
+
+    // ---- Por produto ----------------------------------------------------
+    const produtoAgg = new Map<string, { vendas: number; receita: number }>();
+    for (const l of fechouLeads) {
+      for (const o of l.__orders as OrderRow[]) {
+        const p = orderProduct(o);
+        const cur = produtoAgg.get(p) ?? { vendas: 0, receita: 0 };
+        cur.vendas += 1;
+        cur.receita += o.valor_total;
+        produtoAgg.set(p, cur);
+      }
+    }
+    const por_produto = Array.from(produtoAgg.entries())
+      .map(([produto, v]) => ({ produto, ...v }))
+      .sort((a, b) => b.receita - a.receita);
+
+    // ---- Cruzamentos ----------------------------------------------------
+    const xClOrigem = new Map<string, any>();
+    for (const l of workingLeads) {
+      const k = `${l.__closer}||${l.origem || "Não informado"}`;
+      const cur = xClOrigem.get(k) ?? {
+        closer: l.__closer, origem: l.origem || "Não informado",
+        leads: 0, compareceu: 0, fechou: 0, receita: 0,
+      };
+      cur.leads += 1;
+      if (isCompareceu(l.status_geral)) cur.compareceu += 1;
+      if (l.__fechou) { cur.fechou += 1; cur.receita += l.__receita_fechada; }
+      xClOrigem.set(k, cur);
+    }
+    const closer_x_origem = Array.from(xClOrigem.values())
+      .map((v) => ({ ...v, taxa_conversao: v.compareceu > 0 ? +(v.fechou / v.compareceu * 100).toFixed(2) : 0 }));
+
+    const xClProduto = new Map<string, any>();
+    const xClTipo = new Map<string, any>();
+    for (const l of fechouLeads) {
+      for (const o of l.__orders as OrderRow[]) {
+        const rec = isOrderRecurring(o);
+        const prod = orderProduct(o);
+
+        const kp = `${l.__closer}||${prod}`;
+        const cp = xClProduto.get(kp) ?? {
+          closer: l.__closer, produto: prod, vendas: 0, receita: 0, recorrente: 0, avista: 0,
+        };
+        cp.vendas += 1;
+        cp.receita += o.valor_total;
+        if (rec) cp.recorrente += 1; else cp.avista += 1;
+        xClProduto.set(kp, cp);
+
+        const kt = l.__closer;
+        const ct = xClTipo.get(kt) ?? {
+          closer: l.__closer, recorrente: 0, avista: 0, receita_recorrente: 0, receita_avista: 0,
+        };
+        if (rec) { ct.recorrente += 1; ct.receita_recorrente += o.valor_total; }
+        else { ct.avista += 1; ct.receita_avista += o.valor_total; }
+        xClTipo.set(kt, ct);
+      }
+    }
+    const closer_x_produto = Array.from(xClProduto.values());
+    const closer_x_tipo_venda = Array.from(xClTipo.values());
+
+    // ---- Parity logs ----------------------------------------------------
+    const sumLeads = por_closer_nested.reduce((a, c) => a + c.leads, 0);
+    const sumReceita = por_closer_nested.reduce((a, c) => a + c.receita, 0);
     if (sumLeads !== total_leads) {
-      console.warn(`[comercial-metrics v4] PARITY MISMATCH leads: closer=${sumLeads} total=${total_leads}`);
+      console.warn(`[comercial-metrics v5] PARITY MISMATCH leads: closer=${sumLeads} total=${total_leads}`);
     }
     if (Math.abs(sumReceita - receita_total) > 0.01) {
-      console.warn(`[comercial-metrics v4] PARITY MISMATCH receita: closer=${sumReceita} total=${receita_total}`);
+      console.warn(`[comercial-metrics v5] PARITY MISMATCH receita: closer=${sumReceita} total=${receita_total}`);
+    }
+    if (Math.abs((receita_avista + receita_recorrente) - receita_total) > 0.01) {
+      console.warn(`[comercial-metrics v5] PARITY MISMATCH avista+rec=${receita_avista + receita_recorrente} total=${receita_total}`);
+    }
+    if ((vendas_avista + vendas_recorrente) !== total_fechamentos) {
+      console.warn(`[comercial-metrics v5] PARITY MISMATCH vendas tipo=${vendas_avista + vendas_recorrente} fechamentos=${total_fechamentos}`);
     }
 
-    console.log(`[comercial-metrics v4] total=${total_leads} closers=${por_closer.length} sumLeads=${sumLeads} receita=${receita_total}`);
+    console.log(`[comercial-metrics v5] total=${total_leads} validos=${leads_validos} fechou=${total_fechamentos} receita=${receita_total} closers=${por_closer_nested.length}`);
+
+    const dias = Math.max(1, Math.round((+new Date(dataFim!) - +new Date(dataInicio!)) / 86400000) + 1);
 
     return jsonResponse({
-      resumo: { total_leads, agendamentos, atendimentos, fechamentos },
+      periodo: {
+        inicio: dataInicio, fim: dataFim,
+        data_inicio: dataInicio, data_fim: dataFim,
+        tipo: periodo, dias_totais: dias,
+      },
+      pipeline: { id: pipeline.id, nome: pipeline.nome },
+      fonte: "supabase-direct",
+      gerado_em: new Date().toISOString(),
+
+      // legado raiz (compat)
+      resumo: {
+        total_leads,
+        agendamentos: workingLeads.filter((l) => l.__agendado).length,
+        atendimentos: workingLeads.filter((l) => isAtendidoLegacy(l.status_geral)).length,
+        fechamentos: total_fechamentos,
+      },
       financeiro: { receita_total, ticket_medio },
-      por_closer,
-      por_origem,
-      periodo: { data_inicio: dataInicio, data_fim: dataFim },
+      por_closer: por_closer_legacy,
+      por_origem: por_origem_legacy,
+
+      // novo nested completo
+      metricas: {
+        resumo: { total_leads, mentorados, leads_validos },
+        sessoes: {
+          pendentes: { agendado: pendAg, confirmado: pendConf, remarcou: pendRem, total: pendTotal },
+          compareceram,
+          nao_compareceram: noShow,
+          no_show: noShow,
+          taxa_comparecimento,
+        },
+        vendas: {
+          fechamentos_diretos: total_fechamentos,
+          fechamentos_recuperacao: 0,
+          total_fechamentos,
+          taxa_conversao,
+          perdidos_pos_sessao,
+          perdidos_sem_sessao,
+          em_recuperacao: 0,
+        },
+        financeiro: {
+          receita_total, ticket_medio,
+          receita_recorrente, receita_avista,
+          ticket_medio_recorrente, ticket_medio_avista,
+          vendas_recorrente, vendas_avista,
+        },
+        por_tipo_venda: {
+          recorrente: { vendas: vendas_recorrente, receita: receita_recorrente },
+          avista: { vendas: vendas_avista, receita: receita_avista },
+        },
+        por_closer: por_closer_nested,
+        por_origem: por_origem_nested,
+        por_etapa,
+        por_status,
+        por_produto,
+        lista_vendas,
+        cruzamentos: {
+          closer_x_origem,
+          closer_x_produto,
+          closer_x_tipo_venda,
+        },
+      },
     });
   } catch (err: any) {
-    console.error("[comercial-metrics v4] erro fatal", err);
+    console.error("[comercial-metrics v5] erro fatal", err);
     return jsonResponse({ error: "Erro interno ao calcular métricas", details: String(err?.message || err) }, 500);
   }
 });
