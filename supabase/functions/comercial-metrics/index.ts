@@ -755,7 +755,7 @@ Deno.serve(async (req) => {
     }
 
     console.log(
-      `[comercial-metrics v6] periodo=${dataInicio}..${dataFim}\n` +
+      `[comercial-metrics v7] periodo=${dataInicio}..${dataFim}\n` +
       `  por_lead_created_at: fechou=${oldFechou} receita=${oldReceita.toFixed(2)}\n` +
       `  por_data_venda:      fechou=${total_fechamentos} receita=${receita_total.toFixed(2)}\n` +
       `  retornado:           por_data_venda`
@@ -763,21 +763,35 @@ Deno.serve(async (req) => {
 
     // Paridade interna
     if (Math.abs((receita_avista + receita_recorrente) - receita_total) > 0.01) {
-      console.warn(`[v6] PARITY MISMATCH avista+rec=${receita_avista + receita_recorrente} vs total=${receita_total}`);
+      console.warn(`[v7] PARITY MISMATCH avista+rec=${receita_avista + receita_recorrente} vs total=${receita_total}`);
     }
     if ((vendas_avista + vendas_recorrente) !== total_fechamentos) {
-      console.warn(`[v6] PARITY MISMATCH vendas tipo=${vendas_avista + vendas_recorrente} vs fechamentos=${total_fechamentos}`);
+      console.warn(`[v7] PARITY MISMATCH vendas tipo=${vendas_avista + vendas_recorrente} vs fechamentos=${total_fechamentos}`);
     }
     if (lista_vendas.length !== total_fechamentos) {
-      console.warn(`[v6] PARITY MISMATCH lista_vendas=${lista_vendas.length} vs fechamentos=${total_fechamentos}`);
+      console.warn(`[v7] PARITY MISMATCH lista_vendas=${lista_vendas.length} vs fechamentos=${total_fechamentos}`);
     }
     const sumCloserReceita = por_closer_nested.reduce((a, c) => a + c.receita, 0);
     if (Math.abs(sumCloserReceita - receita_total) > 0.01) {
-      console.warn(`[v6] PARITY MISMATCH closer.receita=${sumCloserReceita} vs total=${receita_total}`);
+      console.warn(`[v7] PARITY MISMATCH closer.receita=${sumCloserReceita} vs total=${receita_total}`);
     }
 
+    // Paridade Tabela CRM (fonte de verdade)
+    const closersDistintosLeads = Array.from(new Set(workingLeads.map((l: any) => l.__closer)));
+    const closersDistintosVendas = Array.from(new Set(workingSales.map((s) => s.__closer)));
+    const receitaPorCloserStr = por_closer_nested
+      .map((c) => `${c.closer}=R$${c.receita.toFixed(2)}(${c.fechou}v)`)
+      .join(" / ");
     console.log(
-      `[comercial-metrics v6] resumo total_leads=${total_leads} validos=${leads_validos} ` +
+      `[comercial-metrics v7] paridade-tabela-crm\n` +
+      `  total_leads_pipeline:     ${total_leads}\n` +
+      `  closers_distintos_leads:  [${closersDistintosLeads.join(", ")}]\n` +
+      `  closers_distintos_vendas: [${closersDistintosVendas.join(", ")}]\n` +
+      `  receita_por_closer:       ${receitaPorCloserStr}`
+    );
+
+    console.log(
+      `[comercial-metrics v7] resumo total_leads=${total_leads} validos=${leads_validos} ` +
       `fechou=${total_fechamentos} receita=${receita_total.toFixed(2)} ` +
       `closers=${por_closer_nested.length} produtos=${por_produto.length}`
     );
