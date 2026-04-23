@@ -1,9 +1,13 @@
 // ============================================================================
-// Edge Function: comercial-metrics  (v6 — base de leads + base de vendas separadas)
+// Edge Function: comercial-metrics  (v7 — Tabela CRM como fonte de verdade)
 // ============================================================================
 // - Leads do período (volume): usa leads.created_at
 // - Vendas do período (faturamento): usa orders.data_venda
 // - Fallback de produto/recorrência: order_items -> deal_products -> deals
+// - Closer SEMPRE resolvido pelo texto humano:
+//     vendas: orders.closer -> leads.closer -> "Não atribuído"
+//     leads:  leads.closer -> "Não atribuído"
+//   (NÃO usa mais deals.closer_id nem lead_responsibles)
 // ============================================================================
 
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -238,17 +242,18 @@ Deno.serve(async (req) => {
       data_venda: string | null;
       data_pedido: string | null;
       deal_id: string | null;
+      closer_text: string | null;
       items: { recorrencia: string | null; produto: string | null }[];
     };
 
-    // 3a. Pegar orders com data_venda no período
+    // 3a. Pegar orders com data_venda no período (inclui orders.closer — fonte primária)
     const ordersInPeriod: any[] = [];
     let oFrom = 0;
     while (true) {
       const { data, error } = await supabase
         .from("orders")
         .select(`
-          id, lead_id, valor_total, data_venda, data_pedido, deal_id,
+          id, lead_id, valor_total, data_venda, data_pedido, deal_id, closer,
           order_items ( recorrencia, products ( nome ) )
         `)
         .gte("data_venda", `${dataInicio}T00:00:00`)
@@ -337,6 +342,7 @@ Deno.serve(async (req) => {
         data_venda: o.data_venda,
         data_pedido: o.data_pedido,
         deal_id: o.deal_id ?? null,
+        closer_text: o.closer ?? null,
         items,
       };
     });
@@ -369,50 +375,31 @@ Deno.serve(async (req) => {
     };
 
     // ============================================================
-    // 4. CLOSER HIERARCHY (para todos os leads relevantes:
-    //    leads do período + leads das vendas)
+    // 4. CLOSER RESOLUTION (Tabela CRM como fonte de verdade)
+    //    - Para LEADS: leads.closer (texto livre) -> "Não atribuído"
+    //    - Para VENDAS: orders.closer -> leads.closer -> "Não atribuído"
+    //    NÃO usamos mais deals.closer_id nem lead_responsibles.is_primary,
+    //    porque a Tabela CRM (fonte de verdade) também não usa.
     // ============================================================
-    const closerLeadIds = [
-      ...new Set([
-        ...allLeadsPeriod.map((l: any) => l.id),
-        ...saleLeadIds,
-      ]),
-    ];
+    const normalizeCloserText = (raw: string | null | undefined): string => {
+      if (!raw) return NAO_ATRIBUIDO;
+      const trimmed = raw.trim();
+      return trimmed.length > 0 ? trimmed : NAO_ATRIBUIDO;
+    };
 
-    const dealCloserMap = new Map<string, string>();
-    for (let i = 0; i < closerLeadIds.length; i += CHUNK_SIZE) {
-      const chunk = closerLeadIds.slice(i, i + CHUNK_SIZE);
-      const { data, error } = await supabase
-        .from("deals")
-        .select("lead_id, created_at, profiles!deals_closer_id_fkey(nome, full_name)")
-        .in("lead_id", chunk)
-        .order("created_at", { ascending: false });
-      if (error) { console.error("[deals closer err]", error); continue; }
-      (data || []).forEach((d: any) => {
-        const name = d.profiles?.nome || d.profiles?.full_name;
-        if (name && !dealCloserMap.has(d.lead_id)) dealCloserMap.set(d.lead_id, name);
-      });
-    }
+    const resolveLeadCloser = (leadCloser: string | null | undefined): string =>
+      normalizeCloserText(leadCloser ?? null);
 
-    const respCloserMap = new Map<string, string>();
-    for (let i = 0; i < closerLeadIds.length; i += CHUNK_SIZE) {
-      const chunk = closerLeadIds.slice(i, i + CHUNK_SIZE);
-      const { data, error } = await supabase
-        .from("lead_responsibles")
-        .select("lead_id, is_primary, profiles!lead_responsibles_user_id_fkey(nome, full_name)")
-        .in("lead_id", chunk)
-        .eq("is_primary", true);
-      if (error) { console.error("[responsibles err]", error); continue; }
-      (data || []).forEach((r: any) => {
-        const name = r.profiles?.nome || r.profiles?.full_name;
-        if (name) respCloserMap.set(r.lead_id, name);
-      });
-    }
-
-    const resolveCloserById = (leadId: string, fallbackCloser: string | null): string =>
-      dealCloserMap.get(leadId)
-        ?? respCloserMap.get(leadId)
-        ?? (fallbackCloser && fallbackCloser.trim() ? fallbackCloser.trim() : NAO_ATRIBUIDO);
+    const resolveSaleCloser = (
+      orderCloser: string | null | undefined,
+      leadCloser: string | null | undefined,
+    ): string => {
+      const fromOrder = (orderCloser ?? "").trim();
+      if (fromOrder) return fromOrder;
+      const fromLead = (leadCloser ?? "").trim();
+      if (fromLead) return fromLead;
+      return NAO_ATRIBUIDO;
+    };
 
     // ============================================================
     // 5. APPOINTMENTS (para leads do período)
@@ -434,7 +421,7 @@ Deno.serve(async (req) => {
     // ============================================================
     let workingLeads = allLeadsPeriod.map((l: any) => ({
       ...l,
-      __closer: resolveCloserById(l.id, l.closer),
+      __closer: resolveLeadCloser(l.closer),
       __agendado: apptLeadSet.has(l.id),
       __mentorado: isMentorado(l.status_geral),
       __fechou: isFechou(l.status_geral),
@@ -465,7 +452,7 @@ Deno.serve(async (req) => {
       const lead = saleLeadsMap.get(o.lead_id);
       return {
         ...o,
-        __closer: resolveCloserById(o.lead_id, lead?.closer ?? null),
+        __closer: resolveSaleCloser(o.closer_text, lead?.closer ?? null),
         __origem: lead?.origem || "Não informado",
         __recorrente: resolveOrderRecurring(o),
         __produto: resolveOrderProduct(o),
@@ -768,7 +755,7 @@ Deno.serve(async (req) => {
     }
 
     console.log(
-      `[comercial-metrics v6] periodo=${dataInicio}..${dataFim}\n` +
+      `[comercial-metrics v7] periodo=${dataInicio}..${dataFim}\n` +
       `  por_lead_created_at: fechou=${oldFechou} receita=${oldReceita.toFixed(2)}\n` +
       `  por_data_venda:      fechou=${total_fechamentos} receita=${receita_total.toFixed(2)}\n` +
       `  retornado:           por_data_venda`
@@ -776,21 +763,35 @@ Deno.serve(async (req) => {
 
     // Paridade interna
     if (Math.abs((receita_avista + receita_recorrente) - receita_total) > 0.01) {
-      console.warn(`[v6] PARITY MISMATCH avista+rec=${receita_avista + receita_recorrente} vs total=${receita_total}`);
+      console.warn(`[v7] PARITY MISMATCH avista+rec=${receita_avista + receita_recorrente} vs total=${receita_total}`);
     }
     if ((vendas_avista + vendas_recorrente) !== total_fechamentos) {
-      console.warn(`[v6] PARITY MISMATCH vendas tipo=${vendas_avista + vendas_recorrente} vs fechamentos=${total_fechamentos}`);
+      console.warn(`[v7] PARITY MISMATCH vendas tipo=${vendas_avista + vendas_recorrente} vs fechamentos=${total_fechamentos}`);
     }
     if (lista_vendas.length !== total_fechamentos) {
-      console.warn(`[v6] PARITY MISMATCH lista_vendas=${lista_vendas.length} vs fechamentos=${total_fechamentos}`);
+      console.warn(`[v7] PARITY MISMATCH lista_vendas=${lista_vendas.length} vs fechamentos=${total_fechamentos}`);
     }
     const sumCloserReceita = por_closer_nested.reduce((a, c) => a + c.receita, 0);
     if (Math.abs(sumCloserReceita - receita_total) > 0.01) {
-      console.warn(`[v6] PARITY MISMATCH closer.receita=${sumCloserReceita} vs total=${receita_total}`);
+      console.warn(`[v7] PARITY MISMATCH closer.receita=${sumCloserReceita} vs total=${receita_total}`);
     }
 
+    // Paridade Tabela CRM (fonte de verdade)
+    const closersDistintosLeads = Array.from(new Set(workingLeads.map((l: any) => l.__closer)));
+    const closersDistintosVendas = Array.from(new Set(workingSales.map((s) => s.__closer)));
+    const receitaPorCloserStr = por_closer_nested
+      .map((c) => `${c.closer}=R$${c.receita.toFixed(2)}(${c.fechou}v)`)
+      .join(" / ");
     console.log(
-      `[comercial-metrics v6] resumo total_leads=${total_leads} validos=${leads_validos} ` +
+      `[comercial-metrics v7] paridade-tabela-crm\n` +
+      `  total_leads_pipeline:     ${total_leads}\n` +
+      `  closers_distintos_leads:  [${closersDistintosLeads.join(", ")}]\n` +
+      `  closers_distintos_vendas: [${closersDistintosVendas.join(", ")}]\n` +
+      `  receita_por_closer:       ${receitaPorCloserStr}`
+    );
+
+    console.log(
+      `[comercial-metrics v7] resumo total_leads=${total_leads} validos=${leads_validos} ` +
       `fechou=${total_fechamentos} receita=${receita_total.toFixed(2)} ` +
       `closers=${por_closer_nested.length} produtos=${por_produto.length}`
     );
@@ -861,7 +862,7 @@ Deno.serve(async (req) => {
       },
     });
   } catch (err: any) {
-    console.error("[comercial-metrics v6] erro fatal", err);
+    console.error("[comercial-metrics v7] erro fatal", err);
     return jsonResponse({ error: "Erro interno ao calcular métricas", details: String(err?.message || err) }, 500);
   }
 });
