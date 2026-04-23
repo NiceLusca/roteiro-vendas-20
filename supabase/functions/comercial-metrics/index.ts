@@ -404,17 +404,32 @@ Deno.serve(async (req) => {
       return trimmed.length === 0 || SENTINEL_CLOSERS.has(trimmed);
     };
 
+    // v10: aliases de closers — unifica nomes equivalentes da mesma pessoa.
+    // Chave em lower-case (sem trim necessário, normalizamos antes).
+    const CLOSER_ALIASES: Record<string, string> = {
+      "lucas casagrande sampaio": "Casagrande",
+      "lucas casagrande": "Casagrande",
+      "casagrande": "Casagrande",
+      "carolaine santana": "Carol",
+      "carolaine": "Carol",
+      "carol": "Carol",
+    };
+    const canonicalizeCloser = (raw: string): string => {
+      const key = raw.trim().toLowerCase();
+      return CLOSER_ALIASES[key] ?? raw.trim();
+    };
+
     const resolveLeadCloser = (leadCloser: string | null | undefined): string => {
       if (isSentinelCloser(leadCloser)) return NAO_ATRIBUIDO;
-      return String(leadCloser).trim();
+      return canonicalizeCloser(String(leadCloser));
     };
 
     const resolveSaleCloser = (
       orderCloser: string | null | undefined,
       leadCloser: string | null | undefined,
     ): string => {
-      if (!isSentinelCloser(orderCloser)) return String(orderCloser).trim();
-      if (!isSentinelCloser(leadCloser)) return String(leadCloser).trim();
+      if (!isSentinelCloser(orderCloser)) return canonicalizeCloser(String(orderCloser));
+      if (!isSentinelCloser(leadCloser)) return canonicalizeCloser(String(leadCloser));
       return NAO_ATRIBUIDO;
     };
 
