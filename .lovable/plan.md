@@ -1,96 +1,150 @@
 
+## Correção do `comercial-metrics`: números do mês e fallback de produto/recorrência
 
-# Edge Function `comercial-metrics` v5 — payload completo para o Clarity 2
+### Diagnóstico confirmado
+O Clarity 2 está lendo o payload novo corretamente, mas os dados ainda saem errados por 2 causas no backend atual:
 
-## Problema
+1. **A função mistura “lead do mês” com “venda do mês”.**
+   - Hoje ela filtra os leads por `leads.created_at` e depois soma os pedidos desses leads.
+   - Isso explica exatamente o número atual do Clarity:
+     - `5 fechamentos / R$ 3.643,80`
+   - No banco, usando `orders.data_venda` no mês atual para o pipeline comercial, o total real é:
+     - `29 fechamentos / R$ 20.222,10`
 
-Hoje a função devolve um payload enxuto (`resumo`, `financeiro`, `por_closer`, `por_origem`) e calcula receita errada (soma `orders.valor_total` de **todos** os leads, não só dos `fechou`). Resultado no Clarity 2: R$ 3.643 incorretos, 0 leads válidos, 0 vendas à vista/recorrente, gráficos zerados.
+2. **Os pedidos deste mês não têm `order_items`.**
+   - Por isso o backend devolve:
+     - `produto = "Sem produto"`
+     - `recorrente = false`
+     - `receita_recorrente = 0`
+   - O dado de produto/recorrência está sendo salvo no CRM principalmente em:
+     - `deals.recorrente`
+     - `deals.produto_id`
+     - `deal_products -> products`
 
-## Solução
+### O que será ajustado
 
-Reescrever `supabase/functions/comercial-metrics/index.ts` (v5) devolvendo o contrato nested completo dentro de `metricas`, mantendo os campos legados no nível raiz para compatibilidade com qualquer outro consumidor.
+#### 1. Separar universos de cálculo dentro da edge function
+**Arquivo:** `supabase/functions/comercial-metrics/index.ts`
 
-## Mudanças no cálculo
+A função passará a calcular em duas bases diferentes:
 
-### Novas regras de negócio
-- **Mentorado**: `status_geral ∈ {cliente, mentorado}` — separar do `total_leads`.
-- **Lead válido**: lead não-mentorado que tem appointment.
-- **Compareceu**: `atendido | ligacao_realizada | fechou | nao_fechou | ja_possui | perdido`.
-- **No-show**: `nao_compareceu | closer_ausente`.
-- **Pendente**: `agendado | confirmado | remarcou`.
-- **Fechou**: estritamente `status_geral = 'fechou'` (não inclui mais `cliente`).
-- **Receita**: soma de `orders.valor_total` **somente para leads fechados**.
-- **Tipo de venda**: recorrente se algum `order_items.recorrencia` ≠ `Nenhuma`/`null`; à vista caso contrário.
-- **Perdido pós-sessão**: `nao_fechou | ja_possui | perdido` com appointment.
-- **Perdido sem sessão**: mesmos status sem appointment.
+- **Base de leads do período**  
+  Continua usando `leads.created_at` no período para:
+  - `metricas.resumo.total_leads`
+  - `metricas.resumo.mentorados`
+  - `metricas.resumo.leads_validos`
+  - `metricas.sessoes`
+  - `metricas.por_etapa`
+  - `metricas.por_status`
+  - `por_closer[].leads`
+  - `por_origem[].leads`
 
-### Novas queries
-1. `appointments` — já existe, mas precisa também guardar `start_at` para sessões pendentes/no-show.
-2. `orders` — buscar `id, lead_id, valor_total, data_venda` + nested `order_items(recorrencia, products(nome))` para classificar tipo de venda e quebrar por produto.
-3. Closer hierarchy — mantida igual (`deals → lead_responsibles → leads.closer → "Não atribuído"`).
-4. `lead_pipeline_entries` — buscar também `data_inscricao` para filtro de período (alternativa ao `leads.created_at`, manter `leads.created_at` por enquanto).
+- **Base de vendas do período**  
+  Passa a usar `orders.data_venda` no período para:
+  - `metricas.vendas.total_fechamentos`
+  - `metricas.vendas.fechamentos_diretos`
+  - `metricas.financeiro.*`
+  - `metricas.por_tipo_venda`
+  - `metricas.lista_vendas`
+  - `metricas.por_produto`
+  - `metricas.cruzamentos.closer_x_produto`
+  - `metricas.cruzamentos.closer_x_tipo_venda`
+  - parte de receita/fechamento em `metricas.por_closer`
+  - parte de receita/fechamento em `metricas.por_origem`
 
-### Sem `recuperação` confiável
-Não há tabela de log de mudanças de `status_geral`. Vamos devolver `fechamentos_diretos = total_fechamentos` e `fechamentos_recuperacao = 0` (documentado nos critérios de aceite do prompt).
+Resultado esperado:
+- cards de topo continuam mostrando entrada de leads do mês
+- vendas e faturamento passam a mostrar o fechamento real do mês
 
-## Estrutura do novo payload
-
+#### 2. Reescrever a base de vendas para usar `orders.data_venda`
+Em vez de:
 ```text
-{
-  periodo: { inicio, fim, data_inicio, data_fim, tipo, dias_totais },
-  pipeline: { id, nome },
-  fonte: "supabase-direct",
-  gerado_em: ISO,
-  // legado (raiz) — mantém compatibilidade
-  resumo: { total_leads, agendamentos, atendimentos, fechamentos },
-  financeiro: { receita_total, ticket_medio },
-  por_closer: [...],
-  por_origem: [...],
-  // novo nested completo
-  metricas: {
-    resumo: { total_leads, mentorados, leads_validos },
-    sessoes: { pendentes:{agendado,confirmado,remarcou,total},
-               compareceram, nao_compareceram, no_show, taxa_comparecimento },
-    vendas: { fechamentos_diretos, fechamentos_recuperacao, total_fechamentos,
-              taxa_conversao, perdidos_pos_sessao, perdidos_sem_sessao,
-              em_recuperacao },
-    financeiro: { receita_total, ticket_medio,
-                  receita_recorrente, receita_avista,
-                  ticket_medio_recorrente, ticket_medio_avista,
-                  vendas_recorrente, vendas_avista },
-    por_tipo_venda: { recorrente:{vendas,receita}, avista:{vendas,receita} },
-    por_closer:  [{ closer, nome, leads, compareceu, fechou, receita,
-                    taxa_conversao, recorrente, avista,
-                    receita_recorrente, receita_avista }],
-    por_origem:  [{ origem, nome, leads, compareceu, fechou, receita }],
-    por_etapa:   [{ etapa, grupo, total, ordem }],
-    por_status:  [{ status, total, grupo }],
-    por_produto: [{ produto, vendas, receita }],
-    lista_vendas:[{ id, closer, valor, origem, recorrente, produto, data_venda }],
-    cruzamentos: { closer_x_origem:[...],
-                   closer_x_produto:[...],
-                   closer_x_tipo_venda:[...] }
-  }
-}
+leads criados no mês -> pegar orders desses leads
 ```
 
-## Critérios de aceite
+A função passará a usar:
+```text
+orders com data_venda no mês
+-> join leads
+-> restringir ao pipeline comercial
+-> restringir a leads com status_geral='fechou'
+```
 
-1. Resposta inclui **todas** as chaves de `metricas`, mesmo vazias.
-2. `metricas.resumo.leads_validos > 0` quando há leads com appointment.
-3. `metricas.financeiro.receita_total` = soma de `orders.valor_total` **apenas dos leads `fechou`**.
-4. `receita_avista + receita_recorrente == receita_total` (paridade exata).
-5. `por_tipo_venda.avista.vendas + recorrente.vendas == vendas.total_fechamentos`.
-6. `lista_vendas.length == vendas.total_fechamentos`.
-7. `por_etapa` cobre 100% dos leads (`sum(total) == resumo.total_leads`).
-8. Filtros `closer[]`/`origem[]` continuam funcionando e recalculam todos os blocos.
-9. Logs mostram paridade fechamentos+receita por closer.
+Isso deve corrigir imediatamente:
+- `total_fechamentos`: de 5 para 29
+- `receita_total`: de R$ 3.643,80 para R$ 20.222,10
+
+#### 3. Adicionar fallback real para produto e recorrência
+Como os pedidos atuais não possuem `order_items`, a função precisa montar produto/tipo de venda com fallback na estrutura comercial já existente.
+
+Ordem de prioridade para cada venda:
+```text
+order_items -> deal_products -> deals.produto_id -> "Sem produto"
+order_items.recorrencia -> deals.recorrente -> false
+```
+
+Isso permitirá preencher corretamente:
+- `metricas.por_produto`
+- `metricas.lista_vendas[].produto`
+- `metricas.lista_vendas[].recorrente`
+- `metricas.financeiro.receita_recorrente`
+- `metricas.financeiro.receita_avista`
+- `metricas.por_tipo_venda`
+- cruzamentos por produto/tipo
+
+#### 4. Manter a hierarquia de closer, mas calcular receita por closer na base de vendas
+A resolução de closer permanece compatível com a regra já adotada:
+```text
+deals.closer_id -> lead_responsibles(is_primary) -> leads.closer -> "Não atribuído"
+```
+
+Mas a parte de **receita e fechamentos por closer** passará a ser agregada sobre as vendas do mês, e não sobre os leads criados no mês.
+
+Observação importante:
+- pelos dados atuais, as 29 vendas do mês resolvem para **Alessandra** via `deals.closer_id`
+- então, após o ajuste, o valor total deve subir para R$ 20.222,10, mas a distribuição por closer pode continuar concentrada nela se esse for o dado salvo hoje
+
+#### 5. Fortalecer logs e paridade
+Adicionar logs explícitos para mostrar os dois critérios lado a lado:
+```text
+por_lead_created_at: fechou=5 receita=3643.8
+por_data_venda:      fechou=29 receita=20222.1
+retornado:           por_data_venda
+```
+
+E manter validações de paridade para:
+- `receita_avista + receita_recorrente == receita_total`
+- `vendas_avista + vendas_recorrente == total_fechamentos`
+- `lista_vendas.length == total_fechamentos`
+
+### Ajuste complementar para não reincidir no problema
+**Arquivo:** `src/components/kanban/LeadEditDialog.tsx`
+
+Hoje, ao confirmar venda, o CRM cria/atualiza `orders`, mas **não grava `order_items`** junto do pedido.  
+Será incluída uma sincronização para que, ao salvar uma venda com produtos selecionados:
+
+- os produtos do deal sejam copiados para `order_items`
+- a recorrência do deal (`vendaRecorrente`) seja refletida nos itens do pedido
+
+Isso não corrige histórico antigo sozinho, mas evita que novas vendas continuem chegando ao dashboard como:
+- `Sem produto`
+- `avista`
+- `receita_recorrente = 0`
+
+### Critérios de aceite
+1. `metricas.vendas.total_fechamentos` do mês atual passa para **29**.
+2. `metricas.financeiro.receita_total` passa para **R$ 20.222,10**.
+3. `lista_vendas.length == 29`.
+4. `por_produto` deixa de vir apenas com `"Sem produto"` quando houver produto no deal/deal_products.
+5. `receita_recorrente` e `vendas_recorrente` passam a refletir `order_items` ou fallback de `deals.recorrente`.
+6. `por_closer` continua compatível no contrato, mas receita/fechamentos passam a ser calculados na base de vendas do mês.
+7. Logs da função mostram claramente a diferença entre `lead.created_at` e `orders.data_venda`.
 
 ## Resumo técnico
 
-| Arquivo | Tipo de mudança |
+| Arquivo | Mudança |
 |---|---|
-| `supabase/functions/comercial-metrics/index.ts` | Reescrita completa para v5 (nested `metricas` + raiz legada) |
+| `supabase/functions/comercial-metrics/index.ts` | Separar base de leads e base de vendas; usar `orders.data_venda`; fallback de produto/recorrência por `deal_products`/`deals`; ajustar agregações e logs |
+| `src/components/kanban/LeadEditDialog.tsx` | Ao confirmar venda, sincronizar `order_items` com os produtos/recorrência do deal para evitar novos pedidos sem item |
 
-Sem alteração de schema, sem nova edge function, sem mudança de RLS. Deploy automático após save.
-
+Sem alteração de schema e sem nova edge function.
