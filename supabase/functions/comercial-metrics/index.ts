@@ -421,7 +421,7 @@ Deno.serve(async (req) => {
     // ============================================================
     let workingLeads = allLeadsPeriod.map((l: any) => ({
       ...l,
-      __closer: resolveCloserById(l.id, l.closer),
+      __closer: resolveLeadCloser(l.closer),
       __agendado: apptLeadSet.has(l.id),
       __mentorado: isMentorado(l.status_geral),
       __fechou: isFechou(l.status_geral),
@@ -452,7 +452,7 @@ Deno.serve(async (req) => {
       const lead = saleLeadsMap.get(o.lead_id);
       return {
         ...o,
-        __closer: resolveCloserById(o.lead_id, lead?.closer ?? null),
+        __closer: resolveSaleCloser(o.closer_text, lead?.closer ?? null),
         __origem: lead?.origem || "Não informado",
         __recorrente: resolveOrderRecurring(o),
         __produto: resolveOrderProduct(o),
