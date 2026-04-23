@@ -266,13 +266,15 @@ Deno.serve(async (req) => {
       oFrom += PAGE;
     }
 
-    // 3b. Filtrar para somente orders cujo lead pertence ao pipeline comercial
-    const ordersPipeline = ordersInPeriod.filter(
-      (o: any) => o.lead_id && pipelineLeadIdSet.has(o.lead_id),
-    );
+    // 3b. v9: NÃO filtrar por pipeline. Toda venda do mês com status_geral='fechou'
+    // entra no faturamento, independente do pipeline do lead. Isso espelha o
+    // comportamento da Tabela CRM (que mostra Valor Vendas para qualquer lead
+    // com order, sem checar pipeline). Apenas leads sem nenhum lead_id válido
+    // são descartados.
+    const ordersWithLead = ordersInPeriod.filter((o: any) => !!o.lead_id);
 
     // 3c. Buscar status_geral + dados básicos desses leads (sem filtrar created_at)
-    const saleLeadIds = [...new Set(ordersPipeline.map((o: any) => o.lead_id))];
+    const saleLeadIds = [...new Set(ordersWithLead.map((o: any) => o.lead_id))];
     const saleLeadsMap = new Map<string, any>();
     for (let i = 0; i < saleLeadIds.length; i += CHUNK_SIZE) {
       const chunk = saleLeadIds.slice(i, i + CHUNK_SIZE);
@@ -284,11 +286,16 @@ Deno.serve(async (req) => {
       (data || []).forEach((l: any) => saleLeadsMap.set(l.id, l));
     }
 
-    // 3d. Restringir a leads com status_geral = 'fechou'
-    const ordersFechou = ordersPipeline.filter((o: any) => {
+    // 3d. Restringir a leads com status_geral = 'fechou' (independente de pipeline)
+    const ordersFechou = ordersWithLead.filter((o: any) => {
       const lead = saleLeadsMap.get(o.lead_id);
       return lead && isFechou(lead.status_geral);
     });
+
+    // Diagnóstico: quantos vieram de fora do pipeline comercial
+    const ordersForaDoComercial = ordersFechou.filter(
+      (o: any) => !pipelineLeadIdSet.has(o.lead_id),
+    ).length;
 
     // 3e. Buscar fallback de produto/recorrência via deal_products + deals
     const dealIds = [...new Set(ordersFechou.map((o: any) => o.deal_id).filter(Boolean))];
