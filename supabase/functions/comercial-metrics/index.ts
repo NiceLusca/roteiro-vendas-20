@@ -862,7 +862,7 @@ Deno.serve(async (req) => {
       },
     });
   } catch (err: any) {
-    console.error("[comercial-metrics v6] erro fatal", err);
+    console.error("[comercial-metrics v7] erro fatal", err);
     return jsonResponse({ error: "Erro interno ao calcular métricas", details: String(err?.message || err) }, 500);
   }
 });
