@@ -328,9 +328,23 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
           .eq('id', lead.id)
           .maybeSingle();
 
-        const closerName = (leadRow?.closer && leadRow.closer.trim())
-          || (lead.closer && lead.closer.trim())
-          || 'Não atribuído';
+        // v8: nunca grava o sentinel "Não atribuído" em orders.closer.
+        // Se não houver closer real no lead, deixa NULL — a edge function
+        // (comercial-metrics v8) faz o fallback para leads.closer no momento
+        // da leitura, e a Tabela CRM continua sendo a fonte de verdade.
+        const SENTINEL_VALUES = new Set([
+          '', '-', 'nao atribuido', 'não atribuído', 'nao atribuído', 'não atribuido',
+          'n/a', 'na', 'none', 'null', 'undefined',
+        ]);
+        const pickRealCloser = (raw: string | null | undefined): string | null => {
+          if (!raw) return null;
+          const trimmed = raw.trim();
+          if (!trimmed) return null;
+          if (SENTINEL_VALUES.has(trimmed.toLowerCase())) return null;
+          return trimmed;
+        };
+        const closerName: string | null =
+          pickRealCloser(leadRow?.closer) ?? pickRealCloser(lead.closer);
         
         // Verificar se já existe order para este deal
         const { data: existingOrder } = await supabase

@@ -1,5 +1,5 @@
 // ============================================================================
-// Edge Function: comercial-metrics  (v7 — Tabela CRM como fonte de verdade)
+// Edge Function: comercial-metrics  (v8 — sentinel-aware closer resolution)
 // ============================================================================
 // - Leads do período (volume): usa leads.created_at
 // - Vendas do período (faturamento): usa orders.data_venda
@@ -375,29 +375,37 @@ Deno.serve(async (req) => {
     };
 
     // ============================================================
-    // 4. CLOSER RESOLUTION (Tabela CRM como fonte de verdade)
+    // 4. CLOSER RESOLUTION (Tabela CRM como fonte de verdade) — v8
     //    - Para LEADS: leads.closer (texto livre) -> "Não atribuído"
     //    - Para VENDAS: orders.closer -> leads.closer -> "Não atribuído"
     //    NÃO usamos mais deals.closer_id nem lead_responsibles.is_primary,
     //    porque a Tabela CRM (fonte de verdade) também não usa.
+    //
+    //    v8: trata valores SENTINEL como vazio, porque histórico tem
+    //    orders.closer = "Não atribuído" gravado literalmente, o que
+    //    bloqueava o fallback para leads.closer.
     // ============================================================
-    const normalizeCloserText = (raw: string | null | undefined): string => {
-      if (!raw) return NAO_ATRIBUIDO;
-      const trimmed = raw.trim();
-      return trimmed.length > 0 ? trimmed : NAO_ATRIBUIDO;
+    const SENTINEL_CLOSERS = new Set([
+      "", "-", "nao atribuido", "não atribuído", "nao atribuído", "não atribuido",
+      "n/a", "na", "none", "null", "undefined",
+    ]);
+    const isSentinelCloser = (raw: string | null | undefined): boolean => {
+      if (raw == null) return true;
+      const trimmed = String(raw).trim().toLowerCase();
+      return trimmed.length === 0 || SENTINEL_CLOSERS.has(trimmed);
     };
 
-    const resolveLeadCloser = (leadCloser: string | null | undefined): string =>
-      normalizeCloserText(leadCloser ?? null);
+    const resolveLeadCloser = (leadCloser: string | null | undefined): string => {
+      if (isSentinelCloser(leadCloser)) return NAO_ATRIBUIDO;
+      return String(leadCloser).trim();
+    };
 
     const resolveSaleCloser = (
       orderCloser: string | null | undefined,
       leadCloser: string | null | undefined,
     ): string => {
-      const fromOrder = (orderCloser ?? "").trim();
-      if (fromOrder) return fromOrder;
-      const fromLead = (leadCloser ?? "").trim();
-      if (fromLead) return fromLead;
+      if (!isSentinelCloser(orderCloser)) return String(orderCloser).trim();
+      if (!isSentinelCloser(leadCloser)) return String(leadCloser).trim();
       return NAO_ATRIBUIDO;
     };
 
@@ -782,12 +790,31 @@ Deno.serve(async (req) => {
     const receitaPorCloserStr = por_closer_nested
       .map((c) => `${c.closer}=R$${c.receita.toFixed(2)}(${c.fechou}v)`)
       .join(" / ");
+
+    // Diagnóstico v8: quantos orders tinham sentinel em orders.closer e foram
+    // resolvidos via leads.closer, e quantos seguem sem closer real.
+    let sentinelOrdersSubstituidos = 0;
+    let ordersSemCloserResolvido = 0;
+    for (const s of workingSales) {
+      const rawOrderCloser = s.closer_text;
+      const lead = saleLeadsMap.get(s.lead_id);
+      const rawLeadCloser = lead?.closer ?? null;
+      if (isSentinelCloser(rawOrderCloser) && !isSentinelCloser(rawLeadCloser)) {
+        sentinelOrdersSubstituidos += 1;
+      }
+      if (s.__closer === NAO_ATRIBUIDO) {
+        ordersSemCloserResolvido += 1;
+      }
+    }
+
     console.log(
-      `[comercial-metrics v7] paridade-tabela-crm\n` +
-      `  total_leads_pipeline:     ${total_leads}\n` +
-      `  closers_distintos_leads:  [${closersDistintosLeads.join(", ")}]\n` +
-      `  closers_distintos_vendas: [${closersDistintosVendas.join(", ")}]\n` +
-      `  receita_por_closer:       ${receitaPorCloserStr}`
+      `[comercial-metrics v8] paridade-tabela-crm\n` +
+      `  total_leads_pipeline:                  ${total_leads}\n` +
+      `  closers_distintos_leads:               [${closersDistintosLeads.join(", ")}]\n` +
+      `  closers_distintos_vendas:              [${closersDistintosVendas.join(", ")}]\n` +
+      `  receita_por_closer:                    ${receitaPorCloserStr}\n` +
+      `  sentinel_orders_substituidos_por_lead: ${sentinelOrdersSubstituidos}\n` +
+      `  orders_sem_closer_resolvido:           ${ordersSemCloserResolvido}`
     );
 
     console.log(
