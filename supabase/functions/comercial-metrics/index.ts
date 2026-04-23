@@ -832,7 +832,7 @@ Deno.serve(async (req) => {
     }
 
     console.log(
-      `[comercial-metrics v9] paridade-tabela-crm\n` +
+      `[comercial-metrics v10] paridade-tabela-crm\n` +
       `  total_leads_pipeline:                  ${total_leads}\n` +
       `  closers_distintos_leads:               [${closersDistintosLeads.join(", ")}]\n` +
       `  closers_distintos_vendas:              [${closersDistintosVendas.join(", ")}]\n` +
@@ -843,7 +843,7 @@ Deno.serve(async (req) => {
     );
 
     console.log(
-      `[comercial-metrics v9] resumo total_leads=${total_leads} validos=${leads_validos} ` +
+      `[comercial-metrics v10] resumo total_leads=${total_leads} validos=${leads_validos} ` +
       `fechou=${total_fechamentos} receita=${receita_total.toFixed(2)} ` +
       `closers=${por_closer_nested.length} produtos=${por_produto.length}`
     );
