@@ -242,17 +242,18 @@ Deno.serve(async (req) => {
       data_venda: string | null;
       data_pedido: string | null;
       deal_id: string | null;
+      closer_text: string | null;
       items: { recorrencia: string | null; produto: string | null }[];
     };
 
-    // 3a. Pegar orders com data_venda no período
+    // 3a. Pegar orders com data_venda no período (inclui orders.closer — fonte primária)
     const ordersInPeriod: any[] = [];
     let oFrom = 0;
     while (true) {
       const { data, error } = await supabase
         .from("orders")
         .select(`
-          id, lead_id, valor_total, data_venda, data_pedido, deal_id,
+          id, lead_id, valor_total, data_venda, data_pedido, deal_id, closer,
           order_items ( recorrencia, products ( nome ) )
         `)
         .gte("data_venda", `${dataInicio}T00:00:00`)
@@ -341,6 +342,7 @@ Deno.serve(async (req) => {
         data_venda: o.data_venda,
         data_pedido: o.data_pedido,
         deal_id: o.deal_id ?? null,
+        closer_text: o.closer ?? null,
         items,
       };
     });
