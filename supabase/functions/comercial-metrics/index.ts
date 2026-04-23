@@ -1,8 +1,10 @@
 // ============================================================================
-// Edge Function: comercial-metrics  (v8 — sentinel-aware closer resolution)
+// Edge Function: comercial-metrics  (v9 — vendas sem filtro de pipeline)
 // ============================================================================
-// - Leads do período (volume): usa leads.created_at
-// - Vendas do período (faturamento): usa orders.data_venda
+// - Leads do período (volume): pipeline comercial + leads.created_at
+// - Vendas do período (faturamento): TODAS orders.data_venda no período
+//   com lead.status_geral='fechou' (independente do pipeline). Espelha a
+//   Tabela CRM, que mostra Valor Vendas por lead sem checar pipeline.
 // - Fallback de produto/recorrência: order_items -> deal_products -> deals
 // - Closer SEMPRE resolvido pelo texto humano:
 //     vendas: orders.closer -> leads.closer -> "Não atribuído"
