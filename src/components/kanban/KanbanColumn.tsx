@@ -6,7 +6,7 @@ import { KanbanCard } from './KanbanCard';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
 import { PipelineDisplayConfig, DealDisplayInfo, AppointmentDisplayInfo } from '@/types/pipelineDisplay';
 import { LeadTag } from '@/types/bulkImport';
-import { AlertTriangle, Loader2, GripVertical, ChevronsLeftRight } from 'lucide-react';
+import { AlertTriangle, Loader2, GripVertical, ChevronsLeftRight, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
 import { SortOption } from './KanbanBoard';
@@ -253,6 +253,55 @@ export const KanbanColumn = memo(function KanbanColumn({
     }
   }, [stage.id, onColumnDrop]);
 
+  const handleExportCSV = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!sortedEntries.length) return;
+
+    const escape = (val: any) => {
+      if (val === null || val === undefined) return '';
+      const s = String(val).replace(/"/g, '""');
+      return `"${s}"`;
+    };
+
+    const headers = [
+      'Nome', 'Email', 'Telefone', 'Empresa', 'Cargo', 'Origem',
+      'Closer', 'Status Geral', 'Score', 'Tags',
+      'Data Entrada Etapa', 'Data Criação Lead'
+    ];
+
+    const rows = sortedEntries.map((entry) => {
+      const lead: any = entry.lead || {};
+      const tags = (tagsMap[entry.lead_id] || []).map(t => t.nome).join('; ');
+      return [
+        lead.nome,
+        lead.email,
+        lead.telefone,
+        lead.empresa,
+        lead.cargo,
+        lead.origem,
+        lead.closer,
+        lead.status_geral,
+        lead.lead_score,
+        tags,
+        entry.data_entrada_etapa,
+        lead.created_at,
+      ].map(escape).join(',');
+    });
+
+    const csv = '\uFEFF' + [headers.map(escape).join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const safeName = stage.nome.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+    const date = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.download = `leads_${safeName}_${date}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [sortedEntries, tagsMap, stage.nome]);
+
   return (
     <div 
       onDragOver={handleDragOver}
@@ -325,7 +374,22 @@ export const KanbanColumn = memo(function KanbanColumn({
               </TooltipContent>
             </Tooltip>
           </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleExportCSV}
+                  disabled={!sortedEntries.length}
+                  className="p-1 rounded hover:bg-muted/70 text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Exportar CSV"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs z-[60]">
+                Exportar leads desta etapa em CSV
+              </TooltipContent>
+            </Tooltip>
             <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full font-medium">
               {entries.length}
             </span>
