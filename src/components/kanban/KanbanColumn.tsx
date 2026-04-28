@@ -253,6 +253,55 @@ export const KanbanColumn = memo(function KanbanColumn({
     }
   }, [stage.id, onColumnDrop]);
 
+  const handleExportCSV = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!sortedEntries.length) return;
+
+    const escape = (val: any) => {
+      if (val === null || val === undefined) return '';
+      const s = String(val).replace(/"/g, '""');
+      return `"${s}"`;
+    };
+
+    const headers = [
+      'Nome', 'Email', 'Telefone', 'Empresa', 'Cargo', 'Origem',
+      'Closer', 'Status Geral', 'Score', 'Tags',
+      'Data Entrada Etapa', 'Data Criação Lead'
+    ];
+
+    const rows = sortedEntries.map((entry) => {
+      const lead: any = entry.lead || {};
+      const tags = (tagsMap[entry.lead_id] || []).map(t => t.nome).join('; ');
+      return [
+        lead.nome,
+        lead.email,
+        lead.telefone,
+        lead.empresa,
+        lead.cargo,
+        lead.origem,
+        lead.closer,
+        lead.status_geral,
+        lead.lead_score,
+        tags,
+        entry.data_entrada_etapa,
+        lead.created_at,
+      ].map(escape).join(',');
+    });
+
+    const csv = '\uFEFF' + [headers.map(escape).join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const safeName = stage.nome.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_');
+    const date = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.download = `leads_${safeName}_${date}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [sortedEntries, tagsMap, stage.nome]);
+
   return (
     <div 
       onDragOver={handleDragOver}
