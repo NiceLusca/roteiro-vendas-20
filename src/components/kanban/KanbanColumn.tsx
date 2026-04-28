@@ -264,7 +264,7 @@ export const KanbanColumn = memo(function KanbanColumn({
     };
 
     const headers = [
-      'Nome', 'Email', 'Telefone', 'Empresa', 'Cargo', 'Origem',
+      'Nome', 'Email', 'WhatsApp', 'Empresa', 'Cargo', 'Origem',
       'Closer', 'Status Geral', 'Score', 'Tags',
       'Data Entrada Etapa', 'Data Criação Lead'
     ];
@@ -275,7 +275,7 @@ export const KanbanColumn = memo(function KanbanColumn({
       return [
         lead.nome,
         lead.email,
-        lead.telefone,
+        lead.whatsapp,
         lead.empresa,
         lead.cargo,
         lead.origem,
