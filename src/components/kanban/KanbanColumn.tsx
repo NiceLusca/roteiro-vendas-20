@@ -6,7 +6,7 @@ import { KanbanCard } from './KanbanCard';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
 import { PipelineDisplayConfig, DealDisplayInfo, AppointmentDisplayInfo } from '@/types/pipelineDisplay';
 import { LeadTag } from '@/types/bulkImport';
-import { AlertTriangle, Loader2, GripVertical, ChevronsLeftRight } from 'lucide-react';
+import { AlertTriangle, Loader2, GripVertical, ChevronsLeftRight, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
 import { SortOption } from './KanbanBoard';
