@@ -374,7 +374,22 @@ export const KanbanColumn = memo(function KanbanColumn({
               </TooltipContent>
             </Tooltip>
           </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleExportCSV}
+                  disabled={!sortedEntries.length}
+                  className="p-1 rounded hover:bg-muted/70 text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Exportar CSV"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="text-xs z-[60]">
+                Exportar leads desta etapa em CSV
+              </TooltipContent>
+            </Tooltip>
             <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full font-medium">
               {entries.length}
             </span>
