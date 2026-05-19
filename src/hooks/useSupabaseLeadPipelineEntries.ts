@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContextSecure';
@@ -47,28 +47,29 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
-  
+
+  // ✅ Race condition guard: descartar respostas obsoletas quando pipelineId muda
+  const requestIdRef = useRef(0);
+  const activePipelineRef = useRef<string | undefined>(pipelineId);
+
   const ITEMS_PER_PAGE = 100;
 
   // Fetch lead pipeline entries com paginação opcional
   const fetchEntries = async (targetPipelineId?: string, forceUpdate = false, append = false, noPagination = false) => {
     if (!user) return;
-    
+
     const effectivePipelineId = targetPipelineId || pipelineId;
     const offset = append ? page * ITEMS_PER_PAGE : 0;
-    
-    // ✅ Guard interno: prevenir chamadas duplicadas usando flag dedicada
-    if (isFetching && !forceUpdate) {
-      logger.debug('Fetch já em progresso, ignorando chamada duplicada', {
-        feature: 'lead-pipeline-entries'
-      });
-      return;
-    }
+
+    // ✅ Marcar este request com um ID incremental para descartar respostas obsoletas
+    const myRequestId = ++requestIdRef.current;
+    activePipelineRef.current = effectivePipelineId;
 
     logger.debug('fetchEntries chamado', {
       feature: 'lead-pipeline-entries',
-      metadata: { effectivePipelineId, forceUpdate, append, offset }
+      metadata: { effectivePipelineId, forceUpdate, append, offset, requestId: myRequestId }
     });
+    
     
     try {
       setIsFetching(true);
@@ -212,14 +213,23 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         _fetchedAt: Date.now()
       }));
 
+      // ✅ Descartar resposta obsoleta (pipelineId mudou ou nova request iniciada)
+      if (myRequestId !== requestIdRef.current || activePipelineRef.current !== effectivePipelineId) {
+        logger.debug('Resposta obsoleta descartada', {
+          feature: 'lead-pipeline-entries',
+          metadata: { myRequestId, currentRequestId: requestIdRef.current, effectivePipelineId, active: activePipelineRef.current }
+        });
+        return;
+      }
+
       logger.info('Leads carregados', {
         feature: 'lead-pipeline-entries',
-        metadata: { count: processedEntries.length, append, offset }
+        metadata: { count: processedEntries.length, append, offset, pipelineId: effectivePipelineId }
       });
-      
-      // Verificar se há mais páginas
-      setHasMore(processedEntries.length === ITEMS_PER_PAGE);
-      
+
+      // Verificar se há mais páginas (somente quando paginando)
+      setHasMore(!noPagination && processedEntries.length === ITEMS_PER_PAGE);
+
       // Append ou replace entries
       if (append) {
         setEntries(prev => [...prev, ...processedEntries as any]);
@@ -228,7 +238,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         setEntries([...processedEntries as any]);
         setPage(0);
       }
-      
+
       // Atualizar timestamp da última atualização
       setLastUpdated(new Date());
     } catch (error) {
