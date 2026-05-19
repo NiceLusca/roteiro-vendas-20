@@ -213,14 +213,23 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         _fetchedAt: Date.now()
       }));
 
+      // ✅ Descartar resposta obsoleta (pipelineId mudou ou nova request iniciada)
+      if (myRequestId !== requestIdRef.current || activePipelineRef.current !== effectivePipelineId) {
+        logger.debug('Resposta obsoleta descartada', {
+          feature: 'lead-pipeline-entries',
+          metadata: { myRequestId, currentRequestId: requestIdRef.current, effectivePipelineId, active: activePipelineRef.current }
+        });
+        return;
+      }
+
       logger.info('Leads carregados', {
         feature: 'lead-pipeline-entries',
-        metadata: { count: processedEntries.length, append, offset }
+        metadata: { count: processedEntries.length, append, offset, pipelineId: effectivePipelineId }
       });
-      
-      // Verificar se há mais páginas
-      setHasMore(processedEntries.length === ITEMS_PER_PAGE);
-      
+
+      // Verificar se há mais páginas (somente quando paginando)
+      setHasMore(!noPagination && processedEntries.length === ITEMS_PER_PAGE);
+
       // Append ou replace entries
       if (append) {
         setEntries(prev => [...prev, ...processedEntries as any]);
@@ -229,7 +238,7 @@ export function useSupabaseLeadPipelineEntries(pipelineId?: string) {
         setEntries([...processedEntries as any]);
         setPage(0);
       }
-      
+
       // Atualizar timestamp da última atualização
       setLastUpdated(new Date());
     } catch (error) {
