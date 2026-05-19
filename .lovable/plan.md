@@ -1,112 +1,30 @@
+Diagnóstico:
+- No banco, a Cintia de S Villas Boas existe e está ativa em Mentoria Society, na etapa AGUARDANDO ACESSO DO LOVABLE.
+- A mesma etapa tem 2 leads ativos: Cintia de S Villas Boas e Gleides Maria silva.
+- Yan tem acesso edit ao pipeline Mentoria Society nas duas contas.
+- Portanto, o problema não parece ser permissão/RLS nem URL/filtros. O sintoma da coluna mostrar apenas 1 lead aponta para falha silenciosa no carregamento client-side do Kanban.
 
+Causa provável:
+- O hook `useSupabaseLeadPipelineEntries` pode iniciar uma busca antes do `pipelineId` estar resolvido e depois bloquear/atrasar a busca correta por causa do guard `isFetching`.
+- Também há risco de uma resposta antiga sobrescrever os dados corretos quando o usuário entra direto pela URL do pipeline.
+- Isso explica um cenário em que a coluna carrega parcialmente e a contagem fica menor que o total real.
 
-# Corrigir leitura de closer da venda: tratar `"Não atribuído"` como vazio
+Plano de implementação:
+1. Corrigir `useSupabaseLeadPipelineEntries`
+   - Garantir que, quando um `pipelineId` específico existe, a busca desse pipeline sempre tenha prioridade.
+   - Evitar que uma resposta antiga ou de outro escopo sobrescreva os dados atuais.
+   - Usar controle por `requestId`/pipeline atual para descartar respostas obsoletas.
+   - Manter busca sem paginação quando estiver em um pipeline específico, para não depender do limite padrão.
 
-## Causa raiz confirmada por query no banco
+2. Ajustar o comportamento inicial em `/pipelines/:slug`
+   - Evitar carregar inscrições globais enquanto o pipeline da URL ainda está sendo resolvido.
+   - Só renderizar/considerar entradas depois que o `pipelineId` correto estiver definido.
 
-Rodei direto no `orders` do mês:
+3. Adicionar diagnóstico seguro no frontend
+   - Logar quando a busca do pipeline retornar menos dados do que o esperado por etapa, sem expor dados sensíveis ao usuário comum.
+   - Isso ajuda a detectar rapidamente se outra coluna voltar a carregar incompleta.
 
-| order_closer | lead_closer |
-|---|---|
-| `"Não atribuído"` | Lucas Casagrande Sampaio |
-| `"Não atribuído"` | Vagner |
-| `"Não atribuído"` | Gabriel |
-| `"Não atribuído"` | Uilma |
-| `"Não atribuído"` | Carolaine Santana |
-| ... (todas as 29) | ... |
-
-A coluna `orders.closer` foi populada com a **string literal** `"Não atribuído"` em vez de ficar `NULL`. Resultado: a hierarquia da v7
-
-```
-orders.closer  ->  leads.closer  ->  "Não atribuído"
-```
-
-nunca cai no `leads.closer`, porque `orders.closer` "tem valor" (mesmo sendo o texto sentinel).
-
-A Tabela CRM funciona porque ela lê `leads.closer` direto. O Clarity 2 não, porque a edge function lê `orders.closer` primeiro.
-
-## Correção
-
-### 1. Edge function: tratar valores sentinel como vazio
-**Arquivo:** `supabase/functions/comercial-metrics/index.ts`
-
-Ajustar `resolveSaleCloser` para considerar como “sem valor”:
-- `null`
-- string vazia
-- `"Não atribuído"` (case-insensitive, com/sem acento)
-- `"nao atribuido"`
-- `"-"`
-
-```text
-fromOrder = orders.closer (após normalização)
-se fromOrder for sentinel/vazio -> usar leads.closer
-se leads.closer também for sentinel/vazio -> "Não atribuído"
-```
-
-Mesma normalização aplicada em:
-- `metricas.por_closer`
-- `metricas.lista_vendas[].closer`
-- `metricas.cruzamentos.closer_x_*`
-- ranking de receita por closer
-
-### 2. LeadEditDialog: nunca gravar o texto sentinel
-**Arquivo:** `src/components/kanban/LeadEditDialog.tsx`
-
-Ao registrar venda:
-- se `leads.closer` estiver vazio/sentinel, gravar `orders.closer = NULL` (não a string `"Não atribuído"`).
-- se tiver nome real, gravar exatamente o texto de `leads.closer`.
-
-Isso evita que novas vendas continuem nascendo com o sentinel poluindo a base.
-
-### 3. Backfill dos 29 pedidos do mês (e histórico)
-Migração SQL única para limpar o sentinel já gravado:
-
-```sql
-UPDATE orders o
-SET closer = l.closer
-FROM leads l
-WHERE o.lead_id = l.id
-  AND (o.closer IS NULL 
-       OR btrim(o.closer) = '' 
-       OR lower(unaccent(btrim(o.closer))) IN ('nao atribuido','não atribuído','-'))
-  AND l.closer IS NOT NULL
-  AND btrim(l.closer) <> '';
-```
-
-E zerar para `NULL` os casos em que `leads.closer` também está vazio:
-
-```sql
-UPDATE orders
-SET closer = NULL
-WHERE lower(unaccent(btrim(closer))) IN ('nao atribuido','não atribuído','-');
-```
-
-### 4. Logs de paridade reforçados
-Adicionar no log da v8:
-
-```
-sentinel_orders_substituidos_por_lead_closer: N
-orders_sem_closer_resolvido: M
-```
-
-Para flagrar regressão futura imediatamente.
-
-## Critérios de aceite
-
-1. Ranking do Clarity 2 mostra Lucas, Vagner, Gabriel, Uilma, Carolaine, Casagrande etc — não mais "Não atribuído" concentrando 29 vendas.
-2. Receita por closer = soma de `orders.valor_total` agrupada pelo `leads.closer` quando `orders.closer` está sentinel.
-3. Número total continua **29 vendas / R$ 20.222,10**.
-4. Apenas vendas que realmente não têm nem `orders.closer` nem `leads.closer` aparecem como "Não atribuído".
-5. Novas vendas registradas pelo `LeadEditDialog` deixam de gravar o texto `"Não atribuído"` em `orders.closer`.
-6. Conversões por closer voltam a fazer sentido (>0% e ≤100% para cada um).
-
-## Resumo técnico
-
-| Arquivo | Mudança |
-|---|---|
-| `supabase/functions/comercial-metrics/index.ts` | Normalizar valores sentinel (`null`, `""`, `"Não atribuído"`, `"-"`) como vazio em todos os pontos de resolução de closer |
-| `src/components/kanban/LeadEditDialog.tsx` | Gravar `NULL` em vez de `"Não atribuído"` quando não houver closer real |
-| Migração SQL | Backfill de `orders.closer` puxando de `leads.closer` quando o atual for sentinel |
-
-Sem alteração de schema, sem nova edge function. Correção retroativa via migração + correção prospectiva via UI/edge function.
-
+4. Validar especificamente o caso da Cintia
+   - Confirmar que a etapa AGUARDANDO ACESSO DO LOVABLE renderiza 2 cards no pipeline Mentoria Society.
+   - Confirmar que filtros vazios continuam mostrando todos os leads ativos.
+   - Confirmar que busca, responsáveis e tags continuam funcionando.
