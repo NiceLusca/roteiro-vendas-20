@@ -861,7 +861,19 @@ export function LeadEditDialog({ open, onOpenChange, lead, onUpdate, currentStag
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="whatsapp">WhatsApp</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="whatsapp">WhatsApp</Label>
+                  {formData.whatsapp && (
+                    <a
+                      href={`https://wa.me/${formData.whatsapp.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline font-medium"
+                    >
+                      Abrir no WhatsApp ↗
+                    </a>
+                  )}
+                </div>
                 <div className="relative">
                   <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
