@@ -1,30 +1,37 @@
-Diagnóstico:
-- No banco, a Cintia de S Villas Boas existe e está ativa em Mentoria Society, na etapa AGUARDANDO ACESSO DO LOVABLE.
-- A mesma etapa tem 2 leads ativos: Cintia de S Villas Boas e Gleides Maria silva.
-- Yan tem acesso edit ao pipeline Mentoria Society nas duas contas.
-- Portanto, o problema não parece ser permissão/RLS nem URL/filtros. O sintoma da coluna mostrar apenas 1 lead aponta para falha silenciosa no carregamento client-side do Kanban.
+## Webhook Kiwify → Pipeline Crescimento Acelerado Diário
 
-Causa provável:
-- O hook `useSupabaseLeadPipelineEntries` pode iniciar uma busca antes do `pipelineId` estar resolvido e depois bloquear/atrasar a busca correta por causa do guard `isFetching`.
-- Também há risco de uma resposta antiga sobrescrever os dados corretos quando o usuário entra direto pela URL do pipeline.
-- Isso explica um cenário em que a coluna carrega parcialmente e a contagem fica menor que o total real.
+Criar uma nova Edge Function `kiwify-webhook` que recebe notificações de compra da Kiwify e, quando o produto for "Crescimento Acelerado" (ID `6d3aec60-3885-11f1-afdf-b95efc23004a`), cria/atualiza o lead e o inscreve automaticamente no pipeline **Crescimento Acelerado Diário**.
 
-Plano de implementação:
-1. Corrigir `useSupabaseLeadPipelineEntries`
-   - Garantir que, quando um `pipelineId` específico existe, a busca desse pipeline sempre tenha prioridade.
-   - Evitar que uma resposta antiga ou de outro escopo sobrescreva os dados atuais.
-   - Usar controle por `requestId`/pipeline atual para descartar respostas obsoletas.
-   - Manter busca sem paginação quando estiver em um pipeline específico, para não depender do limite padrão.
+### Comportamento
 
-2. Ajustar o comportamento inicial em `/pipelines/:slug`
-   - Evitar carregar inscrições globais enquanto o pipeline da URL ainda está sendo resolvido.
-   - Só renderizar/considerar entradas depois que o `pipelineId` correto estiver definido.
+1. Recebe POST da Kiwify (sem validação de secret, conforme solicitado).
+2. Aceita apenas eventos de pagamento aprovado (`order_approved` / `compra_aprovada` / status `paid`/`approved`).
+3. Confere se o `product_id` corresponde a `6d3aec60-3885-11f1-afdf-b95efc23004a`. Caso contrário, ignora.
+4. Extrai dados do comprador (nome, email, telefone) do payload Kiwify.
+5. Busca lead existente por telefone → depois por email. Se achar, atualiza; se não, cria novo lead com `origem = "Kiwify - Crescimento Acelerado"`.
+6. Adiciona nota `[COMPRA]` em `observacoes` com data, produto, valor e código da transação.
+7. Inscreve o lead na primeira etapa ativa do pipeline `crescimento-acelerado-diario`, com `status_inscricao = 'Ativo'`.
+8. Se já estiver inscrito ativo, não duplica — apenas notifica.
+9. Registra atividade em `lead_activity_log` (`source: 'kiwify_webhook'`).
+10. Notifica todos os admins no sino de notificações: nova compra, já inscrito ou erro.
 
-3. Adicionar diagnóstico seguro no frontend
-   - Logar quando a busca do pipeline retornar menos dados do que o esperado por etapa, sem expor dados sensíveis ao usuário comum.
-   - Isso ajuda a detectar rapidamente se outra coluna voltar a carregar incompleta.
+### Detalhes técnicos
 
-4. Validar especificamente o caso da Cintia
-   - Confirmar que a etapa AGUARDANDO ACESSO DO LOVABLE renderiza 2 cards no pipeline Mentoria Society.
-   - Confirmar que filtros vazios continuam mostrando todos os leads ativos.
-   - Confirmar que busca, responsáveis e tags continuam funcionando.
+- Arquivo: `supabase/functions/kiwify-webhook/index.ts` (segue o mesmo padrão do `eduzz-webhook`).
+- `verify_jwt = false` em `supabase/config.toml` (endpoint público para a Kiwify chamar).
+- CORS liberado para `OPTIONS`.
+- Mapeamento configurável no topo do arquivo:
+  ```ts
+  const KIWIFY_PRODUCT_PIPELINE_MAP: Record<string, string> = {
+    '6d3aec60-3885-11f1-afdf-b95efc23004a': 'crescimento-acelerado-diario',
+  };
+  ```
+- Parser tolerante: aceita `product_id` em `data.Product.product_id`, `data.product_id`, `order.product_id` ou `Product.id` (Kiwify varia o formato dependendo da versão do webhook).
+- Após deploy, a URL para colar no painel da Kiwify será:
+  `https://szuqdfakikbotidnxxvw.supabase.co/functions/v1/kiwify-webhook`
+
+### Fora de escopo
+
+- Nenhuma alteração de schema do banco.
+- Nenhuma mudança em UI/frontend.
+- Sem criação de Deal/Order automático (mesmo comportamento atual do webhook Eduzz).
