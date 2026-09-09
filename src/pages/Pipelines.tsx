@@ -1143,6 +1143,16 @@ function PipelinesContent({ slug }: { slug: string }) {
         }}
         isLoading={isMovingWithAppointment}
       />
+
+      <Dialog open={!!newLeadStageId} onOpenChange={(open) => !open && setNewLeadStageId(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <LeadForm
+            onSubmit={handleCreateLeadInStage}
+            onCancel={() => setNewLeadStageId(null)}
+            loading={creatingLead}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
