@@ -124,6 +124,11 @@ export function PipelineInscriptionDialog({
                       <span className="font-medium">Objetivo:</span> {selectedPipeline.objetivo}
                     </p>
                   )}
+                  {!hasStages(selectedPipeline.id) && (
+                    <p className="text-xs text-destructive">
+                      Este pipeline ainda não tem etapas cadastradas. Crie ao menos uma etapa antes de inscrever leads.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -136,7 +141,7 @@ export function PipelineInscriptionDialog({
           </Button>
           <Button 
             onClick={handleConfirm}
-            disabled={!selectedPipelineId || availablePipelines.length === 0}
+            disabled={!selectedPipelineId || availablePipelines.length === 0 || !hasStages(selectedPipelineId)}
           >
             Inscrever
           </Button>
