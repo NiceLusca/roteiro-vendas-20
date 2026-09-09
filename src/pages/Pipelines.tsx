@@ -22,11 +22,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Search, RotateCcw, LayoutGrid, Table as TableIcon, ArrowUpDown, RefreshCw, Bug, Undo2, CalendarClock, History } from 'lucide-react';
+import { Search, RotateCcw, LayoutGrid, Table as TableIcon, ArrowUpDown, RefreshCw, Bug, Undo2, CalendarClock, History, Plus } from 'lucide-react';
 import { PipelineActivityDashboard } from '@/components/pipeline/PipelineActivityDashboard';
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
+import { LeadForm } from '@/components/forms/LeadForm';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { StageJumpDialog } from '@/components/pipeline/StageJumpDialog';
 import { UnsubscribeConfirmDialog } from '@/components/pipeline/UnsubscribeConfirmDialog';
 import { AppointmentSelectorDialog, AppointmentOption } from '@/components/kanban/AppointmentSelectorDialog';
@@ -74,6 +76,8 @@ function PipelinesContent({ slug }: { slug: string }) {
   const { fetchNextAppointments, getNextAppointmentForLead } = useKanbanAppointments();
   const { moveLead, undoMove } = useLeadMovement();
   const [editingLead, setEditingLead] = useState<{ lead: Lead; initialTab?: string } | null>(null);
+  const [newLeadStageId, setNewLeadStageId] = useState<string | null>(null);
+  const [creatingLead, setCreatingLead] = useState(false);
   const [stageJumpDialogState, setStageJumpDialogState] = useState<{
     open: boolean;
     entryId: string | null;
@@ -576,8 +580,54 @@ function PipelinesContent({ slug }: { slug: string }) {
       feature: 'pipelines',
       metadata: { stageId, pipelineId }
     });
-    navigate(`/leads?pipeline=${pipelineId}&stage=${stageId}&action=create`);
-  }, [navigate, pipelineId]);
+    setNewLeadStageId(stageId);
+  }, [pipelineId]);
+
+  const handleCreateLeadInStage = useCallback(async (leadData: any) => {
+    if (!newLeadStageId) return;
+    setCreatingLead(true);
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const { created_at, updated_at, id, ...rest } = leadData || {};
+      const { data: lead, error } = await supabase
+        .from('leads')
+        .insert([{ ...rest, user_id: authData?.user?.id ?? null }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const { error: entryError } = await supabase
+        .from('lead_pipeline_entries')
+        .insert([{
+          lead_id: lead.id,
+          pipeline_id: pipelineId,
+          etapa_atual_id: newLeadStageId,
+          status_inscricao: 'Ativo',
+          data_inscricao: new Date().toISOString(),
+          data_entrada_etapa: new Date().toISOString(),
+          saude_etapa: 'Verde'
+        }]);
+
+      if (entryError) throw entryError;
+
+      toast({
+        title: 'Lead cadastrado',
+        description: `${lead.nome} foi adicionado nesta etapa.`
+      });
+      setNewLeadStageId(null);
+      handleRefresh();
+    } catch (err) {
+      logger.error('Erro ao cadastrar lead no pipeline', err as Error, { feature: 'pipelines' });
+      toast({
+        title: 'Erro ao cadastrar lead',
+        description: 'Não foi possível cadastrar o lead nesta etapa.',
+        variant: 'destructive'
+      });
+    } finally {
+      setCreatingLead(false);
+    }
+  }, [newLeadStageId, pipelineId, toast, handleRefresh]);
 
   // Função para completar movimentação pendente após criar agendamento
   const completePendingMove = useCallback(async (pending: typeof pendingKanbanMove) => {
@@ -926,6 +976,18 @@ function PipelinesContent({ slug }: { slug: string }) {
             </Button>
           )}
 
+          {/* Cadastrar lead direto no pipeline */}
+          {canEdit && pipelineStages.length > 0 && (
+            <Button
+              size="sm"
+              onClick={() => handleAddLead(pipelineStages[0].id)}
+              className="h-9"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Novo lead
+            </Button>
+          )}
+
           {/* Espaçador flexível */}
           <div className="flex-1" />
 
@@ -1093,6 +1155,16 @@ function PipelinesContent({ slug }: { slug: string }) {
         }}
         isLoading={isMovingWithAppointment}
       />
+
+      <Dialog open={!!newLeadStageId} onOpenChange={(open) => !open && setNewLeadStageId(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <LeadForm
+            onSubmit={handleCreateLeadInStage}
+            onCancel={() => setNewLeadStageId(null)}
+            loading={creatingLead}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

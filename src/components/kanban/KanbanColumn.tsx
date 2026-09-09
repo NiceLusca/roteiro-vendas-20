@@ -6,7 +6,7 @@ import { KanbanCard } from './KanbanCard';
 import { PipelineStage, LeadPipelineEntry, Lead } from '@/types/crm';
 import { PipelineDisplayConfig, DealDisplayInfo, AppointmentDisplayInfo } from '@/types/pipelineDisplay';
 import { LeadTag } from '@/types/bulkImport';
-import { AlertTriangle, Loader2, GripVertical, ChevronsLeftRight, Download } from 'lucide-react';
+import { AlertTriangle, Loader2, GripVertical, ChevronsLeftRight, Download, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
 import { SortOption } from './KanbanBoard';
@@ -375,6 +375,22 @@ export const KanbanColumn = memo(function KanbanColumn({
             </Tooltip>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
+            {onAddLead && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onAddLead(stage.id); }}
+                    className="p-1 rounded hover:bg-muted/70 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Adicionar lead nesta etapa"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="text-xs z-[60]">
+                  Cadastrar lead nesta etapa
+                </TooltipContent>
+              </Tooltip>
+            )}
             <Tooltip>
               <TooltipTrigger asChild>
                 <button

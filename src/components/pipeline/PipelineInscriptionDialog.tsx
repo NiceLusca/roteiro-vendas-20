@@ -40,6 +40,9 @@ export function PipelineInscriptionDialog({
     !activePipelineIds.includes(p.id) && p.ativo
   );
 
+  const hasStages = (pipelineId: string) =>
+    stages.some(s => s.pipeline_id === pipelineId);
+
   const handleConfirm = () => {
     if (!selectedPipelineId) return;
 
@@ -93,12 +96,17 @@ export function PipelineInscriptionDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {availablePipelines.map(pipeline => (
-                    <SelectItem key={pipeline.id} value={pipeline.id}>
+                    <SelectItem key={pipeline.id} value={pipeline.id} disabled={!hasStages(pipeline.id)}>
                       <div className="flex items-center gap-2">
                         <span>{pipeline.nome}</span>
                         {pipeline.primary_pipeline && (
                           <Badge variant="secondary" className="text-xs">
                             Primário
+                          </Badge>
+                        )}
+                        {!hasStages(pipeline.id) && (
+                          <Badge variant="outline" className="text-xs">
+                            Sem etapas
                           </Badge>
                         )}
                       </div>
@@ -116,6 +124,11 @@ export function PipelineInscriptionDialog({
                       <span className="font-medium">Objetivo:</span> {selectedPipeline.objetivo}
                     </p>
                   )}
+                  {!hasStages(selectedPipeline.id) && (
+                    <p className="text-xs text-destructive">
+                      Este pipeline ainda não tem etapas cadastradas. Crie ao menos uma etapa antes de inscrever leads.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -128,7 +141,7 @@ export function PipelineInscriptionDialog({
           </Button>
           <Button 
             onClick={handleConfirm}
-            disabled={!selectedPipelineId || availablePipelines.length === 0}
+            disabled={!selectedPipelineId || availablePipelines.length === 0 || !hasStages(selectedPipelineId)}
           >
             Inscrever
           </Button>
