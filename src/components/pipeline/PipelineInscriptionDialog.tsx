@@ -40,6 +40,9 @@ export function PipelineInscriptionDialog({
     !activePipelineIds.includes(p.id) && p.ativo
   );
 
+  const hasStages = (pipelineId: string) =>
+    stages.some(s => s.pipeline_id === pipelineId);
+
   const handleConfirm = () => {
     if (!selectedPipelineId) return;
 
