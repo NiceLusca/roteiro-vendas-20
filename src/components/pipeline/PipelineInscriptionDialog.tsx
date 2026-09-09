@@ -96,12 +96,17 @@ export function PipelineInscriptionDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {availablePipelines.map(pipeline => (
-                    <SelectItem key={pipeline.id} value={pipeline.id}>
+                    <SelectItem key={pipeline.id} value={pipeline.id} disabled={!hasStages(pipeline.id)}>
                       <div className="flex items-center gap-2">
                         <span>{pipeline.nome}</span>
                         {pipeline.primary_pipeline && (
                           <Badge variant="secondary" className="text-xs">
                             Primário
+                          </Badge>
+                        )}
+                        {!hasStages(pipeline.id) && (
+                          <Badge variant="outline" className="text-xs">
+                            Sem etapas
                           </Badge>
                         )}
                       </div>
