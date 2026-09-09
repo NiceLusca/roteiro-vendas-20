@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Search, RotateCcw, LayoutGrid, Table as TableIcon, ArrowUpDown, RefreshCw, Bug, Undo2, CalendarClock, History } from 'lucide-react';
+import { Search, RotateCcw, LayoutGrid, Table as TableIcon, ArrowUpDown, RefreshCw, Bug, Undo2, CalendarClock, History, Plus } from 'lucide-react';
 import { PipelineActivityDashboard } from '@/components/pipeline/PipelineActivityDashboard';
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
@@ -973,6 +973,18 @@ function PipelinesContent({ slug }: { slug: string }) {
             >
               <Undo2 className="h-4 w-4 mr-2" />
               Desfazer ({undoTimeLeft}s)
+            </Button>
+          )}
+
+          {/* Cadastrar lead direto no pipeline */}
+          {canEdit && pipelineStages.length > 0 && (
+            <Button
+              size="sm"
+              onClick={() => handleAddLead(pipelineStages[0].id)}
+              className="h-9"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Novo lead
             </Button>
           )}
 
