@@ -576,8 +576,54 @@ function PipelinesContent({ slug }: { slug: string }) {
       feature: 'pipelines',
       metadata: { stageId, pipelineId }
     });
-    navigate(`/leads?pipeline=${pipelineId}&stage=${stageId}&action=create`);
-  }, [navigate, pipelineId]);
+    setNewLeadStageId(stageId);
+  }, [pipelineId]);
+
+  const handleCreateLeadInStage = useCallback(async (leadData: any) => {
+    if (!newLeadStageId) return;
+    setCreatingLead(true);
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const { created_at, updated_at, id, ...rest } = leadData || {};
+      const { data: lead, error } = await supabase
+        .from('leads')
+        .insert([{ ...rest, user_id: authData?.user?.id ?? null }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const { error: entryError } = await supabase
+        .from('lead_pipeline_entries')
+        .insert([{
+          lead_id: lead.id,
+          pipeline_id: pipelineId,
+          etapa_atual_id: newLeadStageId,
+          status_inscricao: 'Ativo',
+          data_inscricao: new Date().toISOString(),
+          data_entrada_etapa: new Date().toISOString(),
+          saude_etapa: 'Verde'
+        }]);
+
+      if (entryError) throw entryError;
+
+      toast({
+        title: 'Lead cadastrado',
+        description: `${lead.nome} foi adicionado nesta etapa.`
+      });
+      setNewLeadStageId(null);
+      handleRefresh();
+    } catch (err) {
+      logger.error('Erro ao cadastrar lead no pipeline', err as Error, { feature: 'pipelines' });
+      toast({
+        title: 'Erro ao cadastrar lead',
+        description: 'Não foi possível cadastrar o lead nesta etapa.',
+        variant: 'destructive'
+      });
+    } finally {
+      setCreatingLead(false);
+    }
+  }, [newLeadStageId, pipelineId, toast, handleRefresh]);
 
   // Função para completar movimentação pendente após criar agendamento
   const completePendingMove = useCallback(async (pending: typeof pendingKanbanMove) => {
