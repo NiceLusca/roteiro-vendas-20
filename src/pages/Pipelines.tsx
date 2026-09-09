@@ -27,6 +27,8 @@ import { PipelineActivityDashboard } from '@/components/pipeline/PipelineActivit
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useLeadMovement } from '@/hooks/useLeadMovement';
 import { LeadEditDialog } from '@/components/kanban/LeadEditDialog';
+import { LeadForm } from '@/components/forms/LeadForm';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { StageJumpDialog } from '@/components/pipeline/StageJumpDialog';
 import { UnsubscribeConfirmDialog } from '@/components/pipeline/UnsubscribeConfirmDialog';
 import { AppointmentSelectorDialog, AppointmentOption } from '@/components/kanban/AppointmentSelectorDialog';
@@ -74,6 +76,8 @@ function PipelinesContent({ slug }: { slug: string }) {
   const { fetchNextAppointments, getNextAppointmentForLead } = useKanbanAppointments();
   const { moveLead, undoMove } = useLeadMovement();
   const [editingLead, setEditingLead] = useState<{ lead: Lead; initialTab?: string } | null>(null);
+  const [newLeadStageId, setNewLeadStageId] = useState<string | null>(null);
+  const [creatingLead, setCreatingLead] = useState(false);
   const [stageJumpDialogState, setStageJumpDialogState] = useState<{
     open: boolean;
     entryId: string | null;
